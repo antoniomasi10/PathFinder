@@ -4,7 +4,7 @@ import prisma from '../lib/prisma';
 
 const router = Router();
 
-router.get('/', authMiddleware, async (_req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response) => {
   try {
     const universities = await prisma.university.findMany({
       include: {

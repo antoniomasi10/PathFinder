@@ -28,9 +28,9 @@ interface ProfileData {
 function mapGpa(gpa: string): GpaRange {
   switch (gpa) {
     case '18-21': return 'GPA_18_20';
-    case '22-24': return 'GPA_21_24';
-    case '25-27': return 'GPA_25_27';
-    case '28-30+': return 'GPA_28_30';
+    case '21-24': return 'GPA_21_24';
+    case '24-27': return 'GPA_25_27';
+    case '27-30+': return 'GPA_28_30';
     default: return 'GPA_25_27';
   }
 }

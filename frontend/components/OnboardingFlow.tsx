@@ -64,7 +64,7 @@ const QUESTIONS: Question[] = [
   {
     id: 2,
     question: 'Qual è la tua media voti attuale?',
-    options: ['18-21', '22-24', '25-27', '28-30+'],
+    options: ['18-21', '21-24', '24-27', '27-30+'],
     hasOtherField: false,
   },
   {
@@ -88,7 +88,7 @@ const QUESTIONS: Question[] = [
   },
   {
     id: 6,
-    question: 'Quale attività ti viene più naturale?',
+    question: 'In un progetto di gruppo, quale ruolo ti ritrovi a fare anche senza che te lo chiedano?',
     options: [
       'Analizzare dati e numeri',
       'Creare qualcosa di nuovo',
@@ -119,7 +119,7 @@ const QUESTIONS: Question[] = [
     question: 'Quando affronti un problema, di solito...',
     options: [
       'Provo diverse soluzioni',
-      'Scompongo in parti',
+      'Lo scompongo in parti più piccole',
       'Cerco qualcuno più esperto',
       'Seguo il mio istinto',
     ],
@@ -248,7 +248,7 @@ function computeCluster(
 
   // D8 — problemSolvingStyle
   if (answers[8] === 'Provo diverse soluzioni') scores.INNOVATOR += 1;
-  if (answers[8] === 'Scompongo in parti') scores.ANALYST += 1;
+  if (answers[8] === 'Lo scompongo in parti più piccole') scores.ANALYST += 1;
   if (answers[8] === 'Cerco qualcuno più esperto') scores.HELPER += 1;
 
   // D9 — riskTolerance
@@ -257,8 +257,11 @@ function computeCluster(
     scores.LEADER += 1;
   }
 
-  // D2 — gpa
-  if (answers[2] === '28-30+') scores.ANALYST += 1;
+  // D2 — gpa (progressione lineare)
+  if (answers[2] === '18-21') scores.ANALYST += 0.25;
+  if (answers[2] === '21-24') scores.ANALYST += 0.5;
+  if (answers[2] === '24-27') scores.ANALYST += 0.75;
+  if (answers[2] === '27-30+') scores.ANALYST += 1;
 
   // D1 — yearOfStudy
   if ((answers[1] || '').startsWith('Magistrale')) scores.LEADER += 1;
