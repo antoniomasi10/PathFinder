@@ -9,7 +9,7 @@ interface Question {
   question: string;
   options: string[];
   hasOtherField: boolean;
-  multiSelect?: boolean;
+  selectionType: 'single' | 'multiple';
 }
 
 export interface LanguageEntry {
@@ -60,31 +60,35 @@ const QUESTIONS: Question[] = [
       'Magistrale - 2° anno',
     ],
     hasOtherField: false,
+    selectionType: 'single',
   },
   {
     id: 2,
     question: 'Qual è la tua media voti attuale?',
     options: ['18-21', '21-24', '24-27', '27-30+'],
     hasOtherField: false,
+    selectionType: 'single',
   },
   {
     id: 3,
     question: 'Qual è il tuo livello di inglese?',
     options: ['A2 - Base', 'B1/B2 - Intermedio', 'C1 - Avanzato', 'C2+ - Madrelingua'],
     hasOtherField: false,
+    selectionType: 'single',
   },
   {
     id: 4,
     question: 'Conosci altre lingue straniere a livello intermedio o superiore?',
     options: ['Francese', 'Tedesco', 'Spagnolo', 'Russo', 'Cinese', 'Arabo', 'Giapponese', 'Coreano'],
     hasOtherField: true,
-    multiSelect: true,
+    selectionType: 'multiple',
   },
   {
     id: 5,
     question: 'Saresti disposto a trasferirti per un\'opportunità?',
     options: ['Sì, ovunque', 'Solo in Italia', 'Solo nella mia regione', 'No, preferisco restare nella mia città'],
     hasOtherField: false,
+    selectionType: 'single',
   },
   {
     id: 6,
@@ -99,6 +103,7 @@ const QUESTIONS: Question[] = [
       'Comunicare e persuadere',
     ],
     hasOtherField: true,
+    selectionType: 'single',
   },
   {
     id: 7,
@@ -113,6 +118,7 @@ const QUESTIONS: Question[] = [
       'Esco con amici',
     ],
     hasOtherField: true,
+    selectionType: 'single',
   },
   {
     id: 8,
@@ -124,12 +130,14 @@ const QUESTIONS: Question[] = [
       'Seguo il mio istinto',
     ],
     hasOtherField: false,
+    selectionType: 'single',
   },
   {
     id: 9,
     question: 'Quanto ti piace uscire dalla tua comfort zone?',
     options: ['Molto', 'Abbastanza', 'Poco', 'Per niente'],
     hasOtherField: false,
+    selectionType: 'single',
   },
   {
     id: 10,
@@ -141,6 +149,7 @@ const QUESTIONS: Question[] = [
       'Fare ricerca e innovazione',
     ],
     hasOtherField: false,
+    selectionType: 'single',
   },
   {
     id: 11,
@@ -152,6 +161,7 @@ const QUESTIONS: Question[] = [
       'Ricercatore/accademico',
     ],
     hasOtherField: false,
+    selectionType: 'single',
   },
 ];
 
@@ -333,7 +343,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
 
   const question = currentStep < totalSteps ? QUESTIONS[currentStep] : null;
   const questionId = question?.id ?? 0;
-  const isMultiSelect = question?.multiSelect ?? false;
+  const isMultiSelect = question?.selectionType === 'multiple';
   const selectedAnswer = answers[questionId] ?? '';
   const selectedMulti = multiAnswers[questionId] ?? [];
   const isOtherSelected = isMultiSelect
@@ -501,20 +511,36 @@ export default function OnboardingFlow({ onComplete }: Props) {
                 className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl text-left transition-all"
                 style={{ backgroundColor: '#1C2333' }}
               >
-                {/* Checkbox */}
-                <div
-                  className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-colors"
-                  style={{
-                    backgroundColor: isSelected ? '#6C63FF' : 'transparent',
-                    border: isSelected ? 'none' : '2px solid #4A5568',
-                  }}
-                >
-                  {isSelected && (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
-                </div>
+                {/* Selection icon */}
+                {isMultiSelect ? (
+                  <div
+                    className="flex items-center justify-center flex-shrink-0 transition-colors"
+                    style={{
+                      width: 22, height: 22, borderRadius: 6,
+                      backgroundColor: isSelected ? '#6C63FF' : 'transparent',
+                      border: isSelected ? 'none' : '2px solid #4A4A6A',
+                    }}
+                  >
+                    {isSelected && (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    className="flex items-center justify-center flex-shrink-0 transition-colors"
+                    style={{
+                      width: 22, height: 22, borderRadius: '50%',
+                      border: `2px solid ${isSelected ? '#6C63FF' : '#4A4A6A'}`,
+                      backgroundColor: 'transparent',
+                    }}
+                  >
+                    {isSelected && (
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#6C63FF' }} />
+                    )}
+                  </div>
+                )}
                 <span className="text-white text-sm">{option}</span>
               </button>
             );
@@ -530,19 +556,35 @@ export default function OnboardingFlow({ onComplete }: Props) {
                 onClick={() => isMultiSelect ? handleMultiToggle('__other__') : handleSelect('__other__')}
                 className="flex items-center gap-3 w-full text-left"
               >
-                <div
-                  className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 transition-colors"
-                  style={{
-                    backgroundColor: isOtherSelected ? '#6C63FF' : 'transparent',
-                    border: isOtherSelected ? 'none' : '2px solid #4A5568',
-                  }}
-                >
-                  {isOtherSelected && (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
-                </div>
+                {isMultiSelect ? (
+                  <div
+                    className="flex items-center justify-center flex-shrink-0 transition-colors"
+                    style={{
+                      width: 22, height: 22, borderRadius: 6,
+                      backgroundColor: isOtherSelected ? '#6C63FF' : 'transparent',
+                      border: isOtherSelected ? 'none' : '2px solid #4A4A6A',
+                    }}
+                  >
+                    {isOtherSelected && (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    className="flex items-center justify-center flex-shrink-0 transition-colors"
+                    style={{
+                      width: 22, height: 22, borderRadius: '50%',
+                      border: `2px solid ${isOtherSelected ? '#6C63FF' : '#4A4A6A'}`,
+                      backgroundColor: 'transparent',
+                    }}
+                  >
+                    {isOtherSelected && (
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#6C63FF' }} />
+                    )}
+                  </div>
+                )}
                 <span className="text-white text-sm">Altro...</span>
               </button>
               {isOtherSelected && (
