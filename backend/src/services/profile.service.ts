@@ -1,101 +1,106 @@
 import prisma from '../lib/prisma';
 import { GpaRange, EnglishLevel, WillingnessToRelocate } from '@prisma/client';
 
-interface QuestionnaireInput {
-  // Step 1 - Structural
-  yearOfStudy: number;
-  gpa: GpaRange;
-  englishLevel: EnglishLevel;
-  willingToRelocate: WillingnessToRelocate;
-  // Step 2 - Behavioral
-  naturalActivity: string;
-  freeTimeActivity: string;
-  // Step 3 - Ambition
-  problemSolvingStyle: string;
-  riskTolerance: string;
-  careerVision: string;
-  professionalGoal: string;
-  // Step 4 - Passions
-  passions: string[];
+interface ProfileData {
+  answers: {
+    yearOfStudy: string;
+    gpa: string;
+    englishLevel: string;
+    languages: string[];
+    willingToRelocate: string;
+    naturalActivity: string;
+    freeTimeActivity: string;
+    problemSolvingStyle: string;
+    riskTolerance: string;
+    careerPreference: string;
+    professionalIdentity: string;
+  };
+  cluster: 'INNOVATOR' | 'ANALYST' | 'LEADER' | 'HELPER';
+  languages: Array<{ lingua: string; peso: number; valoreLibero?: string }>;
+  filters: {
+    yearOfStudy: string;
+    gpa: string;
+    englishLevel: string;
+    mobility: string;
+  };
 }
 
-function deriveClusterTag(input: QuestionnaireInput): string {
-  const { naturalActivity, problemSolvingStyle, riskTolerance, careerVision } = input;
-
-  // Derive cluster from behavioral + ambition answers
-  if (naturalActivity === 'analizzare_dati' || problemSolvingStyle === 'analitico') {
-    return 'Analista';
+function mapGpa(gpa: string): GpaRange {
+  switch (gpa) {
+    case '18-21': return 'GPA_18_20';
+    case '22-24': return 'GPA_21_24';
+    case '25-27': return 'GPA_25_27';
+    case '28-30+': return 'GPA_28_30';
+    default: return 'GPA_25_27';
   }
-  if (naturalActivity === 'creare_contenuti' || careerVision === 'creativo') {
-    return 'Creativo';
-  }
-  if (naturalActivity === 'organizzare_team' || careerVision === 'leader') {
-    return 'Leader';
-  }
-  if (riskTolerance === 'alto' || careerVision === 'imprenditore') {
-    return 'Imprenditore';
-  }
-  if (naturalActivity === 'aiutare_altri' || careerVision === 'sociale') {
-    return 'Sociale';
-  }
-  return 'Explorer';
 }
 
-function derivePrimaryInterest(passions: string[], naturalActivity: string): string {
-  if (passions.includes('informatica') || passions.includes('tecnologia')) return 'tech';
-  if (passions.includes('imprenditoria')) return 'business';
-  if (passions.includes('creativo') || passions.includes('musica')) return 'creative';
-  if (passions.includes('sport')) return 'sport';
-  if (naturalActivity === 'analizzare_dati') return 'tech';
-  if (naturalActivity === 'organizzare_team') return 'business';
-  return 'general';
+function mapEnglishLevel(level: string): EnglishLevel {
+  if (level.startsWith('A2')) return 'A2';
+  if (level.startsWith('B1')) return 'B1_B2';
+  if (level.startsWith('C1')) return 'C1';
+  if (level.startsWith('C2')) return 'C2_PLUS';
+  return 'B1_B2';
 }
 
-export async function saveQuestionnaire(userId: string, input: QuestionnaireInput) {
-  const clusterTag = deriveClusterTag(input);
-  const primaryInterest = derivePrimaryInterest(input.passions, input.naturalActivity);
+function mapWillingToRelocate(w: string): WillingnessToRelocate {
+  if (w.startsWith('Sì')) return 'YES';
+  if (w === 'No, preferisco restare nella mia città') return 'NO';
+  return 'MAYBE';
+}
 
-  const profile = await prisma.userProfile.upsert({
-    where: { userId },
-    update: {
-      primaryInterest,
-      naturalActivity: input.naturalActivity,
-      freeTimeActivity: input.freeTimeActivity,
-      problemSolvingStyle: input.problemSolvingStyle,
-      riskTolerance: input.riskTolerance,
-      careerVision: input.careerVision,
-      professionalGoal: input.professionalGoal,
-      passions: input.passions,
-      clusterTag,
-      completedAt: new Date(),
-    },
-    create: {
-      userId,
-      primaryInterest,
-      naturalActivity: input.naturalActivity,
-      freeTimeActivity: input.freeTimeActivity,
-      problemSolvingStyle: input.problemSolvingStyle,
-      riskTolerance: input.riskTolerance,
-      careerVision: input.careerVision,
-      professionalGoal: input.professionalGoal,
-      passions: input.passions,
-      clusterTag,
-      completedAt: new Date(),
-    },
+function extractYearOfStudy(s: string): number {
+  const match = s.match(/(\d+)°/);
+  const year = match ? parseInt(match[1]) : 1;
+  if (s.startsWith('Magistrale')) return year + 3;
+  return year;
+}
+
+function derivePrimaryInterest(cluster: ProfileData['cluster']): string {
+  switch (cluster) {
+    case 'INNOVATOR': return 'tech';
+    case 'ANALYST': return 'tech';
+    case 'LEADER': return 'business';
+    case 'HELPER': return 'general';
+  }
+}
+
+export async function saveQuestionnaire(userId: string, input: ProfileData) {
+  const { answers, cluster } = input;
+  const primaryInterest = derivePrimaryInterest(cluster);
+
+  const profileFields = {
+    primaryInterest,
+    naturalActivity: answers.naturalActivity,
+    freeTimeActivity: answers.freeTimeActivity,
+    problemSolvingStyle: answers.problemSolvingStyle,
+    riskTolerance: answers.riskTolerance,
+    careerVision: answers.careerPreference,
+    professionalGoal: answers.professionalIdentity,
+    passions: (input.languages || []).map((l) => JSON.stringify(l)),
+    clusterTag: cluster,
+  };
+
+  return prisma.$transaction(async (tx) => {
+    const profile = await tx.userProfile.upsert({
+      where: { userId },
+      update: { ...profileFields, completedAt: new Date() },
+      create: { userId, ...profileFields, completedAt: new Date() },
+    });
+
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        yearOfStudy: extractYearOfStudy(answers.yearOfStudy),
+        gpa: mapGpa(answers.gpa),
+        englishLevel: mapEnglishLevel(answers.englishLevel),
+        willingToRelocate: mapWillingToRelocate(answers.willingToRelocate),
+        profileCompleted: true,
+      },
+    });
+
+    return profile;
   });
-
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      yearOfStudy: input.yearOfStudy,
-      gpa: input.gpa,
-      englishLevel: input.englishLevel,
-      willingToRelocate: input.willingToRelocate,
-      profileCompleted: true,
-    },
-  });
-
-  return profile;
 }
 
 export async function getProfile(userId: string) {
