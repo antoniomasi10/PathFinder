@@ -77,6 +77,66 @@ router.get('/:userId', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
+// Get group messages
+router.get('/group/:groupId', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const { groupId } = req.params;
+
+    // Verify user is a member of the group
+    const membership = await prisma.groupMember.findUnique({
+      where: { groupId_userId: { groupId, userId } },
+    });
+    if (!membership) {
+      return res.status(403).json({ error: 'Non sei membro di questo gruppo' });
+    }
+
+    const messages = await prisma.pathMatesMessage.findMany({
+      where: { groupId },
+      orderBy: { sentAt: 'asc' },
+      include: {
+        sender: { select: { id: true, name: true, avatar: true } },
+      },
+    });
+
+    res.json(messages);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Send a group message (REST fallback)
+router.post('/group/:groupId', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const { groupId } = req.params;
+    const { content } = req.body;
+
+    // Verify user is a member of the group
+    const membership = await prisma.groupMember.findUnique({
+      where: { groupId_userId: { groupId, userId } },
+    });
+    if (!membership) {
+      return res.status(403).json({ error: 'Non sei membro di questo gruppo' });
+    }
+
+    const message = await prisma.pathMatesMessage.create({
+      data: {
+        senderId: userId,
+        groupId,
+        content,
+      },
+      include: {
+        sender: { select: { id: true, name: true, avatar: true } },
+      },
+    });
+
+    res.status(201).json(message);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // Send a message (REST fallback)
 router.post('/', authMiddleware, async (req: Request, res: Response) => {
   try {

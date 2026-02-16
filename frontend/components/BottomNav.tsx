@@ -54,7 +54,10 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#0D1117] border-t border-[#1E293B] z-50">
+    <nav
+      className="fixed bottom-0 left-0 right-0 bg-[#1a1b2e] border-t border-indigo-900/20 z-50"
+      style={{ boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.5)' }}
+    >
       <div className="max-w-lg mx-auto flex">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
@@ -62,12 +65,30 @@ export default function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex-1 flex flex-col items-center py-3 text-[11px] transition-colors ${
-                isActive ? 'text-primary' : 'text-gray-500 hover:text-gray-400'
+              className={`flex-1 flex flex-col items-center pt-3 pb-2 text-[11px] transition-colors relative ${
+                isActive ? 'text-indigo-400' : 'text-gray-500 hover:text-gray-400'
               }`}
             >
-              <span className="mb-1">{item.icon(isActive)}</span>
-              <span className={isActive ? 'font-semibold' : ''}>{item.label}</span>
+              {/* Active top bar indicator */}
+              {isActive && (
+                <div
+                  className="absolute top-0 w-12 h-1 bg-indigo-500 rounded-b-full"
+                  style={{ boxShadow: '0 2px 15px rgba(99,102,241,0.6)' }}
+                />
+              )}
+
+              {/* Active glow background */}
+              {isActive && (
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(circle at 50% 30%, rgba(99,102,241,0.2) 0%, transparent 70%)',
+                  }}
+                />
+              )}
+
+              <span className="mb-1 relative z-10">{item.icon(isActive)}</span>
+              <span className={`relative z-10 ${isActive ? 'font-semibold' : ''}`}>{item.label}</span>
             </Link>
           );
         })}

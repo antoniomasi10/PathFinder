@@ -25,6 +25,10 @@ const config: Config = {
         warning: '#F59E0B',
         error: '#EF4444',
         border: '#334155',
+        'chat-card': '#1a1b2e',
+        'chat-bg-start': '#0a0b1e',
+        'chat-bg-mid': '#1a0b2e',
+        'chat-bg-peak': '#2a0b3e',
       },
       fontFamily: {
         display: ['var(--font-sora)', 'sans-serif'],

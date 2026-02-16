@@ -14,6 +14,18 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
+
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .bg-chat-gradient {
+    background: linear-gradient(135deg, #0a0b1e 0%, #1a0b2e 25%, #2a0b3e 50%, #1a0b2e 75%, #0a0b1e 100%);
+  }
 }
 
 @layer components {

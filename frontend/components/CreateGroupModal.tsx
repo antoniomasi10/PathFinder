@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '@/lib/api';
 
 interface Friend {
@@ -17,6 +17,39 @@ interface CreateGroupModalProps {
   onGroupCreated: () => void;
 }
 
+function compressImage(file: File, maxSize = 200): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        if (width > height) {
+          if (width > maxSize) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.onerror = reject;
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGroupModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -27,8 +60,9 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const hasUnsavedChanges = name.trim() !== '' || description.trim() !== '' || selectedFriends.size > 0;
+  const hasUnsavedChanges = name.trim() !== '' || description.trim() !== '' || selectedFriends.size > 0 || image !== null;
 
   const handleClose = useCallback((fromPopState = false) => {
     const close = () => {
@@ -67,7 +101,6 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
   useEffect(() => {
     if (isOpen) {
       loadFriends();
-      // Reset state
       setName('');
       setDescription('');
       setImage(null);
@@ -109,19 +142,45 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
     });
   };
 
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file);
+      setImage(compressed);
+    } catch {
+      setError('Errore nel caricamento dell\'immagine');
+    }
+    // Reset input so the same file can be re-selected
+    e.target.value = '';
+  };
+
   const filteredFriends = friends.filter((f) =>
     f.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const canCreate = name.trim() !== '' && selectedFriends.size >= 2;
+  const canCreate = selectedFriends.size >= 2;
+
+  const generateAutoName = (): string => {
+    const selectedNames = Array.from(selectedFriends)
+      .map((id) => friends.find((f) => f.id === id)?.name)
+      .filter(Boolean);
+    if (selectedNames.length <= 3) {
+      return `Gruppo con ${selectedNames.join(', ')}`;
+    }
+    return `Gruppo con ${selectedNames.slice(0, 2).join(', ')} e altri ${selectedNames.length - 2}`;
+  };
 
   const handleCreate = async () => {
     if (!canCreate) return;
     setCreating(true);
     setError('');
+
+    const groupName = name.trim() || generateAutoName();
+
     try {
       await api.post('/groups', {
-        name: name.trim(),
+        name: groupName,
         memberIds: Array.from(selectedFriends),
         description: description.trim() || undefined,
         image: image || undefined,
@@ -129,7 +188,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
       onGroupCreated();
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Errore nella creazione del gruppo');
+      setError(err.response?.data?.error || 'Impossibile creare il gruppo, riprova');
     } finally {
       setCreating(false);
     }
@@ -150,36 +209,65 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
-        {/* Group Info */}
+        {/* Group Photo + Name */}
         <div className="space-y-3">
           <div className="flex items-center gap-4">
-            <label className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center cursor-pointer shrink-0 hover:bg-primary/30 transition-colors">
+            {/* Image Picker */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-20 h-20 rounded-full shrink-0 flex flex-col items-center justify-center relative overflow-hidden transition-colors"
+              style={{
+                border: '2px dashed #6C63FF',
+                backgroundColor: image ? 'transparent' : 'rgba(108, 99, 255, 0.1)',
+              }}
+            >
               {image ? (
-                <span className="text-2xl font-bold text-primary">{name[0]?.toUpperCase() || 'G'}</span>
+                <>
+                  <img src={image} alt="Foto gruppo" className="w-full h-full object-cover" />
+                  {/* Edit overlay */}
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </div>
+                </>
               ) : (
-                <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+                <>
+                  <svg className="w-6 h-6" style={{ color: '#6C63FF' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span className="text-[10px] mt-0.5" style={{ color: '#6C63FF' }}>Aggiungi foto</span>
+                </>
               )}
-            </label>
-            <div className="flex-1">
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+
+            <div className="flex-1 space-y-2">
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Nome del gruppo *"
+                placeholder="Nome del gruppo"
                 className="input-field w-full"
                 maxLength={50}
+                style={{ backgroundColor: '#1C2333', borderRadius: '12px', padding: '12px' }}
+              />
+              <input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Descrizione (opzionale)"
+                className="input-field w-full"
+                maxLength={200}
+                style={{ backgroundColor: '#1C2333', borderRadius: '12px', padding: '12px' }}
               />
             </div>
           </div>
-          <input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Descrizione (opzionale)"
-            className="input-field w-full"
-            maxLength={200}
-          />
         </div>
 
         {/* Selected Friends Chips */}
@@ -191,10 +279,11 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
               return (
                 <span
                   key={id}
-                  className="inline-flex items-center gap-1.5 bg-primary/20 text-primary text-xs font-medium px-3 py-1.5 rounded-full"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full"
+                  style={{ backgroundColor: 'rgba(108, 99, 255, 0.2)', color: '#6C63FF' }}
                 >
                   {friend.name}
-                  <button onClick={() => removeFriend(id)} className="hover:text-primary/70">
+                  <button onClick={() => removeFriend(id)} className="hover:opacity-70">
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -226,7 +315,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
         </div>
 
         {/* Friends List */}
-        <div className="space-y-1">
+        <div className="space-y-1 pb-24">
           {loading ? (
             [1, 2, 3].map((i) => (
               <div key={i} className="flex items-center gap-3 p-3 animate-pulse">
@@ -261,9 +350,13 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
                       </p>
                     )}
                   </div>
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                    isSelected ? 'bg-primary border-primary' : 'border-border'
-                  }`}>
+                  <div
+                    className="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors"
+                    style={{
+                      backgroundColor: isSelected ? '#6C63FF' : 'transparent',
+                      borderColor: isSelected ? '#6C63FF' : '#334155',
+                    }}
+                  >
                     {isSelected && (
                       <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -284,14 +377,28 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
         </div>
       )}
 
-      {/* Footer */}
-      <div className="px-4 py-4 border-t border-border">
+      {/* Footer — Crea Gruppo button */}
+      <div className="px-4 pb-6 pt-4 border-t border-border">
         <button
           onClick={handleCreate}
           disabled={!canCreate || creating}
-          className="btn-primary w-full disabled:opacity-50"
+          className="w-full flex items-center justify-center font-medium text-white transition-colors"
+          style={{
+            height: '56px',
+            borderRadius: '12px',
+            fontSize: '16px',
+            backgroundColor: canCreate && !creating ? '#6C63FF' : '#4A4A6A',
+            cursor: canCreate && !creating ? 'pointer' : 'not-allowed',
+          }}
         >
-          {creating ? 'Creazione...' : 'Crea Gruppo'}
+          {creating ? (
+            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+          ) : (
+            'Crea Gruppo'
+          )}
         </button>
       </div>
     </div>

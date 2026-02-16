@@ -72,7 +72,9 @@ export default function NetworkingPage() {
   const [tab, setTab] = useState<'messaggi' | 'esplora'>('messaggi');
   const [unifiedConversations, setUnifiedConversations] = useState<UnifiedConversation[]>([]);
   const [selectedUser, setSelectedUser] = useState<{ id: string; name: string } | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<{ id: string; name: string; memberCount: number } | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [groupMessages, setGroupMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [posts, setPosts] = useState<Post[]>([]);
   const [newPost, setNewPost] = useState('');
@@ -182,6 +184,46 @@ export default function NetworkingPage() {
     } catch {}
   };
 
+  const loadGroupMessages = async (groupId: string) => {
+    try {
+      const { data } = await api.get(`/messages/group/${groupId}`);
+      setGroupMessages(data);
+    } catch {}
+  };
+
+  const sendGroupMessage = async () => {
+    if (!newMessage.trim() || !selectedGroup) return;
+    try {
+      const socket = getSocket();
+      socket.emit('send_group_message', { groupId: selectedGroup.id, content: newMessage });
+      setGroupMessages((prev) => [...prev, {
+        id: Date.now().toString(),
+        senderId: user!.id,
+        content: newMessage,
+        sentAt: new Date().toISOString(),
+        sender: { id: user!.id, name: user!.name },
+      }]);
+      setNewMessage('');
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (selectedGroup) {
+      loadGroupMessages(selectedGroup.id);
+      const socket = getSocket();
+      socket.on('new_group_message', (msg: Message & { groupId?: string }) => {
+        if (msg.groupId === selectedGroup.id) {
+          setGroupMessages((prev) => [...prev, msg]);
+        }
+      });
+      return () => { socket.off('new_group_message'); };
+    }
+  }, [selectedGroup]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [groupMessages]);
+
   const loadPosts = async () => {
     setLoading(true);
     try {
@@ -241,29 +283,61 @@ export default function NetworkingPage() {
 
   const handleConversationClick = (conv: UnifiedConversation) => {
     if (conv.type === 'direct' && conv.userId) {
+      setSelectedGroup(null);
       setSelectedUser({ id: conv.userId, name: conv.name });
+    } else if (conv.type === 'group' && conv.groupId) {
+      setSelectedUser(null);
+      setSelectedGroup({ id: conv.groupId, name: conv.name, memberCount: conv.memberCount || 0 });
     }
-    // Group chat view will be implemented later
   };
 
   return (
-    <div className="px-4 py-4">
-      <h2 className="text-2xl font-display font-bold mb-4">Networking</h2>
+    <div className="bg-chat-gradient min-h-screen -mx-4 -mt-4 px-6 pt-6 pb-24">
+
+      {/* Sub-header */}
+      <div className="flex justify-between items-center mb-2">
+        <div>
+          <h1 className="text-white font-medium text-lg">Chat</h1>
+          <p className="text-gray-500 text-sm">
+            {unifiedConversations.length} conversazion{unifiedConversations.length === 1 ? 'e' : 'i'}
+          </p>
+        </div>
+        <button
+          onClick={() => setShowCreateGroup(true)}
+          className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-full flex items-center justify-center transition-transform hover:scale-105"
+          style={{ boxShadow: '0 4px 20px rgba(99,102,241,0.5)' }}
+          title="Crea gruppo"
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Progress bar */}
+      <div
+        className="h-1 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 mb-4"
+        style={{ boxShadow: '0 0 20px rgba(99,102,241,0.5)' }}
+      />
 
       {/* Tabs */}
-      <div className="flex bg-card rounded-xl p-1 mb-4">
+      <div className="bg-[#1a1b2e] rounded-2xl p-1 mb-4 flex">
         <button
-          onClick={() => { setTab('messaggi'); setSelectedUser(null); }}
-          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
-            tab === 'messaggi' ? 'bg-primary text-white' : 'text-text-secondary'
+          onClick={() => { setTab('messaggi'); setSelectedUser(null); setSelectedGroup(null); }}
+          className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
+            tab === 'messaggi'
+              ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white'
+              : 'text-gray-500'
           }`}
         >
           Messaggi
         </button>
         <button
           onClick={() => setTab('esplora')}
-          className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
-            tab === 'esplora' ? 'bg-primary text-white' : 'text-text-secondary'
+          className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
+            tab === 'esplora'
+              ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white'
+              : 'text-gray-500'
           }`}
         >
           Esplora
@@ -271,123 +345,96 @@ export default function NetworkingPage() {
       </div>
 
       {/* Messages Tab - Conversation List */}
-      {tab === 'messaggi' && !selectedUser && (
-        <div className="space-y-2">
-          {/* Create Group Button */}
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-text-secondary">Conversazioni</span>
-            <button
-              onClick={() => setShowCreateGroup(true)}
-              className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center hover:bg-primary/90 transition-colors"
-              title="Crea gruppo"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
-          </div>
-
+      {tab === 'messaggi' && !selectedUser && !selectedGroup && (
+        <div>
           {loading ? (
             [1, 2, 3].map((i) => (
-              <div key={i} className="card animate-pulse flex items-center gap-3">
-                <div className="w-12 h-12 bg-border rounded-full" />
+              <div key={i} className="bg-[#1a1b2e] rounded-2xl p-4 mb-3 animate-pulse flex items-center gap-3">
+                <div className="w-14 h-14 bg-gray-700 rounded-full shrink-0" />
                 <div className="flex-1">
-                  <div className="h-4 bg-border rounded w-1/2 mb-1" />
-                  <div className="h-3 bg-border rounded w-3/4" />
+                  <div className="h-4 bg-gray-700 rounded w-1/2 mb-2" />
+                  <div className="h-3 bg-gray-700 rounded w-3/4" />
                 </div>
               </div>
             ))
           ) : unifiedConversations.length === 0 ? (
-            <div className="text-center py-12 text-text-muted">
+            <div className="text-center py-12 text-gray-500">
               <p>Nessun messaggio ancora</p>
               <p className="text-sm mt-1">Connettiti con altri studenti nella sezione Esplora!</p>
             </div>
           ) : (
             unifiedConversations.map((conv) => (
-              <div key={conv.id} className="relative">
-                <button
-                  onClick={() => handleConversationClick(conv)}
-                  className="card w-full text-left flex items-center gap-3 hover:bg-card-hover transition-colors"
-                >
-                  {/* Avatar */}
-                  <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center text-lg font-bold text-primary shrink-0 relative">
-                    {conv.type === 'group' ? (
-                      <>
-                        {conv.name[0]}
-                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-card rounded-full flex items-center justify-center">
-                          <svg className="w-3 h-3 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                          </svg>
-                        </div>
-                      </>
+              <button
+                key={conv.id}
+                onClick={() => handleConversationClick(conv)}
+                className="bg-[#1a1b2e] rounded-2xl p-4 mb-3 w-full text-left flex items-center gap-3 cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/10"
+                style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)' }}
+              >
+                {/* Avatar */}
+                <div className="relative shrink-0">
+                  <div
+                    className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center"
+                    style={{ boxShadow: '0 0 20px rgba(99, 102, 241, 0.3)' }}
+                  >
+                    {conv.avatar ? (
+                      <img src={conv.avatar} alt={conv.name} className="w-14 h-14 rounded-full object-cover" />
                     ) : (
-                      conv.name[0]
+                      <span className="text-white text-lg font-medium">{conv.name[0]}</span>
                     )}
                   </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        {conv.pinned && (
-                          <svg className="w-3 h-3 text-text-muted shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
-                          </svg>
-                        )}
-                        <span className="font-medium text-text-primary truncate">{conv.name}</span>
-                        {conv.type === 'group' && conv.memberCount && (
-                          <span className="text-[10px] text-text-muted shrink-0">({conv.memberCount})</span>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-text-muted shrink-0 ml-2">
-                        {new Date(conv.lastMessageAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                    <p className="text-sm text-text-secondary truncate">{conv.lastMessage}</p>
-                  </div>
-
                   {conv.unread > 0 && (
-                    <span className="w-5 h-5 bg-primary text-white text-[10px] rounded-full flex items-center justify-center shrink-0">
+                    <span
+                      className="absolute -top-1 -right-1 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center text-white text-xs font-medium"
+                      style={{ boxShadow: '0 0 15px rgba(99, 102, 241, 0.6)' }}
+                    >
                       {conv.unread}
                     </span>
                   )}
-                </button>
+                </div>
 
-                {/* Pin button */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); togglePin(conv.id); }}
-                  className="absolute top-2 right-2 p-1 text-text-muted hover:text-primary transition-colors opacity-0 group-hover:opacity-100"
-                  style={{ opacity: conv.pinned ? 1 : undefined }}
-                  title={conv.pinned ? 'Rimuovi pin' : 'Fissa in alto'}
-                >
-                  <svg className="w-3.5 h-3.5" fill={conv.pinned ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z" />
-                  </svg>
-                </button>
-              </div>
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <div className="flex items-center min-w-0">
+                      <span className="text-white font-medium truncate">{conv.name}</span>
+                      {conv.type === 'group' && (
+                        <span className="ml-2 text-xs text-indigo-400">gruppo</span>
+                      )}
+                    </div>
+                    <span className="text-gray-500 text-xs shrink-0 ml-2">
+                      {new Date(conv.lastMessageAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <p className="text-gray-400 text-sm truncate">{conv.lastMessage}</p>
+                </div>
+              </button>
             ))
           )}
         </div>
       )}
 
-      {/* Chat View */}
+      {/* Direct Chat View */}
       {tab === 'messaggi' && selectedUser && (
         <div className="flex flex-col" style={{ height: 'calc(100vh - 240px)' }}>
           <button
             onClick={() => setSelectedUser(null)}
-            className="flex items-center gap-2 text-text-secondary mb-3 text-sm"
+            className="flex items-center gap-2 text-gray-400 hover:text-white mb-3 text-sm transition-colors"
           >
-            ← {selectedUser.name}
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            {selectedUser.name}
           </button>
-          <div className="flex-1 overflow-y-auto space-y-2 mb-3">
+          <div className="flex-1 overflow-y-auto space-y-2 mb-3 scrollbar-hide">
             {messages.map((msg) => (
               <div
                 key={msg.id}
                 className={`flex ${msg.senderId === user?.id ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm ${
+                <div className={`max-w-[75%] px-4 py-2.5 text-sm ${
                   msg.senderId === user?.id
-                    ? 'bg-primary text-white rounded-br-md'
-                    : 'bg-card text-text-primary rounded-bl-md'
+                    ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl rounded-br-md'
+                    : 'bg-[#1a1b2e] text-white rounded-2xl rounded-bl-md'
                 }`}>
                   {msg.content}
                 </div>
@@ -401,9 +448,69 @@ export default function NetworkingPage() {
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
               placeholder="Scrivi un messaggio..."
-              className="input-field flex-1"
+              className="flex-1 bg-[#1a1b2e] text-white border border-indigo-900/30 focus:border-indigo-500 rounded-2xl px-4 py-3 placeholder:text-gray-500 focus:outline-none transition-colors"
             />
-            <button onClick={sendMessage} className="btn-primary px-4">
+            <button
+              onClick={sendMessage}
+              className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white shrink-0 hover:scale-105 transition-transform"
+              style={{ boxShadow: '0 4px 20px rgba(99,102,241,0.5)' }}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Group Chat View */}
+      {tab === 'messaggi' && selectedGroup && !selectedUser && (
+        <div className="flex flex-col" style={{ height: 'calc(100vh - 240px)' }}>
+          <button
+            onClick={() => setSelectedGroup(null)}
+            className="flex items-center gap-2 text-gray-400 hover:text-white mb-3 text-sm transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            {selectedGroup.name}
+            <span className="text-gray-500">({selectedGroup.memberCount} membri)</span>
+          </button>
+          <div className="flex-1 overflow-y-auto space-y-2 mb-3 scrollbar-hide">
+            {groupMessages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex ${msg.senderId === user?.id ? 'justify-end' : 'justify-start'}`}
+              >
+                <div className={`max-w-[75%]`}>
+                  {msg.senderId !== user?.id && (
+                    <p className="text-[10px] text-indigo-400 mb-0.5 ml-1">{msg.sender.name}</p>
+                  )}
+                  <div className={`px-4 py-2.5 text-sm ${
+                    msg.senderId === user?.id
+                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl rounded-br-md'
+                      : 'bg-[#1a1b2e] text-white rounded-2xl rounded-bl-md'
+                  }`}>
+                    {msg.content}
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+          <div className="flex gap-2">
+            <input
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && sendGroupMessage()}
+              placeholder="Scrivi un messaggio..."
+              className="flex-1 bg-[#1a1b2e] text-white border border-indigo-900/30 focus:border-indigo-500 rounded-2xl px-4 py-3 placeholder:text-gray-500 focus:outline-none transition-colors"
+            />
+            <button
+              onClick={sendGroupMessage}
+              className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white shrink-0 hover:scale-105 transition-transform"
+              style={{ boxShadow: '0 4px 20px rgba(99,102,241,0.5)' }}
+            >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
