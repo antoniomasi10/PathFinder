@@ -10,6 +10,8 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        'onboarding-accent': '#6366f1',
+        'onboarding-accent-end': '#8b5cf6',
         primary: '#4F46E5',
         secondary: '#7C3AED',
         accent: '#06B6D4',

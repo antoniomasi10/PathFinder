@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import OnboardingFlow from '@/components/OnboardingFlow';
-import type { ProfileData } from '@/components/OnboardingFlow';
+import OnboardingFlow from '@/components/onboarding';
+import type { ProfileData } from '@/components/onboarding';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 

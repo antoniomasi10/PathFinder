@@ -8,6 +8,14 @@
   }
 }
 
+@layer utilities {
+  .text-gradient-accent {
+    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
 @layer components {
   .btn-primary {
     @apply bg-primary hover:bg-primary/90 text-white font-medium py-2.5 px-5 rounded-2xl transition-all duration-200;
