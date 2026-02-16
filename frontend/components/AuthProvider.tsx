@@ -34,6 +34,8 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         });
         if (!data.profileCompleted && pathname !== '/onboarding') {
           router.replace('/onboarding');
+        } else if (data.profileCompleted && pathname === '/onboarding') {
+          router.replace('/home');
         }
       })
       .catch(() => {
