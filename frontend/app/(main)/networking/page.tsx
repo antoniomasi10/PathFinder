@@ -5,6 +5,8 @@ import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import CreateGroupModal from '@/components/CreateGroupModal';
+import GroupOptionsModal from '@/components/GroupOptionsModal';
+import ChatHeader from '@/components/ChatHeader';
 
 interface Conversation {
   user: { id: string; name: string; avatar?: string };
@@ -71,8 +73,8 @@ export default function NetworkingPage() {
   const { user } = useAuth();
   const [tab, setTab] = useState<'messaggi' | 'esplora'>('messaggi');
   const [unifiedConversations, setUnifiedConversations] = useState<UnifiedConversation[]>([]);
-  const [selectedUser, setSelectedUser] = useState<{ id: string; name: string } | null>(null);
-  const [selectedGroup, setSelectedGroup] = useState<{ id: string; name: string; memberCount: number } | null>(null);
+  const [selectedUser, setSelectedUser] = useState<{ id: string; name: string; avatar?: string; university?: string } | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<{ id: string; name: string; memberCount: number; image?: string } | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [groupMessages, setGroupMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -80,6 +82,8 @@ export default function NetworkingPage() {
   const [newPost, setNewPost] = useState('');
   const [loading, setLoading] = useState(true);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showGroupOptions, setShowGroupOptions] = useState(false);
+  const [groupDetails, setGroupDetails] = useState<any>(null);
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -156,6 +160,18 @@ export default function NetworkingPage() {
       return () => { socket.off('new_message'); };
     }
   }, [selectedUser]);
+
+  useEffect(() => {
+    if (selectedUser && !selectedUser.university) {
+      api.get(`/profile/${selectedUser.id}`)
+        .then(({ data }) => {
+          if (data.university?.name) {
+            setSelectedUser(prev => prev ? { ...prev, university: data.university.name } : prev);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [selectedUser?.id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -284,65 +300,100 @@ export default function NetworkingPage() {
   const handleConversationClick = (conv: UnifiedConversation) => {
     if (conv.type === 'direct' && conv.userId) {
       setSelectedGroup(null);
-      setSelectedUser({ id: conv.userId, name: conv.name });
+      setSelectedUser({ id: conv.userId, name: conv.name, avatar: conv.avatar });
     } else if (conv.type === 'group' && conv.groupId) {
       setSelectedUser(null);
-      setSelectedGroup({ id: conv.groupId, name: conv.name, memberCount: conv.memberCount || 0 });
+      setSelectedGroup({ id: conv.groupId, name: conv.name, memberCount: conv.memberCount || 0, image: conv.avatar });
     }
+  };
+
+  const openGroupOptions = async () => {
+    if (!selectedGroup) return;
+    try {
+      const { data } = await api.get(`/groups/${selectedGroup.id}`);
+      setGroupDetails(data);
+      setShowGroupOptions(true);
+    } catch {}
+  };
+
+  const handleGroupUpdated = async () => {
+    setShowGroupOptions(false);
+    setGroupDetails(null);
+    // Reload group details + conversation list
+    if (selectedGroup) {
+      try {
+        const { data } = await api.get(`/groups/${selectedGroup.id}`);
+        setSelectedGroup({ id: data.id, name: data.name, memberCount: data.members.length, image: data.image });
+        setGroupDetails(data);
+        setShowGroupOptions(true);
+      } catch {}
+    }
+    loadConversations();
+  };
+
+  const handleGroupLeft = () => {
+    setShowGroupOptions(false);
+    setGroupDetails(null);
+    setSelectedGroup(null);
+    loadConversations();
   };
 
   return (
     <div className="bg-chat-gradient min-h-screen -mx-4 -mt-4 px-6 pt-6 pb-24">
 
-      {/* Sub-header */}
-      <div className="flex justify-between items-center mb-2">
-        <div>
-          <h1 className="text-white font-medium text-lg">Chat</h1>
-          <p className="text-gray-500 text-sm">
-            {unifiedConversations.length} conversazion{unifiedConversations.length === 1 ? 'e' : 'i'}
-          </p>
-        </div>
-        <button
-          onClick={() => setShowCreateGroup(true)}
-          className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-full flex items-center justify-center transition-transform hover:scale-105"
-          style={{ boxShadow: '0 4px 20px rgba(99,102,241,0.5)' }}
-          title="Crea gruppo"
-        >
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-          </svg>
-        </button>
-      </div>
+      {!selectedUser && !selectedGroup && (
+        <>
+          {/* Sub-header */}
+          <div className="flex justify-between items-center mb-2">
+            <div>
+              <h1 className="text-white font-medium text-lg">Chat</h1>
+              <p className="text-gray-500 text-sm">
+                {unifiedConversations.length} conversazion{unifiedConversations.length === 1 ? 'e' : 'i'}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowCreateGroup(true)}
+              className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-full flex items-center justify-center transition-transform hover:scale-105"
+              style={{ boxShadow: '0 4px 20px rgba(99,102,241,0.5)' }}
+              title="Crea gruppo"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          </div>
 
-      {/* Progress bar */}
-      <div
-        className="h-1 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 mb-4"
-        style={{ boxShadow: '0 0 20px rgba(99,102,241,0.5)' }}
-      />
+          {/* Progress bar */}
+          <div
+            className="h-1 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 mb-4"
+            style={{ boxShadow: '0 0 20px rgba(99,102,241,0.5)' }}
+          />
 
-      {/* Tabs */}
-      <div className="bg-[#1a1b2e] rounded-2xl p-1 mb-4 flex">
-        <button
-          onClick={() => { setTab('messaggi'); setSelectedUser(null); setSelectedGroup(null); }}
-          className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
-            tab === 'messaggi'
-              ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white'
-              : 'text-gray-500'
-          }`}
-        >
-          Messaggi
-        </button>
-        <button
-          onClick={() => setTab('esplora')}
-          className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
-            tab === 'esplora'
-              ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white'
-              : 'text-gray-500'
-          }`}
-        >
-          Esplora
-        </button>
-      </div>
+          {/* Tabs */}
+          <div className="bg-[#1a1b2e] rounded-2xl p-1 mb-4 flex">
+            <button
+              onClick={() => { setTab('messaggi'); setSelectedUser(null); setSelectedGroup(null); }}
+              className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
+                tab === 'messaggi'
+                  ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white'
+                  : 'text-gray-500'
+              }`}
+            >
+              Messaggi
+            </button>
+            <button
+              onClick={() => setTab('esplora')}
+              className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
+                tab === 'esplora'
+                  ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white'
+                  : 'text-gray-500'
+              }`}
+            >
+              Esplora
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Messages Tab - Conversation List */}
       {tab === 'messaggi' && !selectedUser && !selectedGroup && (
@@ -416,15 +467,12 @@ export default function NetworkingPage() {
       {/* Direct Chat View */}
       {tab === 'messaggi' && selectedUser && (
         <div className="flex flex-col" style={{ height: 'calc(100vh - 240px)' }}>
-          <button
-            onClick={() => setSelectedUser(null)}
-            className="flex items-center gap-2 text-gray-400 hover:text-white mb-3 text-sm transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            {selectedUser.name}
-          </button>
+          <ChatHeader
+            type="individual"
+            user={{ id: selectedUser.id, name: selectedUser.name, avatar: selectedUser.avatar, university: selectedUser.university }}
+            onBack={() => setSelectedUser(null)}
+            onPress={() => {}}
+          />
           <div className="flex-1 overflow-y-auto space-y-2 mb-3 scrollbar-hide">
             {messages.map((msg) => (
               <div
@@ -466,16 +514,12 @@ export default function NetworkingPage() {
       {/* Group Chat View */}
       {tab === 'messaggi' && selectedGroup && !selectedUser && (
         <div className="flex flex-col" style={{ height: 'calc(100vh - 240px)' }}>
-          <button
-            onClick={() => setSelectedGroup(null)}
-            className="flex items-center gap-2 text-gray-400 hover:text-white mb-3 text-sm transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            {selectedGroup.name}
-            <span className="text-gray-500">({selectedGroup.memberCount} membri)</span>
-          </button>
+          <ChatHeader
+            type="group"
+            group={{ id: selectedGroup.id, name: selectedGroup.name, image: selectedGroup.image }}
+            onBack={() => setSelectedGroup(null)}
+            onPress={openGroupOptions}
+          />
           <div className="flex-1 overflow-y-auto space-y-2 mb-3 scrollbar-hide">
             {groupMessages.map((msg) => (
               <div
@@ -597,6 +641,18 @@ export default function NetworkingPage() {
         onClose={() => setShowCreateGroup(false)}
         onGroupCreated={loadConversations}
       />
+
+      {/* Group Options Modal */}
+      {groupDetails && (
+        <GroupOptionsModal
+          isOpen={showGroupOptions}
+          onClose={() => { setShowGroupOptions(false); setGroupDetails(null); }}
+          group={groupDetails}
+          currentUserId={user?.id || ''}
+          onGroupUpdated={handleGroupUpdated}
+          onGroupLeft={handleGroupLeft}
+        />
+      )}
     </div>
   );
 }
