@@ -75,4 +75,62 @@ router.post('/:groupId/members', authMiddleware, async (req: Request, res: Respo
   }
 });
 
+// Update group photo
+router.put('/:groupId/photo', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const group = await groupService.updateGroupPhoto(
+      req.params.groupId,
+      req.user!.userId,
+      req.body.image,
+    );
+    res.json(group);
+  } catch (err: any) {
+    const status = err.status || 400;
+    res.status(status).json({ error: err.message });
+  }
+});
+
+// Remove member from group
+router.delete('/:groupId/members/:userId', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const result = await groupService.removeMember(
+      req.params.groupId,
+      req.user!.userId,
+      req.params.userId,
+    );
+    res.json(result);
+  } catch (err: any) {
+    const status = err.status || 400;
+    res.status(status).json({ error: err.message });
+  }
+});
+
+// Leave group
+router.post('/:groupId/leave', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const result = await groupService.leaveGroup(
+      req.params.groupId,
+      req.user!.userId,
+    );
+    res.json(result);
+  } catch (err: any) {
+    const status = err.status || 400;
+    res.status(status).json({ error: err.message });
+  }
+});
+
+// Delete group
+router.delete('/:groupId', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const result = await groupService.deleteGroup(
+      req.params.groupId,
+      req.user!.userId,
+    );
+    res.json(result);
+  } catch (err: any) {
+    const status = err.status || 400;
+    res.status(status).json({ error: err.message });
+  }
+});
+
 export default router;
