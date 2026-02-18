@@ -357,11 +357,18 @@ async function main() {
   ]);
 
   // ============ FRIEND CONNECTIONS ============
+  // All 10 pairs among 5 users, all ACCEPTED
   await Promise.all([
     prisma.friendRequest.create({ data: { fromUserId: user1.id, toUserId: user2.id, status: 'ACCEPTED' } }),
     prisma.friendRequest.create({ data: { fromUserId: user1.id, toUserId: user3.id, status: 'ACCEPTED' } }),
+    prisma.friendRequest.create({ data: { fromUserId: user1.id, toUserId: user4.id, status: 'ACCEPTED' } }),
+    prisma.friendRequest.create({ data: { fromUserId: user1.id, toUserId: user5.id, status: 'ACCEPTED' } }),
+    prisma.friendRequest.create({ data: { fromUserId: user2.id, toUserId: user3.id, status: 'ACCEPTED' } }),
     prisma.friendRequest.create({ data: { fromUserId: user2.id, toUserId: user4.id, status: 'ACCEPTED' } }),
-    prisma.friendRequest.create({ data: { fromUserId: user3.id, toUserId: user5.id, status: 'PENDING' } }),
+    prisma.friendRequest.create({ data: { fromUserId: user2.id, toUserId: user5.id, status: 'ACCEPTED' } }),
+    prisma.friendRequest.create({ data: { fromUserId: user3.id, toUserId: user4.id, status: 'ACCEPTED' } }),
+    prisma.friendRequest.create({ data: { fromUserId: user3.id, toUserId: user5.id, status: 'ACCEPTED' } }),
+    prisma.friendRequest.create({ data: { fromUserId: user4.id, toUserId: user5.id, status: 'ACCEPTED' } }),
   ]);
 
   // ============ SAMPLE MESSAGES ============
