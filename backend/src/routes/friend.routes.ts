@@ -117,7 +117,41 @@ router.get('/status/:userId', authMiddleware, async (req: Request, res: Response
         ],
       },
     });
-    res.json({ status: request?.status || null, requestId: request?.id || null });
+    res.json({ status: request?.status || null, requestId: request?.id || null, fromUserId: request?.fromUserId || null });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Batch check friendship status for multiple users
+router.post('/status/batch', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { userIds } = req.body;
+    const validIds = (Array.isArray(userIds) ? userIds : [])
+      .filter((id: any) => typeof id === 'string')
+      .slice(0, 50);
+
+    if (validIds.length === 0) {
+      res.json({});
+      return;
+    }
+
+    const requests = await prisma.friendRequest.findMany({
+      where: {
+        OR: [
+          { fromUserId: req.user!.userId, toUserId: { in: validIds } },
+          { fromUserId: { in: validIds }, toUserId: req.user!.userId },
+        ],
+      },
+    });
+
+    const statusMap: Record<string, { status: string; requestId: string; fromUserId: string }> = {};
+    for (const r of requests) {
+      const otherUserId = r.fromUserId === req.user!.userId ? r.toUserId : r.fromUserId;
+      statusMap[otherUserId] = { status: r.status, requestId: r.id, fromUserId: r.fromUserId };
+    }
+
+    res.json(statusMap);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

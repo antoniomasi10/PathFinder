@@ -13,9 +13,9 @@ export async function getPosts(page: number = 1, limit: number = 20) {
   });
 }
 
-export async function createPost(authorId: string, content: string) {
+export async function createPost(authorId: string, content: string, images: string[] = []) {
   return prisma.post.create({
-    data: { authorId, content },
+    data: { authorId, content, images },
     include: {
       author: { select: { id: true, name: true, avatar: true, courseOfStudy: true, university: { select: { name: true } } } },
       _count: { select: { likes: true, comments: true } },

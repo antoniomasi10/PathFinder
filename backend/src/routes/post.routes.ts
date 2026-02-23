@@ -16,7 +16,11 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
 router.post('/', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const post = await postService.createPost(req.user!.userId, req.body.content);
+    const { content, images } = req.body;
+    const validImages = Array.isArray(images)
+      ? images.filter((img: any) => typeof img === 'string' && img.startsWith('data:image/')).slice(0, 5)
+      : [];
+    const post = await postService.createPost(req.user!.userId, content, validImages);
     res.status(201).json(post);
   } catch (err: any) {
     res.status(400).json({ error: err.message });

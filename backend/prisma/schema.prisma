@@ -217,6 +217,7 @@ model Post {
   authorId  String
   author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
   content   String
+  images    String[]      @default([])
   createdAt DateTime      @default(now())
   likes     PostLike[]
   comments  PostComment[]

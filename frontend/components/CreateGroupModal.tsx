@@ -378,7 +378,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
       )}
 
       {/* Footer — Crea Gruppo button */}
-      <div className="px-4 pb-6 pt-4 border-t border-border">
+      <div className="px-4 pb-[calc(env(safe-area-inset-bottom,0px)+80px)] pt-4 border-t border-border">
         <button
           onClick={handleCreate}
           disabled={!canCreate || creating}

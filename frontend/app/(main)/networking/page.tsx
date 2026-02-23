@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, ChangeEvent } from 'react';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import CreateGroupModal from '@/components/CreateGroupModal';
 import GroupOptionsModal from '@/components/GroupOptionsModal';
 import ChatHeader from '@/components/ChatHeader';
+import ActionMenu from '@/components/ActionMenu';
+import NewChatModal from '@/components/NewChatModal';
+import ImageLightbox from '@/components/ImageLightbox';
 
 interface Conversation {
   user: { id: string; name: string; avatar?: string };
@@ -50,6 +53,7 @@ interface Message {
 interface Post {
   id: string;
   content: string;
+  images?: string[];
   createdAt: string;
   author: { id: string; name: string; avatar?: string; courseOfStudy?: string; university?: { name: string } };
   _count: { likes: number; comments: number };
@@ -82,10 +86,58 @@ export default function NetworkingPage() {
   const [newPost, setNewPost] = useState('');
   const [loading, setLoading] = useState(true);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const [showNewChat, setShowNewChat] = useState(false);
   const [showGroupOptions, setShowGroupOptions] = useState(false);
   const [groupDetails, setGroupDetails] = useState<any>(null);
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [postImages, setPostImages] = useState<string[]>([]);
+  const postFileInputRef = useRef<HTMLInputElement>(null);
+  const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
+  const [connectionStatuses, setConnectionStatuses] = useState<
+    Record<string, { status: string | null; requestId: string | null; fromUserId: string | null }>
+  >({});
+
+  function compressImage(file: File, maxSize = 800): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let { width, height } = img;
+          if (width > height) {
+            if (width > maxSize) { height = (height * maxSize) / width; width = maxSize; }
+          } else {
+            if (height > maxSize) { width = (width * maxSize) / height; height = maxSize; }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d')!;
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        };
+        img.onerror = reject;
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  const handlePostImageSelect = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const remaining = 5 - postImages.length;
+    const toProcess = files.slice(0, remaining);
+    const compressed = await Promise.all(toProcess.map((f) => compressImage(f)));
+    setPostImages((prev) => [...prev, ...compressed]);
+    e.target.value = '';
+  };
+
+  const removePostImage = (index: number) => {
+    setPostImages((prev) => prev.filter((_, i) => i !== index));
+  };
 
   useEffect(() => {
     setPinnedIds(getPinnedIds());
@@ -173,8 +225,43 @@ export default function NetworkingPage() {
     }
   }, [selectedUser?.id]);
 
+  // Lock page scroll when in chat mode so scrollIntoView only affects the messages container
+  useEffect(() => {
+    if (selectedUser || selectedGroup) {
+      const scrollY = window.scrollY;
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      return () => {
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [selectedUser, selectedGroup]);
+
+  // Reset page scroll when mobile keyboard opens/closes
+  useEffect(() => {
+    if (!(selectedUser || selectedGroup)) return;
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const handleResize = () => {
+      window.scrollTo(0, 0);
+    };
+
+    viewport.addEventListener('resize', handleResize);
+    return () => viewport.removeEventListener('resize', handleResize);
+  }, [selectedUser, selectedGroup]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    requestAnimationFrame(() => window.scrollTo(0, 0));
   }, [messages]);
 
   const loadMessages = async (userId: string) => {
@@ -238,6 +325,7 @@ export default function NetworkingPage() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    requestAnimationFrame(() => window.scrollTo(0, 0));
   }, [groupMessages]);
 
   const loadPosts = async () => {
@@ -245,15 +333,21 @@ export default function NetworkingPage() {
     try {
       const { data } = await api.get('/posts');
       setPosts(data);
+      const authorIds = [...new Set(data.map((p: Post) => p.author.id).filter((id: string) => id !== user?.id))] as string[];
+      if (authorIds.length > 0) {
+        const { data: statuses } = await api.post('/friends/status/batch', { userIds: authorIds });
+        setConnectionStatuses(statuses);
+      }
     } catch {} finally { setLoading(false); }
   };
 
   const submitPost = async () => {
-    if (!newPost.trim()) return;
+    if (!newPost.trim() && postImages.length === 0) return;
     try {
-      const { data } = await api.post('/posts', { content: newPost });
+      const { data } = await api.post('/posts', { content: newPost, images: postImages });
       setPosts((prev) => [data, ...prev]);
       setNewPost('');
+      setPostImages([]);
     } catch {}
   };
 
@@ -273,8 +367,13 @@ export default function NetworkingPage() {
   const sendFriendRequest = async (toUserId: string) => {
     try {
       await api.post('/friends/request', { toUserId });
+      setConnectionStatuses(prev => ({
+        ...prev,
+        [toUserId]: { status: 'PENDING', requestId: null, fromUserId: user!.id },
+      }));
     } catch {}
   };
+
 
   const togglePin = (convId: string) => {
     setPinnedIds((prev) => {
@@ -339,7 +438,9 @@ export default function NetworkingPage() {
   };
 
   return (
-    <div className="bg-chat-gradient min-h-screen -mx-4 -mt-4 px-6 pt-6 pb-24">
+    <div className={`bg-chat-gradient -mx-4 -mt-4 px-6 pt-6 ${
+      selectedUser || selectedGroup ? 'h-[calc(100dvh-116px)] flex flex-col overflow-hidden pb-2 -mb-20' : 'min-h-screen pb-24'
+    }`}>
 
       {!selectedUser && !selectedGroup && (
         <>
@@ -352,7 +453,7 @@ export default function NetworkingPage() {
               </p>
             </div>
             <button
-              onClick={() => setShowCreateGroup(true)}
+              onClick={() => setShowActionMenu(true)}
               className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-full flex items-center justify-center transition-transform hover:scale-105"
               style={{ boxShadow: '0 4px 20px rgba(99,102,241,0.5)' }}
               title="Crea gruppo"
@@ -466,11 +567,11 @@ export default function NetworkingPage() {
 
       {/* Direct Chat View */}
       {tab === 'messaggi' && selectedUser && (
-        <div className="flex flex-col" style={{ height: 'calc(100vh - 240px)' }}>
+        <div className="flex flex-col flex-1 min-h-0">
           <ChatHeader
             type="individual"
             user={{ id: selectedUser.id, name: selectedUser.name, avatar: selectedUser.avatar, university: selectedUser.university }}
-            onBack={() => setSelectedUser(null)}
+            onBack={() => { setSelectedUser(null); loadConversations(); }}
             onPress={() => {}}
           />
           <div className="flex-1 overflow-y-auto space-y-2 mb-3 scrollbar-hide">
@@ -513,11 +614,11 @@ export default function NetworkingPage() {
 
       {/* Group Chat View */}
       {tab === 'messaggi' && selectedGroup && !selectedUser && (
-        <div className="flex flex-col" style={{ height: 'calc(100vh - 240px)' }}>
+        <div className="flex flex-col flex-1 min-h-0">
           <ChatHeader
             type="group"
             group={{ id: selectedGroup.id, name: selectedGroup.name, image: selectedGroup.image }}
-            onBack={() => setSelectedGroup(null)}
+            onBack={() => { setSelectedGroup(null); loadConversations(); }}
             onPress={openGroupOptions}
           />
           <div className="flex-1 overflow-y-auto space-y-2 mb-3 scrollbar-hide">
@@ -575,9 +676,53 @@ export default function NetworkingPage() {
               className="input-field resize-none mb-3"
               rows={3}
             />
-            <button onClick={submitPost} disabled={!newPost.trim()} className="btn-primary text-sm disabled:opacity-50">
-              Pubblica
-            </button>
+
+            {/* Image upload section */}
+            {postImages.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto mb-3 pb-1 scrollbar-hide">
+                {postImages.map((img, i) => (
+                  <div key={i} className="relative shrink-0">
+                    <img src={img} alt="" className="w-[72px] h-[72px] rounded-xl object-cover" />
+                    <button
+                      onClick={() => removePostImage(i)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white"
+                    >
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => postFileInputRef.current?.click()}
+                disabled={postImages.length >= 5}
+                className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Aggiungi foto ({postImages.length}/5)
+              </button>
+              <input
+                ref={postFileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handlePostImageSelect}
+                className="hidden"
+              />
+              <button
+                onClick={submitPost}
+                disabled={!newPost.trim() && postImages.length === 0}
+                className="btn-primary text-sm disabled:opacity-50"
+              >
+                Pubblica
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -605,26 +750,110 @@ export default function NetworkingPage() {
                       </p>
                     </div>
                   </div>
-                  {post.author.id !== user?.id && (
-                    <button
-                      onClick={() => sendFriendRequest(post.author.id)}
-                      className="text-xs text-primary border border-primary/30 px-3 py-1 rounded-full hover:bg-primary/10 transition-colors"
-                    >
-                      Connetti
-                    </button>
-                  )}
+                  {post.author.id !== user?.id && (() => {
+                    const cs = connectionStatuses[post.author.id];
+                    const status = cs?.status || null;
+
+                    if (status === 'ACCEPTED') {
+                      return (
+                        <span className="text-xs text-green-400 border border-green-400/30 px-3 py-1 rounded-full flex items-center gap-1">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Connessi
+                        </span>
+                      );
+                    }
+                    if (status === 'PENDING') {
+                      return null;
+                    }
+                    return (
+                      <button
+                        onClick={() => sendFriendRequest(post.author.id)}
+                        className="text-xs text-primary border border-primary/30 px-3 py-1 rounded-full hover:bg-primary/10 transition-colors"
+                      >
+                        Connetti
+                      </button>
+                    );
+                  })()}
                 </div>
 
-                <p className="text-sm text-text-primary mb-3 whitespace-pre-wrap">{post.content}</p>
+                {post.content && <p className="text-sm text-text-primary mb-3 whitespace-pre-wrap">{post.content}</p>}
+
+                {/* Post images grid */}
+                {post.images && post.images.length > 0 && (
+                  <div className={`mb-3 rounded-xl overflow-hidden ${
+                    post.images.length === 1 ? '' :
+                    post.images.length === 2 ? 'grid grid-cols-2 gap-1' :
+                    post.images.length === 4 ? 'grid grid-cols-2 gap-1' :
+                    ''
+                  }`}>
+                    {post.images.length === 1 && (
+                      <button onClick={() => setLightbox({ images: post.images!, index: 0 })} className="w-full">
+                        <img src={post.images[0]} alt="" className="w-full h-48 object-cover rounded-xl" />
+                      </button>
+                    )}
+                    {post.images.length === 2 && post.images.map((img, i) => (
+                      <button key={i} onClick={() => setLightbox({ images: post.images!, index: i })}>
+                        <img src={img} alt="" className="w-full h-44 object-cover" />
+                      </button>
+                    ))}
+                    {post.images.length === 3 && (
+                      <div className="space-y-1">
+                        <button onClick={() => setLightbox({ images: post.images!, index: 0 })} className="w-full">
+                          <img src={post.images[0]} alt="" className="w-full h-44 object-cover rounded-t-xl" />
+                        </button>
+                        <div className="grid grid-cols-2 gap-1">
+                          {post.images.slice(1).map((img, i) => (
+                            <button key={i} onClick={() => setLightbox({ images: post.images!, index: i + 1 })}>
+                              <img src={img} alt="" className="w-full h-28 object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {post.images.length === 4 && post.images.map((img, i) => (
+                      <button key={i} onClick={() => setLightbox({ images: post.images!, index: i })}>
+                        <img src={img} alt="" className="w-full h-36 object-cover" />
+                      </button>
+                    ))}
+                    {post.images.length === 5 && (
+                      <div className="space-y-1">
+                        <div className="grid grid-cols-2 gap-1">
+                          {post.images.slice(0, 2).map((img, i) => (
+                            <button key={i} onClick={() => setLightbox({ images: post.images!, index: i })}>
+                              <img src={img} alt="" className="w-full h-36 object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                          {post.images.slice(2).map((img, i) => (
+                            <button key={i} onClick={() => setLightbox({ images: post.images!, index: i + 2 })}>
+                              <img src={img} alt="" className="w-full h-28 object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="flex items-center gap-4 text-text-muted text-sm">
                   <button
                     onClick={() => toggleLike(post.id, !!post.liked)}
-                    className={`flex items-center gap-1 transition-colors ${post.liked ? 'text-error' : 'hover:text-error'}`}
+                    className={`flex items-center gap-1.5 transition-colors ${post.liked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
                   >
-                    {post.liked ? '❤️' : '🤍'} {post._count.likes}
+                    <svg className="w-5 h-5" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill={post.liked ? 'currentColor' : 'none'}>
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                    </svg>
+                    <span className="text-sm">{post._count.likes}</span>
                   </button>
-                  <span className="flex items-center gap-1">💬 {post._count.comments}</span>
+                  <span className="flex items-center gap-1.5 text-gray-400">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                    <span className="text-sm">{post._count.comments}</span>
+                  </span>
                   <span className="text-[10px] ml-auto">
                     {new Date(post.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
                   </span>
@@ -642,6 +871,25 @@ export default function NetworkingPage() {
         onGroupCreated={loadConversations}
       />
 
+      {/* Action Menu */}
+      <ActionMenu
+        isOpen={showActionMenu}
+        onClose={() => setShowActionMenu(false)}
+        onNewChat={() => setShowNewChat(true)}
+        onCreateGroup={() => setShowCreateGroup(true)}
+      />
+
+      {/* New Chat Modal */}
+      <NewChatModal
+        isOpen={showNewChat}
+        onClose={() => setShowNewChat(false)}
+        onUserSelected={(u) => {
+          setShowNewChat(false);
+          setSelectedGroup(null);
+          setSelectedUser({ id: u.id, name: u.name, avatar: u.avatar });
+        }}
+      />
+
       {/* Group Options Modal */}
       {groupDetails && (
         <GroupOptionsModal
@@ -651,6 +899,15 @@ export default function NetworkingPage() {
           currentUserId={user?.id || ''}
           onGroupUpdated={handleGroupUpdated}
           onGroupLeft={handleGroupLeft}
+        />
+      )}
+
+      {/* Image Lightbox */}
+      {lightbox && (
+        <ImageLightbox
+          images={lightbox.images}
+          initialIndex={lightbox.index}
+          onClose={() => setLightbox(null)}
         />
       )}
     </div>
