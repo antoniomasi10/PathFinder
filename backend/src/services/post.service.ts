@@ -1,26 +1,33 @@
 import prisma from '../lib/prisma';
 
-export async function getPosts(page: number = 1, limit: number = 20) {
+export async function getPosts(page: number = 1, limit: number = 20, currentUserId?: string) {
   const skip = (page - 1) * limit;
-  return prisma.post.findMany({
+  const posts = await prisma.post.findMany({
     skip,
     take: limit,
     orderBy: { createdAt: 'desc' },
     include: {
       author: { select: { id: true, name: true, avatar: true, courseOfStudy: true, university: { select: { name: true } } } },
       _count: { select: { likes: true, comments: true } },
+      likes: currentUserId ? { where: { userId: currentUserId }, select: { userId: true } } : false,
     },
   });
+
+  return posts.map(({ likes, ...post }) => ({
+    ...post,
+    liked: Array.isArray(likes) && likes.length > 0,
+  }));
 }
 
 export async function createPost(authorId: string, content: string, images: string[] = []) {
-  return prisma.post.create({
+  const post = await prisma.post.create({
     data: { authorId, content, images },
     include: {
       author: { select: { id: true, name: true, avatar: true, courseOfStudy: true, university: { select: { name: true } } } },
       _count: { select: { likes: true, comments: true } },
     },
   });
+  return { ...post, liked: false };
 }
 
 export async function likePost(postId: string, userId: string) {
@@ -42,6 +49,13 @@ export async function getComments(postId: string) {
     include: {
       author: { select: { id: true, name: true, avatar: true } },
     },
+  });
+}
+
+export async function getPostById(postId: string) {
+  return prisma.post.findUnique({
+    where: { id: postId },
+    select: { authorId: true },
   });
 }
 

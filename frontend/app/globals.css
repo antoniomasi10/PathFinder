@@ -34,6 +34,10 @@
   .animate-slide-up {
     animation: slideUp 0.3s ease-out;
   }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
 }
 
 @keyframes fadeInUp {
@@ -53,6 +57,15 @@
   }
   to {
     transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 

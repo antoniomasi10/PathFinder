@@ -23,6 +23,7 @@ const io = new Server(httpServer, {
     origin: true,
     credentials: true,
   },
+  maxHttpBufferSize: 5e6, // 5MB per supportare invio immagini via socket
 });
 
 app.use(cors({

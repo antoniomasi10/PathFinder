@@ -34,7 +34,7 @@ export function setupChatSocket(io: Server) {
       }
     } catch {}
 
-    socket.on('send_group_message', async (data: { groupId: string; content: string }) => {
+    socket.on('send_group_message', async (data: { groupId: string; content: string; images?: string[] }) => {
       try {
         // Verify membership
         const membership = await prisma.groupMember.findUnique({
@@ -50,6 +50,7 @@ export function setupChatSocket(io: Server) {
             senderId: userId,
             groupId: data.groupId,
             content: data.content,
+            images: data.images || [],
           },
           include: {
             sender: { select: { id: true, name: true, avatar: true } },
@@ -65,13 +66,14 @@ export function setupChatSocket(io: Server) {
       }
     });
 
-    socket.on('send_message', async (data: { receiverId: string; content: string }) => {
+    socket.on('send_message', async (data: { receiverId: string; content: string; images?: string[] }) => {
       try {
         const message = await prisma.pathMatesMessage.create({
           data: {
             senderId: userId,
             receiverId: data.receiverId,
             content: data.content,
+            images: data.images || [],
           },
           include: {
             sender: { select: { id: true, name: true, avatar: true } },

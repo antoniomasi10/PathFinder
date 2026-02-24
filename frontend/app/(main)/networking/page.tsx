@@ -24,7 +24,7 @@ interface Group {
   image?: string;
   description?: string;
   members: { user: { id: string; name: string; avatar?: string } }[];
-  lastMessage: { content: string; sentAt: string; sender: { id: string; name: string } } | null;
+  lastMessage: { content: string; images?: string[]; sentAt: string; sender: { id: string; name: string } } | null;
   createdAt: string;
 }
 
@@ -46,6 +46,7 @@ interface Message {
   id: string;
   senderId: string;
   content: string;
+  images?: string[];
   sentAt: string;
   sender: { id: string; name: string; avatar?: string };
 }
@@ -58,6 +59,13 @@ interface Post {
   author: { id: string; name: string; avatar?: string; courseOfStudy?: string; university?: { name: string } };
   _count: { likes: number; comments: number };
   liked?: boolean;
+}
+
+interface Comment {
+  id: string;
+  content: string;
+  createdAt: string;
+  author: { id: string; name: string; avatar?: string };
 }
 
 function getPinnedIds(): Set<string> {
@@ -98,6 +106,14 @@ export default function NetworkingPage() {
   const [connectionStatuses, setConnectionStatuses] = useState<
     Record<string, { status: string | null; requestId: string | null; fromUserId: string | null }>
   >({});
+  const [chatImages, setChatImages] = useState<string[]>([]);
+  const chatFileInputRef = useRef<HTMLInputElement>(null);
+  const [commentPost, setCommentPost] = useState<Post | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentSending, setCommentSending] = useState(false);
+  const commentsEndRef = useRef<HTMLDivElement>(null);
 
   function compressImage(file: File, maxSize = 800): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -139,6 +155,19 @@ export default function NetworkingPage() {
     setPostImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleChatImageSelect = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const remaining = 5 - chatImages.length;
+    const toProcess = files.slice(0, remaining);
+    const compressed = await Promise.all(toProcess.map((f) => compressImage(f)));
+    setChatImages((prev) => [...prev, ...compressed]);
+    e.target.value = '';
+  };
+
+  const removeChatImage = (index: number) => {
+    setChatImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   useEffect(() => {
     setPinnedIds(getPinnedIds());
   }, []);
@@ -161,7 +190,9 @@ export default function NetworkingPage() {
       type: 'group' as const,
       name: g.name,
       avatar: g.image,
-      lastMessage: g.lastMessage ? `${g.lastMessage.sender.name}: ${g.lastMessage.content}` : 'Nessun messaggio',
+      lastMessage: g.lastMessage
+        ? `${g.lastMessage.sender.name}: ${g.lastMessage.images && g.lastMessage.images.length > 0 && !g.lastMessage.content ? '📷 Foto' : g.lastMessage.content}`
+        : 'Nessun messaggio',
       lastMessageAt: g.lastMessage?.sentAt || g.createdAt,
       unread: 0,
       pinned: pinned.has(`group-${g.id}`),
@@ -272,18 +303,22 @@ export default function NetworkingPage() {
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !selectedUser) return;
+    if (!newMessage.trim() && chatImages.length === 0) return;
+    if (!selectedUser) return;
     try {
       const socket = getSocket();
-      socket.emit('send_message', { receiverId: selectedUser.id, content: newMessage });
+      const images = chatImages.length > 0 ? chatImages : undefined;
+      socket.emit('send_message', { receiverId: selectedUser.id, content: newMessage || '', images });
       setMessages((prev) => [...prev, {
         id: Date.now().toString(),
         senderId: user!.id,
-        content: newMessage,
+        content: newMessage || '',
+        images: images || [],
         sentAt: new Date().toISOString(),
         sender: { id: user!.id, name: user!.name },
       }]);
       setNewMessage('');
+      setChatImages([]);
     } catch {}
   };
 
@@ -295,18 +330,22 @@ export default function NetworkingPage() {
   };
 
   const sendGroupMessage = async () => {
-    if (!newMessage.trim() || !selectedGroup) return;
+    if (!newMessage.trim() && chatImages.length === 0) return;
+    if (!selectedGroup) return;
     try {
       const socket = getSocket();
-      socket.emit('send_group_message', { groupId: selectedGroup.id, content: newMessage });
+      const images = chatImages.length > 0 ? chatImages : undefined;
+      socket.emit('send_group_message', { groupId: selectedGroup.id, content: newMessage || '', images });
       setGroupMessages((prev) => [...prev, {
         id: Date.now().toString(),
         senderId: user!.id,
-        content: newMessage,
+        content: newMessage || '',
+        images: images || [],
         sentAt: new Date().toISOString(),
         sender: { id: user!.id, name: user!.name },
       }]);
       setNewMessage('');
+      setChatImages([]);
     } catch {}
   };
 
@@ -364,6 +403,34 @@ export default function NetworkingPage() {
     } catch {}
   };
 
+  const openComments = async (post: Post) => {
+    setCommentPost(post);
+    setComments([]);
+    setCommentsLoading(true);
+    try {
+      const { data } = await api.get(`/posts/${post.id}/comments`);
+      setComments(data);
+    } catch {} finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const submitComment = async () => {
+    if (!newComment.trim() || !commentPost || commentSending) return;
+    setCommentSending(true);
+    try {
+      const { data } = await api.post(`/posts/${commentPost.id}/comments`, { content: newComment });
+      setComments((prev) => [...prev, data]);
+      setNewComment('');
+      setPosts((prev) => prev.map((p) =>
+        p.id === commentPost.id ? { ...p, _count: { ...p._count, comments: p._count.comments + 1 } } : p
+      ));
+      setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    } catch {} finally {
+      setCommentSending(false);
+    }
+  };
+
   const sendFriendRequest = async (toUserId: string) => {
     try {
       await api.post('/friends/request', { toUserId });
@@ -399,9 +466,11 @@ export default function NetworkingPage() {
   const handleConversationClick = (conv: UnifiedConversation) => {
     if (conv.type === 'direct' && conv.userId) {
       setSelectedGroup(null);
+      setChatImages([]);
       setSelectedUser({ id: conv.userId, name: conv.name, avatar: conv.avatar });
     } else if (conv.type === 'group' && conv.groupId) {
       setSelectedUser(null);
+      setChatImages([]);
       setSelectedGroup({ id: conv.groupId, name: conv.name, memberCount: conv.memberCount || 0, image: conv.avatar });
     }
   };
@@ -439,7 +508,7 @@ export default function NetworkingPage() {
 
   return (
     <div className={`bg-chat-gradient -mx-4 -mt-4 px-6 pt-6 ${
-      selectedUser || selectedGroup ? 'h-[calc(100dvh-116px)] flex flex-col overflow-hidden pb-2 -mb-20' : 'min-h-screen pb-24'
+      selectedUser || selectedGroup ? 'h-[calc(100dvh-116px)] flex flex-col overflow-hidden -mb-20' : 'min-h-screen pb-24'
     }`}>
 
       {!selectedUser && !selectedGroup && (
@@ -580,34 +649,86 @@ export default function NetworkingPage() {
                 key={msg.id}
                 className={`flex ${msg.senderId === user?.id ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`max-w-[75%] px-4 py-2.5 text-sm ${
+                <div className={`max-w-[75%] ${
                   msg.senderId === user?.id
                     ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl rounded-br-md'
                     : 'bg-[#1a1b2e] text-white rounded-2xl rounded-bl-md'
-                }`}>
-                  {msg.content}
+                } ${msg.images && msg.images.length > 0 ? 'p-1.5' : 'px-4 py-2.5'}`}>
+                  {msg.images && msg.images.length > 0 && (
+                    <div className={`${msg.images.length === 1 ? '' : 'grid grid-cols-2 gap-1'} mb-${msg.content ? '1.5' : '0'}`}>
+                      {msg.images.map((img, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setLightbox({ images: msg.images!, index: i })}
+                          className={`block overflow-hidden rounded-xl ${msg.images!.length === 1 ? 'w-full' : ''} ${msg.images!.length % 2 !== 0 && i === msg.images!.length - 1 ? 'col-span-2' : ''}`}
+                        >
+                          <img src={img} alt="" className={`w-full object-cover ${msg.images!.length === 1 ? 'max-h-64 rounded-xl' : 'h-32'}`} />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {msg.content && (
+                    <p className={`text-sm ${msg.images && msg.images.length > 0 ? 'px-2.5 pb-1.5 pt-1' : ''}`}>{msg.content}</p>
+                  )}
                 </div>
               </div>
             ))}
             <div ref={messagesEndRef} />
           </div>
-          <div className="flex gap-2">
-            <input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-              placeholder="Scrivi un messaggio..."
-              className="flex-1 bg-[#1a1b2e] text-white border border-indigo-900/30 focus:border-indigo-500 rounded-2xl px-4 py-3 placeholder:text-gray-500 focus:outline-none transition-colors"
-            />
-            <button
-              onClick={sendMessage}
-              className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white shrink-0 hover:scale-105 transition-transform"
-              style={{ boxShadow: '0 4px 20px rgba(99,102,241,0.5)' }}
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-            </button>
+          <div>
+            {chatImages.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto mb-2 pb-1 scrollbar-hide">
+                {chatImages.map((img, i) => (
+                  <div key={i} className="relative shrink-0">
+                    <img src={img} alt="" className="w-16 h-16 rounded-xl object-cover" />
+                    <button
+                      onClick={() => removeChatImage(i)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white"
+                    >
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => chatFileInputRef.current?.click()}
+                disabled={chatImages.length >= 5}
+                className="w-12 h-12 bg-[#1a1b2e] border border-indigo-900/30 rounded-full flex items-center justify-center text-gray-400 hover:text-indigo-400 shrink-0 disabled:opacity-40 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </button>
+              <input
+                ref={chatFileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleChatImageSelect}
+                className="hidden"
+              />
+              <input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                placeholder="Scrivi un messaggio..."
+                className="flex-1 bg-[#1a1b2e] text-white border border-indigo-900/30 focus:border-indigo-500 rounded-2xl px-4 py-3 placeholder:text-gray-500 focus:outline-none transition-colors"
+              />
+              <button
+                onClick={sendMessage}
+                disabled={!newMessage.trim() && chatImages.length === 0}
+                className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white shrink-0 hover:scale-105 transition-transform disabled:opacity-40"
+                style={{ boxShadow: '0 4px 20px rgba(99,102,241,0.5)' }}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -631,35 +752,87 @@ export default function NetworkingPage() {
                   {msg.senderId !== user?.id && (
                     <p className="text-[10px] text-indigo-400 mb-0.5 ml-1">{msg.sender.name}</p>
                   )}
-                  <div className={`px-4 py-2.5 text-sm ${
+                  <div className={`${
                     msg.senderId === user?.id
                       ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl rounded-br-md'
                       : 'bg-[#1a1b2e] text-white rounded-2xl rounded-bl-md'
-                  }`}>
-                    {msg.content}
+                  } ${msg.images && msg.images.length > 0 ? 'p-1.5' : 'px-4 py-2.5'}`}>
+                    {msg.images && msg.images.length > 0 && (
+                      <div className={`${msg.images.length === 1 ? '' : 'grid grid-cols-2 gap-1'} mb-${msg.content ? '1.5' : '0'}`}>
+                        {msg.images.map((img, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setLightbox({ images: msg.images!, index: i })}
+                            className={`block overflow-hidden rounded-xl ${msg.images!.length === 1 ? 'w-full' : ''} ${msg.images!.length % 2 !== 0 && i === msg.images!.length - 1 ? 'col-span-2' : ''}`}
+                          >
+                            <img src={img} alt="" className={`w-full object-cover ${msg.images!.length === 1 ? 'max-h-64 rounded-xl' : 'h-32'}`} />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {msg.content && (
+                      <p className={`text-sm ${msg.images && msg.images.length > 0 ? 'px-2.5 pb-1.5 pt-1' : ''}`}>{msg.content}</p>
+                    )}
                   </div>
                 </div>
               </div>
             ))}
             <div ref={messagesEndRef} />
           </div>
-          <div className="flex gap-2">
-            <input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && sendGroupMessage()}
-              placeholder="Scrivi un messaggio..."
-              className="flex-1 bg-[#1a1b2e] text-white border border-indigo-900/30 focus:border-indigo-500 rounded-2xl px-4 py-3 placeholder:text-gray-500 focus:outline-none transition-colors"
-            />
-            <button
-              onClick={sendGroupMessage}
-              className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white shrink-0 hover:scale-105 transition-transform"
-              style={{ boxShadow: '0 4px 20px rgba(99,102,241,0.5)' }}
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-            </button>
+          <div>
+            {chatImages.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto mb-2 pb-1 scrollbar-hide">
+                {chatImages.map((img, i) => (
+                  <div key={i} className="relative shrink-0">
+                    <img src={img} alt="" className="w-16 h-16 rounded-xl object-cover" />
+                    <button
+                      onClick={() => removeChatImage(i)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white"
+                    >
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => chatFileInputRef.current?.click()}
+                disabled={chatImages.length >= 5}
+                className="w-12 h-12 bg-[#1a1b2e] border border-indigo-900/30 rounded-full flex items-center justify-center text-gray-400 hover:text-indigo-400 shrink-0 disabled:opacity-40 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </button>
+              <input
+                ref={chatFileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleChatImageSelect}
+                className="hidden"
+              />
+              <input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && sendGroupMessage()}
+                placeholder="Scrivi un messaggio..."
+                className="flex-1 bg-[#1a1b2e] text-white border border-indigo-900/30 focus:border-indigo-500 rounded-2xl px-4 py-3 placeholder:text-gray-500 focus:outline-none transition-colors"
+              />
+              <button
+                onClick={sendGroupMessage}
+                disabled={!newMessage.trim() && chatImages.length === 0}
+                className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white shrink-0 hover:scale-105 transition-transform disabled:opacity-40"
+                style={{ boxShadow: '0 4px 20px rgba(99,102,241,0.5)' }}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -848,12 +1021,15 @@ export default function NetworkingPage() {
                     </svg>
                     <span className="text-sm">{post._count.likes}</span>
                   </button>
-                  <span className="flex items-center gap-1.5 text-gray-400">
+                  <button
+                    onClick={() => openComments(post)}
+                    className="flex items-center gap-1.5 text-gray-400 hover:text-indigo-400 transition-colors"
+                  >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                     </svg>
                     <span className="text-sm">{post._count.comments}</span>
-                  </span>
+                  </button>
                   <span className="text-[10px] ml-auto">
                     {new Date(post.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
                   </span>
@@ -909,6 +1085,96 @@ export default function NetworkingPage() {
           initialIndex={lightbox.index}
           onClose={() => setLightbox(null)}
         />
+      )}
+
+      {/* Comments Modal */}
+      {commentPost && (
+        <div className="fixed inset-0 bg-black sm:bg-black/60 z-[60] flex items-end sm:items-center justify-center animate-fade-in" onClick={() => { setCommentPost(null); setNewComment(''); }}>
+          <div
+            className="bg-surface w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl h-[92dvh] sm:h-auto sm:max-h-[85vh] flex flex-col animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Handle bar (mobile only) */}
+            <div className="flex justify-center pt-2 pb-1 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-gray-600" />
+            </div>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
+              <h3 className="text-white font-semibold text-lg">Commenti ({comments.length})</h3>
+              <button onClick={() => { setCommentPost(null); setNewComment(''); }} className="text-gray-400 hover:text-white p-1">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Comments List */}
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4 min-h-0">
+              {commentsLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : comments.length === 0 ? (
+                <div className="text-center py-12">
+                  <svg className="w-12 h-12 mx-auto text-gray-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <p className="text-gray-500 text-sm">Nessun commento ancora</p>
+                  <p className="text-gray-600 text-xs mt-1">Sii il primo a commentare!</p>
+                </div>
+              ) : (
+                comments.map((c) => (
+                  <div key={c.id} className="flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {c.author.avatar ? (
+                        <img src={c.author.avatar} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-xs font-bold text-primary">{c.author.name.charAt(0)}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-white text-sm font-semibold">{c.author.name}</span>
+                        <span className="text-gray-500 text-xs">
+                          {new Date(c.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
+                        </span>
+                      </div>
+                      <p className="text-gray-300 text-sm mt-0.5 break-words">{c.content}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+              <div ref={commentsEndRef} />
+            </div>
+
+            {/* Input — fixed at bottom, outside scroll area */}
+            <div className="border-t border-white/10 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center gap-2 flex-shrink-0">
+              <input
+                type="text"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && submitComment()}
+                placeholder="Scrivi un commento..."
+                className="flex-1 bg-card rounded-full px-4 py-2 text-sm text-white placeholder-gray-500 outline-none focus:ring-1 focus:ring-primary"
+                maxLength={500}
+              />
+              <button
+                onClick={submitComment}
+                disabled={!newComment.trim() || commentSending}
+                className="w-9 h-9 rounded-full bg-primary flex items-center justify-center disabled:opacity-40 transition-opacity"
+              >
+                {commentSending ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

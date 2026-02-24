@@ -161,6 +161,7 @@ model PathMatesMessage {
   groupId    String?
   group      PathMatesGroup? @relation(fields: [groupId], references: [id])
   content    String
+  images     String[] @default([])
   sentAt     DateTime @default(now())
   readAt     DateTime?
 }

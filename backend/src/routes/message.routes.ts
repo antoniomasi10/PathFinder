@@ -29,7 +29,7 @@ router.get('/conversations', authMiddleware, async (req: Request, res: Response)
         const partner = msg.senderId === userId ? msg.receiver : msg.sender;
         convMap.set(partnerId, {
           user: partner,
-          lastMessage: msg.content,
+          lastMessage: msg.images && msg.images.length > 0 && !msg.content ? '📷 Foto' : msg.content,
           lastMessageAt: msg.sentAt,
           unread: msg.receiverId === userId && !msg.readAt ? 1 : 0,
         });
@@ -110,7 +110,7 @@ router.post('/group/:groupId', authMiddleware, async (req: Request, res: Respons
   try {
     const userId = req.user!.userId;
     const { groupId } = req.params;
-    const { content } = req.body;
+    const { content, images } = req.body;
 
     // Verify user is a member of the group
     const membership = await prisma.groupMember.findUnique({
@@ -125,6 +125,7 @@ router.post('/group/:groupId', authMiddleware, async (req: Request, res: Respons
         senderId: userId,
         groupId,
         content,
+        images: images || [],
       },
       include: {
         sender: { select: { id: true, name: true, avatar: true } },
@@ -140,12 +141,13 @@ router.post('/group/:groupId', authMiddleware, async (req: Request, res: Respons
 // Send a message (REST fallback)
 router.post('/', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { receiverId, content } = req.body;
+    const { receiverId, content, images } = req.body;
     const message = await prisma.pathMatesMessage.create({
       data: {
         senderId: req.user!.userId,
         receiverId,
         content,
+        images: images || [],
       },
       include: {
         sender: { select: { id: true, name: true, avatar: true } },
