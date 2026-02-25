@@ -1,13 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import * as postService from '../services/post.service';
+import { createNotification } from '../services/notification.service';
 
 const router = Router();
 
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    const posts = await postService.getPosts(page);
+    const posts = await postService.getPosts(page, 20, req.user!.userId);
     res.json(posts);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -16,7 +17,11 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
 router.post('/', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const post = await postService.createPost(req.user!.userId, req.body.content);
+    const { content, images } = req.body;
+    const validImages = Array.isArray(images)
+      ? images.filter((img: any) => typeof img === 'string' && img.startsWith('data:image/')).slice(0, 5)
+      : [];
+    const post = await postService.createPost(req.user!.userId, content, validImages);
     res.status(201).json(post);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -26,6 +31,10 @@ router.post('/', authMiddleware, async (req: Request, res: Response) => {
 router.post('/:id/like', authMiddleware, async (req: Request, res: Response) => {
   try {
     await postService.likePost(req.params.id, req.user!.userId);
+    const post = await postService.getPostById(req.params.id);
+    if (post && post.authorId !== req.user!.userId) {
+      await createNotification(post.authorId, 'GENERAL', 'A qualcuno piace il tuo post', `/networking`);
+    }
     res.json({ liked: true });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -53,6 +62,10 @@ router.get('/:id/comments', authMiddleware, async (req: Request, res: Response) 
 router.post('/:id/comments', authMiddleware, async (req: Request, res: Response) => {
   try {
     const comment = await postService.createComment(req.params.id, req.user!.userId, req.body.content);
+    const post = await postService.getPostById(req.params.id);
+    if (post && post.authorId !== req.user!.userId) {
+      await createNotification(post.authorId, 'GENERAL', 'Qualcuno ha commentato il tuo post', `/networking`);
+    }
     res.status(201).json(comment);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
