@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
-const STEPS = ['Dati strutturali', 'Preferenze', 'Ambizione', 'Passioni'];
+const STEPS = ['Dati strutturali', 'Preferenze', 'Ambizione'];
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(0);
@@ -30,19 +30,11 @@ export default function OnboardingPage() {
   const [careerVision, setCareerVision] = useState('');
   const [professionalGoal, setProfessionalGoal] = useState('');
 
-  // Step 4
-  const [passions, setPassions] = useState<string[]>([]);
-
-  const togglePassion = (p: string) => {
-    setPassions((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]);
-  };
-
   const canProceed = () => {
     switch (step) {
       case 0: return gpa && englishLevel && willingToRelocate;
       case 1: return naturalActivity && freeTimeActivity;
       case 2: return problemSolvingStyle && riskTolerance && careerVision && professionalGoal;
-      case 3: return passions.length > 0;
       default: return false;
     }
   };
@@ -62,7 +54,6 @@ export default function OnboardingPage() {
         riskTolerance,
         careerVision,
         professionalGoal,
-        passions,
       });
       if (user) setUser({ ...user, profileCompleted: true });
       router.push('/home');
@@ -235,38 +226,6 @@ export default function OnboardingPage() {
             </>
           )}
 
-          {step === 3 && (
-            <div>
-              <label className="block text-sm text-text-secondary mb-3">Seleziona le tue passioni</label>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { value: 'sport', label: 'Sport', icon: '⚽' },
-                  { value: 'imprenditoria', label: 'Imprenditoria', icon: '💼' },
-                  { value: 'musica', label: 'Musica', icon: '🎵' },
-                  { value: 'informatica', label: 'Informatica', icon: '💻' },
-                  { value: 'lettura', label: 'Lettura', icon: '📚' },
-                  { value: 'creativo', label: 'Creativo', icon: '🎨' },
-                  { value: 'viaggi', label: 'Viaggi', icon: '✈️' },
-                  { value: 'altro', label: 'Altro', icon: '✨' },
-                ].map(({ value, label, icon }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => togglePassion(value)}
-                    className={`flex items-center gap-2 px-4 py-3 rounded-xl border transition-all ${
-                      passions.includes(value)
-                        ? 'border-primary bg-primary/10 text-text-primary'
-                        : 'border-border bg-card hover:bg-card-hover text-text-secondary'
-                    }`}
-                  >
-                    <span className="text-xl">{icon}</span>
-                    <span className="text-sm">{label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Navigation */}
           <div className="flex gap-3 pt-4">
             {step > 0 && (
@@ -278,7 +237,7 @@ export default function OnboardingPage() {
                 Indietro
               </button>
             )}
-            {step < 3 ? (
+            {step < 2 ? (
               <button
                 type="button"
                 onClick={() => setStep(step + 1)}

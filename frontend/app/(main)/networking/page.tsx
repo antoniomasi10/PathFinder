@@ -214,7 +214,7 @@ export default function NetworkingPage() {
           >
             ← {selectedUser.name}
           </button>
-          <div className="flex-1 overflow-y-auto space-y-2 mb-3">
+          <div className="flex-1 overflow-y-auto no-scrollbar space-y-2 mb-3">
             {messages.map((msg) => (
               <div
                 key={msg.id}

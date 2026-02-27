@@ -2,9 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slide-up 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
 @layer base {
   body {
     @apply bg-surface text-text-primary font-body;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome/Safari/Opera */
   }
 }
 

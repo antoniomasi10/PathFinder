@@ -15,8 +15,6 @@ interface QuestionnaireInput {
   riskTolerance: string;
   careerVision: string;
   professionalGoal: string;
-  // Step 4 - Passions
-  passions: string[];
 }
 
 function deriveClusterTag(input: QuestionnaireInput): string {
@@ -41,19 +39,17 @@ function deriveClusterTag(input: QuestionnaireInput): string {
   return 'Explorer';
 }
 
-function derivePrimaryInterest(passions: string[], naturalActivity: string): string {
-  if (passions.includes('informatica') || passions.includes('tecnologia')) return 'tech';
-  if (passions.includes('imprenditoria')) return 'business';
-  if (passions.includes('creativo') || passions.includes('musica')) return 'creative';
-  if (passions.includes('sport')) return 'sport';
-  if (naturalActivity === 'analizzare_dati') return 'tech';
-  if (naturalActivity === 'organizzare_team') return 'business';
+function derivePrimaryInterest(naturalActivity: string, careerVision: string): string {
+  if (naturalActivity === 'risolvere_problemi' || naturalActivity === 'analizzare_dati') return 'tech';
+  if (naturalActivity === 'organizzare_team' || careerVision === 'leader' || careerVision === 'imprenditore') return 'business';
+  if (naturalActivity === 'creare_contenuti' || careerVision === 'creativo') return 'creative';
+  if (naturalActivity === 'aiutare_altri' || careerVision === 'sociale') return 'social';
   return 'general';
 }
 
 export async function saveQuestionnaire(userId: string, input: QuestionnaireInput) {
   const clusterTag = deriveClusterTag(input);
-  const primaryInterest = derivePrimaryInterest(input.passions, input.naturalActivity);
+  const primaryInterest = derivePrimaryInterest(input.naturalActivity, input.careerVision);
 
   const profile = await prisma.userProfile.upsert({
     where: { userId },
@@ -65,7 +61,7 @@ export async function saveQuestionnaire(userId: string, input: QuestionnaireInpu
       riskTolerance: input.riskTolerance,
       careerVision: input.careerVision,
       professionalGoal: input.professionalGoal,
-      passions: input.passions,
+      passions: [],
       clusterTag,
       completedAt: new Date(),
     },
@@ -78,7 +74,7 @@ export async function saveQuestionnaire(userId: string, input: QuestionnaireInpu
       riskTolerance: input.riskTolerance,
       careerVision: input.careerVision,
       professionalGoal: input.professionalGoal,
-      passions: input.passions,
+      passions: [],
       clusterTag,
       completedAt: new Date(),
     },
@@ -109,10 +105,26 @@ export async function getProfile(userId: string) {
   return user;
 }
 
-export async function updateProfile(userId: string, data: { name?: string; bio?: string; avatar?: string; courseOfStudy?: string }) {
-  return prisma.user.update({
+export async function updateProfile(userId: string, data: { name?: string; bio?: string; avatar?: string; courseOfStudy?: string; passions?: string[] }) {
+  const { passions, ...userFields } = data;
+
+  if (passions !== undefined) {
+    await prisma.userProfile.update({
+      where: { userId },
+      data: { passions },
+    });
+  }
+
+  if (Object.keys(userFields).length > 0) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: userFields,
+      include: { profile: true, university: true },
+    });
+  }
+
+  return prisma.user.findUnique({
     where: { id: userId },
-    data,
     include: { profile: true, university: true },
   });
 }
