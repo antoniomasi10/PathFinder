@@ -24,21 +24,6 @@ interface ProfileData {
     mobility: string;
   };
 }
-interface QuestionnaireInput {
-  // Step 1 - Structural
-  yearOfStudy: number;
-  gpa: GpaRange;
-  englishLevel: EnglishLevel;
-  willingToRelocate: WillingnessToRelocate;
-  // Step 2 - Behavioral
-  naturalActivity: string;
-  freeTimeActivity: string;
-  // Step 3 - Ambition
-  problemSolvingStyle: string;
-  riskTolerance: string;
-  careerVision: string;
-  professionalGoal: string;
-}
 
 function mapGpa(gpa: string): GpaRange {
   switch (gpa) {
@@ -58,16 +43,6 @@ function mapEnglishLevel(level: string): EnglishLevel {
   return 'B1_B2';
 }
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      yearOfStudy: input.yearOfStudy,
-      gpa: input.gpa,
-      englishLevel: input.englishLevel,
-      willingToRelocate: input.willingToRelocate,
-      profileCompleted: true,
-    },
-  });
 function mapWillingToRelocate(w: string): WillingnessToRelocate {
   if (w.startsWith('Sì')) return 'YES';
   if (w === 'No, preferisco restare nella mia città') return 'NO';
@@ -81,7 +56,6 @@ function extractYearOfStudy(s: string): number {
   return year;
 }
 
-  return profile;
 function derivePrimaryInterest(cluster: ProfileData['cluster']): string {
   switch (cluster) {
     case 'INNOVATOR': return 'tech';
@@ -128,48 +102,6 @@ export async function saveQuestionnaire(userId: string, input: ProfileData) {
     return profile;
   });
 }
-
-function derivePrimaryInterest(naturalActivity: string, careerVision: string): string {
-  if (naturalActivity === 'risolvere_problemi' || naturalActivity === 'analizzare_dati') return 'tech';
-  if (naturalActivity === 'organizzare_team' || careerVision === 'leader' || careerVision === 'imprenditore') return 'business';
-  if (naturalActivity === 'creare_contenuti' || careerVision === 'creativo') return 'creative';
-  if (naturalActivity === 'aiutare_altri' || careerVision === 'sociale') return 'social';
-  return 'general';
-}
-
-export async function saveQuestionnaire(userId: string, input: QuestionnaireInput) {
-  const clusterTag = deriveClusterTag(input);
-  const primaryInterest = derivePrimaryInterest(input.naturalActivity, input.careerVision);
-
-  const profile = await prisma.userProfile.upsert({
-    where: { userId },
-    update: {
-      primaryInterest,
-      naturalActivity: input.naturalActivity,
-      freeTimeActivity: input.freeTimeActivity,
-      problemSolvingStyle: input.problemSolvingStyle,
-      riskTolerance: input.riskTolerance,
-      careerVision: input.careerVision,
-      professionalGoal: input.professionalGoal,
-      passions: [],
-      clusterTag,
-      completedAt: new Date(),
-    },
-    create: {
-      userId,
-      primaryInterest,
-      naturalActivity: input.naturalActivity,
-      freeTimeActivity: input.freeTimeActivity,
-      problemSolvingStyle: input.problemSolvingStyle,
-      riskTolerance: input.riskTolerance,
-      careerVision: input.careerVision,
-      professionalGoal: input.professionalGoal,
-      passions: [],
-      clusterTag,
-      completedAt: new Date(),
-    },
-}
-
 
 export async function getProfile(userId: string) {
   const user = await prisma.user.findUnique({

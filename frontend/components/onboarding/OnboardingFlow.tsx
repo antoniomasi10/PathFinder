@@ -196,7 +196,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingProps) {
                         exit={{ opacity: 0, height: 0 }}
                         type="text"
                         value={otherTexts[questionId] ?? ''}
-                        onChange={(e) => handleOtherText(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleOtherText(e.target.value)}
                         placeholder="Scrivi qui"
                         autoFocus
                         className="mt-3 w-full bg-transparent text-white text-sm placeholder-gray-500 border-b outline-none pb-1"
