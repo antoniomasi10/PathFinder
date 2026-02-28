@@ -55,6 +55,11 @@ enum FriendRequestStatus {
   REJECTED
 }
 
+enum GroupMemberRole {
+  CREATOR
+  MEMBER
+}
+
 model User {
   id             String    @id @default(uuid())
   email          String    @unique
@@ -77,7 +82,7 @@ model User {
   sentMessages   PathMatesMessage[] @relation("SentMessages")
   receivedMessages PathMatesMessage[] @relation("ReceivedMessages")
   createdGroups  PathMatesGroup[] @relation("GroupCreator")
-  memberGroups   PathMatesGroup[] @relation("GroupMembers")
+  groupMemberships GroupMember[]
   notifications  Notification[]
   sentFriendRequests     FriendRequest[] @relation("FriendRequestFrom")
   receivedFriendRequests FriendRequest[] @relation("FriendRequestTo")
@@ -156,18 +161,33 @@ model PathMatesMessage {
   groupId    String?
   group      PathMatesGroup? @relation(fields: [groupId], references: [id])
   content    String
+  images     String[] @default([])
   sentAt     DateTime @default(now())
   readAt     DateTime?
 }
 
 model PathMatesGroup {
-  id        String   @id @default(uuid())
-  name      String
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  image       String?
   createdById String
-  createdBy User     @relation("GroupCreator", fields: [createdById], references: [id])
-  members   User[]   @relation("GroupMembers")
-  messages  PathMatesMessage[]
-  createdAt DateTime @default(now())
+  createdBy   User     @relation("GroupCreator", fields: [createdById], references: [id])
+  members     GroupMember[]
+  messages    PathMatesMessage[]
+  createdAt   DateTime @default(now())
+}
+
+model GroupMember {
+  id       String          @id @default(uuid())
+  groupId  String
+  group    PathMatesGroup  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     GroupMemberRole @default(MEMBER)
+  joinedAt DateTime        @default(now())
+
+  @@unique([groupId, userId])
 }
 
 model Notification {
@@ -198,6 +218,7 @@ model Post {
   authorId  String
   author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
   content   String
+  images    String[]      @default([])
   createdAt DateTime      @default(now())
   likes     PostLike[]
   comments  PostComment[]

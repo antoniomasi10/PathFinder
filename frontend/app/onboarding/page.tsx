@@ -2,23 +2,23 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import OnboardingFlow from '@/components/onboarding';
+import type { ProfileData } from '@/components/onboarding';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
 const STEPS = ['Dati strutturali', 'Preferenze', 'Ambizione'];
 
 export default function OnboardingPage() {
-  const [step, setStep] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const router = useRouter();
   const { user, setUser } = useAuth();
+  const router = useRouter();
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  // Step 1
-  const [yearOfStudy, setYearOfStudy] = useState(1);
-  const [gpa, setGpa] = useState('');
-  const [englishLevel, setEnglishLevel] = useState('');
-  const [willingToRelocate, setWillingToRelocate] = useState('');
+  if (user?.profileCompleted) {
+    router.replace('/home');
+    return null;
+  }
 
   // Step 2
   const [naturalActivity, setNaturalActivity] = useState('');
@@ -41,7 +41,10 @@ export default function OnboardingPage() {
 
   const handleSubmit = async () => {
     setLoading(true);
+  const handleComplete = async (profileData: ProfileData) => {
+    if (saving) return;
     setError('');
+    setSaving(true);
     try {
       await api.post('/profile/questionnaire', {
         yearOfStudy,
@@ -58,35 +61,20 @@ export default function OnboardingPage() {
       if (user) setUser({ ...user, profileCompleted: true });
       router.push('/home');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Errore durante il salvataggio');
-    } finally {
-      setLoading(false);
+      setError(err.response?.data?.error || 'Errore durante il salvataggio. Riprova.');
+      setSaving(false);
     }
   };
 
-  const RadioOption = ({ value, current, onChange, label }: { value: string; current: string; onChange: (v: string) => void; label: string }) => (
-    <button
-      type="button"
-      onClick={() => onChange(value)}
-      className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
-        current === value
-          ? 'border-primary bg-primary/10 text-text-primary'
-          : 'border-border bg-card hover:bg-card-hover text-text-secondary'
-      }`}
-    >
-      {label}
-    </button>
-  );
-
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-lg">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-display font-bold text-text-primary mb-1">
-            Completa il tuo profilo
-          </h1>
-          <p className="text-text-secondary text-sm">{STEPS[step]}</p>
+    <>
+      <OnboardingFlow onComplete={handleComplete} />
+      {error && (
+        <div className="fixed bottom-4 left-4 right-4 bg-red-900/90 text-white px-4 py-3 rounded-xl text-sm text-center z-50">
+          {error}
         </div>
+      )}
+    </>
 
         {/* Progress bar */}
         <div className="flex gap-2 mb-8">
