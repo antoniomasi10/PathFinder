@@ -71,10 +71,10 @@ router.post('/request', authMiddleware, async (req: Request, res: Response) => {
     }
 
     const request = await prisma.friendRequest.create({
-      data: { fromUserId: req.user!.userId, toUserId },
+      data: { fromUserId: req.user!.userId, toUserId, status: 'ACCEPTED' },
     });
 
-    await createNotification(toUserId, 'FRIEND_REQUEST', 'Hai ricevuto una nuova richiesta di connessione', `/profile/${req.user!.userId}`);
+    await createNotification(toUserId, 'FRIEND_ACCEPTED', 'Sei stato aggiunto ai Pathmates!', `/profile/${req.user!.userId}`);
 
     res.status(201).json(request);
   } catch (err: any) {
@@ -103,6 +103,70 @@ router.patch('/request/:id', authMiddleware, async (req: Request, res: Response)
     res.json(request);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+// Get suggested pathmates (users who are not friends and have no pending request)
+router.get('/suggestions', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const existingRelations = await prisma.friendRequest.findMany({
+      where: {
+        OR: [
+          { fromUserId: req.user!.userId },
+          { toUserId: req.user!.userId },
+        ],
+      },
+      select: { fromUserId: true, toUserId: true },
+    });
+
+    const excludeIds = new Set<string>([req.user!.userId]);
+    existingRelations.forEach((r) => {
+      excludeIds.add(r.fromUserId);
+      excludeIds.add(r.toUserId);
+    });
+
+    const suggestions = await prisma.user.findMany({
+      where: {
+        id: { notIn: Array.from(excludeIds) },
+        profileCompleted: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        avatar: true,
+        courseOfStudy: true,
+        university: { select: { name: true } },
+      },
+      take: 10,
+    });
+
+    res.json(suggestions);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Remove friend
+router.delete('/:friendId', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const deleted = await prisma.friendRequest.deleteMany({
+      where: {
+        status: 'ACCEPTED',
+        OR: [
+          { fromUserId: req.user!.userId, toUserId: req.params.friendId },
+          { fromUserId: req.params.friendId, toUserId: req.user!.userId },
+        ],
+      },
+    });
+
+    if (deleted.count === 0) {
+      res.status(404).json({ error: 'Amicizia non trovata' });
+      return;
+    }
+
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 
