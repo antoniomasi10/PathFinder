@@ -11,10 +11,11 @@ export async function register(req: Request, res: Response) {
     }
     const result = await registerUser({ name, email, password, universityId, courseOfStudy });
 
+    const isProd = process.env.NODE_ENV === 'production';
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -33,10 +34,11 @@ export async function login(req: Request, res: Response) {
     }
     const result = await loginUser({ email, password });
 
+    const isProd = process.env.NODE_ENV === 'production';
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 

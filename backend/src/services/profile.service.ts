@@ -114,10 +114,26 @@ export async function getProfile(userId: string) {
   return user;
 }
 
-export async function updateProfile(userId: string, data: { name?: string; bio?: string; avatar?: string; courseOfStudy?: string }) {
-  return prisma.user.update({
+export async function updateProfile(userId: string, data: { name?: string; bio?: string; avatar?: string; courseOfStudy?: string; passions?: string[] }) {
+  const { passions, ...userFields } = data;
+
+  if (passions !== undefined) {
+    await prisma.userProfile.update({
+      where: { userId },
+      data: { passions },
+    });
+  }
+
+  if (Object.keys(userFields).length > 0) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: userFields,
+      include: { profile: true, university: true },
+    });
+  }
+
+  return prisma.user.findUnique({
     where: { id: userId },
-    data,
     include: { profile: true, university: true },
   });
 }
