@@ -109,6 +109,10 @@ export default function UniversitiesPage() {
           </Link>
         ))}
       </div>
+
+      <p className="text-center mt-6 px-2" style={{ fontSize: '11px', color: '#8B8FA8', lineHeight: '1.5' }}>
+        Dati da siti ufficiali delle università e AlmaLaurea. Aggiornati a Marzo 2026.
+      </p>
     </div>
   );
 }

@@ -15,6 +15,7 @@ import {
   Clock,
   Users,
   BookOpen,
+  ExternalLink,
 } from 'lucide-react';
 import { MOCK_COURSES } from '@/lib/mockCourses';
 
@@ -91,20 +92,19 @@ export default function CourseDetailPage() {
 
         <div className="px-5 pt-5 pb-4">
           <h1 className="text-2xl font-bold text-white leading-tight mb-2">{course.title}</h1>
-          <p style={{ fontSize: '16px', color: '#8B8FA8' }} className="mb-3">
-            {course.university}
+          <p style={{ fontSize: '16px', color: '#8B8FA8' }} className="mb-1">
+            {course.university} — {course.city}
           </p>
-          <div className="flex flex-wrap gap-2">
-            {[course.duration, course.language, course.mode].map((tag) => (
-              <span
-                key={tag}
-                className="px-3 py-1 rounded-full text-sm"
-                style={{ backgroundColor: '#1C2F43', color: '#D0D4DC' }}
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
+          <a
+            href={course.officialUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm"
+            style={{ color: '#4A9EFF' }}
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            Sito ufficiale del corso
+          </a>
         </div>
       </div>
 
@@ -145,7 +145,7 @@ export default function CourseDetailPage() {
           <h2 className="text-lg font-bold text-white mb-4">Info corso</h2>
           <div className="grid grid-cols-2 gap-3">
             <InfoRow icon={<Clock className="w-4 h-4" style={{ color: '#4A9EFF' }} />} label="Durata" value={course.duration} />
-            <InfoRow icon={<Users className="w-4 h-4" style={{ color: '#4A9EFF' }} />} label="Posti" value={String(course.spots)} />
+            <InfoRow icon={<Users className="w-4 h-4" style={{ color: '#4A9EFF' }} />} label="Posti" value={course.spots ? String(course.spots) : 'Su requisiti'} />
             <InfoRow icon={<BookOpen className="w-4 h-4" style={{ color: '#4A9EFF' }} />} label="Lingua" value={course.language} />
             <InfoRow icon={<MapPin className="w-4 h-4" style={{ color: '#4A9EFF' }} />} label="Modalità" value={course.mode} />
           </div>
@@ -430,6 +430,22 @@ export default function CourseDetailPage() {
             <InfoChip icon="📍" label="Dal centro" value={course.distanceFromCenter} />
           </div>
         </div>
+      </div>
+
+      {/* Disclaimer */}
+      <div className="px-5 pb-6">
+        <p className="text-center" style={{ fontSize: '12px', color: '#8B8FA8', lineHeight: '1.5' }}>
+          Informazioni aggiornate a Marzo 2026 da siti ufficiali delle università e AlmaLaurea.
+          Per dettagli sempre aggiornati, visita il{' '}
+          <a
+            href={course.officialUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#4A9EFF', textDecoration: 'underline' }}
+          >
+            sito ufficiale del corso
+          </a>.
+        </p>
       </div>
 
       {/* Fixed Bottom CTA */}
