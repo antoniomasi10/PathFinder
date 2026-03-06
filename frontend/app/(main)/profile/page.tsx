@@ -5,6 +5,8 @@ import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useSavedOpportunities } from '@/lib/savedOpportunities';
+import { useSavedCourses } from '@/lib/savedCourses';
+import { getSavedSimulations, SavedSimulation } from '@/components/AdmissionSimulator';
 
 interface FullProfile {
   id: string;
@@ -62,6 +64,8 @@ export default function ProfilePage() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const { savedOpps } = useSavedOpportunities();
+  const { savedCourses } = useSavedCourses();
+  const [simulations, setSimulations] = useState<SavedSimulation[]>([]);
   const [profile, setProfile] = useState<FullProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -101,6 +105,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     loadData();
+    setSimulations(getSavedSimulations());
   }, []);
 
   const loadData = async () => {
@@ -409,18 +414,78 @@ export default function ProfilePage() {
                 </div>
               </div>
             )
-          ) : (
+          ) : savedCourses.length === 0 ? (
             <div className="bg-[#1E293B] rounded-2xl p-6 text-center">
-              <p className="text-sm text-[#64748B]">Nessuna universit&agrave; salvata ancora</p>
+              <p className="text-sm text-[#64748B]">Nessun corso salvato ancora</p>
               <button
                 onClick={() => router.push('/universities')}
                 className="mt-3 text-sm text-[#4F46E5] font-medium hover:underline"
               >
-                Esplora universit&agrave;
+                Esplora corsi
               </button>
+            </div>
+          ) : (
+            <div className="bg-[#1E293B] rounded-2xl p-4">
+              <div className="space-y-3">
+                {savedCourses.map((c) => (
+                  <div
+                    key={c.id}
+                    onClick={() => router.push(`/universities/course/${c.id}`)}
+                    className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-[#2A3F54]/50 transition-colors"
+                    style={{ backgroundColor: '#0F172A' }}
+                  >
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#4F46E5' }}>
+                      <span className="text-white text-lg">🎓</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-sm font-semibold text-white line-clamp-2 mb-0.5">{c.title}</h4>
+                      <p className="text-xs text-[#64748B] truncate">{c.university} — {c.city}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
+
+        {/* Simulazioni salvate */}
+        {simulations.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <svg className="w-4 h-4 text-[#94A3B8]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <h3 className="text-base font-semibold text-white">Le mie simulazioni</h3>
+            </div>
+            <div className="bg-[#1E293B] rounded-2xl p-4">
+              <div className="space-y-3">
+                {simulations.map((sim) => (
+                  <div
+                    key={sim.id}
+                    onClick={() => router.push(`/universities/course/${sim.courseId}`)}
+                    className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-[#2A3F54]/50 transition-colors"
+                    style={{ backgroundColor: '#0F172A' }}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: `${sim.result.categoria.color}20` }}
+                    >
+                      <span className="text-sm font-bold" style={{ color: sim.result.categoria.color }}>
+                        {sim.result.probabilitaFinale}%
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-sm font-semibold text-white line-clamp-1 mb-0.5">{sim.courseTitle}</h4>
+                      <p className="text-xs text-[#64748B] truncate">
+                        {sim.university} · {sim.result.categoria.label}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Bookmark,
@@ -10,26 +10,104 @@ import {
   MapPin,
   ChevronDown,
   Download,
-  Plus,
   ArrowLeft,
   Clock,
   Users,
   BookOpen,
   ExternalLink,
+  Calendar,
+  Check,
+  GraduationCap,
 } from 'lucide-react';
-import { MOCK_COURSES } from '@/lib/mockCourses';
+import { MOCK_COURSES, CourseDeadline } from '@/lib/mockCourses';
+import { useSavedCourses } from '@/lib/savedCourses';
+import AdmissionSimulator from '@/components/AdmissionSimulator';
+import CourseComparison from '@/components/CourseComparison';
+import LivingMap from '@/components/LivingMap';
 
 export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
   const course = MOCK_COURSES.find((c) => c.id === Number(params.id));
+  const { savedIds, toggleSave } = useSavedCourses();
 
-  const [bookmarked, setBookmarked] = useState(false);
+  const bookmarked = course ? savedIds.has(course.id) : false;
   const [checklist, setChecklist] = useState<Record<number, boolean>>({});
-  const [degreeGrade, setDegreeGrade] = useState('');
-  const [englishCert, setEnglishCert] = useState('');
-  const [fieldOfStudy, setFieldOfStudy] = useState('');
-  const [probability, setProbability] = useState<'high' | 'medium' | 'low' | null>(null);
+  const [calendarAdded, setCalendarAdded] = useState<Set<number>>(new Set());
+  const [showSimulator, setShowSimulator] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(`calendar-added-${params.id}`);
+    if (stored) {
+      setCalendarAdded(new Set(JSON.parse(stored)));
+    }
+  }, [params.id]);
+
+  const addToCalendar = (deadline: CourseDeadline, index: number) => {
+    // Parse Italian date string to ICS format
+    const monthMap: Record<string, string> = {
+      'Gen': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+      'Mag': '05', 'Giu': '06', 'Lug': '07', 'Ago': '08',
+      'Set': '09', 'Ott': '10', 'Nov': '11', 'Dic': '12',
+    };
+
+    let dtStart = '';
+    // Try to match "7 Lug 2025" or "30 Ott 2025"
+    const fullMatch = deadline.date.match(/(\d{1,2})\s+(\w{3})\s+(\d{4})/);
+    // Try to match "Mar 2026" (month + year only)
+    const monthYearMatch = deadline.date.match(/^(\w{3})\s+(\d{4})$/);
+
+    if (fullMatch) {
+      const day = fullMatch[1].padStart(2, '0');
+      const month = monthMap[fullMatch[2]] || '01';
+      const year = fullMatch[3];
+      dtStart = `${year}${month}${day}T090000Z`;
+    } else if (monthYearMatch) {
+      const month = monthMap[monthYearMatch[1]] || '01';
+      const year = monthYearMatch[2];
+      dtStart = `${year}${month}01T090000Z`;
+    } else {
+      // For date ranges like "9 Ott - 5 Nov 2025", use the first date
+      const rangeMatch = deadline.date.match(/(\d{1,2})\s+(\w{3})/);
+      const yearMatch = deadline.date.match(/(\d{4})/);
+      if (rangeMatch && yearMatch) {
+        const day = rangeMatch[1].padStart(2, '0');
+        const month = monthMap[rangeMatch[2]] || '01';
+        dtStart = `${yearMatch[1]}${month}${day}T090000Z`;
+      } else {
+        dtStart = '20260101T090000Z';
+      }
+    }
+
+    const icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//PathFinder//Deadline//IT',
+      'BEGIN:VEVENT',
+      `DTSTART:${dtStart}`,
+      `SUMMARY:${deadline.label} - ${course!.title}`,
+      `LOCATION:${course!.university}`,
+      `DESCRIPTION:${deadline.label} - ${course!.title} (${course!.university})`,
+      'END:VEVENT',
+      'END:VCALENDAR',
+    ].join('\r\n');
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${deadline.label.replace(/[^a-zA-Z0-9]/g, '_')}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    const newSet = new Set(calendarAdded);
+    newSet.add(index);
+    setCalendarAdded(newSet);
+    localStorage.setItem(`calendar-added-${params.id}`, JSON.stringify([...newSet]));
+  };
 
   if (!course) {
     return (
@@ -46,18 +124,6 @@ export default function CourseDetailPage() {
   const completedItems = Object.values(checklist).filter(Boolean).length;
   const totalItems = course.requirements.length;
 
-  const calculateProbability = () => {
-    const grade = parseFloat(degreeGrade);
-    if (!grade || !englishCert || !fieldOfStudy) return;
-
-    if (grade >= 27 && (englishCert === 'C1' || englishCert === 'C2') && fieldOfStudy === 'related') {
-      setProbability('high');
-    } else if (grade >= 24 || englishCert === 'B2') {
-      setProbability('medium');
-    } else {
-      setProbability('low');
-    }
-  };
 
   return (
     <div style={{ backgroundColor: '#0D1117' }} className="min-h-screen pb-48">
@@ -80,7 +146,7 @@ export default function CourseDetailPage() {
             <ArrowLeft className="w-5 h-5 text-white" />
           </button>
           <button
-            onClick={() => setBookmarked(!bookmarked)}
+            onClick={() => toggleSave({ id: course.id, title: course.title, university: course.university, city: course.city })}
             className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center"
             style={{ backgroundColor: 'rgba(13, 17, 23, 0.7)', backdropFilter: 'blur(8px)' }}
           >
@@ -194,146 +260,41 @@ export default function CourseDetailPage() {
         </div>
       </div>
 
-      {/* Admission Simulator */}
+      {/* Admission Simulator CTA */}
       <div className="px-5 pb-6">
-        <div
-          className="rounded-2xl p-5"
+        <button
+          onClick={() => setShowSimulator(true)}
+          className="w-full rounded-2xl p-5 text-left transition-transform active:scale-[0.98]"
           style={{
             background: 'linear-gradient(135deg, #1C2F43 0%, #162232 100%)',
             border: '1px solid #2A3F54',
           }}
         >
-          <h2 className="text-lg font-bold text-white mb-4">Simula la tua ammissione</h2>
-
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: '#D0D4DC' }}>
-                Voto di laurea
-              </label>
-              <input
-                type="number"
-                placeholder="Es. 105"
-                value={degreeGrade}
-                onChange={(e) => setDegreeGrade(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4A9EFF]"
-                style={{
-                  backgroundColor: '#0D1117',
-                  border: '1px solid #2A3F54',
-                  color: 'white',
-                }}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: '#D0D4DC' }}>
-                Certificazione inglese
-              </label>
-              <div className="relative">
-                <select
-                  value={englishCert}
-                  onChange={(e) => setEnglishCert(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl appearance-none focus:outline-none focus:ring-2 focus:ring-[#4A9EFF]"
-                  style={{
-                    backgroundColor: '#0D1117',
-                    border: '1px solid #2A3F54',
-                    color: englishCert ? 'white' : '#8B8FA8',
-                  }}
-                >
-                  <option value="">Seleziona</option>
-                  <option value="A2">A2</option>
-                  <option value="B1">B1</option>
-                  <option value="B2">B2</option>
-                  <option value="C1">C1</option>
-                  <option value="C2">C2</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none" style={{ color: '#8B8FA8' }} />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: '#D0D4DC' }}>
-                Campo di studi precedente
-              </label>
-              <div className="relative">
-                <select
-                  value={fieldOfStudy}
-                  onChange={(e) => setFieldOfStudy(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl appearance-none focus:outline-none focus:ring-2 focus:ring-[#4A9EFF]"
-                  style={{
-                    backgroundColor: '#0D1117',
-                    border: '1px solid #2A3F54',
-                    color: fieldOfStudy ? 'white' : '#8B8FA8',
-                  }}
-                >
-                  <option value="">Seleziona</option>
-                  <option value="related">Informatica/Ingegneria</option>
-                  <option value="stem">STEM</option>
-                  <option value="other">Altro</option>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none" style={{ color: '#8B8FA8' }} />
-              </div>
-            </div>
-
-            <button
-              onClick={calculateProbability}
-              className="w-full py-3 rounded-xl font-semibold shadow-md transition-colors mt-2"
-              style={{ backgroundColor: '#4A9EFF', color: 'white' }}
+          <div className="flex items-center gap-4">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: 'linear-gradient(135deg, #4A9EFF, #7C3AED)' }}
             >
-              Calcola probabilità
-            </button>
-
-            {probability && (
-              <div
-                className="mt-4 p-4 rounded-xl"
-                style={{ backgroundColor: '#0D1117', border: '1px solid #2A3F54' }}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium" style={{ color: '#D0D4DC' }}>
-                    Probabilità di ammissione
-                  </span>
-                  <span
-                    className="px-3 py-1 rounded-full text-sm font-semibold"
-                    style={{
-                      backgroundColor:
-                        probability === 'high'
-                          ? 'rgba(61, 214, 140, 0.15)'
-                          : probability === 'medium'
-                          ? 'rgba(255, 170, 51, 0.15)'
-                          : 'rgba(255, 77, 77, 0.15)',
-                      color:
-                        probability === 'high'
-                          ? '#3DD68C'
-                          : probability === 'medium'
-                          ? '#FFAA33'
-                          : '#FF4D4D',
-                    }}
-                  >
-                    {probability === 'high' ? 'Alta' : probability === 'medium' ? 'Media' : 'Bassa'}
-                  </span>
-                </div>
-                <div
-                  className="h-2 rounded-full overflow-hidden"
-                  style={{ backgroundColor: '#2A3F54' }}
-                >
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      width:
-                        probability === 'high' ? '83%' : probability === 'medium' ? '50%' : '25%',
-                      backgroundColor:
-                        probability === 'high'
-                          ? '#3DD68C'
-                          : probability === 'medium'
-                          ? '#FFAA33'
-                          : '#FF4D4D',
-                    }}
-                  />
-                </div>
-              </div>
-            )}
+              <GraduationCap className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-base font-bold text-white mb-0.5">Simula la tua ammissione</h2>
+              <p className="text-xs" style={{ color: '#8B8FA8' }}>
+                Calcola la tua probabilità in 4 semplici step
+              </p>
+            </div>
+            <ChevronDown className="w-5 h-5 -rotate-90" style={{ color: '#4A9EFF' }} />
           </div>
-        </div>
+        </button>
       </div>
+
+      {showSimulator && (
+        <AdmissionSimulator course={course} onClose={() => setShowSimulator(false)} />
+      )}
+
+      {showComparison && (
+        <CourseComparison course={course} onClose={() => setShowComparison(false)} />
+      )}
 
       {/* Application Checklist */}
       <div className="px-5 pb-6">
@@ -382,54 +343,81 @@ export default function CourseDetailPage() {
         </div>
       </div>
 
-      {/* Timeline */}
-      <div className="px-5 pb-6">
+      {/* Scadenze - Card orizzontali */}
+      <div className="pb-6">
+        <h2 className="text-lg font-bold text-white mb-4 px-5">Scadenze</h2>
         <div
-          className="rounded-2xl p-5"
-          style={{ backgroundColor: '#1C2F43', border: '1px solid #2A3F54' }}
+          className="flex gap-3 overflow-x-auto px-5 hide-scrollbar"
+          style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none' }}
         >
-          <h2 className="text-lg font-bold text-white mb-4">Scadenze</h2>
-          <div className="space-y-4">
-            {course.deadlines.map((deadline, index) => (
-              <TimelineItem
+          <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+          {course.deadlines.map((deadline, index) => {
+            const isAdded = calendarAdded.has(index);
+            const isPast = deadline.status === 'past';
+            const isImminent = deadline.status === 'upcoming';
+            const typeColors: Record<string, { bg: string; accent: string }> = {
+              apertura: { bg: '#166534', accent: '#22C55E' },
+              scadenza: { bg: '#92400E', accent: '#F59E0B' },
+              test: { bg: '#991B1B', accent: '#EF4444' },
+              risultati: { bg: '#1E3A5F', accent: '#4A9EFF' },
+            };
+            const colors = deadline.type ? typeColors[deadline.type] : typeColors.risultati;
+
+            return (
+              <div
                 key={index}
-                date={deadline.date}
-                label={deadline.label}
-                status={deadline.status}
-                isLast={index === course.deadlines.length - 1}
-              />
-            ))}
-          </div>
+                className="flex-shrink-0 rounded-2xl p-4 flex flex-col justify-between"
+                style={{
+                  width: '200px',
+                  height: '120px',
+                  backgroundColor: isPast ? '#2A3F54' : colors.bg,
+                  opacity: isPast ? 0.5 : 1,
+                  scrollSnapAlign: 'start',
+                  border: `1px solid ${isPast ? '#3A4F64' : colors.accent}30`,
+                }}
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold text-white leading-tight">{deadline.date}</p>
+                    {isImminent && (
+                      <span
+                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full animate-pulse"
+                        style={{ backgroundColor: `${colors.accent}30`, color: colors.accent }}
+                      >
+                        Imminente
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs mt-1 leading-tight" style={{ color: isPast ? '#8B8FA8' : '#D0D4DC' }}>
+                    {deadline.label}
+                  </p>
+                </div>
+                <button
+                  onClick={() => !isAdded && addToCalendar(deadline, index)}
+                  className="flex items-center gap-1.5 self-start transition-colors"
+                  style={{ color: isAdded ? '#22C55E' : '#D0D4DC' }}
+                >
+                  {isAdded ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span className="text-[11px] font-medium">Aggiunta</span>
+                    </>
+                  ) : (
+                    <>
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span className="text-[11px] font-medium">Aggiungi</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Vivi qui */}
+      {/* Vivi qui — Mappa interattiva */}
       <div className="px-5 pb-6">
-        <div
-          className="rounded-2xl p-5"
-          style={{ backgroundColor: '#1C2F43', border: '1px solid #2A3F54' }}
-        >
-          <h2 className="text-lg font-bold text-white mb-4">Vivi qui</h2>
-          <div
-            className="h-48 rounded-xl mb-4 flex items-center justify-center relative overflow-hidden"
-            style={{
-              background: 'linear-gradient(135deg, #162232 0%, #1C2F43 50%, #2A3F54 100%)',
-            }}
-          >
-            <MapPin className="w-12 h-12" style={{ color: '#4A9EFF' }} />
-            <div
-              className="absolute inset-0"
-              style={{
-                background: 'linear-gradient(to top, rgba(13,17,23,0.4) 0%, transparent 100%)',
-              }}
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <InfoChip icon="€" label="Affitto medio" value={course.rentAvg} />
-            <InfoChip icon="💰" label="Costo vita" value={course.costOfLiving} />
-            <InfoChip icon="📍" label="Dal centro" value={course.distanceFromCenter} />
-          </div>
-        </div>
+        <LivingMap city={course.city} />
       </div>
 
       {/* Disclaimer */}
@@ -450,7 +438,7 @@ export default function CourseDetailPage() {
 
       {/* Fixed Bottom CTA */}
       <div
-        className="fixed bottom-16 left-0 right-0 px-5 py-4"
+        className="fixed bottom-[48px] left-0 right-0 px-5 py-4"
         style={{
           backgroundColor: '#0D1117',
           borderTop: '1px solid #2A3F54',
@@ -458,12 +446,18 @@ export default function CourseDetailPage() {
       >
         <div className="flex gap-3 max-w-md mx-auto">
           <button
+            onClick={() => toggleSave({ id: course.id, title: course.title, university: course.university, city: course.city })}
             className="flex-1 py-3 rounded-xl font-semibold shadow-md transition-colors"
-            style={{ backgroundColor: '#4A9EFF', color: 'white' }}
+            style={{
+              backgroundColor: bookmarked ? '#2A3F54' : '#4A9EFF',
+              color: bookmarked ? '#4A9EFF' : 'white',
+              border: bookmarked ? '1px solid #4A9EFF' : 'none',
+            }}
           >
-            Salva corso
+            {bookmarked ? 'Salvato' : 'Salva corso'}
           </button>
           <button
+            onClick={() => setShowComparison(true)}
             className="flex-1 py-3 rounded-xl font-semibold transition-colors"
             style={{ border: '2px solid #4A9EFF', color: '#4A9EFF' }}
           >
@@ -569,55 +563,6 @@ function ChecklistItem({
   );
 }
 
-function TimelineItem({
-  date,
-  label,
-  status,
-  isLast,
-}: {
-  date: string;
-  label: string;
-  status: 'past' | 'upcoming' | 'future';
-  isLast: boolean;
-}) {
-  return (
-    <div className="flex gap-3 relative">
-      <div className="flex flex-col items-center">
-        <div
-          className="w-3 h-3 rounded-full"
-          style={{
-            backgroundColor:
-              status === 'past' ? '#8B8FA8' : status === 'upcoming' ? '#4A9EFF' : '#2A3F54',
-          }}
-        />
-        {!isLast && (
-          <div
-            className="w-0.5 flex-1 mt-1"
-            style={{ backgroundColor: '#2A3F54' }}
-          />
-        )}
-      </div>
-      <div className="flex-1 pb-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <p
-              className="text-sm font-semibold"
-              style={{ color: status === 'upcoming' ? '#4A9EFF' : '#D0D4DC' }}
-            >
-              {label}
-            </p>
-            <p className="text-xs mt-0.5" style={{ color: '#8B8FA8' }}>
-              {date}
-            </p>
-          </div>
-          <button className="transition-colors" style={{ color: '#8B8FA8' }}>
-            <Plus className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function InfoChip({
   icon,

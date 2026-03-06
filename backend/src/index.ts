@@ -17,6 +17,7 @@ import notificationRoutes from './routes/notification.routes';
 import messageRoutes from './routes/message.routes';
 import groupRoutes from './routes/group.routes';
 import userRoutes from './routes/user.routes';
+import courseRoutes from './routes/course.routes';
 import { setupChatSocket } from './socket/chatHandler';
 
 const app = express();
@@ -48,6 +49,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/courses', courseRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

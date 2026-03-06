@@ -8,6 +8,7 @@ export interface CourseDeadline {
   date: string;
   label: string;
   status: 'past' | 'upcoming' | 'future';
+  type?: 'apertura' | 'scadenza' | 'test' | 'risultati';
 }
 
 export interface MockCourse {
@@ -34,6 +35,9 @@ export interface MockCourse {
   costOfLiving: string;
   distanceFromCenter: string;
   officialUrl: string;
+  sector: string;
+  requiredEnglishLevel: string;
+  competitiveness: number; // candidati stimati / posti (ratio)
 }
 
 // Dati basati su fonti ufficiali: siti delle università, AlmaLaurea 2024.
@@ -86,15 +90,18 @@ export const MOCK_COURSES: MockCourse[] = [
       'AI Researcher',
     ],
     deadlines: [
-      { date: '7 Lug 2025', label: 'Apertura candidature (1° sem)', status: 'past' },
-      { date: '27 Ago 2025', label: 'Scadenza candidature (1° sem)', status: 'past' },
-      { date: '8 Gen 2026', label: 'Apertura candidature (2° sem)', status: 'past' },
-      { date: '20 Feb 2026', label: 'Scadenza candidature (2° sem)', status: 'past' },
+      { date: '7 Lug 2025', label: 'Apertura candidature (1° sem)', status: 'past', type: 'apertura' },
+      { date: '27 Ago 2025', label: 'Scadenza candidature (1° sem)', status: 'past', type: 'scadenza' },
+      { date: '8 Gen 2026', label: 'Apertura candidature (2° sem)', status: 'past', type: 'apertura' },
+      { date: '20 Feb 2026', label: 'Scadenza candidature (2° sem)', status: 'past', type: 'scadenza' },
     ],
     rentAvg: '€750/mese',
     costOfLiving: 'Alto',
     distanceFromCenter: '3.5 km',
     officialUrl: 'https://www.polimi.it/en/education/laurea-magistrale-programmes/programme-detail/computer-science-and-engineering',
+    sector: 'Computer Science',
+    requiredEnglishLevel: 'B2',
+    competitiveness: 8,
   },
   {
     id: 2,
@@ -143,15 +150,18 @@ export const MOCK_COURSES: MockCourse[] = [
       'AI Product Manager',
     ],
     deadlines: [
-      { date: 'Mar 2026', label: 'Apertura candidature (stima)', status: 'upcoming' },
-      { date: 'Mag 2026', label: 'Scadenza candidature (stima)', status: 'future' },
-      { date: 'Giu 2026', label: 'Valutazione candidature', status: 'future' },
-      { date: 'Set 2026', label: 'Inizio lezioni', status: 'future' },
+      { date: 'Mar 2026', label: 'Apertura candidature (stima)', status: 'upcoming', type: 'apertura' },
+      { date: 'Mag 2026', label: 'Scadenza candidature (stima)', status: 'future', type: 'scadenza' },
+      { date: 'Giu 2026', label: 'Valutazione candidature', status: 'future', type: 'risultati' },
+      { date: 'Set 2026', label: 'Inizio lezioni', status: 'future', type: 'apertura' },
     ],
     rentAvg: '€500/mese',
     costOfLiving: 'Medio',
     distanceFromCenter: '2.5 km',
     officialUrl: 'https://corsi.unibo.it/2cycle/artificial-intelligence',
+    sector: 'Artificial Intelligence',
+    requiredEnglishLevel: 'B2',
+    competitiveness: 7,
   },
   {
     id: 3,
@@ -199,15 +209,18 @@ export const MOCK_COURSES: MockCourse[] = [
       'CISO',
     ],
     deadlines: [
-      { date: 'Nov 2025', label: 'Prima rata iscrizione', status: 'past' },
-      { date: 'Dic 2025', label: 'Seconda rata iscrizione', status: 'past' },
-      { date: 'Mar 2026', label: 'Terza rata iscrizione', status: 'upcoming' },
-      { date: 'Set 2026', label: 'Inizio lezioni A.A. 2026/27', status: 'future' },
+      { date: 'Nov 2025', label: 'Prima rata iscrizione', status: 'past', type: 'scadenza' },
+      { date: 'Dic 2025', label: 'Seconda rata iscrizione', status: 'past', type: 'scadenza' },
+      { date: 'Mar 2026', label: 'Terza rata iscrizione', status: 'upcoming', type: 'scadenza' },
+      { date: 'Set 2026', label: 'Inizio lezioni A.A. 2026/27', status: 'future', type: 'apertura' },
     ],
     rentAvg: '€600/mese',
     costOfLiving: 'Medio-Alto',
     distanceFromCenter: '3.0 km',
     officialUrl: 'https://cybersecurity.uniroma1.it/',
+    sector: 'Cybersecurity',
+    requiredEnglishLevel: 'B2',
+    competitiveness: 5,
   },
   {
     id: 4,
@@ -254,15 +267,18 @@ export const MOCK_COURSES: MockCourse[] = [
       'Motorsport Engineer',
     ],
     deadlines: [
-      { date: '30 Ott 2025', label: 'Scadenza candidature (1° sem)', status: 'past' },
-      { date: '30 Nov 2025', label: 'Scadenza iscrizione (1° sem)', status: 'past' },
-      { date: 'Apr 2026', label: 'Candidature (2° sem, stima)', status: 'upcoming' },
-      { date: 'Set 2026', label: 'Inizio lezioni', status: 'future' },
+      { date: '30 Ott 2025', label: 'Scadenza candidature (1° sem)', status: 'past', type: 'scadenza' },
+      { date: '30 Nov 2025', label: 'Scadenza iscrizione (1° sem)', status: 'past', type: 'scadenza' },
+      { date: 'Apr 2026', label: 'Candidature (2° sem, stima)', status: 'upcoming', type: 'apertura' },
+      { date: 'Set 2026', label: 'Inizio lezioni', status: 'future', type: 'apertura' },
     ],
     rentAvg: '€450/mese',
     costOfLiving: 'Medio',
     distanceFromCenter: '2.0 km',
     officialUrl: 'https://www.polito.it/en/education/master-s-degree-programmes/automotive-engineering',
+    sector: 'Automotive',
+    requiredEnglishLevel: 'B2',
+    competitiveness: 4,
   },
   {
     id: 5,
@@ -311,14 +327,17 @@ export const MOCK_COURSES: MockCourse[] = [
       'Marketing Consultant',
     ],
     deadlines: [
-      { date: '9 Ott - 5 Nov 2025', label: 'I round candidature', status: 'past' },
-      { date: '6 Nov 2025 - 22 Gen 2026', label: 'II round candidature', status: 'past' },
-      { date: '23 Gen - 9 Mar 2026', label: 'III round candidature', status: 'upcoming' },
-      { date: '10 Mar - 29 Apr 2026', label: 'IV round candidature', status: 'future' },
+      { date: '9 Ott - 5 Nov 2025', label: 'I round candidature', status: 'past', type: 'scadenza' },
+      { date: '6 Nov 2025 - 22 Gen 2026', label: 'II round candidature', status: 'past', type: 'scadenza' },
+      { date: '23 Gen - 9 Mar 2026', label: 'III round candidature', status: 'upcoming', type: 'scadenza' },
+      { date: '10 Mar - 29 Apr 2026', label: 'IV round candidature', status: 'future', type: 'scadenza' },
     ],
     rentAvg: '€750/mese',
     costOfLiving: 'Alto',
     distanceFromCenter: '2.5 km',
     officialUrl: 'https://www.unibocconi.it/en/programs/master-science/marketing-management',
+    sector: 'Marketing',
+    requiredEnglishLevel: 'C1',
+    competitiveness: 6,
   },
 ];
