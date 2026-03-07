@@ -19,8 +19,9 @@ import {
   Check,
   GraduationCap,
 } from 'lucide-react';
-import { MOCK_COURSES, CourseDeadline } from '@/lib/mockCourses';
+import { MOCK_COURSES, CourseDeadline, CourseRequirement } from '@/lib/mockCourses';
 import { useSavedCourses } from '@/lib/savedCourses';
+import api from '@/lib/api';
 import AdmissionSimulator from '@/components/AdmissionSimulator';
 import CourseComparison from '@/components/CourseComparison';
 import LivingMap from '@/components/LivingMap';
@@ -36,6 +37,46 @@ export default function CourseDetailPage() {
   const [calendarAdded, setCalendarAdded] = useState<Set<number>>(new Set());
   const [showSimulator, setShowSimulator] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [checklistInitialized, setChecklistInitialized] = useState(false);
+
+  const GPA_ORDER = ['GPA_18_20', 'GPA_21_24', 'GPA_25_27', 'GPA_28_30'];
+  const ENG_ORDER = ['A2', 'B1_B2', 'C1', 'C2_PLUS'];
+
+  function isRequirementMet(req: CourseRequirement, profile: any): boolean | null {
+    if (req.type === 'english' && profile?.englishLevel && req.minEnglishLevel) {
+      return ENG_ORDER.indexOf(profile.englishLevel) >= ENG_ORDER.indexOf(req.minEnglishLevel);
+    }
+    if (req.type === 'gpa' && profile?.gpa && req.minGpa) {
+      return GPA_ORDER.indexOf(profile.gpa) >= GPA_ORDER.indexOf(req.minGpa);
+    }
+    return null;
+  }
+
+  useEffect(() => {
+    api.get('/profile/me').then((res) => setUserProfile(res.data)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!course || checklistInitialized) return;
+    const storageKey = `checklist-${params.id}`;
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      setChecklist(JSON.parse(stored));
+      setChecklistInitialized(true);
+      return;
+    }
+    if (userProfile) {
+      const initial: Record<number, boolean> = {};
+      course.requirements.forEach((req, i) => {
+        const met = isRequirementMet(req, userProfile);
+        if (met === true) initial[i] = true;
+      });
+      setChecklist(initial);
+      setChecklistInitialized(true);
+    }
+  }, [course, userProfile, checklistInitialized, params.id]);
 
   useEffect(() => {
     const stored = localStorage.getItem(`calendar-added-${params.id}`);
@@ -118,60 +159,61 @@ export default function CourseDetailPage() {
   }
 
   const toggleChecklistItem = (index: number) => {
-    setChecklist((prev) => ({ ...prev, [index]: !prev[index] }));
+    setChecklist((prev) => {
+      const updated = { ...prev, [index]: !prev[index] };
+      localStorage.setItem(`checklist-${params.id}`, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const completedItems = Object.values(checklist).filter(Boolean).length;
   const totalItems = course.requirements.length;
+  const autoVerifiableCount = course.requirements.filter((r) => r.type === 'english' || r.type === 'gpa').length;
+  const autoMetCount = course.requirements.filter((r, i) =>
+    (r.type === 'english' || r.type === 'gpa') && checklist[i]
+  ).length;
 
 
   return (
     <div style={{ backgroundColor: '#0D1117' }} className="min-h-screen pb-48">
-      {/* Hero Section */}
-      <div className="relative">
-        <div
-          className="relative h-56 overflow-hidden"
-          style={{
-            background: 'linear-gradient(135deg, #1C2F43 0%, #2A3F54 50%, #4A9EFF 100%)',
-          }}
+      {/* Header navigazione */}
+      <div className="px-5 pt-5 pb-2 flex items-center justify-between">
+        <button
+          onClick={() => router.back()}
+          className="w-10 h-10 rounded-full flex items-center justify-center"
+          style={{ backgroundColor: '#1C2F43' }}
         >
-          <div className="absolute inset-0 flex items-center justify-center">
-            <BookOpen className="w-16 h-16" style={{ color: '#4A9EFF', opacity: 0.3 }} />
-          </div>
-          <button
-            onClick={() => router.back()}
-            className="absolute top-4 left-4 w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(13, 17, 23, 0.7)', backdropFilter: 'blur(8px)' }}
-          >
-            <ArrowLeft className="w-5 h-5 text-white" />
-          </button>
-          <button
-            onClick={() => toggleSave({ id: course.id, title: course.title, university: course.university, city: course.city })}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: 'rgba(13, 17, 23, 0.7)', backdropFilter: 'blur(8px)' }}
-          >
-            <Bookmark
-              className={`w-5 h-5 ${bookmarked ? 'fill-[#4A9EFF] text-[#4A9EFF]' : 'text-white'}`}
-            />
-          </button>
-        </div>
+          <ArrowLeft className="w-5 h-5 text-white" />
+        </button>
+        <button
+          onClick={() => toggleSave({ id: course.id, title: course.title, university: course.university, city: course.city })}
+          className="w-10 h-10 rounded-full flex items-center justify-center"
+          style={{ backgroundColor: '#1C2F43' }}
+        >
+          <Bookmark
+            className={`w-5 h-5 ${bookmarked ? 'fill-[#4A9EFF] text-[#4A9EFF]' : 'text-white'}`}
+          />
+        </button>
+      </div>
 
-        <div className="px-5 pt-5 pb-4">
-          <h1 className="text-2xl font-bold text-white leading-tight mb-2">{course.title}</h1>
-          <p style={{ fontSize: '16px', color: '#8B8FA8' }} className="mb-1">
-            {course.university} — {course.city}
-          </p>
-          <a
-            href={course.officialUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm"
-            style={{ color: '#4A9EFF' }}
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            Sito ufficiale del corso
-          </a>
-        </div>
+      {/* Titolo e info corso */}
+      <div className="px-5 pt-3 pb-6">
+        <h1 className="text-2xl font-bold text-white leading-tight mb-2">
+          {course.title}
+        </h1>
+        <p style={{ fontSize: '14px', color: '#8B8FA8' }} className="mb-3">
+          {course.university} — {course.city}
+        </p>
+        <a
+          href={course.officialUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm"
+          style={{ color: '#4A9EFF' }}
+        >
+          <ExternalLink className="w-3.5 h-3.5" />
+          Sito ufficiale del corso
+        </a>
       </div>
 
       {/* Description */}
@@ -309,13 +351,19 @@ export default function CourseDetailPage() {
             </span>
           </div>
 
+          {userProfile && autoVerifiableCount > 0 && (
+            <p className="text-xs mb-3" style={{ color: autoMetCount === autoVerifiableCount ? '#3DD68C' : '#F59E0B' }}>
+              Possiedi {autoMetCount} di {autoVerifiableCount} requisiti verificabili dal tuo profilo
+            </p>
+          )}
+
           <div className="space-y-3 mb-4">
             {course.requirements.map((req, index) => (
               <ChecklistItem
-                key={req}
+                key={req.label}
                 checked={!!checklist[index]}
                 onChange={() => toggleChecklistItem(index)}
-                label={req}
+                label={req.label}
               />
             ))}
           </div>
@@ -334,6 +382,7 @@ export default function CourseDetailPage() {
           </div>
 
           <button
+            onClick={() => window.open(course.requirementsUrl || course.officialUrl, '_blank', 'noopener,noreferrer')}
             className="w-full py-2.5 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
             style={{ border: '1px solid #2A3F54', color: '#D0D4DC' }}
           >
@@ -465,10 +514,12 @@ export default function CourseDetailPage() {
           </button>
         </div>
         <button
-          className="w-full py-2.5 rounded-xl font-medium transition-colors mt-2 max-w-md mx-auto block"
+          onClick={() => window.open(course.officialUrl, '_blank', 'noopener,noreferrer')}
+          className="w-full py-2.5 rounded-xl font-medium transition-colors mt-2 max-w-md mx-auto flex items-center justify-center gap-2"
           style={{ border: '1px solid #2A3F54', color: '#D0D4DC' }}
         >
           Candidati ora
+          <ExternalLink className="w-4 h-4" />
         </button>
       </div>
     </div>

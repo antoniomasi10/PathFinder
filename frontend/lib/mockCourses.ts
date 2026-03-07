@@ -11,6 +11,13 @@ export interface CourseDeadline {
   type?: 'apertura' | 'scadenza' | 'test' | 'risultati';
 }
 
+export interface CourseRequirement {
+  label: string;
+  type: 'english' | 'gpa' | 'degree' | 'test' | 'other';
+  minEnglishLevel?: string;  // per type 'english': 'B1_B2', 'C1', 'C2_PLUS'
+  minGpa?: string;           // per type 'gpa': 'GPA_25_27'
+}
+
 export interface MockCourse {
   id: number;
   title: string;
@@ -27,7 +34,7 @@ export interface MockCourse {
   employmentRate: string;
   ranking: string;
   satisfaction: string;
-  requirements: string[];
+  requirements: CourseRequirement[];
   subjects: string[];
   careerOutlets: string[];
   deadlines: CourseDeadline[];
@@ -35,9 +42,11 @@ export interface MockCourse {
   costOfLiving: string;
   distanceFromCenter: string;
   officialUrl: string;
+  requirementsUrl: string;
   sector: string;
   requiredEnglishLevel: string;
   competitiveness: number; // candidati stimati / posti (ratio)
+  avgSalary: number; // stipendio netto medio annuo in € (AlmaLaurea)
 }
 
 // Dati basati su fonti ufficiali: siti delle università, AlmaLaurea 2024.
@@ -68,10 +77,10 @@ export const MOCK_COURSES: MockCourse[] = [
     ranking: 'Top 50 mondiale (QS)',
     satisfaction: '94%',
     requirements: [
-      'Laurea triennale in Ingegneria Informatica, Informatica o affini',
-      'Certificazione inglese B2',
-      'Verifica requisiti curriculari',
-      'Valutazione della preparazione personale',
+      { label: 'Laurea triennale in Ingegneria Informatica, Informatica o affini', type: 'degree' },
+      { label: 'Certificazione inglese B2', type: 'english', minEnglishLevel: 'B1_B2' },
+      { label: 'Verifica requisiti curriculari', type: 'other' },
+      { label: 'Valutazione della preparazione personale', type: 'other' },
     ],
     subjects: [
       'Machine Learning & AI',
@@ -99,9 +108,11 @@ export const MOCK_COURSES: MockCourse[] = [
     costOfLiving: 'Alto',
     distanceFromCenter: '3.5 km',
     officialUrl: 'https://www.polimi.it/en/education/laurea-magistrale-programmes/programme-detail/computer-science-and-engineering',
+    requirementsUrl: 'https://www.polimi.it/en/education/laurea-magistrale-programmes/programme-detail/computer-science-and-engineering',
     sector: 'Computer Science',
     requiredEnglishLevel: 'B2',
     competitiveness: 8,
+    avgSalary: 23928, // €1.994/mese * 12
   },
   {
     id: 2,
@@ -128,10 +139,10 @@ export const MOCK_COURSES: MockCourse[] = [
     ranking: 'Top 150 mondiale (QS CS)',
     satisfaction: '92%',
     requirements: [
-      'Laurea triennale in Informatica, Ingegneria, Matematica o affini',
-      'Requisiti curriculari in CS e matematica',
-      'Certificazione inglese B2',
-      'Valutazione della preparazione personale',
+      { label: 'Laurea triennale in Informatica, Ingegneria, Matematica o affini', type: 'degree' },
+      { label: 'Requisiti curriculari in CS e matematica', type: 'other' },
+      { label: 'Certificazione inglese B2', type: 'english', minEnglishLevel: 'B1_B2' },
+      { label: 'Valutazione della preparazione personale', type: 'other' },
     ],
     subjects: [
       'Machine Learning',
@@ -159,9 +170,11 @@ export const MOCK_COURSES: MockCourse[] = [
     costOfLiving: 'Medio',
     distanceFromCenter: '2.5 km',
     officialUrl: 'https://corsi.unibo.it/2cycle/artificial-intelligence',
+    requirementsUrl: 'https://corsi.unibo.it/2cycle/artificial-intelligence/how-to-enrol',
     sector: 'Artificial Intelligence',
     requiredEnglishLevel: 'B2',
     competitiveness: 7,
+    avgSalary: 21108, // €1.759/mese * 12
   },
   {
     id: 3,
@@ -188,9 +201,9 @@ export const MOCK_COURSES: MockCourse[] = [
     ranking: 'Top 100 mondiale (CS - QS)',
     satisfaction: '90%',
     requirements: [
-      'Laurea triennale con min. 44 CFU in Informatica, Ingegneria, Matematica o Statistica',
-      'Certificazione inglese B2',
-      'Verifica della preparazione personale',
+      { label: 'Laurea triennale con min. 44 CFU in Informatica, Ingegneria, Matematica o Statistica', type: 'degree' },
+      { label: 'Certificazione inglese B2', type: 'english', minEnglishLevel: 'B1_B2' },
+      { label: 'Verifica della preparazione personale', type: 'other' },
     ],
     subjects: [
       'Ethical Hacking',
@@ -218,9 +231,11 @@ export const MOCK_COURSES: MockCourse[] = [
     costOfLiving: 'Medio-Alto',
     distanceFromCenter: '3.0 km',
     officialUrl: 'https://cybersecurity.uniroma1.it/',
+    requirementsUrl: 'https://cybersecurity.uniroma1.it/how-to-apply',
     sector: 'Cybersecurity',
     requiredEnglishLevel: 'B2',
     competitiveness: 5,
+    avgSalary: 22320, // €1.860/mese * 12
   },
   {
     id: 4,
@@ -247,9 +262,9 @@ export const MOCK_COURSES: MockCourse[] = [
     ranking: 'Top 50 Ingegneria Meccanica (QS)',
     satisfaction: '93%',
     requirements: [
-      'Laurea triennale in Ingegneria Meccanica, Meccatronica o affini',
-      'Conoscenze di meccanica, termodinamica ed elettronica',
-      'Certificazione inglese B2',
+      { label: 'Laurea triennale in Ingegneria Meccanica, Meccatronica o affini', type: 'degree' },
+      { label: 'Conoscenze di meccanica, termodinamica ed elettronica', type: 'other' },
+      { label: 'Certificazione inglese B2', type: 'english', minEnglishLevel: 'B1_B2' },
     ],
     subjects: [
       'Electric & Hybrid Powertrains',
@@ -276,9 +291,11 @@ export const MOCK_COURSES: MockCourse[] = [
     costOfLiving: 'Medio',
     distanceFromCenter: '2.0 km',
     officialUrl: 'https://www.polito.it/en/education/master-s-degree-programmes/automotive-engineering',
+    requirementsUrl: 'https://www.polito.it/en/education/master-s-degree-programmes/automotive-engineering',
     sector: 'Automotive',
     requiredEnglishLevel: 'B2',
     competitiveness: 4,
+    avgSalary: 21600, // €1.800/mese * 12
   },
   {
     id: 5,
@@ -305,11 +322,11 @@ export const MOCK_COURSES: MockCourse[] = [
     ranking: '#2 in Europa (QS Marketing 2025)',
     satisfaction: '96,9%',
     requirements: [
-      'Laurea triennale in qualsiasi disciplina',
-      'GMAT, GRE o test online Bocconi',
-      'Certificazione inglese C1',
-      'Valutazione dossier e motivazione',
-      'Tassa di candidatura €100',
+      { label: 'Laurea triennale in qualsiasi disciplina', type: 'degree' },
+      { label: 'GMAT, GRE o test online Bocconi', type: 'test' },
+      { label: 'Certificazione inglese C1', type: 'english', minEnglishLevel: 'C1' },
+      { label: 'Valutazione dossier e motivazione', type: 'other' },
+      { label: 'Tassa di candidatura €100', type: 'other' },
     ],
     subjects: [
       'Brand Management',
@@ -336,8 +353,10 @@ export const MOCK_COURSES: MockCourse[] = [
     costOfLiving: 'Alto',
     distanceFromCenter: '2.5 km',
     officialUrl: 'https://www.unibocconi.it/en/programs/master-science/marketing-management',
+    requirementsUrl: 'https://www.unibocconi.it/en/programs/master-science/marketing-management/admission',
     sector: 'Marketing',
     requiredEnglishLevel: 'C1',
     competitiveness: 6,
+    avgSalary: 24000, // €2.000/mese * 12 (Bocconi premium)
   },
 ];
