@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { MOCK_COURSES } from '@/lib/mockCourses';
 
@@ -34,21 +34,68 @@ function CircularProgress({
   label,
   color,
   isPrimary = false,
+  delay = 0,
 }: {
   value: number;
   label: string;
   color: string;
   isPrimary?: boolean;
+  delay?: number;
 }) {
-  const size = isPrimary ? 68 : 54;
-  const strokeWidth = isPrimary ? 6 : 5;
+  const size = isPrimary ? 80 : 60;
+  const strokeWidth = isPrimary ? 8 : 6;
+  const fontSize = isPrimary ? 20 : 16;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (value / 100) * circumference;
+
+  const ref = useRef<HTMLDivElement>(null);
+  const [animatedValue, setAnimatedValue] = useState(0);
+  const hasAnimated = useRef(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAnimated.current) {
+          hasAnimated.current = true;
+          observer.disconnect();
+
+          const timeoutId = setTimeout(() => {
+            const startTime = performance.now();
+            const duration = 1200;
+
+            const animate = (now: number) => {
+              const progress = Math.min((now - startTime) / duration, 1);
+              const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+              setAnimatedValue(Math.round(value * eased));
+              if (progress < 1) requestAnimationFrame(animate);
+            };
+
+            requestAnimationFrame(animate);
+          }, delay);
+
+          return () => clearTimeout(timeoutId);
+        }
+      },
+      { threshold: 0.3 },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [value, delay]);
+
+  const offset = circumference - (animatedValue / 100) * circumference;
 
   return (
-    <div className="flex flex-col items-center gap-1">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    <div ref={ref} className="flex flex-col items-center gap-1">
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className={isPrimary ? 'md:w-[100px] md:h-[100px]' : 'md:w-[70px] md:h-[70px]'}
+      >
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -75,10 +122,10 @@ function CircularProgress({
           dominantBaseline="central"
           textAnchor="middle"
           fill="white"
-          fontSize={isPrimary ? 16 : 14}
+          fontSize={fontSize}
           fontWeight="bold"
         >
-          {value}%
+          {animatedValue}%
         </text>
       </svg>
       <span style={{ fontSize: '11px', color: '#8B8FA8' }}>{label}</span>
@@ -420,14 +467,15 @@ export default function UniversitiesPage() {
                   {course.description}
                 </p>
                 <div style={{ height: '1px', backgroundColor: '#2A3F54', marginBottom: '16px' }} />
-                <div className="flex justify-between items-end">
-                  {course.stats.map((stat) => (
+                <div className="flex justify-between items-center">
+                  {course.stats.map((stat, index) => (
                     <CircularProgress
                       key={stat.label}
                       value={stat.value}
                       label={stat.label}
                       color={stat.color}
-                      isPrimary={stat.label === 'Affinita'}
+                      isPrimary={stat.label === 'Affinità'}
+                      delay={index * 100}
                     />
                   ))}
                 </div>

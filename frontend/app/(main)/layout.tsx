@@ -5,10 +5,12 @@ import TopBar from '@/components/TopBar';
 import { SavedOpportunitiesProvider } from '@/lib/savedOpportunities';
 import { SavedCoursesProvider } from '@/lib/savedCourses';
 import { ToastProvider } from '@/components/Toast';
+import BadgeProvider from '@/components/BadgeProvider';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
+      <BadgeProvider>
       <SavedOpportunitiesProvider>
         <SavedCoursesProvider>
         <div className="min-h-screen" style={{ backgroundColor: '#0D1117' }}>
@@ -18,6 +20,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </div>
         </SavedCoursesProvider>
       </SavedOpportunitiesProvider>
+      </BadgeProvider>
     </ToastProvider>
   );
 }

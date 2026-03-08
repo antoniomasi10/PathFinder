@@ -47,6 +47,12 @@ export interface MockCourse {
   requiredEnglishLevel: string;
   competitiveness: number; // candidati stimati / posti (ratio)
   avgSalary: number; // stipendio netto medio annuo in € (AlmaLaurea)
+  socialProof: {
+    savedCount: number;
+    simulatorRate: number; // percentuale arrotondata al 5%
+    requirementsRate: number;
+    appliedLastMonth: number;
+  };
 }
 
 // Dati basati su fonti ufficiali: siti delle università, AlmaLaurea 2024.
@@ -113,6 +119,7 @@ export const MOCK_COURSES: MockCourse[] = [
     requiredEnglishLevel: 'B2',
     competitiveness: 8,
     avgSalary: 23928, // €1.994/mese * 12
+    socialProof: { savedCount: 342, simulatorRate: 80, requirementsRate: 85, appliedLastMonth: 47 },
   },
   {
     id: 2,
@@ -175,6 +182,7 @@ export const MOCK_COURSES: MockCourse[] = [
     requiredEnglishLevel: 'B2',
     competitiveness: 7,
     avgSalary: 21108, // €1.759/mese * 12
+    socialProof: { savedCount: 218, simulatorRate: 75, requirementsRate: 80, appliedLastMonth: 31 },
   },
   {
     id: 3,
@@ -236,6 +244,7 @@ export const MOCK_COURSES: MockCourse[] = [
     requiredEnglishLevel: 'B2',
     competitiveness: 5,
     avgSalary: 22320, // €1.860/mese * 12
+    socialProof: { savedCount: 156, simulatorRate: 70, requirementsRate: 75, appliedLastMonth: 18 },
   },
   {
     id: 4,
@@ -296,6 +305,7 @@ export const MOCK_COURSES: MockCourse[] = [
     requiredEnglishLevel: 'B2',
     competitiveness: 4,
     avgSalary: 21600, // €1.800/mese * 12
+    socialProof: { savedCount: 127, simulatorRate: 65, requirementsRate: 70, appliedLastMonth: 14 },
   },
   {
     id: 5,
@@ -358,5 +368,6 @@ export const MOCK_COURSES: MockCourse[] = [
     requiredEnglishLevel: 'C1',
     competitiveness: 6,
     avgSalary: 24000, // €2.000/mese * 12 (Bocconi premium)
+    socialProof: { savedCount: 289, simulatorRate: 85, requirementsRate: 90, appliedLastMonth: 38 },
   },
 ];

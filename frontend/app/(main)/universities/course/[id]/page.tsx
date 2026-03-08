@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Bookmark,
@@ -18,6 +18,10 @@ import {
   Calendar,
   Check,
   GraduationCap,
+  TrendingUp,
+  Target,
+  FileText,
+  Send,
 } from 'lucide-react';
 import { MOCK_COURSES, CourseDeadline, CourseRequirement } from '@/lib/mockCourses';
 import { useSavedCourses } from '@/lib/savedCourses';
@@ -25,12 +29,14 @@ import api from '@/lib/api';
 import AdmissionSimulator from '@/components/AdmissionSimulator';
 import CourseComparison from '@/components/CourseComparison';
 import LivingMap from '@/components/LivingMap';
+import { useBadges } from '@/components/BadgeProvider';
 
 export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
   const course = MOCK_COURSES.find((c) => c.id === Number(params.id));
   const { savedIds, toggleSave } = useSavedCourses();
+  const { track } = useBadges();
 
   const bookmarked = course ? savedIds.has(course.id) : false;
   const [checklist, setChecklist] = useState<Record<number, boolean>>({});
@@ -57,6 +63,11 @@ export default function CourseDetailPage() {
   useEffect(() => {
     api.get('/profile/me').then((res) => setUserProfile(res.data)).catch(() => {});
   }, []);
+
+  // Track course view for badges
+  useEffect(() => {
+    if (course) track('courses_viewed');
+  }, [course, track]);
 
   useEffect(() => {
     if (!course || checklistInitialized) return;
@@ -244,6 +255,41 @@ export default function CourseDetailPage() {
         </div>
       </div>
 
+      {/* Social Proof */}
+      <div className="px-5 pb-6">
+        <div
+          className="rounded-2xl p-5"
+          style={{ backgroundColor: '#1C2F43', border: '1px solid #2A3F54' }}
+        >
+          <div className="flex items-center gap-2 mb-5">
+            <TrendingUp className="w-5 h-5" style={{ color: '#4A9EFF' }} />
+            <h2 className="text-lg font-bold text-white">Interesse per questo corso</h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <SocialProofStat
+              icon={<Users className="w-5 h-5" style={{ color: '#6C63FF' }} />}
+              value={course.socialProof.savedCount}
+              label="studenti l'hanno salvato"
+            />
+            <SocialProofStat
+              icon={<Target className="w-5 h-5" style={{ color: '#3DD68C' }} />}
+              value={`${course.socialProof.simulatorRate}%`}
+              label="ha provato il simulatore"
+            />
+            <SocialProofStat
+              icon={<FileText className="w-5 h-5" style={{ color: '#F59E0B' }} />}
+              value={`${course.socialProof.requirementsRate}%`}
+              label="ha consultato i requisiti"
+            />
+            <SocialProofStat
+              icon={<Send className="w-5 h-5" style={{ color: '#4A9EFF' }} />}
+              value={course.socialProof.appliedLastMonth}
+              label="candidature questo mese"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Course Info Pills */}
       <div className="px-5 pb-6">
         <div
@@ -263,13 +309,9 @@ export default function CourseDetailPage() {
         </div>
       </div>
 
-      {/* Subjects */}
+      {/* Subjects — Accordion */}
       <div className="px-5 pb-6">
-        <div
-          className="rounded-2xl p-5"
-          style={{ backgroundColor: '#1C2F43', border: '1px solid #2A3F54' }}
-        >
-          <h2 className="text-lg font-bold text-white mb-4">Materie principali</h2>
+        <AccordionSection title="Materie principali" count={course.subjects.length}>
           <div className="flex flex-wrap gap-2">
             {course.subjects.map((subject) => (
               <span
@@ -281,16 +323,12 @@ export default function CourseDetailPage() {
               </span>
             ))}
           </div>
-        </div>
+        </AccordionSection>
       </div>
 
-      {/* Career Outlets */}
+      {/* Career Outlets — Accordion */}
       <div className="px-5 pb-6">
-        <div
-          className="rounded-2xl p-5"
-          style={{ backgroundColor: '#1C2F43', border: '1px solid #2A3F54' }}
-        >
-          <h2 className="text-lg font-bold text-white mb-4">Sbocchi professionali</h2>
+        <AccordionSection title="Sbocchi professionali" count={course.careerOutlets.length}>
           <div className="space-y-2">
             {course.careerOutlets.map((career) => (
               <div key={career} className="flex items-center gap-3">
@@ -299,13 +337,13 @@ export default function CourseDetailPage() {
               </div>
             ))}
           </div>
-        </div>
+        </AccordionSection>
       </div>
 
       {/* Admission Simulator CTA */}
       <div className="px-5 pb-6">
         <button
-          onClick={() => setShowSimulator(true)}
+          onClick={() => { track('simulations_done'); setShowSimulator(true); }}
           className="w-full rounded-2xl p-5 text-left transition-transform active:scale-[0.98]"
           style={{
             background: 'linear-gradient(135deg, #1C2F43 0%, #162232 100%)',
@@ -382,7 +420,7 @@ export default function CourseDetailPage() {
           </div>
 
           <button
-            onClick={() => window.open(course.requirementsUrl || course.officialUrl, '_blank', 'noopener,noreferrer')}
+            onClick={() => { track('requirements_viewed'); window.open(course.requirementsUrl || course.officialUrl, '_blank', 'noopener,noreferrer'); }}
             className="w-full py-2.5 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
             style={{ border: '1px solid #2A3F54', color: '#D0D4DC' }}
           >
@@ -442,7 +480,7 @@ export default function CourseDetailPage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => !isAdded && addToCalendar(deadline, index)}
+                  onClick={() => { if (!isAdded) { track('deadlines_added'); addToCalendar(deadline, index); } }}
                   className="flex items-center gap-1.5 self-start transition-colors"
                   style={{ color: isAdded ? '#22C55E' : '#D0D4DC' }}
                 >
@@ -495,7 +533,7 @@ export default function CourseDetailPage() {
       >
         <div className="flex gap-3 max-w-md mx-auto">
           <button
-            onClick={() => toggleSave({ id: course.id, title: course.title, university: course.university, city: course.city })}
+            onClick={() => { if (!bookmarked) track('courses_saved'); toggleSave({ id: course.id, title: course.title, university: course.university, city: course.city }); }}
             className="flex-1 py-3 rounded-xl font-semibold shadow-md transition-colors"
             style={{
               backgroundColor: bookmarked ? '#2A3F54' : '#4A9EFF',
@@ -506,7 +544,7 @@ export default function CourseDetailPage() {
             {bookmarked ? 'Salvato' : 'Salva corso'}
           </button>
           <button
-            onClick={() => setShowComparison(true)}
+            onClick={() => { track('courses_compared'); setShowComparison(true); }}
             className="flex-1 py-3 rounded-xl font-semibold transition-colors"
             style={{ border: '2px solid #4A9EFF', color: '#4A9EFF' }}
           >
@@ -514,7 +552,7 @@ export default function CourseDetailPage() {
           </button>
         </div>
         <button
-          onClick={() => window.open(course.officialUrl, '_blank', 'noopener,noreferrer')}
+          onClick={() => { track('applications_clicked'); window.open(course.officialUrl, '_blank', 'noopener,noreferrer'); }}
           className="w-full py-2.5 rounded-xl font-medium transition-colors mt-2 max-w-md mx-auto flex items-center justify-center gap-2"
           style={{ border: '1px solid #2A3F54', color: '#D0D4DC' }}
         >
@@ -614,6 +652,80 @@ function ChecklistItem({
   );
 }
 
+
+function AccordionSection({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count?: number;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState(0);
+
+  useEffect(() => {
+    if (contentRef.current) {
+      setContentHeight(contentRef.current.scrollHeight);
+    }
+  }, [open, children]);
+
+  return (
+    <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: '#1C2F43', border: '1px solid #2A3F54' }}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between p-5 cursor-pointer transition-colors hover:bg-[#243344]"
+        aria-expanded={open}
+      >
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-bold text-white">{title}</h2>
+          {count !== undefined && (
+            <span className="text-sm" style={{ color: '#8B8FA8' }}>({count})</span>
+          )}
+        </div>
+        <ChevronDown
+          className="w-5 h-5 transition-transform duration-300"
+          style={{
+            color: '#8B8FA8',
+            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+          }}
+        />
+      </button>
+      <div
+        style={{
+          maxHeight: open ? `${contentHeight}px` : '0px',
+          overflow: 'hidden',
+          transition: open ? 'max-height 300ms ease-out' : 'max-height 250ms ease-in',
+        }}
+      >
+        <div ref={contentRef} className="px-5 pb-5">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SocialProofStat({
+  icon,
+  value,
+  label,
+}: {
+  icon: React.ReactNode;
+  value: number | string;
+  label: string;
+}) {
+  return (
+    <div className="flex flex-col items-center text-center gap-1.5 p-3 rounded-xl" style={{ backgroundColor: '#0D1117' }}>
+      {icon}
+      <span className="text-2xl font-bold" style={{ color: '#FFFFFF' }}>{value}</span>
+      <span className="text-xs leading-tight" style={{ color: '#8B8FA8' }}>{label}</span>
+    </div>
+  );
+}
 
 function InfoChip({
   icon,
