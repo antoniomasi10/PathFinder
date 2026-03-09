@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { BadgeDefinition, trackAction, setTrackingValue } from '@/lib/badges';
-import BadgeToast from './BadgeToast';
+import BadgeUnlockModal from './BadgeToast';
 
 interface BadgeContextType {
   track: (trackingKey: string, increment?: number) => void;
@@ -19,33 +19,33 @@ export function useBadges() {
 }
 
 export default function BadgeProvider({ children }: { children: ReactNode }) {
-  const [toastQueue, setToastQueue] = useState<BadgeDefinition[]>([]);
+  const [queue, setQueue] = useState<BadgeDefinition[]>([]);
 
-  const showNewBadges = useCallback((newlyUnlocked: BadgeDefinition[]) => {
+  const enqueue = useCallback((newlyUnlocked: BadgeDefinition[]) => {
     if (newlyUnlocked.length > 0) {
-      setToastQueue((prev) => [...prev, ...newlyUnlocked]);
+      setQueue((prev) => [...prev, ...newlyUnlocked]);
     }
   }, []);
 
   const track = useCallback((trackingKey: string, increment = 1) => {
     const unlocked = trackAction(trackingKey, increment);
-    showNewBadges(unlocked);
-  }, [showNewBadges]);
+    enqueue(unlocked);
+  }, [enqueue]);
 
   const setAbsolute = useCallback((trackingKey: string, value: number) => {
     const unlocked = setTrackingValue(trackingKey, value);
-    showNewBadges(unlocked);
-  }, [showNewBadges]);
+    enqueue(unlocked);
+  }, [enqueue]);
 
-  const dismissFirst = useCallback(() => {
-    setToastQueue((prev) => prev.slice(1));
+  const dismissCurrent = useCallback(() => {
+    setQueue((prev) => prev.slice(1));
   }, []);
 
   return (
     <BadgeContext.Provider value={{ track, setAbsolute }}>
       {children}
-      {toastQueue.length > 0 && (
-        <BadgeToast badge={toastQueue[0]} onDismiss={dismissFirst} />
+      {queue.length > 0 && (
+        <BadgeUnlockModal badge={queue[0]} onDismiss={dismissCurrent} />
       )}
     </BadgeContext.Provider>
   );

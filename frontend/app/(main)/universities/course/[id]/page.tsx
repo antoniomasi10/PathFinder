@@ -185,26 +185,59 @@ export default function CourseDetailPage() {
   ).length;
 
 
+  const cityImages: Record<string, string> = {
+    'Milano': '/cities/milano.jpg',
+    'Roma': '/cities/roma.jpg',
+    'Bologna': '/cities/bologna.jpg',
+    'Torino': '/cities/torino.jpg',
+    'Napoli': '/cities/napoli.jpg',
+    'Firenze': '/cities/firenze.jpg',
+    'Padova': '/cities/padova.jpg',
+    'Pisa': '/cities/pisa.jpg',
+  };
+  const heroImage = cityImages[course.city] || '/cities/default.jpg';
+
   return (
     <div style={{ backgroundColor: '#0D1117' }} className="min-h-screen pb-48">
-      {/* Header navigazione */}
-      <div className="px-5 pt-5 pb-2 flex items-center justify-between">
-        <button
-          onClick={() => router.back()}
-          className="w-10 h-10 rounded-full flex items-center justify-center"
-          style={{ backgroundColor: '#1C2F43' }}
-        >
-          <ArrowLeft className="w-5 h-5 text-white" />
-        </button>
-        <button
-          onClick={() => toggleSave({ id: course.id, title: course.title, university: course.university, city: course.city })}
-          className="w-10 h-10 rounded-full flex items-center justify-center"
-          style={{ backgroundColor: '#1C2F43' }}
-        >
-          <Bookmark
-            className={`w-5 h-5 ${bookmarked ? 'fill-[#4A9EFF] text-[#4A9EFF]' : 'text-white'}`}
-          />
-        </button>
+      {/* Hero image + header overlay */}
+      <div className="relative h-[200px] md:h-[280px]">
+        {/* City panorama */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `url(${heroImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
+        {/* Gradient overlay bottom */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(to bottom, rgba(13,17,23,0.4) 0%, rgba(13,17,23,0) 40%, rgba(13,17,23,0.85) 85%, #0D1117 100%)',
+          }}
+        />
+        {/* Header navigazione (overlay) */}
+        <div className="relative px-5 pt-5 pb-2 flex items-center justify-between z-10">
+          <button
+            onClick={() => router.back()}
+            className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(28,47,67,0.8)', backdropFilter: 'blur(8px)' }}
+          >
+            <ArrowLeft className="w-5 h-5 text-white" />
+          </button>
+          <button
+            onClick={() => toggleSave({ id: course.id, title: course.title, university: course.university, city: course.city })}
+            className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(28,47,67,0.8)', backdropFilter: 'blur(8px)' }}
+          >
+            <Bookmark
+              className={`w-5 h-5 ${bookmarked ? 'fill-[#4A9EFF] text-[#4A9EFF]' : 'text-white'}`}
+            />
+          </button>
+        </div>
       </div>
 
       {/* Titolo e info corso */}
@@ -255,40 +288,8 @@ export default function CourseDetailPage() {
         </div>
       </div>
 
-      {/* Social Proof */}
-      <div className="px-5 pb-6">
-        <div
-          className="rounded-2xl p-5"
-          style={{ backgroundColor: '#1C2F43', border: '1px solid #2A3F54' }}
-        >
-          <div className="flex items-center gap-2 mb-5">
-            <TrendingUp className="w-5 h-5" style={{ color: '#4A9EFF' }} />
-            <h2 className="text-lg font-bold text-white">Interesse per questo corso</h2>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <SocialProofStat
-              icon={<Users className="w-5 h-5" style={{ color: '#6C63FF' }} />}
-              value={course.socialProof.savedCount}
-              label="studenti l'hanno salvato"
-            />
-            <SocialProofStat
-              icon={<Target className="w-5 h-5" style={{ color: '#3DD68C' }} />}
-              value={`${course.socialProof.simulatorRate}%`}
-              label="ha provato il simulatore"
-            />
-            <SocialProofStat
-              icon={<FileText className="w-5 h-5" style={{ color: '#F59E0B' }} />}
-              value={`${course.socialProof.requirementsRate}%`}
-              label="ha consultato i requisiti"
-            />
-            <SocialProofStat
-              icon={<Send className="w-5 h-5" style={{ color: '#4A9EFF' }} />}
-              value={course.socialProof.appliedLastMonth}
-              label="candidature questo mese"
-            />
-          </div>
-        </div>
-      </div>
+      {/* Social Proof Carousel */}
+      <SocialProofCarousel socialProof={course.socialProof} />
 
       {/* Course Info Pills */}
       <div className="px-5 pb-6">
@@ -709,20 +710,130 @@ function AccordionSection({
   );
 }
 
-function SocialProofStat({
-  icon,
-  value,
-  label,
-}: {
-  icon: React.ReactNode;
-  value: number | string;
-  label: string;
-}) {
+function SocialProofCarousel({ socialProof }: { socialProof: { savedCount: number; simulatorRate: number; requirementsRate: number; appliedLastMonth: number } }) {
+  const slides = [
+    { icon: <Users className="w-6 h-6" style={{ color: '#6C63FF' }} />, value: String(socialProof.savedCount), label: "studenti hanno salvato\nquesto corso" },
+    { icon: <Target className="w-6 h-6" style={{ color: '#3DD68C' }} />, value: `${socialProof.simulatorRate}%`, label: "ha provato il simulatore\nammissione" },
+    { icon: <FileText className="w-6 h-6" style={{ color: '#F59E0B' }} />, value: `${socialProof.requirementsRate}%`, label: "ha consultato\ni requisiti ufficiali" },
+    { icon: <Send className="w-6 h-6" style={{ color: '#4A9EFF' }} />, value: String(socialProof.appliedLastMonth), label: "candidature\nnell'ultimo mese" },
+  ];
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const isPaused = useRef(false);
+  const total = slides.length;
+
+  const scrollToSlide = (idx: number) => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const child = container.children[idx] as HTMLElement | undefined;
+    if (!child) return;
+    const containerRect = container.getBoundingClientRect();
+    const childRect = child.getBoundingClientRect();
+    const targetScrollLeft =
+      container.scrollLeft +
+      (childRect.left - containerRect.left) -
+      (containerRect.width - childRect.width) / 2;
+    container.scrollTo({ left: targetScrollLeft, behavior: 'smooth' });
+  };
+
+  // Auto-scroll
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isPaused.current) return;
+      setActiveIndex((prev) => {
+        const next = (prev + 1) % total;
+        scrollToSlide(next);
+        return next;
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [total]);
+
+  // Detect manual scroll
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    let timeout: ReturnType<typeof setTimeout>;
+    const handleScroll = () => {
+      isPaused.current = true;
+      clearTimeout(timeout);
+      timeout = setTimeout(() => { isPaused.current = false; }, 4000);
+
+      const scrollLeft = el.scrollLeft;
+      const cardWidth = el.children[0]?.clientWidth || 1;
+      const gap = 12;
+      const idx = Math.round(scrollLeft / (cardWidth + gap));
+      setActiveIndex(Math.min(idx, total - 1));
+    };
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => { el.removeEventListener('scroll', handleScroll); clearTimeout(timeout); };
+  }, [total]);
+
+  const goTo = (idx: number) => {
+    setActiveIndex(idx);
+    scrollToSlide(idx);
+    isPaused.current = true;
+    setTimeout(() => { isPaused.current = false; }, 4000);
+  };
+
   return (
-    <div className="flex flex-col items-center text-center gap-1.5 p-3 rounded-xl" style={{ backgroundColor: '#0D1117' }}>
-      {icon}
-      <span className="text-2xl font-bold" style={{ color: '#FFFFFF' }}>{value}</span>
-      <span className="text-xs leading-tight" style={{ color: '#8B8FA8' }}>{label}</span>
+    <div className="pb-6">
+      <div className="flex items-center gap-2 mb-4 px-5">
+        <TrendingUp className="w-5 h-5" style={{ color: '#4A9EFF' }} />
+        <h2 className="text-lg font-bold text-white">Interesse per questo corso</h2>
+      </div>
+
+      <div
+        ref={scrollRef}
+        className="flex gap-3 overflow-x-auto px-5 hide-scrollbar"
+        style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
+        onMouseEnter={() => { isPaused.current = true; }}
+        onMouseLeave={() => { isPaused.current = false; }}
+      >
+        <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+        {slides.map((slide, i) => (
+          <div
+            key={i}
+            className="flex-shrink-0 flex flex-col items-center justify-center text-center rounded-2xl"
+            style={{
+              width: '220px',
+              height: '165px',
+              backgroundColor: '#1C2F43',
+              border: i === activeIndex ? '2px solid #4A9EFF40' : '1px solid #2A3F54',
+              scrollSnapAlign: 'center',
+              padding: '24px',
+              transition: 'border-color 0.3s, transform 0.3s',
+              transform: i === activeIndex ? 'scale(1)' : 'scale(0.95)',
+            }}
+          >
+            <div className="mb-2">{slide.icon}</div>
+            <span className="text-3xl font-bold mb-1.5" style={{ color: '#FFFFFF' }}>{slide.value}</span>
+            <span className="text-xs leading-snug whitespace-pre-line" style={{ color: '#8B8FA8', maxWidth: '180px' }}>{slide.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Dots */}
+      <div className="flex justify-center gap-2.5 mt-4">
+        {slides.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => goTo(i)}
+            aria-label={`Vai a statistica ${i + 1}`}
+            style={{
+              width: i === activeIndex ? '10px' : '8px',
+              height: i === activeIndex ? '10px' : '8px',
+              borderRadius: '50%',
+              backgroundColor: i === activeIndex ? '#6C63FF' : '#4A4A6A',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              transition: 'all 0.3s',
+            }}
+          />
+        ))}
+      </div>
     </div>
   );
 }

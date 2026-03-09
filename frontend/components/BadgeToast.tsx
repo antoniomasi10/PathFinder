@@ -1,85 +1,220 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BadgeDefinition, RARITY_COLORS } from '@/lib/badges';
+import { useRouter } from 'next/navigation';
+import { BadgeDefinition, RARITY_COLORS, RARITY_LABELS } from '@/lib/badges';
 
-interface BadgeToastProps {
+interface BadgeUnlockModalProps {
   badge: BadgeDefinition;
   onDismiss: () => void;
 }
 
-export default function BadgeToast({ badge, onDismiss }: BadgeToastProps) {
-  const [visible, setVisible] = useState(false);
+export default function BadgeUnlockModal({ badge, onDismiss }: BadgeUnlockModalProps) {
+  const router = useRouter();
+  const [phase, setPhase] = useState<'enter' | 'visible' | 'exit'>('enter');
   const colors = RARITY_COLORS[badge.rarity];
+  const isSpecial = badge.rarity === 'rara' || badge.rarity === 'epica' || badge.rarity === 'leggendaria';
 
   useEffect(() => {
-    requestAnimationFrame(() => setVisible(true));
-    const timer = setTimeout(() => {
-      setVisible(false);
-      setTimeout(onDismiss, 300);
-    }, 4500);
-    return () => clearTimeout(timer);
-  }, [onDismiss]);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setPhase('visible'));
+    });
+  }, []);
+
+  const close = () => {
+    setPhase('exit');
+    setTimeout(onDismiss, 280);
+  };
+
+  const goToAchievements = () => {
+    close();
+    setTimeout(() => router.push('/profile'), 300);
+  };
 
   return (
     <div
       style={{
         position: 'fixed',
-        top: '16px',
-        left: '50%',
-        transform: `translateX(-50%) translateY(${visible ? '0' : '-120%'})`,
-        transition: 'transform 0.3s ease',
+        inset: 0,
         zIndex: 99999,
-        width: 'calc(100% - 32px)',
-        maxWidth: '380px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
       }}
     >
+      {/* Backdrop */}
+      <div
+        onClick={close}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          transition: 'opacity 0.25s ease',
+          opacity: phase === 'visible' ? 1 : 0,
+        }}
+      />
+
+      {/* Modal */}
       <div
         style={{
-          background: '#1C2F43',
-          border: `1px solid ${colors.border}`,
-          borderRadius: '16px',
-          padding: '16px',
-          boxShadow: colors.glow !== 'none' ? colors.glow : '0 4px 24px rgba(0,0,0,0.4)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '14px',
+          position: 'relative',
+          backgroundColor: '#0D1117',
+          border: `2px solid ${colors.border}`,
+          borderRadius: '20px',
+          padding: '32px 24px 28px',
+          maxWidth: '340px',
+          width: '100%',
+          textAlign: 'center',
+          boxShadow: `0 8px 32px rgba(108,99,255,0.3), ${colors.glow}`,
+          transition: 'transform 0.3s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s ease',
+          transform: phase === 'visible' ? 'scale(1)' : 'scale(0.85)',
+          opacity: phase === 'exit' ? 0 : phase === 'visible' ? 1 : 0,
         }}
       >
+        {/* Close */}
+        <button
+          onClick={close}
+          style={{
+            position: 'absolute',
+            top: '12px',
+            right: '12px',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px',
+          }}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M18 6L6 18M6 6l12 12" stroke="#8B8FA8" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </button>
+
+        {/* Celebration emojis */}
         <div
           style={{
-            width: '52px',
-            height: '52px',
-            borderRadius: '14px',
+            fontSize: '28px',
+            marginBottom: '12px',
+            transition: 'opacity 0.3s ease 0.15s, transform 0.4s ease 0.15s',
+            opacity: phase === 'visible' ? 1 : 0,
+            transform: phase === 'visible' ? 'translateY(0)' : 'translateY(-10px)',
+          }}
+        >
+          {isSpecial ? '\u{1F389} \u{1F389} \u{1F389}' : '\u{1F389}'}
+        </div>
+
+        {/* Title */}
+        <h2
+          style={{
+            fontSize: '22px',
+            fontWeight: 700,
+            color: '#FFFFFF',
+            marginBottom: '20px',
+            transition: 'opacity 0.3s ease 0.2s',
+            opacity: phase === 'visible' ? 1 : 0,
+          }}
+        >
+          Badge Sbloccato!
+        </h2>
+
+        {/* Badge icon */}
+        <div
+          style={{
+            width: '110px',
+            height: '110px',
+            borderRadius: '24px',
             background: colors.bg,
-            border: `2px solid ${colors.border}`,
+            border: `3px solid ${colors.border}`,
+            boxShadow: colors.glow,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '28px',
-            flexShrink: 0,
+            fontSize: '56px',
+            margin: '0 auto 20px',
+            transition: 'transform 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.25s, opacity 0.3s ease 0.25s',
+            transform: phase === 'visible' ? 'scale(1)' : 'scale(0)',
+            opacity: phase === 'visible' ? 1 : 0,
           }}
         >
           {badge.icon}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: '12px', color: '#3DD68C', fontWeight: 600, marginBottom: '2px' }}>
-            Badge sbloccato!
-          </p>
-          <p style={{ fontSize: '15px', color: '#FFFFFF', fontWeight: 700, marginBottom: '2px' }}>
-            {badge.name}
-          </p>
-          <p style={{ fontSize: '12px', color: '#8B8FA8', lineHeight: '1.3' }}>
-            {badge.description}
-          </p>
-        </div>
-        <button
-          onClick={() => { setVisible(false); setTimeout(onDismiss, 300); }}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', flexShrink: 0 }}
+
+        {/* Badge name */}
+        <h3
+          style={{
+            fontSize: '20px',
+            fontWeight: 600,
+            color: '#FFFFFF',
+            marginBottom: '6px',
+            transition: 'opacity 0.3s ease 0.35s',
+            opacity: phase === 'visible' ? 1 : 0,
+          }}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M18 6L6 18M6 6l12 12" stroke="#8B8FA8" strokeWidth="2" strokeLinecap="round" />
-          </svg>
+          {badge.name}
+        </h3>
+
+        {/* Description */}
+        <p
+          style={{
+            fontSize: '14px',
+            color: '#D0D4DC',
+            lineHeight: '1.5',
+            marginBottom: '8px',
+            maxWidth: '260px',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            transition: 'opacity 0.3s ease 0.4s',
+            opacity: phase === 'visible' ? 1 : 0,
+          }}
+        >
+          {badge.description}
+        </p>
+
+        {/* Rarity */}
+        <div
+          style={{
+            display: 'inline-block',
+            padding: '4px 14px',
+            borderRadius: '20px',
+            fontSize: '12px',
+            fontWeight: 600,
+            color: '#FFFFFF',
+            background: colors.bg,
+            border: `1px solid ${colors.border}`,
+            marginBottom: '24px',
+            transition: 'opacity 0.3s ease 0.45s',
+            opacity: phase === 'visible' ? 1 : 0,
+          }}
+        >
+          {RARITY_LABELS[badge.rarity]}
+        </div>
+
+        {/* CTA */}
+        <button
+          onClick={goToAchievements}
+          style={{
+            display: 'block',
+            width: '100%',
+            maxWidth: '260px',
+            margin: '0 auto',
+            padding: '14px',
+            borderRadius: '12px',
+            backgroundColor: '#6C63FF',
+            border: 'none',
+            color: '#FFFFFF',
+            fontSize: '15px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(108,99,255,0.3)',
+            transition: 'opacity 0.3s ease 0.5s, background-color 0.2s',
+            opacity: phase === 'visible' ? 1 : 0,
+          }}
+          onMouseEnter={(e) => { (e.target as HTMLButtonElement).style.backgroundColor = '#5952E6'; }}
+          onMouseLeave={(e) => { (e.target as HTMLButtonElement).style.backgroundColor = '#6C63FF'; }}
+        >
+          Vai agli Achievement
         </button>
       </div>
     </div>

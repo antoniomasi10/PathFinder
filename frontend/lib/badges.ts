@@ -1,5 +1,5 @@
 export type BadgeRarity = 'comune' | 'non_comune' | 'rara' | 'epica' | 'leggendaria';
-export type BadgeCategory = 'esplorazione' | 'confronto' | 'simulazioni' | 'organizzazione' | 'ricerca' | 'decisione' | 'azione' | 'engagement';
+export type BadgeCategory = 'esplorazione' | 'decisione' | 'preparazione' | 'azione' | 'engagement';
 
 export interface BadgeDefinition {
   id: string;
@@ -9,22 +9,22 @@ export interface BadgeDefinition {
   rarity: BadgeRarity;
   category: BadgeCategory;
   target: number;
-  trackingKey: string; // key in localStorage progress
+  trackingKey: string;
 }
 
 export interface BadgeProgress {
   current: number;
-  unlockedAt?: string; // ISO date string
+  unlockedAt?: string;
 }
 
 const STORAGE_KEY = 'pf-badge-progress';
 
 export const RARITY_COLORS: Record<BadgeRarity, { bg: string; border: string; glow: string }> = {
-  comune:      { bg: 'linear-gradient(135deg, #3A3F5C, #4A4F6C)', border: '#5A5F7C', glow: 'none' },
-  non_comune:  { bg: 'linear-gradient(135deg, #1E3A5F, #2A5A8F)', border: '#4A9EFF', glow: '0 0 12px rgba(74,158,255,0.3)' },
-  rara:        { bg: 'linear-gradient(135deg, #4A1A6B, #7C3AED)', border: '#9C5AFF', glow: '0 0 12px rgba(124,58,237,0.4)' },
-  epica:       { bg: 'linear-gradient(135deg, #7A3300, #FF6B00)', border: '#FF8C3A', glow: '0 0 16px rgba(255,107,0,0.4)' },
-  leggendaria: { bg: 'linear-gradient(135deg, #8B6914, #FFD700)', border: '#FFE44D', glow: '0 0 20px rgba(255,215,0,0.5)' },
+  comune:      { bg: 'linear-gradient(135deg, #1E3A5F, #2A5A8F)', border: '#4A9EFF', glow: '0 0 12px rgba(74,158,255,0.3)' },
+  non_comune:  { bg: 'linear-gradient(135deg, #4A1A6B, #7C3AED)', border: '#9C5AFF', glow: '0 0 12px rgba(124,58,237,0.4)' },
+  rara:        { bg: 'linear-gradient(135deg, #7A3300, #FF6B00)', border: '#FF8C3A', glow: '0 0 16px rgba(255,107,0,0.4)' },
+  epica:       { bg: 'linear-gradient(135deg, #8B6914, #FFD700)', border: '#FFE44D', glow: '0 0 20px rgba(255,215,0,0.5)' },
+  leggendaria: { bg: 'linear-gradient(135deg, #FFD700, #FF6B00, #7C3AED, #4A9EFF)', border: '#FFE44D', glow: '0 0 24px rgba(255,215,0,0.6)' },
 };
 
 export const RARITY_LABELS: Record<BadgeRarity, string> = {
@@ -36,41 +36,30 @@ export const RARITY_LABELS: Record<BadgeRarity, string> = {
 };
 
 export const BADGES: BadgeDefinition[] = [
-  // Esplorazione
-  { id: 'primo_passo', name: 'Primo Passo', icon: '\u{1F463}', description: 'Hai iniziato il tuo percorso su PathFinder', rarity: 'comune', category: 'esplorazione', target: 1, trackingKey: 'courses_viewed' },
-  { id: 'esploratore', name: 'Esploratore', icon: '\u{1F5FA}', description: 'Hai esplorato 10 corsi universitari', rarity: 'comune', category: 'esplorazione', target: 10, trackingKey: 'courses_viewed' },
-  { id: 'viaggiatore', name: 'Viaggiatore', icon: '\u{1F30D}', description: 'Hai esplorato 50 corsi in tutta Italia', rarity: 'rara', category: 'esplorazione', target: 50, trackingKey: 'courses_viewed' },
+  // --- ESPLORAZIONE ---
+  { id: 'esploratore', name: 'Esploratore', icon: '\u{1F5FA}\uFE0F', description: 'Hai visitato 5 corsi universitari', rarity: 'comune', category: 'esplorazione', target: 5, trackingKey: 'courses_viewed' },
+  { id: 'viaggiatore', name: 'Viaggiatore', icon: '\u{1F30D}', description: 'Hai esplorato 20 corsi diversi', rarity: 'rara', category: 'esplorazione', target: 20, trackingKey: 'courses_viewed' },
+  { id: 'scopritore', name: 'Scopritore', icon: '\u{1F680}', description: 'Hai visitato corsi in 5 citta diverse', rarity: 'epica', category: 'esplorazione', target: 5, trackingKey: 'cities_viewed' },
 
-  // Confronto
-  { id: 'indeciso', name: 'Indeciso', icon: '\u{1F914}', description: 'Hai confrontato il tuo primo corso', rarity: 'comune', category: 'confronto', target: 1, trackingKey: 'courses_compared' },
-  { id: 'analista', name: 'Analista', icon: '\u2696\uFE0F', description: 'Prendi decisioni informate', rarity: 'non_comune', category: 'confronto', target: 5, trackingKey: 'courses_compared' },
+  // --- DECISIONE ---
+  { id: 'preferito', name: 'Preferito', icon: '\u2B50', description: 'Hai salvato il tuo primo corso', rarity: 'comune', category: 'decisione', target: 1, trackingKey: 'courses_saved' },
+  { id: 'selettore', name: 'Selettore', icon: '\u{1F4BC}', description: 'Hai salvato 5 corsi nei preferiti', rarity: 'non_comune', category: 'decisione', target: 5, trackingKey: 'courses_saved' },
+  { id: 'decisore', name: 'Decisore', icon: '\u{1F3AF}', description: 'Hai confrontato 3 corsi diversi', rarity: 'rara', category: 'decisione', target: 3, trackingKey: 'courses_compared' },
 
-  // Simulazioni
-  { id: 'primo_tentativo', name: 'Primo Tentativo', icon: '\u{1F3B2}', description: 'Hai simulato la tua prima ammissione', rarity: 'comune', category: 'simulazioni', target: 1, trackingKey: 'simulations_done' },
-  { id: 'simulatore', name: 'Simulatore', icon: '\u{1F3AF}', description: 'Conosci bene le tue probabilita', rarity: 'non_comune', category: 'simulazioni', target: 5, trackingKey: 'simulations_done' },
-  { id: 'stratega', name: 'Stratega', icon: '\u{1F9E0}', description: 'Pianifichi ogni mossa con attenzione', rarity: 'rara', category: 'simulazioni', target: 10, trackingKey: 'simulations_done' },
+  // --- PREPARAZIONE ---
+  { id: 'simulatore', name: 'Simulatore', icon: '\u{1F3B2}', description: 'Hai completato la prima simulazione', rarity: 'comune', category: 'preparazione', target: 1, trackingKey: 'simulations_done' },
+  { id: 'stratega', name: 'Stratega', icon: '\u{1F9E0}', description: 'Hai completato 5 simulazioni', rarity: 'non_comune', category: 'preparazione', target: 5, trackingKey: 'simulations_done' },
+  { id: 'researcher', name: 'Researcher', icon: '\u{1F4DA}', description: 'Hai consultato i requisiti di 5 corsi', rarity: 'non_comune', category: 'preparazione', target: 5, trackingKey: 'requirements_viewed' },
 
-  // Organizzazione
-  { id: 'pianificatore', name: 'Pianificatore', icon: '\u{1F4CC}', description: 'Non ti fai cogliere impreparato', rarity: 'comune', category: 'organizzazione', target: 1, trackingKey: 'deadlines_added' },
-  { id: 'time_manager', name: 'Time Manager', icon: '\u23F0', description: 'Hai il controllo delle tue deadline', rarity: 'non_comune', category: 'organizzazione', target: 5, trackingKey: 'deadlines_added' },
+  // --- AZIONE ---
+  { id: 'pianificatore', name: 'Pianificatore', icon: '\u{1F4C5}', description: 'Hai aggiunto 3 scadenze al calendario', rarity: 'comune', category: 'azione', target: 3, trackingKey: 'deadlines_added' },
+  { id: 'candidato', name: 'Candidato', icon: '\u{1F680}', description: 'Hai cliccato Candidati ora per la prima volta', rarity: 'rara', category: 'azione', target: 1, trackingKey: 'applications_clicked' },
+  { id: 'ambizioso', name: 'Ambizioso', icon: '\u{1F4AA}', description: 'Hai avviato candidature per 3 corsi diversi', rarity: 'epica', category: 'azione', target: 3, trackingKey: 'applications_clicked' },
 
-  // Ricerca
-  { id: 'curioso', name: 'Curioso', icon: '\u{1F50D}', description: 'Approfondisci prima di decidere', rarity: 'comune', category: 'ricerca', target: 1, trackingKey: 'requirements_viewed' },
-  { id: 'researcher', name: 'Researcher', icon: '\u{1F4D6}', description: 'Fai sempre le tue ricerche', rarity: 'non_comune', category: 'ricerca', target: 5, trackingKey: 'requirements_viewed' },
-
-  // Decisione
-  { id: 'favorito', name: 'Favorito', icon: '\u2B50', description: 'Hai trovato qualcosa che ti piace', rarity: 'comune', category: 'decisione', target: 1, trackingKey: 'courses_saved' },
-  { id: 'collector', name: 'Collector', icon: '\u{1F4BC}', description: 'Stai costruendo la tua wishlist', rarity: 'non_comune', category: 'decisione', target: 5, trackingKey: 'courses_saved' },
-  { id: 'decisore', name: 'Decisore', icon: '\u{1F3AF}', description: 'Hai le idee chiare sulle tue opzioni', rarity: 'rara', category: 'decisione', target: 10, trackingKey: 'courses_saved' },
-
-  // Azione
-  { id: 'candidato', name: 'Candidato', icon: '\u{1F4DD}', description: 'Hai fatto il primo passo verso il futuro', rarity: 'non_comune', category: 'azione', target: 1, trackingKey: 'applications_clicked' },
-  { id: 'go_getter', name: 'Go-Getter', icon: '\u{1F4AA}', description: 'Non ti fermi davanti a nulla', rarity: 'rara', category: 'azione', target: 3, trackingKey: 'applications_clicked' },
-  { id: 'ambizioso', name: 'Ambizioso', icon: '\u{1F3C6}', description: 'Punti in alto e non ti accontenti', rarity: 'epica', category: 'azione', target: 5, trackingKey: 'applications_clicked' },
-
-  // Engagement
-  { id: 'fedele', name: 'Fedele', icon: '\u{1F49A}', description: 'Torni sempre su PathFinder', rarity: 'non_comune', category: 'engagement', target: 7, trackingKey: 'login_streak' },
-  { id: 'dedicato', name: 'Dedicato', icon: '\u{1F393}', description: 'PathFinder e parte della tua routine', rarity: 'rara', category: 'engagement', target: 15, trackingKey: 'login_streak' },
+  // --- ENGAGEMENT ---
+  { id: 'fedele', name: 'Fedele', icon: '\u{1F49A}', description: 'Hai usato PathFinder per 5 giorni consecutivi', rarity: 'non_comune', category: 'engagement', target: 5, trackingKey: 'login_streak' },
+  { id: 'dedicato', name: 'Dedicato', icon: '\u{1F525}', description: 'Hai usato PathFinder per 15 giorni consecutivi', rarity: 'rara', category: 'engagement', target: 15, trackingKey: 'login_streak' },
+  { id: 'completista', name: 'Completista', icon: '\u{1F3C6}', description: 'Hai sbloccato tutti gli altri 14 badge!', rarity: 'leggendaria', category: 'engagement', target: 14, trackingKey: 'total_badges' },
 ];
 
 // --- Progress helpers (localStorage) ---
@@ -108,6 +97,7 @@ export function getUnlockedCount(): number {
 
 /**
  * Increment a tracking key and return any newly-unlocked badges.
+ * Also auto-checks completista badge.
  */
 export function trackAction(trackingKey: string, increment = 1): BadgeDefinition[] {
   const progress = getAllProgress();
@@ -130,6 +120,13 @@ export function trackAction(trackingKey: string, increment = 1): BadgeDefinition
   }
 
   saveAllProgress(progress);
+
+  // Check completista after saving
+  if (newlyUnlocked.length > 0) {
+    const completista = checkCompletista(progress);
+    if (completista) newlyUnlocked.push(completista);
+  }
+
   return newlyUnlocked;
 }
 
@@ -156,5 +153,31 @@ export function setTrackingValue(trackingKey: string, value: number): BadgeDefin
   }
 
   saveAllProgress(progress);
+
+  if (newlyUnlocked.length > 0) {
+    const completista = checkCompletista(progress);
+    if (completista) newlyUnlocked.push(completista);
+  }
+
   return newlyUnlocked;
+}
+
+function checkCompletista(progress: Record<string, BadgeProgress>): BadgeDefinition | null {
+  const completista = BADGES.find((b) => b.id === 'completista')!;
+  const prev = progress[completista.id] || { current: 0 };
+  if (prev.current >= completista.target) return null; // already unlocked
+
+  const otherBadges = BADGES.filter((b) => b.id !== 'completista');
+  const unlockedCount = otherBadges.filter((b) => (progress[b.id]?.current || 0) >= b.target).length;
+
+  if (unlockedCount >= completista.target) {
+    progress[completista.id] = { current: unlockedCount, unlockedAt: new Date().toISOString() };
+    saveAllProgress(progress);
+    return completista;
+  }
+
+  // Update progress even if not unlocked
+  progress[completista.id] = { ...prev, current: unlockedCount };
+  saveAllProgress(progress);
+  return null;
 }
