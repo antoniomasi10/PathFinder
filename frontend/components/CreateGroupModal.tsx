@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '@/lib/api';
+import { useLanguage } from '@/lib/language';
 
 interface Friend {
   id: string;
@@ -51,6 +52,7 @@ function compressImage(file: File, maxSize = 200): Promise<string> {
 }
 
 export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGroupModalProps) {
+  const { t } = useLanguage();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [image, setImage] = useState<string | null>(null);
@@ -73,7 +75,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
     };
 
     if (hasUnsavedChanges) {
-      if (window.confirm('Vuoi davvero uscire? Le modifiche non salvate andranno perse.')) {
+      if (window.confirm(t.group.unsavedChanges)) {
         close();
       } else if (fromPopState) {
         window.history.pushState({ modal: 'createGroup' }, '');
@@ -116,7 +118,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
       const { data } = await api.get('/friends');
       setFriends(data);
     } catch {
-      setError('Errore nel caricamento degli amici');
+      setError(t.group.errorLoadFriends);
     } finally {
       setLoading(false);
     }
@@ -149,7 +151,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
       const compressed = await compressImage(file);
       setImage(compressed);
     } catch {
-      setError('Errore nel caricamento dell\'immagine');
+      setError(t.group.errorLoadImage);
     }
     // Reset input so the same file can be re-selected
     e.target.value = '';
@@ -166,9 +168,9 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
       .map((id) => friends.find((f) => f.id === id)?.name)
       .filter(Boolean);
     if (selectedNames.length <= 3) {
-      return `Gruppo con ${selectedNames.join(', ')}`;
+      return `${t.group.autoNameWith} ${selectedNames.join(', ')}`;
     }
-    return `Gruppo con ${selectedNames.slice(0, 2).join(', ')} e altri ${selectedNames.length - 2}`;
+    return `${t.group.autoNameWith} ${selectedNames.slice(0, 2).join(', ')} ${t.group.autoNameOthers} ${selectedNames.length - 2}`;
   };
 
   const handleCreate = async () => {
@@ -188,7 +190,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
       onGroupCreated();
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Impossibile creare il gruppo, riprova');
+      setError(err.response?.data?.error || t.group.errorCreate);
     } finally {
       setCreating(false);
     }
@@ -200,7 +202,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
     <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: '#0D1117' }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-border">
-        <h2 className="text-lg font-display font-bold text-text-primary">Nuovo Gruppo</h2>
+        <h2 className="text-lg font-display font-bold text-text-primary">{t.group.newGroup}</h2>
         <button onClick={() => handleClose()} className="text-text-muted hover:text-text-primary transition-colors">
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -237,7 +239,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
                   <svg className="w-6 h-6" style={{ color: '#6C63FF' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  <span className="text-[10px] mt-0.5" style={{ color: '#6C63FF' }}>Aggiungi foto</span>
+                  <span className="text-[10px] mt-0.5" style={{ color: '#6C63FF' }}>{t.networking.addPhoto}</span>
                 </>
               )}
             </button>
@@ -253,7 +255,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Nome del gruppo"
+                placeholder={t.group.groupName}
                 className="input-field w-full"
                 maxLength={50}
                 style={{ backgroundColor: '#1C2333', borderRadius: '12px', padding: '12px' }}
@@ -261,7 +263,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
               <input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Descrizione (opzionale)"
+                placeholder={t.group.description}
                 className="input-field w-full"
                 maxLength={200}
                 style={{ backgroundColor: '#1C2333', borderRadius: '12px', padding: '12px' }}
@@ -297,7 +299,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
         {/* Counter */}
         <div className="flex items-center justify-between">
           <p className={`text-sm font-medium ${selectedFriends.size < 2 ? 'text-error' : 'text-text-secondary'}`}>
-            {selectedFriends.size} selezionati {selectedFriends.size < 2 && '(minimo 2)'}
+            {t.group.selectedCount.replace('{count}', String(selectedFriends.size))} {selectedFriends.size < 2 && t.group.minTwo}
           </p>
         </div>
 
@@ -309,7 +311,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cerca amici..."
+            placeholder={t.group.searchFriends}
             className="input-field w-full pl-10"
           />
         </div>
@@ -328,7 +330,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
             ))
           ) : filteredFriends.length === 0 ? (
             <p className="text-center text-text-muted text-sm py-6">
-              {friends.length === 0 ? 'Nessun amico trovato' : 'Nessun risultato'}
+              {friends.length === 0 ? t.group.noFriendsFound : t.profile.noResults}
             </p>
           ) : (
             filteredFriends.map((friend) => {
@@ -397,7 +399,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
           ) : (
-            'Crea Gruppo'
+            t.networking.createGroup
           )}
         </button>
       </div>

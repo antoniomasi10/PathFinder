@@ -3,6 +3,7 @@
 import { Sora, DM_Sans } from 'next/font/google';
 import './globals.css';
 import AuthProvider from '@/components/AuthProvider';
+import { LanguageProvider } from '@/lib/language';
 
 const sora = Sora({
   subsets: ['latin'],
@@ -27,7 +28,9 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>
       <body className={`${sora.variable} ${dmSans.variable} font-body antialiased`}>
-        <AuthProvider>{children}</AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

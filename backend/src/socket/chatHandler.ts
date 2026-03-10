@@ -68,6 +68,35 @@ export function setupChatSocket(io: Server) {
 
     socket.on('send_message', async (data: { receiverId: string; content: string; images?: string[] }) => {
       try {
+        // Check receiver's messagePrivacy
+        const receiver = await prisma.user.findUnique({
+          where: { id: data.receiverId },
+          select: { messagePrivacy: true },
+        });
+        if (!receiver) {
+          socket.emit('message_error', { message: 'Utente non trovato' });
+          return;
+        }
+        if (receiver.messagePrivacy === 'Nessuno') {
+          socket.emit('message_error', { message: 'Questo utente non accetta messaggi' });
+          return;
+        }
+        if (receiver.messagePrivacy === 'Pathmates') {
+          const friendship = await prisma.friendRequest.findFirst({
+            where: {
+              status: 'ACCEPTED',
+              OR: [
+                { fromUserId: userId, toUserId: data.receiverId },
+                { fromUserId: data.receiverId, toUserId: userId },
+              ],
+            },
+          });
+          if (!friendship) {
+            socket.emit('message_error', { message: 'Solo i Pathmates possono inviare messaggi a questo utente' });
+            return;
+          }
+        }
+
         const message = await prisma.pathMatesMessage.create({
           data: {
             senderId: userId,

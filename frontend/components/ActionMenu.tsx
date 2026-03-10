@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useLanguage } from '@/lib/language';
 
 interface ActionMenuProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface ActionMenuProps {
 }
 
 export default function ActionMenu({ isOpen, onClose, onNewChat, onCreateGroup }: ActionMenuProps) {
+  const { t } = useLanguage();
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -59,8 +61,8 @@ export default function ActionMenu({ isOpen, onClose, onNewChat, onCreateGroup }
               </svg>
             </div>
             <div className="text-left">
-              <p className="text-white font-medium text-[15px]">Nuova chat</p>
-              <p className="text-gray-400 text-xs">Inizia una conversazione con qualcuno</p>
+              <p className="text-white font-medium text-[15px]">{t.group.newChat}</p>
+              <p className="text-gray-400 text-xs">{t.group.newChatDesc}</p>
             </div>
           </button>
 
@@ -81,8 +83,8 @@ export default function ActionMenu({ isOpen, onClose, onNewChat, onCreateGroup }
               </svg>
             </div>
             <div className="text-left">
-              <p className="text-white font-medium text-[15px]">Crea gruppo</p>
-              <p className="text-gray-400 text-xs">Crea un gruppo con i tuoi amici</p>
+              <p className="text-white font-medium text-[15px]">{t.networking.createGroup}</p>
+              <p className="text-gray-400 text-xs">{t.group.createGroupDesc}</p>
             </div>
           </button>
         </div>

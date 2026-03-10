@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { registerUser, loginUser } from '../services/auth.service';
+import { registerUser, loginUser, changePassword, requestPasswordReset, resetPassword } from '../services/auth.service';
 import { verifyRefreshToken, generateAccessToken } from '../utils/jwt';
 
 export async function register(req: Request, res: Response) {
@@ -60,5 +60,51 @@ export async function refresh(req: Request, res: Response) {
     res.json({ accessToken });
   } catch {
     res.status(401).json({ error: 'Refresh token non valido' });
+  }
+}
+
+export async function changePasswordHandler(req: Request, res: Response) {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    if (!oldPassword || !newPassword) {
+      res.status(400).json({ error: 'Campi obbligatori mancanti' });
+      return;
+    }
+    await changePassword(req.user!.userId, oldPassword, newPassword);
+    res.json({ message: 'Password aggiornata con successo' });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+export async function forgotPasswordHandler(req: Request, res: Response) {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      res.status(400).json({ error: 'Email obbligatoria' });
+      return;
+    }
+    if (email.trim().toLowerCase() !== req.user!.email.toLowerCase()) {
+      res.status(400).json({ error: 'L\'email inserita non corrisponde a quella del tuo account' });
+      return;
+    }
+    await requestPasswordReset(email.trim());
+    res.json({ message: 'Codice inviato alla tua email' });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+}
+
+export async function resetPasswordHandler(req: Request, res: Response) {
+  try {
+    const { email, code, newPassword } = req.body;
+    if (!email || !code || !newPassword) {
+      res.status(400).json({ error: 'Campi obbligatori mancanti' });
+      return;
+    }
+    await resetPassword(email, code, newPassword);
+    res.json({ message: 'Password reimpostata con successo' });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
   }
 }

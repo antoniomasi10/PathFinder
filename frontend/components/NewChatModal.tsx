@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '@/lib/api';
+import { useLanguage } from '@/lib/language';
 
 interface User {
   id: string;
@@ -18,6 +19,7 @@ interface NewChatModalProps {
 }
 
 export default function NewChatModal({ isOpen, onClose, onUserSelected }: NewChatModalProps) {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
@@ -94,7 +96,7 @@ export default function NewChatModal({ isOpen, onClose, onUserSelected }: NewCha
     <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: '#0D1117' }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-border">
-        <h2 className="text-lg font-display font-bold text-text-primary">Nuova chat</h2>
+        <h2 className="text-lg font-display font-bold text-text-primary">{t.group.newChat}</h2>
         <button onClick={() => handleClose()} className="text-text-muted hover:text-text-primary transition-colors">
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -111,7 +113,7 @@ export default function NewChatModal({ isOpen, onClose, onUserSelected }: NewCha
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cerca utenti..."
+            placeholder={t.group.searchUsers}
             className="input-field w-full pl-10"
             autoFocus
           />
@@ -131,7 +133,7 @@ export default function NewChatModal({ isOpen, onClose, onUserSelected }: NewCha
             ))
           ) : users.length === 0 ? (
             <p className="text-center text-text-muted text-sm py-6">
-              {searchQuery ? 'Nessun utente trovato' : 'Nessun utente disponibile'}
+              {searchQuery ? t.group.noUsersFound : t.group.noUsersAvailable}
             </p>
           ) : (
             users.map((u) => {
@@ -197,7 +199,7 @@ export default function NewChatModal({ isOpen, onClose, onUserSelected }: NewCha
             cursor: selectedUserId ? 'pointer' : 'not-allowed',
           }}
         >
-          Avvia chat
+          {t.group.startChat}
         </button>
       </div>
     </div>

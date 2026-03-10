@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, ChangeEvent } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
+import { useLanguage } from '@/lib/language';
 import { getSocket } from '@/lib/socket';
 import CreateGroupModal from '@/components/CreateGroupModal';
 import GroupOptionsModal from '@/components/GroupOptionsModal';
@@ -83,9 +85,12 @@ function savePinnedIds(ids: Set<string>) {
 
 export default function NetworkingPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<'messaggi' | 'esplora'>('messaggi');
   const [unifiedConversations, setUnifiedConversations] = useState<UnifiedConversation[]>([]);
-  const [selectedUser, setSelectedUser] = useState<{ id: string; name: string; avatar?: string; university?: string } | null>(null);
+  const [selectedUser, setSelectedUser] = useState<{ id: string; name: string; avatar?: string; university?: string; canMessage?: boolean } | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<{ id: string; name: string; memberCount: number; image?: string } | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [groupMessages, setGroupMessages] = useState<Message[]>([]);
@@ -172,6 +177,20 @@ export default function NetworkingPage() {
     setPinnedIds(getPinnedIds());
   }, []);
 
+  // Open a direct chat from external navigation (e.g. message button in pathmates list)
+  useEffect(() => {
+    const openChatId = searchParams.get('openChat');
+    const openChatName = searchParams.get('name');
+    const openChatAvatar = searchParams.get('avatar');
+    if (openChatId && openChatName) {
+      setTab('messaggi');
+      setSelectedGroup(null);
+      setChatImages([]);
+      setSelectedUser({ id: openChatId, name: decodeURIComponent(openChatName), avatar: openChatAvatar ? decodeURIComponent(openChatAvatar) || undefined : undefined });
+      router.replace('/networking');
+    }
+  }, [searchParams]);
+
   const buildUnifiedList = useCallback((conversations: Conversation[], groups: Group[], pinned: Set<string>): UnifiedConversation[] => {
     const directItems: UnifiedConversation[] = conversations.map((conv) => ({
       id: `direct-${conv.user.id}`,
@@ -192,7 +211,7 @@ export default function NetworkingPage() {
       avatar: g.image,
       lastMessage: g.lastMessage
         ? `${g.lastMessage.sender.name}: ${g.lastMessage.images && g.lastMessage.images.length > 0 && !g.lastMessage.content ? '📷 Foto' : g.lastMessage.content}`
-        : 'Nessun messaggio',
+        : t.networking.noMessagePreview,
       lastMessageAt: g.lastMessage?.sentAt || g.createdAt,
       unread: 0,
       pinned: pinned.has(`group-${g.id}`),
@@ -206,7 +225,7 @@ export default function NetworkingPage() {
       return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
     });
     return all;
-  }, []);
+  }, [t]);
 
   const loadConversations = useCallback(async () => {
     setLoading(true);
@@ -245,12 +264,14 @@ export default function NetworkingPage() {
   }, [selectedUser]);
 
   useEffect(() => {
-    if (selectedUser && !selectedUser.university) {
+    if (selectedUser) {
       api.get(`/profile/${selectedUser.id}`)
         .then(({ data }) => {
-          if (data.university?.name) {
-            setSelectedUser(prev => prev ? { ...prev, university: data.university.name } : prev);
-          }
+          setSelectedUser(prev => prev ? {
+            ...prev,
+            university: data.university?.name ?? prev.university,
+            canMessage: data.canMessage,
+          } : prev);
         })
         .catch(() => {});
     }
@@ -518,14 +539,14 @@ export default function NetworkingPage() {
             <div>
               <h1 className="text-white font-medium text-lg">Chat</h1>
               <p className="text-gray-500 text-sm">
-                {unifiedConversations.length} conversazion{unifiedConversations.length === 1 ? 'e' : 'i'}
+                {unifiedConversations.length} {unifiedConversations.length === 1 ? t.networking.conversationsSingular : t.networking.conversationsPlural}
               </p>
             </div>
             <button
               onClick={() => setShowActionMenu(true)}
               className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-full flex items-center justify-center transition-transform hover:scale-105"
               style={{ boxShadow: '0 4px 20px rgba(99,102,241,0.5)' }}
-              title="Crea gruppo"
+              title={t.networking.createGroup}
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
@@ -549,7 +570,7 @@ export default function NetworkingPage() {
                   : 'text-gray-500'
               }`}
             >
-              Messaggi
+              {t.networking.messages}
             </button>
             <button
               onClick={() => setTab('esplora')}
@@ -559,7 +580,7 @@ export default function NetworkingPage() {
                   : 'text-gray-500'
               }`}
             >
-              Esplora
+              {t.networking.explore}
             </button>
           </div>
         </>
@@ -580,8 +601,8 @@ export default function NetworkingPage() {
             ))
           ) : unifiedConversations.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
-              <p>Nessun messaggio ancora</p>
-              <p className="text-sm mt-1">Connettiti con altri studenti nella sezione Esplora!</p>
+              <p>{t.networking.noMessages}</p>
+              <p className="text-sm mt-1">{t.networking.connectExplore}</p>
             </div>
           ) : (
             unifiedConversations.map((conv) => (
@@ -619,7 +640,7 @@ export default function NetworkingPage() {
                     <div className="flex items-center min-w-0">
                       <span className="text-white font-medium truncate">{conv.name}</span>
                       {conv.type === 'group' && (
-                        <span className="ml-2 text-xs text-indigo-400">gruppo</span>
+                        <span className="ml-2 text-xs text-indigo-400">{t.networking.group}</span>
                       )}
                     </div>
                     <span className="text-gray-500 text-xs shrink-0 ml-2">
@@ -644,6 +665,16 @@ export default function NetworkingPage() {
             onPress={() => {}}
           />
           <div className="flex-1 overflow-y-auto space-y-2 mb-3 scrollbar-hide">
+            {messages.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full text-center gap-2 py-12">
+                <div className="w-14 h-14 rounded-full bg-indigo-500/10 flex items-center justify-center mb-1">
+                  <svg className="w-7 h-7 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </div>
+                <p className="text-gray-400 text-sm">Inizia una conversazione con <span className="text-white font-medium">{selectedUser.name}</span></p>
+              </div>
+            )}
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -693,6 +724,11 @@ export default function NetworkingPage() {
                 ))}
               </div>
             )}
+            {selectedUser?.canMessage === false ? (
+              <div className="flex items-center justify-center py-3 text-sm text-gray-500 italic">
+                Questo utente non accetta messaggi
+              </div>
+            ) : (
             <div className="flex gap-2">
               <button
                 onClick={() => chatFileInputRef.current?.click()}
@@ -715,7 +751,7 @@ export default function NetworkingPage() {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                placeholder="Scrivi un messaggio..."
+                placeholder={t.networking.writeMessage}
                 className="flex-1 bg-[#1a1b2e] text-white border border-indigo-900/30 focus:border-indigo-500 rounded-2xl px-4 py-3 placeholder:text-gray-500 focus:outline-none transition-colors"
               />
               <button
@@ -729,6 +765,7 @@ export default function NetworkingPage() {
                 </svg>
               </button>
             </div>
+            )}
           </div>
         </div>
       )}
@@ -819,7 +856,7 @@ export default function NetworkingPage() {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && sendGroupMessage()}
-                placeholder="Scrivi un messaggio..."
+                placeholder={t.networking.writeMessage}
                 className="flex-1 bg-[#1a1b2e] text-white border border-indigo-900/30 focus:border-indigo-500 rounded-2xl px-4 py-3 placeholder:text-gray-500 focus:outline-none transition-colors"
               />
               <button
@@ -845,7 +882,7 @@ export default function NetworkingPage() {
             <textarea
               value={newPost}
               onChange={(e) => setNewPost(e.target.value)}
-              placeholder="Condividi qualcosa con la community..."
+              placeholder={t.networking.shareWithCommunity}
               className="input-field resize-none mb-3"
               rows={3}
             />
@@ -878,7 +915,7 @@ export default function NetworkingPage() {
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                Aggiungi foto ({postImages.length}/5)
+                {t.networking.addPhoto} ({postImages.length}/5)
               </button>
               <input
                 ref={postFileInputRef}
@@ -893,7 +930,7 @@ export default function NetworkingPage() {
                 disabled={!newPost.trim() && postImages.length === 0}
                 className="btn-primary text-sm disabled:opacity-50"
               >
-                Pubblica
+                {t.networking.publish}
               </button>
             </div>
           </div>
@@ -913,9 +950,20 @@ export default function NetworkingPage() {
               <div key={post.id} className="card">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center text-sm font-bold text-primary">
-                      {post.author.name[0]}
-                    </div>
+                    {(() => {
+                      const avatar = post.author.id === user?.id
+                        ? (user?.avatar ?? post.author.avatar)
+                        : post.author.avatar;
+                      return (
+                        <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center text-sm font-bold text-primary overflow-hidden shrink-0">
+                          {avatar ? (
+                            <img src={avatar} alt={post.author.name} className="w-full h-full object-cover" />
+                          ) : (
+                            post.author.name[0]
+                          )}
+                        </div>
+                      );
+                    })()}
                     <div>
                       <p className="font-medium text-sm text-text-primary">{post.author.name}</p>
                       <p className="text-[10px] text-text-muted">
@@ -933,7 +981,7 @@ export default function NetworkingPage() {
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                           </svg>
-                          Connessi
+                          {t.userProfile.connected}
                         </span>
                       );
                     }
@@ -945,7 +993,7 @@ export default function NetworkingPage() {
                         onClick={() => sendFriendRequest(post.author.id)}
                         className="text-xs text-primary border border-primary/30 px-3 py-1 rounded-full hover:bg-primary/10 transition-colors"
                       >
-                        Connetti
+                        {t.userProfile.connect}
                       </button>
                     );
                   })()}
@@ -1120,7 +1168,7 @@ export default function NetworkingPage() {
                   <svg className="w-12 h-12 mx-auto text-gray-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                   </svg>
-                  <p className="text-gray-500 text-sm">Nessun commento ancora</p>
+                  <p className="text-gray-500 text-sm">{t.networking.noComments}</p>
                   <p className="text-gray-600 text-xs mt-1">Sii il primo a commentare!</p>
                 </div>
               ) : (
@@ -1155,7 +1203,7 @@ export default function NetworkingPage() {
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && submitComment()}
-                placeholder="Scrivi un commento..."
+                placeholder={t.networking.writeComment}
                 className="flex-1 bg-card rounded-full px-4 py-2 text-sm text-white placeholder-gray-500 outline-none focus:ring-1 focus:ring-primary"
                 maxLength={500}
               />

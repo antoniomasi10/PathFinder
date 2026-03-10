@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
+import { useLanguage } from '@/lib/language';
 
 interface Friend {
   id: string;
@@ -26,6 +27,7 @@ export default function AddMembersModal({
   existingMemberIds,
   onMembersAdded,
 }: AddMembersModalProps) {
+  const { t } = useLanguage();
   const [friends, setFriends] = useState<Friend[]>([]);
   const [selectedFriends, setSelectedFriends] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
@@ -91,7 +93,7 @@ export default function AddMembersModal({
     <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: '#0D1117' }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-indigo-900/20">
-        <h2 className="text-lg font-medium text-white">Aggiungi membri</h2>
+        <h2 className="text-lg font-medium text-white">{t.group.addMembers}</h2>
         <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -108,7 +110,7 @@ export default function AddMembersModal({
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cerca amici..."
+            placeholder={t.group.searchFriends}
             className="w-full bg-[#1a1b2e] border border-indigo-900/30 rounded-2xl pl-10 pr-4 py-3 text-white text-sm placeholder:text-gray-500 focus:outline-none focus:border-indigo-500 transition-colors"
           />
         </div>
@@ -125,7 +127,7 @@ export default function AddMembersModal({
           ))
         ) : allInGroup ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 text-sm">Tutti i tuoi amici sono gia nel gruppo</p>
+            <p className="text-gray-500 text-sm">{t.group.allFriendsInGroup}</p>
           </div>
         ) : (
           <div className="space-y-1 pb-24">
@@ -185,7 +187,7 @@ export default function AddMembersModal({
                 </div>
                 <div className="flex-1 text-left min-w-0">
                   <p className="font-medium text-sm text-gray-400">{friend.name}</p>
-                  <p className="text-[11px] text-gray-600">Gia nel gruppo</p>
+                  <p className="text-[11px] text-gray-600">{t.group.alreadyInGroup}</p>
                 </div>
               </div>
             ))}
@@ -213,7 +215,7 @@ export default function AddMembersModal({
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
           ) : (
-            `Aggiungi${selectedFriends.size > 0 ? ` (${selectedFriends.size})` : ''}`
+            selectedFriends.size > 0 ? `${t.profile.add} (${selectedFriends.size})` : t.profile.add
           )}
         </button>
       </div>

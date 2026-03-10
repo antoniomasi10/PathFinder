@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useSavedOpportunities } from '@/lib/savedOpportunities';
+import { useLanguage } from '@/lib/language';
 
 interface Opportunity {
   id: string;
@@ -50,18 +51,15 @@ function CircularProgress({ score }: { score: number }) {
   );
 }
 
-const opportunities: Opportunity[] = [
+type BaseOpportunity = Omit<Opportunity, 'description' | 'about' | 'location'>;
+
+const BASE_OPPORTUNITIES: BaseOpportunity[] = [
   {
     id: '1',
     title: 'Software Engineer Intern',
     company: 'TechNova Solutions',
     badge: 'FULL-TIME • REMOTE',
-    description:
-      `Siamo alla ricerca di uno studente appassionato di sviluppo web per unirsi al nostro team di ingegneria. Lavorerai su progetti reali con impatto diretto sul prodotto, collaborando con ingegneri senior su feature front-end e back-end. Richiediamo conoscenza di JavaScript/TypeScript e dei fondamentali del web. È previsto un compenso mensile e la possibilità di assunzione a tempo indeterminato al termine del percorso.`,
     matchScore: 85,
-    location: `Milano, IT • Remoto`,
-    about:
-      `TechNova Solutions è una startup fintech in rapida crescita con sede a Milano. Lavoriamo per rivoluzionare il settore dei pagamenti digitali con soluzioni basate su intelligenza artificiale e blockchain. Il nostro team è composto da oltre 50 ingegneri provenienti da tutta Europa, uniti dalla passione per la tecnologia e dall'impatto sociale del nostro lavoro.`,
     url: 'https://www.technova.io/careers/software-engineer-intern',
     icon: (
       <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -77,12 +75,7 @@ const opportunities: Opportunity[] = [
     title: 'Product Design Workshop',
     company: 'Creative Hub Milan',
     badge: 'WORKSHOP • HYBRID',
-    description:
-      `Unisciti a noi per una settimana intensiva di Design Thinking e prototyping applicato al mondo reale. Il programma include sessioni mattutine di teoria, pomeriggi di hands-on workshop con mentori del settore e una presentazione finale davanti a un panel di aziende partner. Partecipazione gratuita con borsa di studio disponibile.`,
     matchScore: 62,
-    location: `Milano, IT • Ibrido`,
-    about:
-      `Creative Hub Milan è un centro di innovazione dedicato alla cultura del design e alla creatività applicata. Ogni anno formiamo centinaia di giovani designer attraverso workshop intensivi e programmi di mentorship con professionisti del settore. Collaboriamo con oltre 80 aziende italiane e internazionali.`,
     url: 'https://www.creativehubmilan.it/workshop/product-design',
     icon: (
       <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -96,12 +89,7 @@ const opportunities: Opportunity[] = [
     title: 'Data Analyst Junior',
     company: 'Fintech Alpha',
     badge: 'JUNIOR • IN-PERSON',
-    description:
-      `Analisi di dataset complessi per l'ottimizzazione dei processi di credito e gestione del rischio. Il ruolo prevede elaborazione dati in Python, creazione di dashboard in Tableau e reporting settimanale ai manager. Sono richieste esperienza pregressa in analisi dati e conoscenza di SQL. Contratto a tempo determinato con possibilità di rinnovo.`,
     matchScore: 35,
-    location: `Roma, IT • In presenza`,
-    about:
-      `Fintech Alpha è una società fintech specializzata nella gestione del rischio di credito. Utilizziamo modelli statistici avanzati e machine learning per ottimizzare i processi di valutazione del credito, operando con oltre 200 partner bancari in tutta Italia. Fondata nel 2018, contiamo oggi più di 120 dipendenti.`,
     icon: (
       <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h4v11H3zM10 3h4v18h-4zM17 7h4v14h-4z" />
@@ -113,12 +101,7 @@ const opportunities: Opportunity[] = [
     title: 'Master in AI Ethics',
     company: 'Politecnico di Milano',
     badge: 'EDUCATION • PART-TIME',
-    description:
-      `Un percorso formativo avanzato che esplora le implicazioni etiche dell'intelligenza artificiale in contesti aziendali, legali e sociali. Il corso è erogato in modalità ibrida con 6 moduli da 4 settimane ciascuno, inclusi casi studio con aziende leader del settore tech. Titolo riconosciuto a livello europeo.`,
     matchScore: 92,
-    location: `Milano, IT • Part-time`,
-    about:
-      `Il Politecnico di Milano, una delle migliori università tecniche d'Europa, propone questo programma d'eccellenza dedicato alle sfide etiche dell'intelligenza artificiale. Il programma è riconosciuto a livello europeo e offre accesso a una rete di alumni in oltre 30 paesi, con placement rate del 94%.`,
     url: 'https://www.polimi.it/formazione/master-e-corsi/master/master-in-ai-ethics',
     icon: (
       <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -127,6 +110,13 @@ const opportunities: Opportunity[] = [
     ),
   },
 ];
+
+function getOpportunities(t: ReturnType<typeof useLanguage>['t']): Opportunity[] {
+  return BASE_OPPORTUNITIES.map((opp) => ({
+    ...opp,
+    ...t.opportunitiesContent[opp.id as keyof typeof t.opportunitiesContent],
+  }));
+}
 
 /* ── Search + filter predicates (module-level, no closure) ──────── */
 
@@ -150,36 +140,38 @@ function matchesBadgeFilters(opp: Opportunity, filters: Record<string, string[]>
 
 /* ── Filter config ───────────────────────────────────────────────── */
 
-const FILTER_CATEGORIES = [
-  {
-    id: 'tipo',
-    label: 'Tipo',
-    options: [
-      { label: 'Full-time', value: 'full-time' },
-      { label: 'Part-time', value: 'part-time' },
-      { label: 'Workshop',  value: 'workshop'  },
-      { label: 'Internship',value: 'intern'    },
-      { label: 'Education', value: 'education' },
-    ],
-  },
-  {
-    id: 'modalita',
-    label: 'Modalità',
-    options: [
-      { label: 'Remoto',      value: 'remote'    },
-      { label: 'In presenza', value: 'in-person' },
-      { label: 'Ibrido',      value: 'hybrid'    },
-    ],
-  },
-  {
-    id: 'livello',
-    label: 'Livello',
-    options: [
-      { label: 'Junior', value: 'junior' },
-      { label: 'Senior', value: 'senior' },
-    ],
-  },
-];
+function getFilterCategories(t: ReturnType<typeof useLanguage>['t']) {
+  return [
+    {
+      id: 'tipo',
+      label: t.home.filterType,
+      options: [
+        { label: t.home.filterFullTime,  value: 'full-time' },
+        { label: t.home.filterPartTime,  value: 'part-time' },
+        { label: t.home.filterWorkshop,  value: 'workshop'  },
+        { label: t.home.filterInternship,value: 'intern'    },
+        { label: t.home.filterEducation, value: 'education' },
+      ],
+    },
+    {
+      id: 'modalita',
+      label: t.home.filterMode,
+      options: [
+        { label: t.home.filterRemote,   value: 'remote'    },
+        { label: t.home.filterInPerson, value: 'in-person' },
+        { label: t.home.filterHybrid,   value: 'hybrid'    },
+      ],
+    },
+    {
+      id: 'livello',
+      label: t.home.filterLevel,
+      options: [
+        { label: t.home.filterJunior, value: 'junior' },
+        { label: t.home.filterSenior, value: 'senior' },
+      ],
+    },
+  ];
+}
 
 /* ── Shared primitives ───────────────────────────────────────────── */
 
@@ -249,6 +241,7 @@ function FullWidthCard({
   isSaved: boolean;
   onSave: () => void;
 }) {
+  const { t } = useLanguage();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -325,7 +318,7 @@ function FullWidthCard({
               <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
               </svg>
-              <span className="text-gray-300 text-xs">Pubblicato 3 giorni fa</span>
+              <span className="text-gray-300 text-xs">{t.home.publishedDaysAgo}</span>
             </div>
           </div>
 
@@ -348,7 +341,7 @@ function FullWidthCard({
                   : 'bg-[#1E293B] text-gray-500 cursor-not-allowed'
               }`}
             >
-              {opp.url ? 'Vai all\u2019opportunità' : 'Link non disponibile'}
+              {opp.url ? t.home.goToOpportunity : t.home.linkUnavailable}
             </button>
             <button
               onClick={onSave}
@@ -380,6 +373,7 @@ function HalfWidthCard({
   isSaved: boolean;
   onSave: () => void;
 }) {
+  const { t } = useLanguage();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -451,7 +445,7 @@ function HalfWidthCard({
                   : 'bg-[#1E293B] text-gray-500 cursor-not-allowed'
               }`}
             >
-              {opp.url ? 'Vai all\u2019opportunità' : 'Link non disponibile'}
+              {opp.url ? t.home.goToOpportunity : t.home.linkUnavailable}
             </button>
             <button
               onClick={onSave}
@@ -620,6 +614,10 @@ function FilterSheet({
   open,
   draft,
   matchCount,
+  filterCategories,
+  labelFilters,
+  labelReset,
+  labelApplyFilters,
   onToggleOption,
   onReset,
   onApply,
@@ -628,6 +626,10 @@ function FilterSheet({
   open: boolean;
   draft: Record<string, string[]>;
   matchCount: number;
+  filterCategories: ReturnType<typeof getFilterCategories>;
+  labelFilters: string;
+  labelReset: string;
+  labelApplyFilters: string;
   onToggleOption: (catId: string, value: string) => void;
   onReset: () => void;
   onApply: () => void;
@@ -657,18 +659,18 @@ function FilterSheet({
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-3 pb-4">
-          <h2 className="text-white font-bold text-lg">Filtri</h2>
+          <h2 className="text-white font-bold text-lg">{labelFilters}</h2>
           <button
             onClick={onReset}
             className="text-primary text-sm font-semibold active:opacity-70 transition-opacity"
           >
-            Reset
+            {labelReset}
           </button>
         </div>
 
         {/* Categories — scrollable if content is tall */}
         <div className="px-5 pb-4 space-y-6 max-h-[55vh] overflow-y-auto no-scrollbar">
-          {FILTER_CATEGORIES.map((cat) => {
+          {filterCategories.map((cat) => {
             const selectedValues = draft[cat.id] ?? [];
             return (
               <div key={cat.id}>
@@ -704,7 +706,7 @@ function FilterSheet({
             onClick={onApply}
             className="w-full bg-primary text-white py-4 rounded-2xl font-semibold text-[15px] active:opacity-90 transition-opacity"
           >
-            {`Applica filtri (${matchCount})`}
+            {`${labelApplyFilters} (${matchCount})`}
           </button>
         </div>
       </div>
@@ -719,6 +721,12 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { savedIds, toggleSave } = useSavedOpportunities();
+  const { t } = useLanguage();
+  const allOpportunities = getOpportunities(t);
+  const filterCategories = getFilterCategories(t);
+
+  // Always sort by match score descending in "Per te"
+  const opportunities = [...allOpportunities].sort((a, b) => b.matchScore - a.matchScore);
 
   // Filter sheet state
   const [filterOpen, setFilterOpen] = useState(false);
@@ -794,7 +802,7 @@ export default function HomePage() {
                 tab === 'per-te' ? 'bg-primary text-white' : 'text-gray-500'
               }`}
             >
-              Per te
+              {t.home.forYou}
             </button>
             <button
               onClick={() => handleTabChange('esplora')}
@@ -802,7 +810,7 @@ export default function HomePage() {
                 tab === 'esplora' ? 'bg-primary text-white' : 'text-gray-500'
               }`}
             >
-              Esplora
+              {t.home.explore}
             </button>
           </div>
           <div className="absolute right-0">
@@ -827,7 +835,7 @@ export default function HomePage() {
               </svg>
               <input
                 type="text"
-                placeholder="Cerca opportunità…"
+                placeholder={t.home.searchPlaceholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-[#161B22] rounded-xl pl-9 pr-12 py-3 text-white placeholder-gray-500 text-sm outline-none"
@@ -875,7 +883,7 @@ export default function HomePage() {
             <svg className="w-10 h-10 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
             </svg>
-            <p className="text-sm font-medium">Nessuna opportunità trovata</p>
+            <p className="text-sm font-medium">{t.home.noOpportunities}</p>
           </div>
         ) : (
           <EsploraGrid
@@ -896,6 +904,10 @@ export default function HomePage() {
         open={filterOpen}
         draft={draftFilters}
         matchCount={draftMatchCount}
+        filterCategories={filterCategories}
+        labelFilters={t.home.filters}
+        labelReset={t.home.reset}
+        labelApplyFilters={t.home.applyFilters}
         onToggleOption={toggleDraftOption}
         onReset={() => setDraftFilters({})}
         onApply={applyFilters}

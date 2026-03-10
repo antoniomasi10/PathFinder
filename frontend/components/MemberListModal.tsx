@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import api from '@/lib/api';
 import ConfirmDialog from './ConfirmDialog';
+import { useLanguage } from '@/lib/language';
 
 interface Member {
   id: string;
@@ -35,6 +36,7 @@ export default function MemberListModal({
   isCreator,
   onMemberRemoved,
 }: MemberListModalProps) {
+  const { t } = useLanguage();
   const [removing, setRemoving] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<Member | null>(null);
 
@@ -63,7 +65,7 @@ export default function MemberListModal({
     <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: '#0D1117' }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-indigo-900/20">
-        <h2 className="text-lg font-medium text-white">Membri ({members.length})</h2>
+        <h2 className="text-lg font-medium text-white">{t.group.viewMembers} ({members.length})</h2>
         <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -95,12 +97,12 @@ export default function MemberListModal({
                 <span className="text-white font-medium text-sm truncate">{member.user.name}</span>
                 {member.role === 'CREATOR' && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 font-medium shrink-0">
-                    Creatore
+                    {t.group.creator}
                   </span>
                 )}
                 {member.user.id === currentUserId && (
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-700 text-gray-400 font-medium shrink-0">
-                    Tu
+                    {t.group.you}
                   </span>
                 )}
               </div>
@@ -119,7 +121,7 @@ export default function MemberListModal({
                 disabled={removing === member.user.id}
                 className="text-red-400 hover:text-red-300 text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-red-500/10 transition-colors shrink-0"
               >
-                {removing === member.user.id ? '...' : 'Rimuovi'}
+                {removing === member.user.id ? '...' : t.group.remove}
               </button>
             )}
           </div>
@@ -128,9 +130,9 @@ export default function MemberListModal({
 
       <ConfirmDialog
         isOpen={!!confirmRemove}
-        title="Rimuovi membro"
-        message={`Vuoi rimuovere ${confirmRemove?.user.name} dal gruppo?`}
-        confirmLabel="Rimuovi"
+        title={t.group.removeConfirmTitle}
+        message={`${t.group.removeConfirmMsgPrefix} ${confirmRemove?.user.name} ${t.group.removeConfirmMsgSuffix}`}
+        confirmLabel={t.group.removeConfirmBtn}
         confirmColor="red"
         onConfirm={() => confirmRemove && handleRemove(confirmRemove)}
         onCancel={() => setConfirmRemove(null)}

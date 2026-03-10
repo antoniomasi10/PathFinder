@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useLanguage } from '@/lib/language';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -17,13 +18,15 @@ export default function ConfirmDialog({
   isOpen,
   title,
   message,
-  confirmLabel = 'Conferma',
+  confirmLabel,
   confirmColor = 'red',
   requireInput,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
   const [inputValue, setInputValue] = useState('');
+  const { t } = useLanguage();
+  const resolvedConfirmLabel = confirmLabel ?? t.common.confirm;
 
   if (!isOpen) return null;
 
@@ -57,7 +60,7 @@ export default function ConfirmDialog({
           <input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder={`Scrivi "${requireInput}" per confermare`}
+            placeholder={t.common.typeToConfirm.replace('{input}', requireInput!)}
             className="w-full bg-[#0D1117] border border-indigo-900/30 rounded-xl px-4 py-3 text-white text-sm placeholder:text-gray-500 focus:outline-none focus:border-red-500 mb-4 transition-colors"
           />
         )}
@@ -67,7 +70,7 @@ export default function ConfirmDialog({
             onClick={handleCancel}
             className="flex-1 py-3 rounded-xl text-sm font-medium text-gray-400 bg-[#0D1117] hover:bg-[#161b22] transition-colors"
           >
-            Annulla
+            {t.common.cancel}
           </button>
           <button
             onClick={handleConfirm}
@@ -76,7 +79,7 @@ export default function ConfirmDialog({
               canConfirm ? colorClass : 'bg-gray-700 cursor-not-allowed'
             }`}
           >
-            {confirmLabel}
+            {resolvedConfirmLabel}
           </button>
         </div>
       </div>

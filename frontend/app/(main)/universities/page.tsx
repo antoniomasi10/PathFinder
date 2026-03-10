@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
+import { useLanguage } from '@/lib/language';
 
 interface University {
   id: string;
@@ -17,6 +18,7 @@ interface University {
 export default function UniversitiesPage() {
   const [universities, setUniversities] = useState<University[]>([]);
   const [loading, setLoading] = useState(true);
+  const { t } = useLanguage();
 
   useEffect(() => {
     api.get('/universities')
@@ -28,7 +30,7 @@ export default function UniversitiesPage() {
   if (loading) {
     return (
       <div className="px-4 py-4 space-y-4">
-        <h2 className="text-2xl font-display font-bold">Università</h2>
+        <h2 className="text-2xl font-display font-bold">{t.uni.title}</h2>
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="card animate-pulse">
             <div className="h-32 bg-border rounded-xl mb-3" />
@@ -56,7 +58,7 @@ export default function UniversitiesPage() {
                 <span className="flex items-center gap-1">
                   ⭐ {uni.avgRating.toFixed(1)}
                 </span>
-                <span>{uni._count.opportunities} opportunità</span>
+                <span>{uni._count.opportunities} {t.uni.opportunities}</span>
                 <span>{uni.alumniCount.toLocaleString()} alumni</span>
               </div>
             </div>

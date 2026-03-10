@@ -5,6 +5,9 @@ import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useSavedOpportunities } from '@/lib/savedOpportunities';
+import { useLanguage, Language, LANGUAGE_DISPLAY_NAMES, SKILL_KEYS, getSkillLabel, normalizePassionToKey } from '@/lib/language';
+import { usePrivacy } from '@/lib/privacy';
+import ChangePasswordModal from '@/components/ChangePasswordModal';
 
 interface FullProfile {
   id: string;
@@ -47,27 +50,19 @@ const TYPE_ICONS: Record<string, string> = {
   EVENT: '📅',
 };
 
-const AVAILABLE_SKILLS = [
-  'Informatica', 'Data Science', 'Machine Learning', 'Web Development',
-  'Mobile Development', 'Cybersecurity', 'Cloud Computing', 'DevOps',
-  'UI/UX Design', 'Graphic Design', 'Marketing', 'Comunicazione',
-  'Economia', 'Finanza', 'Management', 'Imprenditoria',
-  'Ingegneria', 'Matematica', 'Fisica', 'Chimica',
-  'Biologia', 'Medicina', 'Giurisprudenza', 'Scienze Politiche',
-  'Lingue', 'Letteratura', 'Filosofia', 'Psicologia',
-  'Sociologia', 'Architettura', 'Design', 'Musica',
-];
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth();
+  const { user, setUser, logout } = useAuth();
   const router = useRouter();
   const { savedOpps } = useSavedOpportunities();
+  const { language, setLanguage, t } = useLanguage();
   const [profile, setProfile] = useState<FullProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [activeTab, setActiveTab] = useState<'settings' | 'pathmates'>('settings');
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showSkillsModal, setShowSkillsModal] = useState(false);
+  const [modalSkills, setModalSkills] = useState<string[]>([]);
   const [editName, setEditName] = useState('');
   const [editBio, setEditBio] = useState('');
   const [editCourse, setEditCourse] = useState('');
@@ -75,22 +70,23 @@ export default function ProfilePage() {
   const [editSkills, setEditSkills] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [friendSearch, setFriendSearch] = useState('');
-  const [messagePrivacy, setMessagePrivacy] = useState<'Tutti' | 'Pathmates' | 'Nessuno'>('Pathmates');
-  const [activityVisibility, setActivityVisibility] = useState<'Tutti' | 'Pathmates' | 'Nessuno'>('Pathmates');
-  const [language, setLanguage] = useState<'Italiano' | 'Inglese' | 'Cinese' | 'Spagnolo'>('Italiano');
   const [showPrivacySheet, setShowPrivacySheet] = useState(false);
   const [showSecuritySheet, setShowSecuritySheet] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [showHelpSheet, setShowHelpSheet] = useState(false);
   const [showInfoSheet, setShowInfoSheet] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  // Privacy sheet state
-  const [privacyProfile, setPrivacyProfile] = useState<'Tutti' | 'Pathmates' | 'Nessuno'>('Tutti');
-  const [privacySkills, setPrivacySkills] = useState<'Tutti' | 'Pathmates' | 'Nessuno'>('Tutti');
-  const [privacyUniversity, setPrivacyUniversity] = useState<'Tutti' | 'Pathmates' | 'Nessuno'>('Tutti');
-  const [privacySavedOpps, setPrivacySavedOpps] = useState<'Tutti' | 'Pathmates' | 'Nessuno'>('Pathmates');
-  const [privacyPathmates, setPrivacyPathmates] = useState<'Tutti' | 'Pathmates' | 'Nessuno'>('Pathmates');
-  const [privacyRecommendations, setPrivacyRecommendations] = useState(true);
-  const [privacyAnonymousData, setPrivacyAnonymousData] = useState(false);
+  // Privacy settings from global context (persisted to localStorage)
+  const {
+    publicProfile, setPublicProfile,
+    privacySkills, setPrivacySkills,
+    privacyUniversity, setPrivacyUniversity,
+    privacySavedOpps, setPrivacySavedOpps,
+    privacyPathmates, setPrivacyPathmates,
+    messagePrivacy, setMessagePrivacy,
+  } = usePrivacy();
   const [savedTab, setSavedTab] = useState<'opportunities' | 'universities'>('opportunities');
   const [suggestedUsers, setSuggestedUsers] = useState<Friend[]>([]);
   const [sendingRequest, setSendingRequest] = useState<string | null>(null);
@@ -103,6 +99,12 @@ export default function ProfilePage() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (showSkillsModal) {
+      setModalSkills(profile?.profile?.passions || []);
+    }
+  }, [showSkillsModal]);
+
   const loadData = async () => {
     try {
       const [profileRes, friendsRes, suggestionsRes] = await Promise.all([
@@ -110,12 +112,19 @@ export default function ProfilePage() {
         api.get('/friends').catch(() => ({ data: [] })),
         api.get('/friends/suggestions').catch(() => ({ data: [] })),
       ]);
-      setProfile(profileRes.data);
+      const rawPassions: string[] = profileRes.data.profile?.passions || [];
+      const normalizedPassions = rawPassions.map(normalizePassionToKey);
+      const profileData = profileRes.data;
+      if (profileData.profile) profileData.profile.passions = normalizedPassions;
+      if (normalizedPassions.some((k, i) => k !== rawPassions[i])) {
+        api.patch('/profile/me', { passions: normalizedPassions }).catch(() => {});
+      }
+      setProfile(profileData);
       setEditName(profileRes.data.name || '');
       setEditBio(profileRes.data.bio || '');
       setEditCourse(profileRes.data.courseOfStudy || '');
       setEditYear(profileRes.data.yearOfStudy);
-      setEditSkills(profileRes.data.profile?.passions || []);
+      setEditSkills(normalizedPassions);
       setFriends(friendsRes.data);
       setSuggestedUsers(suggestionsRes.data);
     } catch {
@@ -144,9 +153,15 @@ export default function ProfilePage() {
         bio: editBio,
         courseOfStudy: editCourse,
         yearOfStudy: editYear,
+        passions: editSkills,
+        ...(avatarPreview && { avatar: avatarPreview }),
       });
       setShowEditDialog(false);
-      loadData();
+      await loadData();
+      if (avatarPreview && user) {
+        setUser({ ...user, avatar: avatarPreview });
+      }
+      setAvatarPreview(null);
     } catch {
     } finally {
       setSaving(false);
@@ -177,12 +192,14 @@ export default function ProfilePage() {
     if (profile?.profile) {
       setProfile({ ...profile, profile: { ...profile.profile, passions: newPassions } });
     }
+    setModalSkills(newPassions);
     try {
       await api.patch('/profile/me', { passions: newPassions });
     } catch {
       if (profile?.profile) {
         setProfile({ ...profile, profile: { ...profile.profile, passions: currentPassions } });
       }
+      setModalSkills(currentPassions);
     }
   };
 
@@ -192,12 +209,14 @@ export default function ProfilePage() {
     if (profile?.profile) {
       setProfile({ ...profile, profile: { ...profile.profile, passions: newPassions } });
     }
+    setModalSkills(newPassions);
     try {
       await api.patch('/profile/me', { passions: newPassions });
     } catch {
       if (profile?.profile) {
         setProfile({ ...profile, profile: { ...profile.profile, passions: currentPassions } });
       }
+      setModalSkills(currentPassions);
     }
   };
 
@@ -230,6 +249,38 @@ export default function ProfilePage() {
   };
 
   const handleLogout = () => {
+    logout();
+  };
+
+  const handleDownloadData = () => {
+    if (!profile) return;
+    const data = {
+      name: profile.name,
+      email: profile.email,
+      bio: profile.bio,
+      university: profile.university?.name,
+      courseOfStudy: profile.courseOfStudy,
+      yearOfStudy: profile.yearOfStudy,
+      skills: profile.profile?.passions ?? [],
+      clusterTag: profile.profile?.clusterTag,
+      pathmates: friends.map((f) => ({ id: f.id, name: f.name, university: f.university?.name })),
+      savedOpportunities: savedOpps.map((o) => ({ id: o.id, title: o.title, company: o.company })),
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pathfinder-data.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true);
+    try {
+      await api.delete('/profile/me');
+    } catch {}
     logout();
   };
 
@@ -269,7 +320,7 @@ export default function ProfilePage() {
   }
   if (profile.profile?.passions) {
     profile.profile.passions.forEach((p) => {
-      tags.push({ label: p, color: 'bg-[#334155] text-[#94A3B8]' });
+      tags.push({ label: getSkillLabel(p, t), color: 'bg-[#334155] text-[#94A3B8]' });
     });
   }
 
@@ -280,7 +331,7 @@ export default function ProfilePage() {
       <div className="px-4 py-6 space-y-6">
         {/* Top Bar */}
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-white">Profilo</h1>
+          <h1 className="text-xl font-bold text-white">{t.profile.title}</h1>
           <button
             onClick={openEditDialog}
             className="p-2 rounded-full hover:bg-[#1E293B] transition-colors"
@@ -291,25 +342,40 @@ export default function ProfilePage() {
           </button>
         </div>
 
+        {/* Profile visibility notice */}
+        {!publicProfile && (
+          <div className="flex items-center gap-2 bg-[#1E293B] rounded-xl px-4 py-2.5">
+            <svg className="w-4 h-4 text-[#64748B] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+            </svg>
+            <p className="text-xs text-[#64748B]">
+              Profilo <span className="text-[#94A3B8] font-medium">privato</span> — visibile solo ai Pathmates
+            </p>
+          </div>
+        )}
+
         {/* Profile Header */}
         <div className="flex flex-col items-center text-center space-y-3">
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center text-2xl font-bold text-white shadow-lg shadow-[#4F46E5]/20">
-            {profile.avatar ? (
-              <img src={profile.avatar} alt={profile.name} className="w-full h-full rounded-full object-cover" />
+            {currentAvatar ? (
+              <img src={currentAvatar} alt={profile.name} className="w-full h-full rounded-full object-cover" />
             ) : (
               initials
             )}
           </div>
           <div>
             <h2 className="text-xl font-bold text-white">{profile.name}</h2>
-            {profile.university && (
+            {privacyUniversity !== 'Nessuno' && profile.university && (
               <p className="text-sm text-[#94A3B8] mt-0.5">{profile.university.name}</p>
             )}
-            {profile.courseOfStudy && (
+            {privacyUniversity !== 'Nessuno' && profile.courseOfStudy && (
               <p className="text-xs text-[#64748B] mt-0.5">
                 {profile.courseOfStudy}
-                {profile.yearOfStudy ? ` - ${profile.yearOfStudy}° anno` : ''}
+                {profile.yearOfStudy ? ` - ${profile.yearOfStudy}${t.profile.yearSuffix}` : ''}
               </p>
+            )}
+            {privacyUniversity === 'Nessuno' && (
+              <p className="text-xs text-[#475569] mt-0.5 italic">{t.profile.universityHidden}</p>
             )}
           </div>
 
@@ -319,34 +385,38 @@ export default function ProfilePage() {
           )}
 
           {/* Tags with + button */}
-          <div className="flex flex-wrap justify-center gap-2 pt-1">
-            {tags.map((tag) => (
-              <span
-                key={tag.label}
-                className={`px-3 py-1 rounded-full text-xs font-medium ${tag.color}`}
+          {privacySkills !== 'Nessuno' ? (
+            <div className="flex flex-wrap justify-center gap-2 pt-1">
+              {tags.map((tag) => (
+                <span
+                  key={tag.label}
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${tag.color}`}
+                >
+                  {tag.label}
+                </span>
+              ))}
+              <button
+                onClick={() => setShowSkillsModal(true)}
+                className="w-7 h-7 rounded-full bg-[#334155] flex items-center justify-center hover:bg-[#475569] transition-colors"
               >
-                {tag.label}
-              </span>
-            ))}
-            <button
-              onClick={() => setShowSkillsModal(true)}
-              className="w-7 h-7 rounded-full bg-[#334155] flex items-center justify-center hover:bg-[#475569] transition-colors"
-            >
-              <svg className="w-3.5 h-3.5 text-[#94A3B8]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
-          </div>
+                <svg className="w-3.5 h-3.5 text-[#94A3B8]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-[#475569] italic pt-1">Competenze nascoste</p>
+          )}
         </div>
 
         {/* Salvati Section */}
-        <div>
+        <div style={privacySavedOpps === 'Nessuno' ? { display: 'none' } : undefined}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <svg className="w-4 h-4 text-[#94A3B8]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
               </svg>
-              <h3 className="text-base font-semibold text-white">Salvati</h3>
+              <h3 className="text-base font-semibold text-white">{t.profile.saved}</h3>
             </div>
             <div className="flex bg-[#1E293B] rounded-lg p-0.5">
               <button
@@ -357,7 +427,7 @@ export default function ProfilePage() {
                     : 'text-[#94A3B8] hover:text-white'
                 }`}
               >
-                Universit&agrave;
+                {t.profile.savedUni}
               </button>
               <button
                 onClick={() => setSavedTab('opportunities')}
@@ -367,7 +437,7 @@ export default function ProfilePage() {
                     : 'text-[#94A3B8] hover:text-white'
                 }`}
               >
-                Opportunit&agrave;
+                {t.profile.savedOpp}
               </button>
             </div>
           </div>
@@ -375,12 +445,12 @@ export default function ProfilePage() {
           {savedTab === 'opportunities' ? (
             savedOpps.length === 0 ? (
               <div className="bg-[#1E293B] rounded-2xl p-6 text-center">
-                <p className="text-sm text-[#64748B]">Nessuna opportunit&agrave; salvata ancora</p>
+                <p className="text-sm text-[#64748B]">{t.profile.noSavedOpportunities}</p>
                 <button
                   onClick={() => router.push('/home')}
                   className="mt-3 text-sm text-[#4F46E5] font-medium hover:underline"
                 >
-                  Esplora opportunit&agrave;
+                  {t.profile.exploreOpportunities}
                 </button>
               </div>
             ) : (
@@ -411,12 +481,12 @@ export default function ProfilePage() {
             )
           ) : (
             <div className="bg-[#1E293B] rounded-2xl p-6 text-center">
-              <p className="text-sm text-[#64748B]">Nessuna universit&agrave; salvata ancora</p>
+              <p className="text-sm text-[#64748B]">{t.profile.noSavedUniversities}</p>
               <button
                 onClick={() => router.push('/universities')}
                 className="mt-3 text-sm text-[#4F46E5] font-medium hover:underline"
               >
-                Esplora universit&agrave;
+                {t.profile.exploreUniversities}
               </button>
             </div>
           )}
@@ -438,27 +508,29 @@ export default function ProfilePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                Impostazioni
+                {t.profile.settings}
               </span>
             </button>
-            <button
-              onClick={() => setActiveTab('pathmates')}
-              className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-                activeTab === 'pathmates'
-                  ? 'bg-[#4F46E5] text-white shadow-md'
-                  : 'text-[#94A3B8] hover:text-white'
-              }`}
-            >
-              <span className="flex items-center justify-center gap-1.5">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                Pathmates
-                {friends.length > 0 && (
-                  <span className="text-xs opacity-70">({friends.length})</span>
-                )}
-              </span>
-            </button>
+            {privacyPathmates !== 'Nessuno' && (
+              <button
+                onClick={() => setActiveTab('pathmates')}
+                className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                  activeTab === 'pathmates'
+                    ? 'bg-[#4F46E5] text-white shadow-md'
+                    : 'text-[#94A3B8] hover:text-white'
+                }`}
+              >
+                <span className="flex items-center justify-center gap-1.5">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  Pathmates
+                  {friends.length > 0 && (
+                    <span className="text-xs opacity-70">({friends.length})</span>
+                  )}
+                </span>
+              </button>
+            )}
           </div>
 
           {/* Settings Tab */}
@@ -466,7 +538,7 @@ export default function ProfilePage() {
             <div className="space-y-3">
               {/* Unified Preferences */}
               <div className="bg-[#1E293B] rounded-2xl p-4">
-                <h4 className="text-sm font-semibold text-white mb-3">Preferenze</h4>
+                <h4 className="text-sm font-semibold text-white mb-3">{t.profile.preferences}</h4>
                 <div>
                   <div className="flex items-center justify-between py-2">
                     <div className="flex items-center gap-3">
@@ -475,7 +547,7 @@ export default function ProfilePage() {
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                         </svg>
                       </div>
-                      <span className="text-sm text-white">Notifiche</span>
+                      <span className="text-sm text-white">{t.profile.notifications}</span>
                     </div>
                     <ToggleSwitch defaultOn />
                   </div>
@@ -487,7 +559,7 @@ export default function ProfilePage() {
                           <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                         </svg>
                       </div>
-                      <span className="text-sm text-white">Modalit&agrave; scura</span>
+                      <span className="text-sm text-white">{t.profile.darkMode}</span>
                     </div>
                     <ToggleSwitch defaultOn />
                   </div>
@@ -499,12 +571,9 @@ export default function ProfilePage() {
                           <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
                         </svg>
                       </div>
-                      <span className="text-sm text-white">Lingua</span>
+                      <span className="text-sm text-white">{t.profile.language}</span>
                     </div>
-                    <LanguageDropdown
-                      value={language}
-                      onChange={setLanguage}
-                    />
+                    <LanguageDropdown />
                   </div>
                 </div>
               </div>
@@ -512,10 +581,10 @@ export default function ProfilePage() {
               {/* Security & Info */}
               <div className="bg-[#1E293B] rounded-2xl overflow-hidden">
                 {[
-                  { label: 'Sicurezza', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z', onPress: () => setShowSecuritySheet(true) },
-                  { label: 'Privacy', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', onPress: () => setShowPrivacySheet(true) },
-                  { label: 'Aiuto & Supporto', icon: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', onPress: () => setShowHelpSheet(true) },
-                  { label: 'Info', icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', onPress: () => setShowInfoSheet(true) },
+                  { label: t.profile.security, icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z', onPress: () => setShowSecuritySheet(true) },
+                  { label: t.profile.privacy, icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', onPress: () => setShowPrivacySheet(true) },
+                  { label: t.profile.helpSupport, icon: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', onPress: () => setShowHelpSheet(true) },
+                  { label: t.profile.info, icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', onPress: () => setShowInfoSheet(true) },
                 ].map((item, i, arr) => (
                   <div key={item.label}>
                     <button
@@ -546,7 +615,7 @@ export default function ProfilePage() {
                 onClick={handleLogout}
                 className="w-full bg-[#EF4444]/10 text-[#EF4444] rounded-2xl py-3.5 text-sm font-medium hover:bg-[#EF4444]/20 transition-colors"
               >
-                Esci dall&apos;account
+                {t.profile.logout}
               </button>
             </div>
           )}
@@ -561,7 +630,7 @@ export default function ProfilePage() {
                 </svg>
                 <input
                   type="text"
-                  placeholder="Cerca pathmates..."
+                  placeholder={t.profile.searchPathmates}
                   value={friendSearch}
                   onChange={(e) => setFriendSearch(e.target.value)}
                   className="w-full bg-[#1E293B] border border-[#334155] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#4F46E5] transition-colors"
@@ -572,7 +641,7 @@ export default function ProfilePage() {
               {filteredFriends.length === 0 ? (
                 <div className="bg-[#1E293B] rounded-2xl p-6 text-center">
                   <p className="text-sm text-[#64748B]">
-                    {friendSearch ? 'Nessun risultato trovato' : 'Non hai ancora pathmates'}
+                    {friendSearch ? t.profile.noResults : t.profile.noPathmates}
                   </p>
                 </div>
               ) : (
@@ -604,14 +673,16 @@ export default function ProfilePage() {
                           </p>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <button
-                            onClick={() => router.push('/messages')}
-                            className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center hover:bg-[#4F46E5]/30 transition-colors"
-                          >
-                            <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                            </svg>
-                          </button>
+                          {messagePrivacy !== 'Nessuno' && (
+                            <button
+                              onClick={() => router.push(`/networking?openChat=${friend.id}&name=${encodeURIComponent(friend.name)}&avatar=${encodeURIComponent(friend.avatar || '')}`)}
+                              className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center hover:bg-[#4F46E5]/30 transition-colors"
+                            >
+                              <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                              </svg>
+                            </button>
+                          )}
                           <button
                             onClick={() => removeFriend(friend.id)}
                             disabled={removingFriend === friend.id}
@@ -633,7 +704,7 @@ export default function ProfilePage() {
               {suggestedUsers.length > 0 && (
                 <div className="mt-4">
                   <h4 className="text-sm font-semibold text-[#94A3B8] uppercase tracking-wider mb-3 px-1">
-                    Pathmates consigliati
+                    {t.profile.suggestedPathmates}
                   </h4>
                   <div className="space-y-2">
                     {suggestedUsers.map((suggested) => {
@@ -692,7 +763,7 @@ export default function ProfilePage() {
           />
           <div className="relative w-full max-w-lg bg-[#1E293B] rounded-t-3xl sm:rounded-3xl p-6 space-y-5 animate-slide-up max-h-[90vh] overflow-y-auto no-scrollbar">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white">Modifica Profilo</h3>
+              <h3 className="text-lg font-bold text-white">{t.profile.editProfile}</h3>
               <button
                 onClick={() => setShowEditDialog(false)}
                 className="p-1 rounded-full hover:bg-[#334155] transition-colors"
@@ -731,12 +802,12 @@ export default function ProfilePage() {
                   onChange={handleAvatarChange}
                   className="hidden"
                 />
-                <p className="text-xs text-[#64748B] mt-2">Tocca per cambiare foto</p>
+                <p className="text-xs text-[#64748B] mt-2">{t.profile.tapToChangePhoto}</p>
               </div>
 
               {/* Name */}
               <div>
-                <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">Nome</label>
+                <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.profile.name}</label>
                 <input
                   type="text"
                   value={editName}
@@ -747,50 +818,54 @@ export default function ProfilePage() {
 
               {/* Bio */}
               <div>
-                <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">Bio</label>
+                <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.profile.bio}</label>
                 <textarea
                   value={editBio}
                   onChange={(e) => setEditBio(e.target.value)}
                   rows={3}
-                  placeholder="Raccontaci di te..."
+                  placeholder={t.profile.bioPlaceholder}
                   className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-4 py-3 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#4F46E5] transition-colors resize-none"
                 />
               </div>
 
               {/* Course & Year */}
               <div>
-                <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">Corso di studi</label>
+                <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.profile.course}</label>
                 <input
                   type="text"
                   value={editCourse}
                   onChange={(e) => setEditCourse(e.target.value)}
-                  placeholder="es. Ingegneria Informatica"
+                  placeholder={t.profile.coursePlaceholder}
                   className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-4 py-3 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#4F46E5] transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">Anno</label>
+                <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.profile.year}</label>
                 <input
                   type="number"
                   min={1}
-                  max={6}
+                  max={5}
                   value={editYear || ''}
-                  onChange={(e) => setEditYear(e.target.value ? parseInt(e.target.value) : undefined)}
-                  placeholder="es. 3"
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value);
+                    if (!e.target.value) { setEditYear(undefined); return; }
+                    if (Number.isInteger(v) && v >= 1 && v <= 5) setEditYear(v);
+                  }}
+                  placeholder={t.profile.yearPlaceholder}
                   className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-4 py-3 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#4F46E5] transition-colors"
                 />
               </div>
 
               {/* Skills in Edit */}
               <div>
-                <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">Competenze</label>
+                <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.profile.skills}</label>
                 <div className="flex flex-wrap gap-2">
                   {editSkills.map((skill) => (
                     <span
                       key={skill}
                       className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#334155] text-[#94A3B8]"
                     >
-                      {skill}
+                      {getSkillLabel(skill, t)}
                       <button
                         onClick={() => toggleEditSkill(skill)}
                         className="hover:text-white transition-colors"
@@ -811,7 +886,7 @@ export default function ProfilePage() {
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                     </svg>
-                    Aggiungi
+                    {t.profile.add}
                   </button>
                 </div>
               </div>
@@ -822,14 +897,14 @@ export default function ProfilePage() {
                 onClick={() => setShowEditDialog(false)}
                 className="flex-1 py-3 rounded-xl text-sm font-medium text-[#94A3B8] bg-[#334155]/50 hover:bg-[#334155] transition-colors"
               >
-                Annulla
+                {t.profile.cancel}
               </button>
               <button
                 onClick={saveProfile}
                 disabled={saving}
                 className="flex-1 py-3 rounded-xl text-sm font-medium text-white bg-[#4F46E5] hover:bg-[#4338CA] transition-colors disabled:opacity-50"
               >
-                {saving ? 'Salvataggio...' : 'Salva'}
+                {saving ? t.profile.saving : t.profile.save}
               </button>
             </div>
           </div>
@@ -845,7 +920,7 @@ export default function ProfilePage() {
           />
           <div className="relative w-full max-w-lg bg-[#1E293B] rounded-t-3xl sm:rounded-3xl p-6 space-y-4 animate-slide-up max-h-[80vh] overflow-y-auto no-scrollbar">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-white">Aggiungi competenze</h3>
+              <h3 className="text-lg font-bold text-white">{t.profile.addSkills}</h3>
               <button
                 onClick={() => setShowSkillsModal(false)}
                 className="p-1 rounded-full hover:bg-[#334155] transition-colors"
@@ -857,17 +932,17 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {AVAILABLE_SKILLS.map((skill) => {
-                const currentSkills = profile?.profile?.passions || [];
-                const isAdded = currentSkills.includes(skill);
+              {SKILL_KEYS.map((key) => {
+                const isAdded = modalSkills.includes(key);
+                const label = getSkillLabel(key, t);
                 return (
                   <button
-                    key={skill}
+                    key={key}
                     onClick={() => {
                       if (isAdded) {
-                        removeSkill(skill);
+                        removeSkill(key);
                       } else {
-                        addSkillFromModal(skill);
+                        addSkillFromModal(key);
                       }
                     }}
                     className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
@@ -881,7 +956,7 @@ export default function ProfilePage() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     )}
-                    {skill}
+                    {label}
                   </button>
                 );
               })}
@@ -891,7 +966,7 @@ export default function ProfilePage() {
               onClick={() => setShowSkillsModal(false)}
               className="w-full py-3 rounded-xl text-sm font-medium text-white bg-[#4F46E5] hover:bg-[#4338CA] transition-colors"
             >
-              Fatto
+              {t.profile.done}
             </button>
           </div>
         </div>
@@ -918,7 +993,7 @@ export default function ProfilePage() {
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-3 pb-4 border-b border-[#1E293B]">
-          <h2 className="text-white font-bold text-lg">Privacy</h2>
+          <h2 className="text-white font-bold text-lg">{t.privacy.title}</h2>
           <button
             onClick={() => setShowPrivacySheet(false)}
             className="p-1 rounded-full hover:bg-[#334155] transition-colors"
@@ -934,156 +1009,128 @@ export default function ProfilePage() {
 
           {/* Visibilità profilo */}
           <div className="bg-[#1E293B] rounded-2xl p-4">
-            <h4 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3">Visibilit&agrave; profilo</h4>
-            <div>
-              {/* Chi può vedere il tuo profilo */}
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <span className="text-sm text-white block">Chi pu&ograve; vedere il tuo profilo</span>
-                  </div>
+            <h4 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3">{t.privacy.profileVisibility}</h4>
+            {/* Profilo pubblico / privato toggle */}
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
                 </div>
-                <PrivacyDropdown value={privacyProfile} onChange={setPrivacyProfile} />
+                <div>
+                  <span className="text-sm text-white block">Profilo pubblico</span>
+                  <span className="text-xs text-[#64748B]">{publicProfile ? 'Visibile a tutti' : 'Solo Pathmates'}</span>
+                </div>
               </div>
-              <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
-              {/* Chi può vedere le tue competenze */}
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                    </svg>
+              <PrivacyToggle value={publicProfile} onChange={setPublicProfile} />
+            </div>
+          </div>
+
+          {/* Impostazioni dettagliate — disabilitate quando il profilo è privato */}
+          <div className={`space-y-4 transition-opacity duration-200 ${!publicProfile ? 'opacity-40 pointer-events-none select-none' : ''}`}>
+            {/* Visibilità contenuti */}
+            <div className="bg-[#1E293B] rounded-2xl p-4">
+              <div>
+                {/* Chi può vedere le tue competenze */}
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                      </svg>
+                    </div>
+                    <span className="text-sm text-white">{t.privacy.whoCanSeeSkills}</span>
                   </div>
-                  <span className="text-sm text-white">Chi pu&ograve; vedere le tue competenze</span>
+                  <PrivacyDropdown value={privacySkills} onChange={setPrivacySkills} />
                 </div>
-                <PrivacyDropdown value={privacySkills} onChange={setPrivacySkills} />
+                <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
+                {/* Chi può vedere la tua università */}
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                      </svg>
+                    </div>
+                    <span className="text-sm text-white">{t.privacy.whoCanSeeUniversity}</span>
+                  </div>
+                  <PrivacyDropdown value={privacyUniversity} onChange={setPrivacyUniversity} />
+                </div>
               </div>
-              <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
-              {/* Chi può vedere la tua università */}
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-                    </svg>
+            </div>
+
+            {/* Attività */}
+            <div className="bg-[#1E293B] rounded-2xl p-4">
+              <h4 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3">{t.privacy.activity}</h4>
+              <div>
+                {/* Opportunità salvate */}
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      </svg>
+                    </div>
+                    <span className="text-sm text-white">{t.privacy.whoCanSeeSavedOpps}</span>
                   </div>
-                  <span className="text-sm text-white">Chi pu&ograve; vedere la tua universit&agrave;</span>
+                  <PrivacyDropdown value={privacySavedOpps} onChange={setPrivacySavedOpps} />
                 </div>
-                <PrivacyDropdown value={privacyUniversity} onChange={setPrivacyUniversity} />
+                <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
+                {/* Pathmates */}
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <span className="text-sm text-white">{t.privacy.whoCanSeePathmates}</span>
+                  </div>
+                  <PrivacyDropdown value={privacyPathmates} onChange={setPrivacyPathmates} />
+                </div>
+                <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
+                {/* Messaggi */}
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                    </div>
+                    <span className="text-sm text-white">{t.privacy.whoCanMessage}</span>
+                  </div>
+                  <PrivacyDropdown value={messagePrivacy} onChange={setMessagePrivacy} />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Attività */}
-          <div className="bg-[#1E293B] rounded-2xl p-4">
-            <h4 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3">Attivit&agrave;</h4>
-            <div>
-              {/* Opportunità salvate */}
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                    </svg>
-                  </div>
-                  <span className="text-sm text-white">Chi pu&ograve; vedere le tue opportunit&agrave; salvate</span>
-                </div>
-                <PrivacyDropdown value={privacySavedOpps} onChange={setPrivacySavedOpps} />
-              </div>
-              <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
-              {/* Pathmates */}
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </div>
-                  <span className="text-sm text-white">Chi pu&ograve; vedere i tuoi pathmates</span>
-                </div>
-                <PrivacyDropdown value={privacyPathmates} onChange={setPrivacyPathmates} />
-              </div>
-              <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
-              {/* Messaggi */}
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                  </div>
-                  <span className="text-sm text-white">Chi pu&ograve; inviarti messaggi</span>
-                </div>
-                <PrivacyDropdown value={messagePrivacy} onChange={setMessagePrivacy} />
-              </div>
-            </div>
-          </div>
-
-          {/* Dati e personalizzazione */}
-          <div className="bg-[#1E293B] rounded-2xl p-4">
-            <h4 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3">Dati e personalizzazione</h4>
-            <div>
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <span className="text-sm text-white block">Consenti raccomandazioni personalizzate</span>
-                    <span className="text-xs text-[#64748B]">Migliora i suggerimenti per te</span>
-                  </div>
-                </div>
-                <PrivacyToggle value={privacyRecommendations} onChange={setPrivacyRecommendations} />
-              </div>
-              <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <span className="text-sm text-white block">Condividi dati anonimi per migliorare l&apos;app</span>
-                    <span className="text-xs text-[#64748B]">Nessun dato personale condiviso</span>
-                  </div>
-                </div>
-                <PrivacyToggle value={privacyAnonymousData} onChange={setPrivacyAnonymousData} />
-              </div>
-            </div>
-          </div>
 
           {/* Account */}
           <div className="bg-[#1E293B] rounded-2xl overflow-hidden">
-            <button className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-[#334155]/50 transition-colors">
+            <button onClick={handleDownloadData} className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-[#334155]/50 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
                   <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
                 </div>
-                <span className="text-sm text-white">Scarica i tuoi dati</span>
+                <span className="text-sm text-white">{t.privacy.downloadData}</span>
               </div>
               <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             </button>
             <div className="ml-[60px] mr-2 h-px bg-[#334155]/50" />
-            <button className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-[#EF4444]/5 transition-colors">
+            <button onClick={() => setShowDeleteModal(true)} className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-[#EF4444]/5 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-[22%] bg-[#EF4444]/10 flex items-center justify-center flex-shrink-0">
                   <svg className="w-5 h-5 text-[#EF4444]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </div>
-                <span className="text-sm text-[#EF4444] font-medium">Elimina account</span>
+                <span className="text-sm text-[#EF4444] font-medium">{t.privacy.deleteAccount}</span>
               </div>
               <svg className="w-4 h-4 text-[#EF4444]/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -1110,7 +1157,7 @@ export default function ProfilePage() {
           <div className="w-10 h-1 rounded-full bg-[#334155]" />
         </div>
         <div className="flex items-center justify-between px-5 pt-3 pb-4 border-b border-[#1E293B]">
-          <h2 className="text-white font-bold text-lg">Sicurezza</h2>
+          <h2 className="text-white font-bold text-lg">{t.security.title}</h2>
           <button onClick={() => setShowSecuritySheet(false)} className="p-1 rounded-full hover:bg-[#334155] transition-colors">
             <svg className="w-5 h-5 text-[#94A3B8]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -1121,14 +1168,14 @@ export default function ProfilePage() {
           <div className="bg-[#1E293B] rounded-2xl p-4">
             <div>
               {/* Cambia password */}
-              <button className="w-full flex items-center justify-between py-2">
+              <button onClick={() => setShowChangePassword(true)} className="w-full flex items-center justify-between py-2">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
                     <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                     </svg>
                   </div>
-                  <span className="text-sm text-white">Cambia password</span>
+                  <span className="text-sm text-white">{t.security.changePassword}</span>
                 </div>
                 <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -1143,7 +1190,7 @@ export default function ProfilePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
                     </svg>
                   </div>
-                  <span className="text-sm text-white">Autenticazione a due fattori</span>
+                  <span className="text-sm text-white">{t.security.twoFactor}</span>
                 </div>
                 <PrivacyToggle value={twoFactorEnabled} onChange={setTwoFactorEnabled} />
               </div>
@@ -1157,8 +1204,8 @@ export default function ProfilePage() {
                     </svg>
                   </div>
                   <div>
-                    <span className="text-sm text-white block">Sessioni attive</span>
-                    <span className="text-xs text-[#64748B]">Gestisci i dispositivi connessi</span>
+                    <span className="text-sm text-white block">{t.security.activeSessions}</span>
+                    <span className="text-xs text-[#64748B]">{t.security.manageDevices}</span>
                   </div>
                 </div>
                 <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1174,7 +1221,7 @@ export default function ProfilePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                     </svg>
                   </div>
-                  <span className="text-sm text-[#EF4444]">Disconnetti tutti i dispositivi</span>
+                  <span className="text-sm text-[#EF4444]">{t.security.disconnectAll}</span>
                 </div>
                 <svg className="w-4 h-4 text-[#EF4444]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -1201,7 +1248,7 @@ export default function ProfilePage() {
           <div className="w-10 h-1 rounded-full bg-[#334155]" />
         </div>
         <div className="flex items-center justify-between px-5 pt-3 pb-4 border-b border-[#1E293B]">
-          <h2 className="text-white font-bold text-lg">Aiuto &amp; Supporto</h2>
+          <h2 className="text-white font-bold text-lg">{t.help.title}</h2>
           <button onClick={() => setShowHelpSheet(false)} className="p-1 rounded-full hover:bg-[#334155] transition-colors">
             <svg className="w-5 h-5 text-[#94A3B8]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -1220,8 +1267,8 @@ export default function ProfilePage() {
                     </svg>
                   </div>
                   <div>
-                    <span className="text-sm text-white block">Centro assistenza</span>
-                    <span className="text-xs text-[#64748B]">Sfoglia le domande frequenti</span>
+                    <span className="text-sm text-white block">{t.help.helpCenter}</span>
+                    <span className="text-xs text-[#64748B]">{t.help.browseFaq}</span>
                   </div>
                 </div>
                 <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1238,8 +1285,8 @@ export default function ProfilePage() {
                     </svg>
                   </div>
                   <div>
-                    <span className="text-sm text-white block">Contattaci</span>
-                    <span className="text-xs text-[#64748B]">Scrivici per assistenza</span>
+                    <span className="text-sm text-white block">{t.help.contactUs}</span>
+                    <span className="text-xs text-[#64748B]">{t.help.writeForHelp}</span>
                   </div>
                 </div>
                 <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1255,7 +1302,7 @@ export default function ProfilePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                   </div>
-                  <span className="text-sm text-white">Segnala un problema</span>
+                  <span className="text-sm text-white">{t.help.reportProblem}</span>
                 </div>
                 <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -1270,7 +1317,7 @@ export default function ProfilePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
-                  <span className="text-sm text-white">Termini di servizio</span>
+                  <span className="text-sm text-white">{t.help.termsOfService}</span>
                 </div>
                 <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -1285,7 +1332,7 @@ export default function ProfilePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
                   </div>
-                  <span className="text-sm text-white">Informativa sulla privacy</span>
+                  <span className="text-sm text-white">{t.help.privacyPolicy}</span>
                 </div>
                 <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -1312,7 +1359,7 @@ export default function ProfilePage() {
           <div className="w-10 h-1 rounded-full bg-[#334155]" />
         </div>
         <div className="flex items-center justify-between px-5 pt-3 pb-4 border-b border-[#1E293B]">
-          <h2 className="text-white font-bold text-lg">Info</h2>
+          <h2 className="text-white font-bold text-lg">{t.info.title}</h2>
           <button onClick={() => setShowInfoSheet(false)} className="p-1 rounded-full hover:bg-[#334155] transition-colors">
             <svg className="w-5 h-5 text-[#94A3B8]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -1330,7 +1377,7 @@ export default function ProfilePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
                     </svg>
                   </div>
-                  <span className="text-sm text-white">Versione app</span>
+                  <span className="text-sm text-white">{t.info.appVersion}</span>
                 </div>
                 <span className="text-sm text-[#64748B]">1.0.0</span>
               </div>
@@ -1344,8 +1391,8 @@ export default function ProfilePage() {
                     </svg>
                   </div>
                   <div>
-                    <span className="text-sm text-white block">Novit&agrave;</span>
-                    <span className="text-xs text-[#64748B]">Scopri le ultime funzionalit&agrave;</span>
+                    <span className="text-sm text-white block">{t.info.whatsNew}</span>
+                    <span className="text-xs text-[#64748B]">{t.info.discoverFeatures}</span>
                   </div>
                 </div>
                 <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1361,7 +1408,7 @@ export default function ProfilePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                     </svg>
                   </div>
-                  <span className="text-sm text-white">Licenze open source</span>
+                  <span className="text-sm text-white">{t.info.openSourceLicenses}</span>
                 </div>
                 <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -1376,7 +1423,7 @@ export default function ProfilePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
                     </svg>
                   </div>
-                  <span className="text-sm text-white">Seguici sui social</span>
+                  <span className="text-sm text-white">{t.info.followSocial}</span>
                 </div>
                 <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -1388,6 +1435,46 @@ export default function ProfilePage() {
           <p className="text-center text-xs text-[#64748B] py-2">Made with ❤️ in Italy</p>
         </div>
       </div>
+
+      {/* ── Change Password Modal ─────────────────────────────────── */}
+      <ChangePasswordModal
+        isOpen={showChangePassword}
+        onClose={() => setShowChangePassword(false)}
+      />
+
+      {/* ── Delete Account Modal ──────────────────────────────────── */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center px-6">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => !deletingAccount && setShowDeleteModal(false)} />
+          <div className="relative w-full max-w-sm bg-[#1E293B] rounded-3xl p-6 space-y-4 animate-slide-up">
+            <div className="w-14 h-14 rounded-full bg-[#EF4444]/10 flex items-center justify-center mx-auto">
+              <svg className="w-7 h-7 text-[#EF4444]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div className="text-center">
+              <h3 className="text-white font-bold text-lg mb-1">{t.privacy.deleteAccount}</h3>
+              <p className="text-sm text-[#94A3B8]">{t.profile.deleteIrreversibleMsg}</p>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deletingAccount}
+                className="flex-1 py-3 rounded-xl text-sm font-medium text-[#94A3B8] bg-[#334155]/50 hover:bg-[#334155] transition-colors disabled:opacity-50"
+              >
+                {t.profile.cancel}
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deletingAccount}
+                className="flex-1 py-3 rounded-xl text-sm font-medium text-white bg-[#EF4444] hover:bg-[#DC2626] transition-colors disabled:opacity-50"
+              >
+                {deletingAccount ? t.profile.deletingAccount : t.privacy.deleteAccount}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .scrollbar-hide::-webkit-scrollbar {
@@ -1446,18 +1533,11 @@ function PrivacyToggle({ value, onChange }: { value: boolean; onChange: (v: bool
   );
 }
 
-type LanguageOption = 'Italiano' | 'Inglese' | 'Cinese' | 'Spagnolo';
-
-function LanguageDropdown({
-  value,
-  onChange,
-}: {
-  value: LanguageOption;
-  onChange: (v: LanguageOption) => void;
-}) {
+function LanguageDropdown() {
+  const { language, setLanguage } = useLanguage();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const options: LanguageOption[] = ['Italiano', 'Inglese', 'Cinese', 'Spagnolo'];
+  const options: Language[] = ['Italiano', 'Inglese', 'Cinese', 'Spagnolo'];
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -1475,7 +1555,7 @@ function LanguageDropdown({
         onClick={() => setOpen(!open)}
         className="flex items-center gap-1.5 text-sm text-[#94A3B8] hover:text-white transition-colors"
       >
-        <span>{value}</span>
+        <span>{LANGUAGE_DISPLAY_NAMES[language]}</span>
         <svg
           className={`w-4 h-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
           fill="none"
@@ -1492,16 +1572,16 @@ function LanguageDropdown({
             <button
               key={opt}
               onClick={() => {
-                onChange(opt);
+                setLanguage(opt);
                 setOpen(false);
               }}
               className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
-                opt === value
+                opt === language
                   ? 'text-[#4F46E5] bg-[#4F46E5]/10'
                   : 'text-[#94A3B8] hover:bg-[#1E293B] hover:text-white'
               }`}
             >
-              {opt}
+              {LANGUAGE_DISPLAY_NAMES[opt]}
             </button>
           ))}
         </div>
@@ -1521,7 +1601,12 @@ function PrivacyDropdown({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const options: PrivacyOption[] = ['Tutti', 'Pathmates', 'Nessuno'];
+  const { t } = useLanguage();
+  const options: { key: PrivacyOption; label: string }[] = [
+    { key: 'Tutti', label: t.privacy.everyone },
+    { key: 'Pathmates', label: 'Pathmates' },
+    { key: 'Nessuno', label: t.privacy.nobody },
+  ];
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -1533,13 +1618,15 @@ function PrivacyDropdown({
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  const currentLabel = options.find((o) => o.key === value)?.label ?? value;
+
   return (
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
         className="flex items-center gap-1.5 text-sm text-[#94A3B8] hover:text-white transition-colors"
       >
-        <span>{value}</span>
+        <span>{currentLabel}</span>
         <svg
           className={`w-4 h-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
           fill="none"
@@ -1554,18 +1641,18 @@ function PrivacyDropdown({
         <div className="absolute right-0 top-full mt-1 bg-[#0F172A] border border-[#334155] rounded-xl overflow-hidden shadow-xl z-10 min-w-[120px]">
           {options.map((opt) => (
             <button
-              key={opt}
+              key={opt.key}
               onClick={() => {
-                onChange(opt);
+                onChange(opt.key);
                 setOpen(false);
               }}
               className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
-                opt === value
+                opt.key === value
                   ? 'text-[#4F46E5] bg-[#4F46E5]/10'
                   : 'text-[#94A3B8] hover:bg-[#1E293B] hover:text-white'
               }`}
             >
-              {opt}
+              {opt.label}
             </button>
           ))}
         </div>

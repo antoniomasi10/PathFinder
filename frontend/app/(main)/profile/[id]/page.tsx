@@ -4,6 +4,15 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
+import { useLanguage, getSkillLabel } from '@/lib/language';
+
+interface SavedOpportunity {
+  id: string;
+  title: string;
+  company?: string;
+  type: string;
+  university?: { name: string };
+}
 
 interface UserProfile {
   id: string;
@@ -17,6 +26,10 @@ interface UserProfile {
     clusterTag?: string;
     passions: string[];
   };
+  isPathmate?: boolean;
+  canMessage?: boolean;
+  canViewDetails?: boolean;
+  savedOpportunities?: SavedOpportunity[] | null;
 }
 
 const CLUSTER_COLORS: Record<string, string> = {
@@ -35,6 +48,7 @@ export default function UserProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [friendStatus, setFriendStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (id === user?.id) {
@@ -72,7 +86,7 @@ export default function UserProfilePage() {
   }
 
   if (!profile) {
-    return <div className="px-4 py-12 text-center text-text-muted">Profilo non trovato</div>;
+    return <div className="px-4 py-12 text-center text-text-muted">{t.userProfile.notFound}</div>;
   }
 
   return (
@@ -83,8 +97,12 @@ export default function UserProfilePage() {
         </div>
         <div>
           <h2 className="text-xl font-display font-bold">{profile.name}</h2>
-          <p className="text-sm text-text-secondary">{profile.university?.name}</p>
-          <p className="text-xs text-text-muted">{profile.courseOfStudy}</p>
+          {profile.canViewDetails !== false && (
+            <>
+              <p className="text-sm text-text-secondary">{profile.university?.name}</p>
+              <p className="text-xs text-text-muted">{profile.courseOfStudy}</p>
+            </>
+          )}
         </div>
       </div>
 
@@ -92,35 +110,37 @@ export default function UserProfilePage() {
       <div className="flex gap-3 mb-6">
         <button
           onClick={() => router.push(`/networking`)}
-          className="btn-primary flex-1 text-sm"
+          disabled={profile.canMessage === false}
+          className="btn-primary flex-1 text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          title={profile.canMessage === false ? 'Questo utente non accetta messaggi' : undefined}
         >
-          Invia messaggio
+          {t.userProfile.sendMessage}
         </button>
         {friendStatus === 'ACCEPTED' ? (
           <button className="btn-secondary flex-1 text-sm" disabled>
-            Connesso
+            {t.userProfile.connected}
           </button>
         ) : friendStatus === 'PENDING' ? (
           <button className="btn-secondary flex-1 text-sm" disabled>
-            Richiesta inviata
+            {t.userProfile.requestSent}
           </button>
         ) : (
           <button onClick={sendFriendRequest} className="btn-secondary flex-1 text-sm">
-            Connetti
+            {t.userProfile.connect}
           </button>
         )}
       </div>
 
-      {profile.bio && (
+      {profile.bio && profile.canViewDetails !== false && (
         <div className="card mb-4">
-          <h3 className="font-display font-semibold text-sm mb-2">Bio</h3>
+          <h3 className="font-display font-semibold text-sm mb-2">{t.userProfile.bio}</h3>
           <p className="text-sm text-text-secondary">{profile.bio}</p>
         </div>
       )}
 
-      {profile.profile && (
-        <div className="card">
-          <h3 className="font-display font-semibold text-sm mb-3">Competenze</h3>
+      {profile.profile && profile.canViewDetails !== false && (
+        <div className="card mb-4">
+          <h3 className="font-display font-semibold text-sm mb-3">{t.userProfile.skills}</h3>
           <div className="flex flex-wrap gap-2">
             {profile.profile.clusterTag && (
               <span className={`px-3 py-1.5 rounded-full text-xs font-medium ${CLUSTER_COLORS[profile.profile.clusterTag] || 'bg-card text-text-secondary'}`}>
@@ -129,8 +149,22 @@ export default function UserProfilePage() {
             )}
             {profile.profile.passions.map((p) => (
               <span key={p} className="px-3 py-1.5 rounded-full text-xs bg-card border border-border text-text-secondary">
-                {p}
+                {getSkillLabel(p, t)}
               </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {profile.savedOpportunities && profile.savedOpportunities.length > 0 && (
+        <div className="card">
+          <h3 className="font-display font-semibold text-sm mb-3">{t.profile.savedOpp}</h3>
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            {profile.savedOpportunities.map((opp) => (
+              <div key={opp.id} className="flex-shrink-0 w-48 bg-background rounded-xl p-3 border border-border">
+                <p className="text-xs font-semibold text-text-primary line-clamp-2 mb-1">{opp.title}</p>
+                <p className="text-xs text-text-muted truncate">{opp.company || opp.university?.name || ''}</p>
+              </div>
             ))}
           </div>
         </div>

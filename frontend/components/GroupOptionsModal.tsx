@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import api from '@/lib/api';
 import { useToast } from './Toast';
+import { useLanguage } from '@/lib/language';
 import ConfirmDialog from './ConfirmDialog';
 import AddMembersModal from './AddMembersModal';
 import MemberListModal from './MemberListModal';
@@ -72,6 +73,7 @@ export default function GroupOptionsModal({
   onGroupLeft,
 }: GroupOptionsModalProps) {
   const { showToast } = useToast();
+  const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showAddMembers, setShowAddMembers] = useState(false);
   const [showMemberList, setShowMemberList] = useState(false);
@@ -96,10 +98,10 @@ export default function GroupOptionsModal({
     try {
       const compressed = await compressImage(file);
       await api.put(`/groups/${group.id}/photo`, { image: compressed });
-      showToast('Foto del gruppo aggiornata', 'success');
+      showToast(t.group.photoUpdated, 'success');
       onGroupUpdated();
     } catch {
-      showToast('Errore nell\'aggiornamento della foto', 'error');
+      showToast(t.group.errorUpdatePhoto, 'error');
     } finally {
       setUpdatingPhoto(false);
     }
@@ -108,11 +110,11 @@ export default function GroupOptionsModal({
   const handleLeave = async () => {
     try {
       await api.post(`/groups/${group.id}/leave`);
-      showToast('Hai lasciato il gruppo', 'info');
+      showToast(t.group.leftGroup, 'info');
       setShowLeaveConfirm(false);
       onGroupLeft();
     } catch (err: any) {
-      showToast(err.response?.data?.error || 'Errore', 'error');
+      showToast(err.response?.data?.error || t.common.error, 'error');
       setShowLeaveConfirm(false);
     }
   };
@@ -120,24 +122,24 @@ export default function GroupOptionsModal({
   const handleDelete = async () => {
     try {
       await api.delete(`/groups/${group.id}`);
-      showToast('Gruppo eliminato', 'info');
+      showToast(t.group.groupDeleted, 'info');
       setShowDeleteConfirm(false);
       onGroupLeft();
     } catch (err: any) {
-      showToast(err.response?.data?.error || 'Errore', 'error');
+      showToast(err.response?.data?.error || t.common.error, 'error');
       setShowDeleteConfirm(false);
     }
   };
 
   const handleMembersAdded = () => {
     setShowAddMembers(false);
-    showToast('Membri aggiunti al gruppo', 'success');
+    showToast(t.group.membersAdded, 'success');
     onGroupUpdated();
   };
 
   const handleMemberRemoved = () => {
     setShowMemberList(false);
-    showToast('Membro rimosso dal gruppo', 'success');
+    showToast(t.group.memberRemoved, 'success');
     onGroupUpdated();
   };
 
@@ -146,7 +148,7 @@ export default function GroupOptionsModal({
       <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: '#0D1117' }}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-indigo-900/20">
-          <h2 className="text-lg font-medium text-white">Opzioni gruppo</h2>
+          <h2 className="text-lg font-medium text-white">{t.group.options}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -168,9 +170,9 @@ export default function GroupOptionsModal({
               )}
             </div>
             <h3 className="text-white font-medium text-xl">{group.name}</h3>
-            <p className="text-gray-500 text-sm mt-1">{group.members.length} membri</p>
+            <p className="text-gray-500 text-sm mt-1">{group.members.length} {t.group.memberCount}</p>
             <p className="text-gray-600 text-xs mt-1">
-              Creato da {group.createdBy.name} il {createdDate}
+              {t.group.createdByPrefix} {group.createdBy.name} {t.group.onDate} {createdDate}
             </p>
             {group.description && (
               <p className="text-gray-400 text-sm mt-2">{group.description}</p>
@@ -192,7 +194,7 @@ export default function GroupOptionsModal({
                 </svg>
               </div>
               <span className="text-white text-sm font-medium">
-                {updatingPhoto ? 'Aggiornamento...' : 'Modifica foto gruppo'}
+                {updatingPhoto ? t.group.updatingPhoto : t.group.editPhoto}
               </span>
             </button>
             <input
@@ -213,7 +215,7 @@ export default function GroupOptionsModal({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                 </svg>
               </div>
-              <span className="text-white text-sm font-medium">Aggiungi membri</span>
+              <span className="text-white text-sm font-medium">{t.group.addMembers}</span>
             </button>
 
             {/* View members */}
@@ -226,13 +228,13 @@ export default function GroupOptionsModal({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <span className="text-white text-sm font-medium">Vedi membri</span>
+              <span className="text-white text-sm font-medium">{t.group.viewMembers}</span>
             </button>
           </div>
 
           {/* Danger zone */}
           <div className="space-y-1 pt-2">
-            <p className="text-gray-600 text-xs font-medium uppercase tracking-wider px-2 mb-2">Zona pericolosa</p>
+            <p className="text-gray-600 text-xs font-medium uppercase tracking-wider px-2 mb-2">{t.group.dangerZone}</p>
 
             {/* Leave group */}
             <button
@@ -244,7 +246,7 @@ export default function GroupOptionsModal({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
               </div>
-              <span className="text-red-400 text-sm font-medium">Esci dal gruppo</span>
+              <span className="text-red-400 text-sm font-medium">{t.group.leaveGroup}</span>
             </button>
 
             {/* Delete group — CREATOR only */}
@@ -258,7 +260,7 @@ export default function GroupOptionsModal({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </div>
-                <span className="text-red-400 text-sm font-medium">Elimina gruppo</span>
+                <span className="text-red-400 text-sm font-medium">{t.group.deleteGroup}</span>
               </button>
             )}
           </div>
@@ -286,9 +288,9 @@ export default function GroupOptionsModal({
 
       <ConfirmDialog
         isOpen={showLeaveConfirm}
-        title="Esci dal gruppo"
-        message={`Vuoi davvero uscire dal gruppo "${group.name}"?`}
-        confirmLabel="Esci"
+        title={t.group.leaveConfirmTitle}
+        message={`${t.group.leaveConfirmMsgPrefix} "${group.name}"?`}
+        confirmLabel={t.group.leaveConfirmBtn}
         confirmColor="red"
         onConfirm={handleLeave}
         onCancel={() => setShowLeaveConfirm(false)}
@@ -296,11 +298,11 @@ export default function GroupOptionsModal({
 
       <ConfirmDialog
         isOpen={showDeleteConfirm}
-        title="Elimina gruppo"
-        message={`Questa azione è irreversibile. Tutti i messaggi verranno eliminati e i membri verranno notificati.`}
-        confirmLabel="Elimina"
+        title={t.group.deleteGroup}
+        message={t.group.deleteConfirmMsg}
+        confirmLabel={t.group.deleteConfirmBtn}
         confirmColor="red"
-        requireInput="ELIMINA"
+        requireInput={t.group.deleteConfirmInput}
         onConfirm={handleDelete}
         onCancel={() => setShowDeleteConfirm(false)}
       />

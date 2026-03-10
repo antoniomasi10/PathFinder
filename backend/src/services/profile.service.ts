@@ -77,7 +77,7 @@ export async function saveQuestionnaire(userId: string, input: ProfileData) {
     riskTolerance: answers.riskTolerance,
     careerVision: answers.careerPreference,
     professionalGoal: answers.professionalIdentity,
-    passions: (input.languages || []).map((l) => JSON.stringify(l)),
+    languages: input.languages || [],
     clusterTag: cluster,
   };
 
@@ -114,7 +114,72 @@ export async function getProfile(userId: string) {
   return user;
 }
 
-export async function updateProfile(userId: string, data: { name?: string; bio?: string; avatar?: string; courseOfStudy?: string; passions?: string[] }) {
+export async function getProfileForViewer(ownerId: string, viewerId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: ownerId },
+    include: {
+      profile: true,
+      university: true,
+      savedOpportunities: {
+        select: { id: true, title: true, company: true, type: true, university: { select: { name: true } } },
+      },
+    },
+  });
+  if (!user) return null;
+
+  const friendship = await prisma.friendRequest.findFirst({
+    where: {
+      status: 'ACCEPTED',
+      OR: [
+        { fromUserId: viewerId, toUserId: ownerId },
+        { fromUserId: ownerId, toUserId: viewerId },
+      ],
+    },
+  });
+  const isPathmate = !!friendship;
+
+  const { publicProfile, privacySavedOpps, messagePrivacy, savedOpportunities, ...rest } = user;
+
+  // When profile is private every individual setting is effectively forced to 'Pathmates'
+  const effectiveSavedOpps  = publicProfile ? privacySavedOpps  : 'Pathmates';
+  const effectiveMessage    = publicProfile ? messagePrivacy    : 'Pathmates';
+
+  const canViewDetails =
+    publicProfile || isPathmate; // skills, university, bio visible only to pathmates when private
+  const canViewSaved =
+    effectiveSavedOpps === 'Tutti' ||
+    (effectiveSavedOpps === 'Pathmates' && isPathmate);
+  const canMessage =
+    effectiveMessage === 'Tutti' ||
+    (effectiveMessage === 'Pathmates' && isPathmate);
+
+  return {
+    ...rest,
+    isPathmate,
+    canViewDetails,
+    canMessage,
+    savedOpportunities: canViewSaved ? savedOpportunities : null,
+  };
+}
+
+export async function deleteAccount(userId: string) {
+  await prisma.userProfile.deleteMany({ where: { userId } });
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      bio: null,
+      avatar: null,
+      courseOfStudy: null,
+      yearOfStudy: null,
+      gpa: null,
+      englishLevel: null,
+      willingToRelocate: null,
+      profileCompleted: false,
+    },
+  });
+}
+
+export async function updateProfile(userId: string, data: { name?: string; bio?: string; avatar?: string; courseOfStudy?: string; passions?: string[]; privacySavedOpps?: string; messagePrivacy?: string; publicProfile?: boolean }) {
   const { passions, ...userFields } = data;
 
   if (passions !== undefined) {

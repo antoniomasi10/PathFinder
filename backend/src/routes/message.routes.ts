@@ -141,10 +141,41 @@ router.post('/group/:groupId', authMiddleware, async (req: Request, res: Respons
 // Send a message (REST fallback)
 router.post('/', authMiddleware, async (req: Request, res: Response) => {
   try {
+    const senderId = req.user!.userId;
     const { receiverId, content, images } = req.body;
+
+    // Check receiver's messagePrivacy
+    const receiver = await prisma.user.findUnique({
+      where: { id: receiverId },
+      select: { messagePrivacy: true },
+    });
+    if (!receiver) {
+      res.status(404).json({ error: 'Utente non trovato' });
+      return;
+    }
+    if (receiver.messagePrivacy === 'Nessuno') {
+      res.status(403).json({ error: 'Questo utente non accetta messaggi' });
+      return;
+    }
+    if (receiver.messagePrivacy === 'Pathmates') {
+      const friendship = await prisma.friendRequest.findFirst({
+        where: {
+          status: 'ACCEPTED',
+          OR: [
+            { fromUserId: senderId, toUserId: receiverId },
+            { fromUserId: receiverId, toUserId: senderId },
+          ],
+        },
+      });
+      if (!friendship) {
+        res.status(403).json({ error: 'Solo i Pathmates possono inviare messaggi a questo utente' });
+        return;
+      }
+    }
+
     const message = await prisma.pathMatesMessage.create({
       data: {
-        senderId: req.user!.userId,
+        senderId,
         receiverId,
         content,
         images: images || [],

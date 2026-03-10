@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import { useLanguage } from '@/lib/language';
 
 interface Notification {
   id: string;
@@ -25,6 +26,7 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { t } = useLanguage();
 
   useEffect(() => {
     api.get('/notifications')
@@ -87,7 +89,7 @@ export default function NotificationsPage() {
   if (loading) {
     return (
       <div className="px-4 py-4 space-y-3 animate-pulse">
-        <h2 className="text-2xl font-display font-bold">Notifiche</h2>
+        <h2 className="text-2xl font-display font-bold">{t.notifications.title}</h2>
         {[1, 2, 3].map((i) => (
           <div key={i} className="card flex items-center gap-3">
             <div className="w-10 h-10 bg-border rounded-full" />
@@ -100,18 +102,18 @@ export default function NotificationsPage() {
 
   return (
     <div className="px-4 py-4">
-      <h2 className="text-2xl font-display font-bold mb-4">Notifiche</h2>
+      <h2 className="text-2xl font-display font-bold mb-4">{t.notifications.title}</h2>
 
       {notifications.length === 0 ? (
         <div className="text-center py-12 text-text-muted">
           <p className="text-3xl mb-2">🔔</p>
-          <p>Nessuna notifica</p>
+          <p>{t.notifications.empty}</p>
         </div>
       ) : (
         <>
-          {renderSection('Oggi', todayNotifs)}
-          {renderSection('Ieri', yesterdayNotifs)}
-          {renderSection('Precedenti', olderNotifs)}
+          {renderSection(t.notifications.today, todayNotifs)}
+          {renderSection(t.notifications.yesterday, yesterdayNotifs)}
+          {renderSection(t.notifications.earlier, olderNotifs)}
         </>
       )}
     </div>

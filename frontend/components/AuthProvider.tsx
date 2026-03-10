@@ -4,10 +4,12 @@ import { useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { AuthContext, AuthUser } from '@/lib/auth';
 import api from '@/lib/api';
+import { useLanguage } from '@/lib/language';
 
 const publicPaths = ['/login', '/register'];
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
+  const { t } = useLanguage();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -29,6 +31,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
           id: data.id,
           name: data.name,
           email: data.email,
+          avatar: data.avatar,
           profileCompleted: data.profileCompleted,
           university: data.university,
         });
@@ -56,7 +59,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface">
-        <div className="animate-pulse text-text-secondary">Caricamento...</div>
+        <div className="animate-pulse text-text-secondary">{t.common.loading}</div>
       </div>
     );
   }

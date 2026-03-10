@@ -74,7 +74,12 @@ model User {
   gpa            GpaRange?
   englishLevel   EnglishLevel?
   willingToRelocate WillingnessToRelocate?
-  profileCompleted Boolean @default(false)
+  profileCompleted    Boolean   @default(false)
+  publicProfile       Boolean   @default(true)
+  privacySavedOpps    String    @default("Pathmates")
+  messagePrivacy      String    @default("Pathmates")
+  passwordResetToken  String?
+  passwordResetExpiry DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -104,6 +109,7 @@ model UserProfile {
   careerVision      String?
   professionalGoal  String?
   passions          String[]
+  languages         Json     @default("[]")
   clusterTag        String?
   completedAt       DateTime?
 }
