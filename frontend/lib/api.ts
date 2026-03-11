@@ -28,10 +28,6 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch {
         localStorage.removeItem('accessToken');
-        const publicPaths = ['/login', '/register', '/onboarding'];
-        if (!publicPaths.includes(window.location.pathname)) {
-          window.location.href = '/login';
-        }
         return Promise.reject(error);
       }
     }
