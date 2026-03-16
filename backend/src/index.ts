@@ -19,6 +19,9 @@ import groupRoutes from './routes/group.routes';
 import userRoutes from './routes/user.routes';
 import courseRoutes from './routes/course.routes';
 import { setupChatSocket } from './socket/chatHandler';
+import { setupNotificationSocket } from './socket/notificationHandler';
+import { setIO } from './socketManager';
+import { startDeadlineChecker } from './services/deadlineChecker';
 
 const app = express();
 const httpServer = createServer(app);
@@ -57,11 +60,14 @@ app.get('/api/health', (_req, res) => {
 });
 
 // Socket.IO
+setIO(io);
 setupChatSocket(io);
+setupNotificationSocket(io);
 
 const PORT = process.env.PORT || 4000;
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  startDeadlineChecker();
 });
 
 export { io };

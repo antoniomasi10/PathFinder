@@ -25,6 +25,7 @@ export default function RootLayout({
     <html lang="it" className="dark">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <link rel="manifest" href="/manifest.json" />
       </head>
       <body className={`${sora.variable} ${dmSans.variable} font-body antialiased`}>
         <AuthProvider>{children}</AuthProvider>

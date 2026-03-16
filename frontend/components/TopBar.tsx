@@ -1,17 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
-import api from '@/lib/api';
+import { useNotifications } from '@/lib/notificationContext';
 
 export default function TopBar() {
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  useEffect(() => {
-    api.get('/notifications/unread-count')
-      .then(({ data }) => setUnreadCount(data.count))
-      .catch(() => {});
-  }, []);
+  const { unreadCount } = useNotifications();
 
   return (
     <header className="sticky top-0 bg-surface/80 backdrop-blur-lg border-b border-border/50 z-40">

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import * as postService from '../services/post.service';
 import { createNotification } from '../services/notification.service';
+import prisma from '../lib/prisma';
 
 const router = Router();
 
@@ -33,7 +34,18 @@ router.post('/:id/like', authMiddleware, async (req: Request, res: Response) => 
     await postService.likePost(req.params.id, req.user!.userId);
     const post = await postService.getPostById(req.params.id);
     if (post && post.authorId !== req.user!.userId) {
-      await createNotification(post.authorId, 'GENERAL', 'A qualcuno piace il tuo post', `/networking`);
+      const liker = await prisma.user.findUnique({
+        where: { id: req.user!.userId },
+        select: { name: true },
+      });
+      await createNotification(
+        post.authorId,
+        'POST_LIKE',
+        `${liker?.name || 'Qualcuno'} ha messo mi piace al tuo post`,
+        `/networking`,
+        '❤️',
+        { postId: post.id, fromUserId: req.user!.userId }
+      );
     }
     res.json({ liked: true });
   } catch (err: any) {
@@ -64,7 +76,21 @@ router.post('/:id/comments', authMiddleware, async (req: Request, res: Response)
     const comment = await postService.createComment(req.params.id, req.user!.userId, req.body.content);
     const post = await postService.getPostById(req.params.id);
     if (post && post.authorId !== req.user!.userId) {
-      await createNotification(post.authorId, 'GENERAL', 'Qualcuno ha commentato il tuo post', `/networking`);
+      const commenter = await prisma.user.findUnique({
+        where: { id: req.user!.userId },
+        select: { name: true },
+      });
+      const preview = req.body.content.length > 30
+        ? req.body.content.substring(0, 30) + '...'
+        : req.body.content;
+      await createNotification(
+        post.authorId,
+        'POST_COMMENT',
+        `${commenter?.name || 'Qualcuno'} ha commentato: "${preview}"`,
+        `/networking`,
+        '💬',
+        { postId: post.id, fromUserId: req.user!.userId }
+      );
     }
     res.status(201).json(comment);
   } catch (err: any) {

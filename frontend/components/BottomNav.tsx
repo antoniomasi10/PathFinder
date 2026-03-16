@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useNotifications } from '@/lib/notificationContext';
 
 const navItems = [
   {
@@ -52,6 +53,12 @@ const navItems = [
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const { badgeCounts } = useNotifications();
+
+  const badgeMap: Record<string, number> = {
+    '/home': badgeCounts.opportunities,
+    '/networking': badgeCounts.networking,
+  };
 
   return (
     <nav
@@ -61,6 +68,7 @@ export default function BottomNav() {
       <div className="max-w-lg mx-auto flex">
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
+          const badge = badgeMap[item.href] || 0;
           return (
             <Link
               key={item.href}
@@ -87,7 +95,14 @@ export default function BottomNav() {
                 />
               )}
 
-              <span className="relative z-10">{item.icon(isActive)}</span>
+              <span className="relative z-10">
+                {item.icon(isActive)}
+                {badge > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {badge > 9 ? '9+' : badge}
+                  </span>
+                )}
+              </span>
             </Link>
           );
         })}
