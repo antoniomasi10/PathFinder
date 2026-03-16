@@ -728,19 +728,25 @@ export default function ProfilePage() {
                         key={friend.id}
                         className="bg-[#1E293B] rounded-2xl p-4 flex items-center gap-3"
                       >
-                        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+                        <button
+                          onClick={() => router.push(`/profile/${friend.id}`)}
+                          className="w-11 h-11 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center text-sm font-bold text-white flex-shrink-0 overflow-hidden"
+                        >
                           {friend.avatar ? (
                             <img src={friend.avatar} alt={friend.name} className="w-full h-full rounded-full object-cover" />
                           ) : (
                             friendInitials
                           )}
-                        </div>
-                        <div className="flex-1 min-w-0">
+                        </button>
+                        <button
+                          onClick={() => router.push(`/profile/${friend.id}`)}
+                          className="flex-1 min-w-0 text-left"
+                        >
                           <p className="text-sm font-semibold text-white truncate">{friend.name}</p>
                           <p className="text-xs text-[#64748B] truncate">
                             {friend.courseOfStudy || friend.university?.name || ''}
                           </p>
-                        </div>
+                        </button>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           {messagePrivacy !== 'Nessuno' && (
                             <button
@@ -789,19 +795,25 @@ export default function ProfilePage() {
                           key={suggested.id}
                           className="bg-[#1E293B] rounded-2xl p-4 flex items-center gap-3"
                         >
-                          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#6366F1] to-[#A78BFA] flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+                          <button
+                            onClick={() => router.push(`/profile/${suggested.id}`)}
+                            className="w-11 h-11 rounded-full bg-gradient-to-br from-[#6366F1] to-[#A78BFA] flex items-center justify-center text-sm font-bold text-white flex-shrink-0 overflow-hidden"
+                          >
                             {suggested.avatar ? (
                               <img src={suggested.avatar} alt={suggested.name} className="w-full h-full rounded-full object-cover" />
                             ) : (
                               suggestedInitials
                             )}
-                          </div>
-                          <div className="flex-1 min-w-0">
+                          </button>
+                          <button
+                            onClick={() => router.push(`/profile/${suggested.id}`)}
+                            className="flex-1 min-w-0 text-left"
+                          >
                             <p className="text-sm font-semibold text-white truncate">{suggested.name}</p>
                             <p className="text-xs text-[#64748B] truncate">
                               {suggested.courseOfStudy || suggested.university?.name || ''}
                             </p>
-                          </div>
+                          </button>
                           <button
                             onClick={() => sendFriendRequest(suggested.id)}
                             disabled={sendingRequest === suggested.id}

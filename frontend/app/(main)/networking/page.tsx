@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, ChangeEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/language';
 import { getSocket } from '@/lib/socket';
@@ -249,6 +250,19 @@ export default function NetworkingPage() {
       loadPosts();
     }
   }, [tab, loadConversations]);
+
+  // Auto-open chat when coming from profile page
+  useEffect(() => {
+    const stored = localStorage.getItem('openChatWith');
+    if (!stored) return;
+    try {
+      const chatWith = JSON.parse(stored) as { id: string; name: string; avatar?: string };
+      localStorage.removeItem('openChatWith');
+      setTab('messaggi');
+      setSelectedGroup(null);
+      setSelectedUser({ id: chatWith.id, name: chatWith.name, avatar: chatWith.avatar });
+    } catch {}
+  }, []);
 
   useEffect(() => {
     if (selectedUser) {
@@ -606,16 +620,20 @@ export default function NetworkingPage() {
             </div>
           ) : (
             unifiedConversations.map((conv) => (
-              <button
+              <div
                 key={conv.id}
-                onClick={() => handleConversationClick(conv)}
-                className="bg-[#1a1b2e] rounded-2xl p-4 mb-3 w-full text-left flex items-center gap-3 cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/10"
+                className="bg-[#1a1b2e] rounded-2xl p-4 mb-3 w-full text-left flex items-center gap-3 transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/10"
                 style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)' }}
               >
-                {/* Avatar */}
-                <div className="relative shrink-0">
+                {/* Avatar — navigates to profile for direct chats */}
+                <div
+                  className="relative shrink-0"
+                  onClick={() => conv.type === 'direct' && conv.userId
+                    ? router.push(`/profile/${conv.userId}`)
+                    : handleConversationClick(conv)}
+                >
                   <div
-                    className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center"
+                    className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center cursor-pointer"
                     style={{ boxShadow: '0 0 20px rgba(99, 102, 241, 0.3)' }}
                   >
                     {conv.avatar ? (
@@ -634,6 +652,9 @@ export default function NetworkingPage() {
                   )}
                 </div>
 
+                {/* Rest of row — opens chat */}
+                <button className="flex-1 min-w-0 text-left" onClick={() => handleConversationClick(conv)}>
+
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-0.5">
@@ -649,7 +670,8 @@ export default function NetworkingPage() {
                   </div>
                   <p className="text-gray-400 text-sm truncate">{conv.lastMessage}</p>
                 </div>
-              </button>
+                </button>
+              </div>
             ))
           )}
         </div>
@@ -662,7 +684,7 @@ export default function NetworkingPage() {
             type="individual"
             user={{ id: selectedUser.id, name: selectedUser.name, avatar: selectedUser.avatar, university: selectedUser.university }}
             onBack={() => { setSelectedUser(null); loadConversations(); }}
-            onPress={() => {}}
+            onPress={() => router.push(`/profile/${selectedUser.id}`)}
           />
           <div className="flex-1 overflow-y-auto space-y-2 mb-3 scrollbar-hide">
             {messages.length === 0 && (
@@ -970,7 +992,7 @@ export default function NetworkingPage() {
                         {post.author.university?.name} {post.author.courseOfStudy && `· ${post.author.courseOfStudy}`}
                       </p>
                     </div>
-                  </div>
+                  </button>
                   {post.author.id !== user?.id && (() => {
                     const cs = connectionStatuses[post.author.id];
                     const status = cs?.status || null;
@@ -1174,16 +1196,24 @@ export default function NetworkingPage() {
               ) : (
                 comments.map((c) => (
                   <div key={c.id} className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <button
+                      onClick={() => c.author.id !== user?.id && router.push(`/profile/${c.author.id}`)}
+                      className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 overflow-hidden"
+                    >
                       {c.author.avatar ? (
                         <img src={c.author.avatar} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-xs font-bold text-primary">{c.author.name.charAt(0)}</span>
                       )}
-                    </div>
+                    </button>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline gap-2">
-                        <span className="text-white text-sm font-semibold">{c.author.name}</span>
+                        <button
+                          onClick={() => c.author.id !== user?.id && router.push(`/profile/${c.author.id}`)}
+                          className="text-white text-sm font-semibold hover:underline"
+                        >
+                          {c.author.name}
+                        </button>
                         <span className="text-gray-500 text-xs">
                           {new Date(c.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
                         </span>
