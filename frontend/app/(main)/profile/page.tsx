@@ -5,6 +5,9 @@ import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useSavedOpportunities } from '@/lib/savedOpportunities';
+import { useSavedCourses } from '@/lib/savedCourses';
+import { getSavedSimulations, SavedSimulation } from '@/components/AdmissionSimulator';
+import { BADGES, getAllBadgeStates, getUnlockedCount, RARITY_COLORS, RARITY_LABELS, type BadgeDefinition, type BadgeProgress } from '@/lib/badges';
 import { useLanguage, Language, LANGUAGE_DISPLAY_NAMES, SKILL_KEYS, getSkillLabel, normalizePassionToKey } from '@/lib/language';
 import { usePrivacy } from '@/lib/privacy';
 import ChangePasswordModal from '@/components/ChangePasswordModal';
@@ -55,6 +58,8 @@ export default function ProfilePage() {
   const { user, setUser, logout } = useAuth();
   const router = useRouter();
   const { savedOpps } = useSavedOpportunities();
+  const { savedCourses } = useSavedCourses();
+  const [simulations, setSimulations] = useState<SavedSimulation[]>([]);
   const { language, setLanguage, t } = useLanguage();
   const [profile, setProfile] = useState<FullProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,6 +102,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     loadData();
+    setSimulations(getSavedSimulations());
   }, []);
 
   useEffect(() => {
@@ -479,18 +485,81 @@ export default function ProfilePage() {
                 </div>
               </div>
             )
-          ) : (
+          ) : savedCourses.length === 0 ? (
             <div className="bg-[#1E293B] rounded-2xl p-6 text-center">
-              <p className="text-sm text-[#64748B]">{t.profile.noSavedUniversities}</p>
+              <p className="text-sm text-[#64748B]">Nessun corso salvato ancora</p>
               <button
                 onClick={() => router.push('/universities')}
                 className="mt-3 text-sm text-[#4F46E5] font-medium hover:underline"
               >
-                {t.profile.exploreUniversities}
+                Esplora corsi
               </button>
+            </div>
+          ) : (
+            <div className="bg-[#1E293B] rounded-2xl p-4">
+              <div className="space-y-3">
+                {savedCourses.map((c) => (
+                  <div
+                    key={c.id}
+                    onClick={() => router.push(`/universities/course/${c.id}`)}
+                    className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-[#2A3F54]/50 transition-colors"
+                    style={{ backgroundColor: '#0F172A' }}
+                  >
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#4F46E5' }}>
+                      <span className="text-white text-lg">🎓</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-sm font-semibold text-white line-clamp-2 mb-0.5">{c.title}</h4>
+                      <p className="text-xs text-[#64748B] truncate">{c.university} — {c.city}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
+
+        {/* Simulazioni salvate */}
+        {simulations.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <svg className="w-4 h-4 text-[#94A3B8]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <h3 className="text-base font-semibold text-white">Le mie simulazioni</h3>
+            </div>
+            <div className="bg-[#1E293B] rounded-2xl p-4">
+              <div className="space-y-3">
+                {simulations.map((sim) => (
+                  <div
+                    key={sim.id}
+                    onClick={() => router.push(`/universities/course/${sim.courseId}`)}
+                    className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-[#2A3F54]/50 transition-colors"
+                    style={{ backgroundColor: '#0F172A' }}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: `${sim.result.categoria.color}20` }}
+                    >
+                      <span className="text-sm font-bold" style={{ color: sim.result.categoria.color }}>
+                        {sim.result.probabilitaFinale}%
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-sm font-semibold text-white line-clamp-1 mb-0.5">{sim.courseTitle}</h4>
+                      <p className="text-xs text-[#64748B] truncate">
+                        {sim.university} · {sim.result.categoria.label}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Achievement Badges */}
+        <BadgesSection />
 
         {/* Tabs */}
         <div>
@@ -1591,6 +1660,197 @@ function LanguageDropdown() {
 }
 
 type PrivacyOption = 'Tutti' | 'Pathmates' | 'Nessuno';
+
+function BadgesSection() {
+  const [badges, setBadges] = useState<{ badge: BadgeDefinition; progress: BadgeProgress; unlocked: boolean }[]>([]);
+  const [selectedBadge, setSelectedBadge] = useState<{ badge: BadgeDefinition; progress: BadgeProgress; unlocked: boolean } | null>(null);
+
+  useEffect(() => {
+    setBadges(getAllBadgeStates());
+  }, []);
+
+  const unlockedCount = badges.filter((b) => b.unlocked).length;
+  const totalCount = badges.length;
+  const pct = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0;
+
+  if (totalCount === 0) return null;
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-base">🏆</span>
+        <h3 className="text-base font-semibold text-white">Achievement</h3>
+        <span className="text-xs ml-auto" style={{ color: '#8B8FA8' }}>
+          {unlockedCount}/{totalCount} ({pct}%)
+        </span>
+      </div>
+
+      <div className="h-1.5 rounded-full overflow-hidden mb-4" style={{ backgroundColor: '#1E293B' }}>
+        <div
+          className="h-full rounded-full transition-all"
+          style={{ width: `${pct}%`, backgroundColor: '#4F46E5' }}
+        />
+      </div>
+
+      <div className="bg-[#1E293B] rounded-2xl p-4">
+        <div className="grid grid-cols-4 gap-3">
+          {badges.map(({ badge, progress, unlocked }) => {
+            const colors = RARITY_COLORS[badge.rarity];
+            return (
+              <button
+                key={badge.id}
+                onClick={() => setSelectedBadge({ badge, progress, unlocked })}
+                className="flex flex-col items-center gap-1.5 transition-transform active:scale-95"
+              >
+                <div
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '16px',
+                    background: unlocked ? colors.bg : '#2A2F3D',
+                    border: `2px solid ${unlocked ? colors.border : '#3A3F4D'}`,
+                    boxShadow: unlocked ? colors.glow : 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '28px',
+                    opacity: unlocked ? 1 : 0.4,
+                  }}
+                >
+                  {unlocked ? badge.icon : '🔒'}
+                </div>
+                <span
+                  className="text-[10px] font-semibold leading-tight text-center"
+                  style={{ color: unlocked ? '#FFFFFF' : '#8B8FA8', maxWidth: '72px' }}
+                >
+                  {unlocked ? badge.name : '???'}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {selectedBadge && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+          }}
+        >
+          <div
+            onClick={() => setSelectedBadge(null)}
+            style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)' }}
+          />
+          <div
+            style={{
+              position: 'relative',
+              backgroundColor: '#141B2D',
+              borderRadius: '20px',
+              padding: '28px 24px',
+              maxWidth: '320px',
+              width: '100%',
+              textAlign: 'center',
+            }}
+          >
+            <button
+              onClick={() => setSelectedBadge(null)}
+              style={{
+                position: 'absolute',
+                top: '12px',
+                right: '12px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6L6 18M6 6l12 12" stroke="#8B8FA8" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
+
+            {(() => {
+              const { badge, progress, unlocked } = selectedBadge;
+              const colors = RARITY_COLORS[badge.rarity];
+              const progressPct = Math.min(Math.round((progress.current / badge.target) * 100), 100);
+              return (
+                <>
+                  <div
+                    style={{
+                      width: '88px',
+                      height: '88px',
+                      borderRadius: '20px',
+                      background: unlocked ? colors.bg : '#2A2F3D',
+                      border: `2px solid ${unlocked ? colors.border : '#3A3F4D'}`,
+                      boxShadow: unlocked ? colors.glow : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '40px',
+                      margin: '0 auto 16px',
+                      opacity: unlocked ? 1 : 0.5,
+                    }}
+                  >
+                    {unlocked ? badge.icon : '🔒'}
+                  </div>
+
+                  <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#FFFFFF', marginBottom: '4px' }}>
+                    {badge.name}
+                  </h3>
+                  <p style={{ fontSize: '13px', color: '#8B8FA8', marginBottom: '16px' }}>
+                    {badge.description}
+                  </p>
+
+                  <div className="h-2 rounded-full overflow-hidden mb-2" style={{ backgroundColor: '#2A2F3D' }}>
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${progressPct}%`,
+                        background: unlocked ? colors.bg : '#4F46E5',
+                      }}
+                    />
+                  </div>
+                  <p style={{ fontSize: '13px', color: '#D0D4DC', marginBottom: '12px' }}>
+                    {progress.current}/{badge.target}
+                  </p>
+
+                  <div
+                    className="inline-block px-3 py-1 rounded-full text-xs font-semibold"
+                    style={{
+                      background: unlocked ? colors.bg : '#2A2F3D',
+                      border: `1px solid ${unlocked ? colors.border : '#3A3F4D'}`,
+                      color: '#FFFFFF',
+                    }}
+                  >
+                    {RARITY_LABELS[badge.rarity]}
+                  </div>
+
+                  {unlocked && progress.unlockedAt && (
+                    <p style={{ fontSize: '11px', color: '#8B8FA8', marginTop: '12px' }}>
+                      Sbloccato il {new Date(progress.unlockedAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                  )}
+
+                  {!unlocked && (
+                    <p style={{ fontSize: '12px', color: '#F59E0B', marginTop: '12px' }}>
+                      Ancora {badge.target - progress.current} per sbloccarlo!
+                    </p>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function PrivacyDropdown({
   value,

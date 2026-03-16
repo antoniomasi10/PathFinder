@@ -95,6 +95,7 @@ model User {
   postLikes      PostLike[]
   postComments   PostComment[]
   savedOpportunities Opportunity[] @relation("SavedOpportunities")
+  savedCourses       Course[]     @relation("SavedCourses")
 }
 
 model UserProfile {
@@ -151,11 +152,20 @@ model University {
 }
 
 model Course {
-  id           String     @id @default(uuid())
-  universityId String
-  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
-  name         String
-  type         CourseType
+  id                        String     @id @default(uuid())
+  universityId              String
+  university                University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  name                      String
+  type                      CourseType
+  field                     String?
+  employmentRate            Float?
+  avgSalaryAfterGraduation  Int?
+  internshipsAvailable      Int?
+  internationalOpportunities Boolean   @default(false)
+  programDuration           String?
+  languageOfInstruction     String?
+  tags                      String[]   @default([])
+  savedBy                   User[]     @relation("SavedCourses")
 }
 
 model PathMatesMessage {
