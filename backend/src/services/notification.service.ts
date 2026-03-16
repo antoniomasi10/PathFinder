@@ -36,14 +36,17 @@ export async function createNotification(
     }
   } catch {}
 
-  // Send web push notification
+  // Send web push notification with rich payload
   try {
     const prefs = await getOrCreatePreferences(userId);
     if (prefs.pushEnabled) {
       await sendPushToUser(userId, {
-        title: 'PathFinder',
         body: content,
+        icon: icon || undefined,
         url: linkTo || '/notifications',
+        type,
+        tag: type,
+        data: data || {},
       });
     }
   } catch {}

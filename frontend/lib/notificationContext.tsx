@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { io, Socket } from 'socket.io-client';
 import api from '@/lib/api';
-import { registerServiceWorker } from '@/lib/pushManager';
+import { registerServiceWorker, subscribeToPush, isPushSupported } from '@/lib/pushManager';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -64,9 +64,14 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     setSocket(ns);
 
-    // Register service worker for push notifications
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      registerServiceWorker();
+    // Register service worker and re-sync push subscription
+    if (typeof window !== 'undefined' && isPushSupported()) {
+      registerServiceWorker().then(() => {
+        // If user already granted permission, re-sync subscription with backend
+        if (Notification.permission === 'granted') {
+          subscribeToPush().catch(() => {});
+        }
+      });
     }
 
     return () => {

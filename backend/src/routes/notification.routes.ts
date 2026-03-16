@@ -58,6 +58,20 @@ router.delete('/push/unsubscribe', authMiddleware, async (req: Request, res: Res
   }
 });
 
+// POST /push/test — send a test push to the authenticated user
+router.post('/push/test', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const result = await webPushService.sendPushToUser(req.user!.userId, {
+      body: 'Le notifiche push funzionano correttamente!',
+      type: 'GENERAL',
+      url: '/notifications',
+    });
+    res.json({ success: true, result });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Notifications ──────────────────────────────────────────
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {

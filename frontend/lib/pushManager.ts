@@ -14,7 +14,12 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 }
 
 export function isPushSupported(): boolean {
-  return typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window;
+  return (
+    typeof window !== 'undefined' &&
+    'serviceWorker' in navigator &&
+    'PushManager' in window &&
+    'Notification' in window
+  );
 }
 
 export function getPushPermissionState(): NotificationPermission | 'unsupported' {
@@ -25,7 +30,10 @@ export function getPushPermissionState(): NotificationPermission | 'unsupported'
 export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
   if (!isPushSupported()) return null;
   try {
-    return await navigator.serviceWorker.register('/sw.js');
+    const registration = await navigator.serviceWorker.register('/sw.js');
+    // Wait for the SW to be ready
+    await navigator.serviceWorker.ready;
+    return registration;
   } catch {
     return null;
   }
@@ -37,15 +45,33 @@ export async function subscribeToPush(): Promise<boolean> {
   try {
     const registration = await navigator.serviceWorker.ready;
 
-    // Fetch VAPID key
-    const { data } = await fetch(`${API_URL}/api/notifications/push/vapid-key`).then((r) => r.json().then((d) => ({ data: d })));
+    // Check if already subscribed
+    const existing = await registration.pushManager.getSubscription();
+    if (existing) {
+      // Re-sync subscription with backend (may have changed)
+      const json = existing.toJSON();
+      await api.post('/notifications/push/subscribe', {
+        subscription: {
+          endpoint: json.endpoint,
+          keys: { p256dh: json.keys!.p256dh, auth: json.keys!.auth },
+        },
+      });
+      return true;
+    }
+
+    // Fetch VAPID key from backend
+    const { data } = await fetch(`${API_URL}/api/notifications/push/vapid-key`).then((r) =>
+      r.json().then((d) => ({ data: d }))
+    );
     if (!data.publicKey) return false;
 
+    // Subscribe to push
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(data.publicKey) as BufferSource,
     });
 
+    // Send subscription to backend
     const json = subscription.toJSON();
     await api.post('/notifications/push/subscribe', {
       subscription: {
@@ -72,6 +98,15 @@ export async function unsubscribeFromPush(): Promise<boolean> {
       await api.delete('/notifications/push/unsubscribe', { data: { endpoint } });
     }
     return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function sendTestPush(): Promise<boolean> {
+  try {
+    const { data } = await api.post('/notifications/push/test');
+    return data.success;
   } catch {
     return false;
   }
