@@ -131,8 +131,8 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
   const friendRequest = await prisma.friendRequest.findFirst({
     where: {
       OR: [
-        { fromUserId: requesterId, toUserId: targetId },
-        { fromUserId: targetId, toUserId: requesterId },
+        { fromUserId: viewerId, toUserId: ownerId },
+        { fromUserId: ownerId, toUserId: viewerId },
       ],
     },
   });
@@ -143,8 +143,8 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
   const friendRequests = await prisma.friendRequest.findMany({
     where: {
       OR: [
-        { fromUserId: targetId, status: 'ACCEPTED' },
-        { toUserId: targetId, status: 'ACCEPTED' },
+        { fromUserId: ownerId, status: 'ACCEPTED' },
+        { toUserId: ownerId, status: 'ACCEPTED' },
       ],
     },
     include: {
@@ -154,7 +154,7 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
     take: 20,
   });
   const pathmates = friendRequests.map((fr) =>
-    fr.fromUserId === targetId ? fr.toUser : fr.fromUser
+    fr.fromUserId === ownerId ? fr.toUser : fr.fromUser
   );
 
   const isPublic = (user as any).publicProfile !== false;
@@ -226,4 +226,8 @@ export async function updateProfile(userId: string, data: { name?: string; bio?:
     where: { id: userId },
     include: { profile: true, university: true },
   });
+}
+
+export async function deleteAccount(userId: string) {
+  await prisma.user.delete({ where: { id: userId } });
 }

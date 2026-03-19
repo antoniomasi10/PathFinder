@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback, ChangeEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
-import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/language';
 import { getSocket } from '@/lib/socket';
@@ -971,7 +970,10 @@ export default function NetworkingPage() {
             posts.map((post) => (
               <div key={post.id} className="card">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
+                  <button
+                    className="flex items-center gap-3 text-left"
+                    onClick={() => post.author.id !== user?.id && router.push(`/profile/${post.author.id}`)}
+                  >
                     {(() => {
                       const avatar = post.author.id === user?.id
                         ? (user?.avatar ?? post.author.avatar)
@@ -987,7 +989,7 @@ export default function NetworkingPage() {
                       );
                     })()}
                     <div>
-                      <p className="font-medium text-sm text-text-primary">{post.author.name}</p>
+                      <p className={`font-medium text-sm text-text-primary ${post.author.id !== user?.id ? 'hover:underline' : ''}`}>{post.author.name}</p>
                       <p className="text-[10px] text-text-muted">
                         {post.author.university?.name} {post.author.courseOfStudy && `· ${post.author.courseOfStudy}`}
                       </p>
