@@ -130,7 +130,7 @@ router.post('/badge-unlocked', authMiddleware, async (req: Request, res: Respons
       'BADGE_UNLOCKED',
       `Hai sbloccato il badge "${badgeName}"!`,
       '/profile',
-      badgeIcon || '🏆',
+      badgeIcon || undefined,
       { badgeName }
     );
     res.json(notification);

@@ -43,7 +43,7 @@ router.post('/:id/like', authMiddleware, async (req: Request, res: Response) => 
         'POST_LIKE',
         `${liker?.name || 'Qualcuno'} ha messo mi piace al tuo post`,
         `/networking`,
-        '❤️',
+        undefined,
         { postId: post.id, fromUserId: req.user!.userId }
       );
     }
@@ -88,7 +88,7 @@ router.post('/:id/comments', authMiddleware, async (req: Request, res: Response)
         'POST_COMMENT',
         `${commenter?.name || 'Qualcuno'} ha commentato: "${preview}"`,
         `/networking`,
-        '💬',
+        undefined,
         { postId: post.id, fromUserId: req.user!.userId }
       );
     }
