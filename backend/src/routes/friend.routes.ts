@@ -84,7 +84,7 @@ router.post('/request', authMiddleware, async (req: Request, res: Response) => {
       'FRIEND_ACCEPTED',
       `${fromUser?.name || 'Qualcuno'} ti ha aggiunto ai Pathmates!`,
       `/profile/${req.user!.userId}`,
-      undefined,
+      '\u{1F91D}',
       { fromUserId: req.user!.userId }
     );
 
@@ -118,7 +118,7 @@ router.patch('/request/:id', authMiddleware, async (req: Request, res: Response)
         'FRIEND_ACCEPTED',
         `${acceptor?.name || 'Qualcuno'} ha accettato la tua richiesta di connessione`,
         `/profile/${req.user!.userId}`,
-        undefined,
+        '\u{1F91D}',
         { fromUserId: req.user!.userId }
       );
     }
