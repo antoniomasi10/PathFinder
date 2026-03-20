@@ -46,6 +46,15 @@ enum NotificationType {
   FRIEND_ACCEPTED
   NEW_MESSAGE
   NEW_OPPORTUNITY
+  OPPORTUNITY_DEADLINE
+  COURSE_DEADLINE
+  COURSE_RECOMMENDED
+  BADGE_UNLOCKED
+  POST_LIKE
+  POST_COMMENT
+  COMMENT_REPLY
+  GROUP_UPDATE
+  SYSTEM
   GENERAL
 }
 
@@ -91,6 +100,8 @@ model User {
   postComments   PostComment[]
   savedOpportunities Opportunity[] @relation("SavedOpportunities")
   savedCourses       Course[]     @relation("SavedCourses")
+  notificationPreference NotificationPreference?
+  pushSubscriptions  PushSubscription[]
 }
 
 model UserProfile {
@@ -208,6 +219,8 @@ model Notification {
   content   String
   isRead    Boolean          @default(false)
   linkTo    String?
+  icon      String?
+  data      Json?
   createdAt DateTime         @default(now())
 }
 
@@ -252,5 +265,31 @@ model PostComment {
   authorId  String
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   content   String
+  createdAt DateTime @default(now())
+}
+
+model NotificationPreference {
+  id             String  @id @default(uuid())
+  userId         String  @unique
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pushEnabled    Boolean @default(true)
+  networking     Boolean @default(true)
+  opportunities  Boolean @default(true)
+  universities   Boolean @default(true)
+  social         Boolean @default(true)
+  postLikes      Boolean @default(false)
+  chat           Boolean @default(true)
+  achievements   Boolean @default(true)
+  system         Boolean @default(true)
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
   createdAt DateTime @default(now())
 }

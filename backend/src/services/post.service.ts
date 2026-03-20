@@ -55,7 +55,7 @@ export async function getComments(postId: string) {
 export async function getPostById(postId: string) {
   return prisma.post.findUnique({
     where: { id: postId },
-    select: { authorId: true },
+    select: { id: true, authorId: true },
   });
 }
 

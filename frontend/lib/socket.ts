@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 let socket: Socket | null = null;
+let notificationSocket: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socket) {
@@ -15,9 +16,27 @@ export function getSocket(): Socket {
   return socket;
 }
 
+export function getNotificationSocket(): Socket {
+  if (!notificationSocket) {
+    const token = localStorage.getItem('accessToken');
+    notificationSocket = io(`${API_URL}/notifications`, {
+      auth: { token },
+      transports: ['websocket'],
+    });
+  }
+  return notificationSocket;
+}
+
 export function disconnectSocket() {
   if (socket) {
     socket.disconnect();
     socket = null;
+  }
+}
+
+export function disconnectNotificationSocket() {
+  if (notificationSocket) {
+    notificationSocket.disconnect();
+    notificationSocket = null;
   }
 }
