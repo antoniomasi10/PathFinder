@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useSavedOpportunities } from '@/lib/savedOpportunities';
+import { isValidExternalUrl } from '@/lib/urlValidation';
+import api from '@/lib/api';
 
 interface Opportunity {
   id: string;
@@ -13,8 +15,12 @@ interface Opportunity {
   matchScore: number;
   location: string;
   about: string;
-  icon: React.ReactNode;
   url?: string;
+  type: string;
+  remote: boolean;
+  skills: string[];
+  matchReason: string;
+  deadline: string;
 }
 
 function getScoreColor(score: number): string {
@@ -50,83 +56,40 @@ function CircularProgress({ score }: { score: number }) {
   );
 }
 
-const opportunities: Opportunity[] = [
-  {
-    id: '1',
-    title: 'Software Engineer Intern',
-    company: 'TechNova Solutions',
-    badge: 'FULL-TIME • REMOTE',
-    description:
-      `Siamo alla ricerca di uno studente appassionato di sviluppo web per unirsi al nostro team di ingegneria. Lavorerai su progetti reali con impatto diretto sul prodotto, collaborando con ingegneri senior su feature front-end e back-end. Richiediamo conoscenza di JavaScript/TypeScript e dei fondamentali del web. È previsto un compenso mensile e la possibilità di assunzione a tempo indeterminato al termine del percorso.`,
-    matchScore: 85,
-    location: `Milano, IT • Remoto`,
-    about:
-      `TechNova Solutions è una startup fintech in rapida crescita con sede a Milano. Lavoriamo per rivoluzionare il settore dei pagamenti digitali con soluzioni basate su intelligenza artificiale e blockchain. Il nostro team è composto da oltre 50 ingegneri provenienti da tutta Europa, uniti dalla passione per la tecnologia e dall'impatto sociale del nostro lavoro.`,
-    url: 'https://www.technova.io/careers/software-engineer-intern',
-    icon: (
+function OpportunityIcon({ type }: { type: string }) {
+  const t = type.toLowerCase();
+  if (t === 'internship' || t === 'stage') {
+    return (
       <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <rect x="3" y="3" width="7" height="7" rx="1" />
         <rect x="14" y="3" width="7" height="7" rx="1" />
         <rect x="3" y="14" width="7" height="7" rx="1" />
         <rect x="14" y="14" width="7" height="7" rx="1" />
       </svg>
-    ),
-  },
-  {
-    id: '2',
-    title: 'Product Design Workshop',
-    company: 'Creative Hub Milan',
-    badge: 'WORKSHOP • HYBRID',
-    description:
-      `Unisciti a noi per una settimana intensiva di Design Thinking e prototyping applicato al mondo reale. Il programma include sessioni mattutine di teoria, pomeriggi di hands-on workshop con mentori del settore e una presentazione finale davanti a un panel di aziende partner. Partecipazione gratuita con borsa di studio disponibile.`,
-    matchScore: 62,
-    location: `Milano, IT • Ibrido`,
-    about:
-      `Creative Hub Milan è un centro di innovazione dedicato alla cultura del design e alla creatività applicata. Ogni anno formiamo centinaia di giovani designer attraverso workshop intensivi e programmi di mentorship con professionisti del settore. Collaboriamo con oltre 80 aziende italiane e internazionali.`,
-    url: 'https://www.creativehubmilan.it/workshop/product-design',
-    icon: (
+    );
+  }
+  if (t === 'event' || t === 'extracurricular') {
+    return (
       <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17l-5.1-5.1a3.12 3.12 0 114.41-4.41l.67.67.67-.67a3.12 3.12 0 114.41 4.41l-5.06 5.1z" />
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2" />
       </svg>
-    ),
-  },
-  {
-    id: '3',
-    title: 'Data Analyst Junior',
-    company: 'Fintech Alpha',
-    badge: 'JUNIOR • IN-PERSON',
-    description:
-      `Analisi di dataset complessi per l'ottimizzazione dei processi di credito e gestione del rischio. Il ruolo prevede elaborazione dati in Python, creazione di dashboard in Tableau e reporting settimanale ai manager. Sono richieste esperienza pregressa in analisi dati e conoscenza di SQL. Contratto a tempo determinato con possibilità di rinnovo.`,
-    matchScore: 35,
-    location: `Roma, IT • In presenza`,
-    about:
-      `Fintech Alpha è una società fintech specializzata nella gestione del rischio di credito. Utilizziamo modelli statistici avanzati e machine learning per ottimizzare i processi di valutazione del credito, operando con oltre 200 partner bancari in tutta Italia. Fondata nel 2018, contiamo oggi più di 120 dipendenti.`,
-    icon: (
-      <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h4v11H3zM10 3h4v18h-4zM17 7h4v14h-4z" />
-      </svg>
-    ),
-  },
-  {
-    id: '4',
-    title: 'Master in AI Ethics',
-    company: 'Politecnico di Milano',
-    badge: 'EDUCATION • PART-TIME',
-    description:
-      `Un percorso formativo avanzato che esplora le implicazioni etiche dell'intelligenza artificiale in contesti aziendali, legali e sociali. Il corso è erogato in modalità ibrida con 6 moduli da 4 settimane ciascuno, inclusi casi studio con aziende leader del settore tech. Titolo riconosciuto a livello europeo.`,
-    matchScore: 92,
-    location: `Milano, IT • Part-time`,
-    about:
-      `Il Politecnico di Milano, una delle migliori università tecniche d'Europa, propone questo programma d'eccellenza dedicato alle sfide etiche dell'intelligenza artificiale. Il programma è riconosciuto a livello europeo e offre accesso a una rete di alumni in oltre 30 paesi, con placement rate del 94%.`,
-    url: 'https://www.polimi.it/formazione/master-e-corsi/master/master-in-ai-ethics',
-    icon: (
+    );
+  }
+  if (t === 'fellowship') {
+    return (
       <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
       </svg>
-    ),
-  },
-];
+    );
+  }
+  // Default icon
+  return (
+    <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h4v11H3zM10 3h4v18h-4zM17 7h4v14h-4z" />
+    </svg>
+  );
+}
 
 /* ── Search + filter predicates (module-level, no closure) ──────── */
 
@@ -269,7 +232,7 @@ function FullWidthCard({
       >
         <div className="flex items-start gap-3 mb-3">
           <div className="w-14 h-14 rounded-xl bg-[#1E293B] flex items-center justify-center flex-shrink-0">
-            {opp.icon}
+            <OpportunityIcon type={opp.type} />
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-white font-bold text-[17px] leading-tight">{opp.title}</h3>
@@ -340,15 +303,15 @@ function FullWidthCard({
           {/* CTA */}
           <div className="flex gap-3">
             <button
-              onClick={() => opp.url && window.open(opp.url, '_blank', 'noopener,noreferrer')}
-              disabled={!opp.url}
+              onClick={() => opp.url && isValidExternalUrl(opp.url) && window.open(opp.url, '_blank', 'noopener,noreferrer')}
+              disabled={!opp.url || !isValidExternalUrl(opp.url)}
               className={`flex-1 py-3.5 rounded-2xl font-semibold text-[15px] transition-opacity ${
-                opp.url
+                opp.url && isValidExternalUrl(opp.url)
                   ? 'bg-primary text-white active:opacity-90'
                   : 'bg-[#1E293B] text-gray-500 cursor-not-allowed'
               }`}
             >
-              {opp.url ? 'Vai all\u2019opportunità' : 'Link non disponibile'}
+              {opp.url && isValidExternalUrl(opp.url) ? 'Vai all\u2019opportunità' : 'Link non disponibile'}
             </button>
             <button
               onClick={onSave}
@@ -400,7 +363,7 @@ function HalfWidthCard({
       >
         <div className="flex items-start gap-2.5 mb-1.5">
           <div className="w-9 h-9 rounded-lg bg-[#1E293B] flex items-center justify-center flex-shrink-0">
-            {opp.icon}
+            <OpportunityIcon type={opp.type} />
           </div>
           <h3 className="text-white font-semibold text-[13px] leading-snug flex-1 min-w-0 line-clamp-2">
             {opp.title}
@@ -443,15 +406,15 @@ function HalfWidthCard({
           {/* CTA — scaled down to fit the narrow column */}
           <div className="flex gap-2 pt-1">
             <button
-              onClick={() => opp.url && window.open(opp.url, '_blank', 'noopener,noreferrer')}
-              disabled={!opp.url}
+              onClick={() => opp.url && isValidExternalUrl(opp.url) && window.open(opp.url, '_blank', 'noopener,noreferrer')}
+              disabled={!opp.url || !isValidExternalUrl(opp.url)}
               className={`flex-1 py-3 rounded-xl font-semibold text-[12px] transition-opacity ${
-                opp.url
+                opp.url && isValidExternalUrl(opp.url)
                   ? 'bg-primary text-white active:opacity-90'
                   : 'bg-[#1E293B] text-gray-500 cursor-not-allowed'
               }`}
             >
-              {opp.url ? 'Vai all\u2019opportunità' : 'Link non disponibile'}
+              {opp.url && isValidExternalUrl(opp.url) ? 'Vai all\u2019opportunità' : 'Link non disponibile'}
             </button>
             <button
               onClick={onSave}
@@ -720,6 +683,35 @@ export default function HomePage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { savedIds, toggleSave } = useSavedOpportunities();
 
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [loadingOpps, setLoadingOpps] = useState(true);
+
+  useEffect(() => {
+    api.get('/opportunities?matched=true&limit=20')
+      .then(({ data }) => {
+        const items = data.data || data;
+        const mapped = (Array.isArray(items) ? items : []).map((opp: any) => ({
+          id: opp.id,
+          title: opp.title,
+          company: opp.company || opp.university?.name || '',
+          badge: `${opp.type}${opp.isRemote ? ' \u2022 REMOTE' : ''}`,
+          description: opp.description || '',
+          matchScore: opp.matchScore || 0,
+          location: opp.location || opp.university?.city || '',
+          about: opp.about || '',
+          url: opp.url || '',
+          type: opp.type || '',
+          remote: opp.isRemote || false,
+          skills: opp.tags || [],
+          matchReason: opp.matchReason || '',
+          deadline: opp.deadline || '',
+        }));
+        setOpportunities(mapped);
+      })
+      .catch((err) => console.error('Failed to load opportunities:', err))
+      .finally(() => setLoadingOpps(false));
+  }, []);
+
   // Filter sheet state
   const [filterOpen, setFilterOpen] = useState(false);
   // draft = what's currently selected inside the open sheet (uncommitted)
@@ -856,7 +848,24 @@ export default function HomePage() {
 
       {/* ── Cards ─────────────────────────────────────────────────── */}
       <div className="px-4 pb-4">
-        {tab === 'per-te' ? (
+        {loadingOpps && opportunities.length === 0 ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-[#161B22] rounded-2xl p-5 animate-pulse">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-14 h-14 rounded-xl bg-[#1E293B]" />
+                  <div className="flex-1">
+                    <div className="h-4 bg-[#1E293B] rounded w-3/4 mb-2" />
+                    <div className="h-3 bg-[#1E293B] rounded w-1/2" />
+                  </div>
+                </div>
+                <div className="h-3 bg-[#1E293B] rounded w-1/3 mb-3" />
+                <div className="h-3 bg-[#1E293B] rounded w-full mb-1" />
+                <div className="h-3 bg-[#1E293B] rounded w-5/6" />
+              </div>
+            ))}
+          </div>
+        ) : tab === 'per-te' ? (
           <div className="space-y-4">
             {opportunities.map((opp) => (
               <FullWidthCard

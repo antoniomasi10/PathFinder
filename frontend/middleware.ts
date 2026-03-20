@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const publicPaths = ['/login', '/register'];
+const publicPaths = ['/login', '/register', '/onboarding'];
 
 export function middleware(request: NextRequest) {
   // Client-side auth check handles most protection via AuthProvider
@@ -9,7 +9,12 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow public paths and static assets
-  if (publicPaths.some((p) => pathname.startsWith(p)) || pathname.startsWith('/_next') || pathname.startsWith('/api')) {
+  if (
+    publicPaths.some((p) => pathname.startsWith(p)) ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname === '/'
+  ) {
     return NextResponse.next();
   }
 

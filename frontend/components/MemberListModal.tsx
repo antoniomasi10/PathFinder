@@ -52,7 +52,8 @@ export default function MemberListModal({
     try {
       await api.delete(`/groups/${groupId}/members/${member.user.id}`);
       onMemberRemoved();
-    } catch {
+    } catch (err) {
+      console.error('Failed to remove member:', err);
     } finally {
       setRemoving(null);
       setConfirmRemove(null);

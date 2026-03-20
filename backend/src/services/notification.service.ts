@@ -12,12 +12,19 @@ export async function createNotification(
   });
 }
 
-export async function getNotifications(userId: string) {
-  return prisma.notification.findMany({
-    where: { userId },
-    orderBy: { createdAt: 'desc' },
-    take: 50,
-  });
+export async function getNotifications(userId: string, page: number = 1, limit: number = 20) {
+  limit = Math.min(limit, 50);
+  const skip = (page - 1) * limit;
+  const [notifications, total] = await Promise.all([
+    prisma.notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip,
+    }),
+    prisma.notification.count({ where: { userId } }),
+  ]);
+  return { data: notifications, total, page, totalPages: Math.ceil(total / limit) };
 }
 
 export async function markAsRead(notificationId: string) {

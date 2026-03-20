@@ -91,8 +91,8 @@ export async function addMember(
   }
 
   const requesterMember = group.members.find((m) => m.userId === requesterId);
-  if (!requesterMember) {
-    throw { status: 403, message: 'Non sei membro di questo gruppo' };
+  if (!requesterMember || requesterMember.role !== 'CREATOR') {
+    throw { status: 403, message: 'Solo il creatore del gruppo può aggiungere membri' };
   }
 
   const alreadyMember = group.members.find((m) => m.userId === newMemberId);
@@ -203,9 +203,10 @@ export async function updateGroupPhoto(
     throw { status: 404, message: 'Gruppo non trovato' };
   }
 
+  // Change from checking just membership to checking CREATOR role
   const member = group.members.find((m) => m.userId === userId);
-  if (!member) {
-    throw { status: 403, message: 'Non sei membro di questo gruppo' };
+  if (!member || member.role !== 'CREATOR') {
+    throw { status: 403, message: 'Solo il creatore del gruppo può modificare la foto' };
   }
 
   return prisma.pathMatesGroup.update({

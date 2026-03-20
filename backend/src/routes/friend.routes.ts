@@ -1,5 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { friendRequestSchema } from '../schemas';
 import prisma from '../lib/prisma';
 import { createNotification } from '../services/notification.service';
 
@@ -48,7 +50,7 @@ router.get('/requests', authMiddleware, async (req: Request, res: Response) => {
 });
 
 // Send friend request
-router.post('/request', authMiddleware, async (req: Request, res: Response) => {
+router.post('/request', authMiddleware, validate(friendRequestSchema), async (req: Request, res: Response) => {
   try {
     const { toUserId } = req.body;
     if (toUserId === req.user!.userId) {
@@ -71,10 +73,10 @@ router.post('/request', authMiddleware, async (req: Request, res: Response) => {
     }
 
     const request = await prisma.friendRequest.create({
-      data: { fromUserId: req.user!.userId, toUserId, status: 'ACCEPTED' },
+      data: { fromUserId: req.user!.userId, toUserId, status: 'PENDING' },
     });
 
-    await createNotification(toUserId, 'FRIEND_ACCEPTED', 'Sei stato aggiunto ai Pathmates!', `/profile/${req.user!.userId}`);
+    await createNotification(toUserId, 'GENERAL', 'Hai ricevuto una richiesta di amicizia', `/profile/${req.user!.userId}`);
 
     res.status(201).json(request);
   } catch (err: any) {

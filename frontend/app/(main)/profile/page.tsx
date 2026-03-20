@@ -124,7 +124,8 @@ export default function ProfilePage() {
       setEditSkills(profileRes.data.profile?.passions || []);
       setFriends(friendsRes.data);
       setSuggestedUsers(suggestionsRes.data);
-    } catch {
+    } catch (err) {
+      console.error('Failed to load profile data:', err);
     } finally {
       setLoading(false);
     }
@@ -153,7 +154,8 @@ export default function ProfilePage() {
       });
       setShowEditDialog(false);
       loadData();
-    } catch {
+    } catch (err) {
+      console.error('Failed to save profile:', err);
     } finally {
       setSaving(false);
     }
@@ -213,8 +215,11 @@ export default function ProfilePage() {
       await api.delete(`/friends/${friendId}`);
       setFriends((prev) => prev.filter((f) => f.id !== friendId));
       // Refresh suggestions since the removed user might now appear
-      api.get('/friends/suggestions').then((res) => setSuggestedUsers(res.data)).catch(() => {});
-    } catch {
+      api.get('/friends/suggestions').then((res) => setSuggestedUsers(res.data)).catch((err) => {
+        console.error('Failed to refresh friend suggestions:', err);
+      });
+    } catch (err) {
+      console.error('Failed to remove friend:', err);
     } finally {
       setRemovingFriend(null);
     }
@@ -229,7 +234,8 @@ export default function ProfilePage() {
       if (added) {
         setFriends((prev) => [added, ...prev]);
       }
-    } catch {
+    } catch (err) {
+      console.error('Failed to send friend request:', err);
     } finally {
       setSendingRequest(null);
     }

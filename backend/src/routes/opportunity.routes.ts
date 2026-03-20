@@ -5,13 +5,12 @@ import { scoreOpportunity } from '../services/matchingEngine';
 
 const router = Router();
 
-// Get opportunities with optional matching
+// Get opportunities with optional matching and pagination
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const opportunities = await prisma.opportunity.findMany({
-      include: { university: true },
-      orderBy: { postedAt: 'desc' },
-    });
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+    const skip = (page - 1) * limit;
 
     const { matched } = req.query;
     if (matched === 'true') {
@@ -21,18 +20,36 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       });
 
       if (user?.profile) {
-        const scored = opportunities.map((opp) => ({
+        // For matched results, we need all opportunities to score and sort them
+        const allOpportunities = await prisma.opportunity.findMany({
+          include: { university: true },
+          orderBy: { postedAt: 'desc' },
+        });
+
+        const scored = allOpportunities.map((opp) => ({
           ...opp,
           matchScore: scoreOpportunity(user.profile!, user, opp),
           matchReason: getMatchReason(user.profile!, user, opp),
         }));
         scored.sort((a, b) => b.matchScore - a.matchScore);
-        res.json(scored);
+
+        const paginated = scored.slice(skip, skip + limit);
+        res.json({ data: paginated, total: scored.length, page, totalPages: Math.ceil(scored.length / limit) });
         return;
       }
     }
 
-    res.json(opportunities);
+    const [opportunities, total] = await Promise.all([
+      prisma.opportunity.findMany({
+        include: { university: true },
+        orderBy: { postedAt: 'desc' },
+        take: limit,
+        skip,
+      }),
+      prisma.opportunity.count(),
+    ]);
+
+    res.json({ data: opportunities, total, page, totalPages: Math.ceil(total / limit) });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

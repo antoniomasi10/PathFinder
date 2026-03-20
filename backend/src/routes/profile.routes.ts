@@ -1,5 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { updateProfileSchema } from '../schemas';
 import { saveQuestionnaire, getProfile, updateProfile } from '../services/profile.service';
 
 const router = Router();
@@ -39,7 +41,7 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-router.patch('/me', authMiddleware, async (req: Request, res: Response) => {
+router.patch('/me', authMiddleware, validate(updateProfileSchema), async (req: Request, res: Response) => {
   try {
     const updated = await updateProfile(req.user!.userId, req.body);
     res.json(updated);

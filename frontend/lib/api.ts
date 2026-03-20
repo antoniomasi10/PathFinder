@@ -1,6 +1,9 @@
 import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+if (typeof window !== 'undefined' && !process.env.NEXT_PUBLIC_API_URL && window.location.hostname !== 'localhost') {
+  console.warn('NEXT_PUBLIC_API_URL is not set - using localhost fallback');
+}
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,

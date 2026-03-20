@@ -1,5 +1,7 @@
 'use client';
 
+import { isValidImageUrl } from '@/lib/urlValidation';
+
 type IndividualProps = {
   type: 'individual';
   user: { id: string; name: string; avatar?: string; university?: string };
@@ -48,7 +50,7 @@ export default function ChatHeader(props: ChatHeaderProps) {
           </>
         ) : (
           <>
-            {avatar ? (
+            {avatar && isValidImageUrl(avatar) ? (
               <img
                 src={avatar}
                 alt={name}

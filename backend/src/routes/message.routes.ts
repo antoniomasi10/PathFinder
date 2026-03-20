@@ -1,13 +1,19 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { sendMessageSchema } from '../schemas';
 import prisma from '../lib/prisma';
+import { validateImages } from '../utils/imageValidation';
 
 const router = Router();
 
-// Get conversations
+// Get conversations with pagination
 router.get('/conversations', authMiddleware, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
+
     // Get all users the current user has messages with
     const messages = await prisma.pathMatesMessage.findMany({
       where: {
@@ -38,7 +44,12 @@ router.get('/conversations', authMiddleware, async (req: Request, res: Response)
       }
     }
 
-    res.json(Array.from(convMap.values()));
+    const allConversations = Array.from(convMap.values());
+    const total = allConversations.length;
+    const skip = (page - 1) * limit;
+    const paginated = allConversations.slice(skip, skip + limit);
+
+    res.json({ data: paginated, total, page, totalPages: Math.ceil(total / limit) });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -47,6 +58,13 @@ router.get('/conversations', authMiddleware, async (req: Request, res: Response)
 // Get messages with a specific user
 router.get('/:userId', authMiddleware, async (req: Request, res: Response) => {
   try {
+    const currentUserId = req.user!.userId;
+    // Messages are already filtered by current user, but validate the userId param
+    if (req.params.userId === currentUserId) {
+      res.status(400).json({ error: 'Non puoi visualizzare conversazioni con te stesso' });
+      return;
+    }
+
     const messages = await prisma.pathMatesMessage.findMany({
       where: {
         OR: [
@@ -120,12 +138,13 @@ router.post('/group/:groupId', authMiddleware, async (req: Request, res: Respons
       return res.status(403).json({ error: 'Non sei membro di questo gruppo' });
     }
 
+    const validImages = validateImages(images);
     const message = await prisma.pathMatesMessage.create({
       data: {
         senderId: userId,
         groupId,
         content,
-        images: images || [],
+        images: validImages,
       },
       include: {
         sender: { select: { id: true, name: true, avatar: true } },
@@ -139,15 +158,36 @@ router.post('/group/:groupId', authMiddleware, async (req: Request, res: Respons
 });
 
 // Send a message (REST fallback)
-router.post('/', authMiddleware, async (req: Request, res: Response) => {
+router.post('/', authMiddleware, validate(sendMessageSchema), async (req: Request, res: Response) => {
   try {
     const { receiverId, content, images } = req.body;
+
+    const receiver = await prisma.user.findUnique({ where: { id: receiverId } });
+    if (!receiver) {
+      res.status(404).json({ error: 'Destinatario non trovato' });
+      return;
+    }
+
+    const friendship = await prisma.friendRequest.findFirst({
+      where: {
+        OR: [
+          { fromUserId: req.user!.userId, toUserId: receiverId, status: 'ACCEPTED' },
+          { fromUserId: receiverId, toUserId: req.user!.userId, status: 'ACCEPTED' },
+        ],
+      },
+    });
+    if (!friendship) {
+      res.status(403).json({ error: 'Puoi messaggiare solo i tuoi amici' });
+      return;
+    }
+
+    const validImages = validateImages(images);
     const message = await prisma.pathMatesMessage.create({
       data: {
         senderId: req.user!.userId,
         receiverId,
         content,
-        images: images || [],
+        images: validImages,
       },
       include: {
         sender: { select: { id: true, name: true, avatar: true } },

@@ -24,14 +24,38 @@ const TYPE_ICONS: Record<string, string> = {
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    api.get('/notifications')
-      .then(({ data }) => setNotifications(data))
+    api.get('/notifications?page=1&limit=20')
+      .then(({ data }) => {
+        const items = data.data || data;
+        setNotifications(Array.isArray(items) ? items : []);
+        if (data.totalPages) setTotalPages(data.totalPages);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  const loadMore = async () => {
+    if (loadingMore || page >= totalPages) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      const { data } = await api.get(`/notifications?page=${nextPage}&limit=20`);
+      const items = data.data || data;
+      setNotifications((prev) => [...prev, ...(Array.isArray(items) ? items : [])]);
+      setPage(nextPage);
+      if (data.totalPages) setTotalPages(data.totalPages);
+    } catch (err) {
+      console.error('Failed to load more notifications:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const markAsRead = async (notif: Notification) => {
     if (!notif.isRead) {
@@ -112,6 +136,15 @@ export default function NotificationsPage() {
           {renderSection('Oggi', todayNotifs)}
           {renderSection('Ieri', yesterdayNotifs)}
           {renderSection('Precedenti', olderNotifs)}
+          {page < totalPages && (
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="w-full py-3 text-sm text-primary hover:text-primary/80 font-medium disabled:opacity-50"
+            >
+              {loadingMore ? 'Caricamento...' : 'Carica altro'}
+            </button>
+          )}
         </>
       )}
     </div>

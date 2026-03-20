@@ -31,11 +31,21 @@ export function SavedCoursesProvider({ children }: { children: ReactNode }) {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        const courses: SavedCourse[] = JSON.parse(stored);
+        let courses: SavedCourse[] = [];
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            courses = parsed;
+          }
+        } catch {
+          localStorage.removeItem(STORAGE_KEY);
+        }
         setSavedCourses(courses);
         setSavedIds(new Set(courses.map((c) => c.id)));
       }
-    } catch {}
+    } catch (err) {
+      console.error('Failed to load saved courses from localStorage:', err);
+    }
   }, []);
 
   function toggleSave(course: SavedCourse) {
@@ -48,9 +58,18 @@ export function SavedCoursesProvider({ children }: { children: ReactNode }) {
       next = [...savedCourses, course];
     }
 
+    const previousCourses = savedCourses;
+    const previousIds = savedIds;
+
     setSavedCourses(next);
     setSavedIds(new Set(next.map((c) => c.id)));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch (err) {
+      console.error('Failed to save courses to localStorage:', err);
+      setSavedCourses(previousCourses);
+      setSavedIds(previousIds);
+    }
   }
 
   return (

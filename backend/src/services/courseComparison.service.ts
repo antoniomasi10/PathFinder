@@ -151,13 +151,14 @@ export async function getComparison(courseId: string, userId: string): Promise<C
     include: { profile: true },
   });
 
-  // 3. Find candidate courses (exclude the target)
+  // 3. Find candidate courses (exclude the target, limit to top 100)
   const allCourses = await prisma.course.findMany({
     where: { id: { not: courseId } },
     include: {
       university: true,
       savedBy: { select: { id: true } },
     },
+    take: 100,
   });
 
   // 4. Score and rank candidates

@@ -30,6 +30,7 @@ import AdmissionSimulator from '@/components/AdmissionSimulator';
 import CourseComparison from '@/components/CourseComparison';
 import LivingMap from '@/components/LivingMap';
 import { useBadges } from '@/components/BadgeProvider';
+import { isValidExternalUrl } from '@/lib/urlValidation';
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -61,7 +62,9 @@ export default function CourseDetailPage() {
   }
 
   useEffect(() => {
-    api.get('/profile/me').then((res) => setUserProfile(res.data)).catch(() => {});
+    api.get('/profile/me').then((res) => setUserProfile(res.data)).catch((err) => {
+      console.error('Failed to fetch user profile:', err);
+    });
   }, []);
 
   // Track course view for badges
@@ -74,7 +77,14 @@ export default function CourseDetailPage() {
     const storageKey = `checklist-${params.id}`;
     const stored = localStorage.getItem(storageKey);
     if (stored) {
-      setChecklist(JSON.parse(stored));
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          setChecklist(parsed);
+        }
+      } catch {
+        localStorage.removeItem(storageKey);
+      }
       setChecklistInitialized(true);
       return;
     }
@@ -92,7 +102,14 @@ export default function CourseDetailPage() {
   useEffect(() => {
     const stored = localStorage.getItem(`calendar-added-${params.id}`);
     if (stored) {
-      setCalendarAdded(new Set(JSON.parse(stored)));
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setCalendarAdded(new Set(parsed));
+        }
+      } catch {
+        localStorage.removeItem(`calendar-added-${params.id}`);
+      }
     }
   }, [params.id]);
 
@@ -248,16 +265,18 @@ export default function CourseDetailPage() {
         <p style={{ fontSize: '14px', color: '#8B8FA8' }} className="mb-3">
           {course.university} — {course.city}
         </p>
-        <a
-          href={course.officialUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm"
-          style={{ color: '#4A9EFF' }}
-        >
-          <ExternalLink className="w-3.5 h-3.5" />
-          Sito ufficiale del corso
-        </a>
+        {course.officialUrl && isValidExternalUrl(course.officialUrl) && (
+          <a
+            href={course.officialUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm"
+            style={{ color: '#4A9EFF' }}
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            Sito ufficiale del corso
+          </a>
+        )}
       </div>
 
       {/* Description */}
@@ -421,7 +440,7 @@ export default function CourseDetailPage() {
           </div>
 
           <button
-            onClick={() => { track('requirements_viewed'); window.open(course.requirementsUrl || course.officialUrl, '_blank', 'noopener,noreferrer'); }}
+            onClick={() => { const url = course.requirementsUrl || course.officialUrl; track('requirements_viewed'); if (isValidExternalUrl(url)) window.open(url, '_blank', 'noopener,noreferrer'); }}
             className="w-full py-2.5 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
             style={{ border: '1px solid #2A3F54', color: '#D0D4DC' }}
           >
@@ -513,14 +532,18 @@ export default function CourseDetailPage() {
         <p className="text-center" style={{ fontSize: '12px', color: '#8B8FA8', lineHeight: '1.5' }}>
           Informazioni aggiornate a Marzo 2026 da siti ufficiali delle università e AlmaLaurea.
           Per dettagli sempre aggiornati, visita il{' '}
-          <a
-            href={course.officialUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: '#4A9EFF', textDecoration: 'underline' }}
-          >
-            sito ufficiale del corso
-          </a>.
+          {isValidExternalUrl(course.officialUrl) ? (
+            <a
+              href={course.officialUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#4A9EFF', textDecoration: 'underline' }}
+            >
+              sito ufficiale del corso
+            </a>
+          ) : (
+            <span style={{ color: '#4A9EFF' }}>sito ufficiale del corso</span>
+          )}.
         </p>
       </div>
 
@@ -553,7 +576,7 @@ export default function CourseDetailPage() {
           </button>
         </div>
         <button
-          onClick={() => { track('applications_clicked'); window.open(course.officialUrl, '_blank', 'noopener,noreferrer'); }}
+          onClick={() => { track('applications_clicked'); if (isValidExternalUrl(course.officialUrl)) window.open(course.officialUrl, '_blank', 'noopener,noreferrer'); }}
           className="w-full py-2.5 rounded-xl font-medium transition-colors mt-2 max-w-md mx-auto flex items-center justify-center gap-2"
           style={{ border: '1px solid #2A3F54', color: '#D0D4DC' }}
         >

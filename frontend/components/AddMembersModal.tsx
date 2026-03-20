@@ -45,7 +45,8 @@ export default function AddMembersModal({
     try {
       const { data } = await api.get('/friends');
       setFriends(data);
-    } catch {
+    } catch (err) {
+      console.error('Failed to load friends:', err);
     } finally {
       setLoading(false);
     }
@@ -81,7 +82,8 @@ export default function AddMembersModal({
         await api.post(`/groups/${groupId}/members`, { userId });
       }
       onMembersAdded();
-    } catch {
+    } catch (err) {
+      console.error('Failed to add members:', err);
     } finally {
       setAdding(false);
     }

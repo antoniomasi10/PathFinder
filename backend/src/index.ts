@@ -3,8 +3,10 @@ import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 import express from 'express';
+import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import authRoutes from './routes/auth.routes';
@@ -19,24 +21,48 @@ import groupRoutes from './routes/group.routes';
 import userRoutes from './routes/user.routes';
 import courseRoutes from './routes/course.routes';
 import { setupChatSocket } from './socket/chatHandler';
+import { logger } from './utils/logger';
+
+const FRONTEND_URL = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
+if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
+  throw new Error('FRONTEND_URL must be set in production');
+}
 
 const app = express();
 const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: true,
+    origin: FRONTEND_URL,
     credentials: true,
   },
   maxHttpBufferSize: 5e6, // 5MB per supportare invio immagini via socket
 });
 
+app.use(helmet());
 app.use(cors({
-  origin: true,
+  origin: FRONTEND_URL,
   credentials: true,
 }));
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(limiter);
+
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
+
+// Auth rate limiter (stricter)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Troppi tentativi, riprova più tardi' },
+});
+app.use('/api/auth', authLimiter);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -61,7 +87,7 @@ setupChatSocket(io);
 
 const PORT = process.env.PORT || 4000;
 httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  logger.info(`Server running on port ${PORT}`);
 });
 
 export { io };

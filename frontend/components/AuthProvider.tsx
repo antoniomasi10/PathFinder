@@ -48,6 +48,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = () => {
+    api.post('/auth/logout').catch(() => {});
     localStorage.removeItem('accessToken');
     setUser(null);
     router.replace('/login');
