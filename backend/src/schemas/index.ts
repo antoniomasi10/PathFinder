@@ -40,6 +40,10 @@ export const createGroupSchema = z.object({
   image: z.string().optional(),
 });
 
+export const batchStatusSchema = z.object({
+  userIds: z.array(z.string().uuid()).min(1).max(50),
+});
+
 export const updateProfileSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   bio: z.string().max(500).optional(),

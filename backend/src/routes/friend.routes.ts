@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { validate } from '../middleware/validate';
-import { friendRequestSchema } from '../schemas';
+import { friendRequestSchema, batchStatusSchema } from '../schemas';
 import prisma from '../lib/prisma';
 import { createNotification } from '../services/notification.service';
 
@@ -190,23 +190,15 @@ router.get('/status/:userId', authMiddleware, async (req: Request, res: Response
 });
 
 // Batch check friendship status for multiple users
-router.post('/status/batch', authMiddleware, async (req: Request, res: Response) => {
+router.post('/status/batch', authMiddleware, validate(batchStatusSchema), async (req: Request, res: Response) => {
   try {
     const { userIds } = req.body;
-    const validIds = (Array.isArray(userIds) ? userIds : [])
-      .filter((id: any) => typeof id === 'string')
-      .slice(0, 50);
-
-    if (validIds.length === 0) {
-      res.json({});
-      return;
-    }
 
     const requests = await prisma.friendRequest.findMany({
       where: {
         OR: [
-          { fromUserId: req.user!.userId, toUserId: { in: validIds } },
-          { fromUserId: { in: validIds }, toUserId: req.user!.userId },
+          { fromUserId: req.user!.userId, toUserId: { in: userIds } },
+          { fromUserId: { in: userIds }, toUserId: req.user!.userId },
         ],
       },
     });

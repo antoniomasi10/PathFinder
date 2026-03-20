@@ -65,19 +65,30 @@ router.get('/:userId', authMiddleware, async (req: Request, res: Response) => {
       return;
     }
 
-    const messages = await prisma.pathMatesMessage.findMany({
-      where: {
-        OR: [
-          { senderId: req.user!.userId, receiverId: req.params.userId },
-          { senderId: req.params.userId, receiverId: req.user!.userId },
-        ],
-        groupId: null,
-      },
-      orderBy: { sentAt: 'asc' },
-      include: {
-        sender: { select: { id: true, name: true, avatar: true } },
-      },
-    });
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const skip = (page - 1) * limit;
+
+    const where = {
+      OR: [
+        { senderId: req.user!.userId, receiverId: req.params.userId },
+        { senderId: req.params.userId, receiverId: req.user!.userId },
+      ],
+      groupId: null,
+    };
+
+    const [messages, total] = await Promise.all([
+      prisma.pathMatesMessage.findMany({
+        where,
+        orderBy: { sentAt: 'asc' },
+        take: limit,
+        skip,
+        include: {
+          sender: { select: { id: true, name: true, avatar: true } },
+        },
+      }),
+      prisma.pathMatesMessage.count({ where }),
+    ]);
 
     // Mark as read
     await prisma.pathMatesMessage.updateMany({
@@ -89,7 +100,7 @@ router.get('/:userId', authMiddleware, async (req: Request, res: Response) => {
       data: { readAt: new Date() },
     });
 
-    res.json(messages);
+    res.json({ data: messages, total, page, totalPages: Math.ceil(total / limit) });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

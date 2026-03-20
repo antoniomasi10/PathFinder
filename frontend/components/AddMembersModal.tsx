@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import api from '@/lib/api';
+import { isValidImageUrl } from '@/lib/urlValidation';
 
 interface Friend {
   id: string;
@@ -141,7 +142,7 @@ export default function AddMembersModal({
                   className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-[#1a1b2e] transition-colors"
                 >
                   <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-sm font-medium text-white shrink-0">
-                    {friend.avatar ? (
+                    {friend.avatar && isValidImageUrl(friend.avatar) ? (
                       <img src={friend.avatar} alt={friend.name} className="w-10 h-10 rounded-full object-cover" />
                     ) : (
                       friend.name[0]
@@ -179,7 +180,7 @@ export default function AddMembersModal({
                 className="w-full flex items-center gap-3 p-3 rounded-xl opacity-50"
               >
                 <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center text-sm font-medium text-gray-400 shrink-0">
-                  {friend.avatar ? (
+                  {friend.avatar && isValidImageUrl(friend.avatar) ? (
                     <img src={friend.avatar} alt={friend.name} className="w-10 h-10 rounded-full object-cover" />
                   ) : (
                     friend.name[0]

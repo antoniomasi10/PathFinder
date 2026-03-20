@@ -10,6 +10,7 @@ import ChatHeader from '@/components/ChatHeader';
 import ActionMenu from '@/components/ActionMenu';
 import NewChatModal from '@/components/NewChatModal';
 import ImageLightbox from '@/components/ImageLightbox';
+import { isValidImageUrl } from '@/lib/urlValidation';
 
 interface Conversation {
   user: { id: string; name: string; avatar?: string };
@@ -678,7 +679,7 @@ export default function NetworkingPage() {
                     className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center"
                     style={{ boxShadow: '0 0 20px rgba(99, 102, 241, 0.3)' }}
                   >
-                    {conv.avatar ? (
+                    {conv.avatar && isValidImageUrl(conv.avatar) ? (
                       <img src={conv.avatar} alt={conv.name} className="w-14 h-14 rounded-full object-cover" />
                     ) : (
                       <span className="text-white text-lg font-medium">{conv.name[0]}</span>
@@ -1226,7 +1227,7 @@ export default function NetworkingPage() {
                 comments.map((c) => (
                   <div key={c.id} className="flex gap-3">
                     <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                      {c.author.avatar ? (
+                      {c.author.avatar && isValidImageUrl(c.author.avatar) ? (
                         <img src={c.author.avatar} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-xs font-bold text-primary">{c.author.name.charAt(0)}</span>

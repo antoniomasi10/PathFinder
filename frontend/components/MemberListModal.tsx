@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import api from '@/lib/api';
+import { isValidImageUrl } from '@/lib/urlValidation';
 import ConfirmDialog from './ConfirmDialog';
 
 interface Member {
@@ -83,7 +84,7 @@ export default function MemberListModal({
               className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0"
               style={{ boxShadow: '0 0 12px rgba(99, 102, 241, 0.2)' }}
             >
-              {member.user.avatar ? (
+              {member.user.avatar && isValidImageUrl(member.user.avatar) ? (
                 <img src={member.user.avatar} alt={member.user.name} className="w-12 h-12 rounded-full object-cover" />
               ) : (
                 <span className="text-white font-medium">{member.user.name[0]}</span>

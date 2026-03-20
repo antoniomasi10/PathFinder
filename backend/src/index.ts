@@ -59,7 +59,7 @@ app.use(cookieParser());
 // Auth rate limiter (stricter)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 5,
   message: { error: 'Troppi tentativi, riprova più tardi' },
 });
 app.use('/api/auth', authLimiter);

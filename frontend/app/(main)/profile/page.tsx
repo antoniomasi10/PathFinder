@@ -8,6 +8,7 @@ import { useSavedOpportunities } from '@/lib/savedOpportunities';
 import { useSavedCourses } from '@/lib/savedCourses';
 import { getSavedSimulations, SavedSimulation } from '@/components/AdmissionSimulator';
 import { BADGES, getAllBadgeStates, getUnlockedCount, RARITY_COLORS, RARITY_LABELS, type BadgeDefinition, type BadgeProgress } from '@/lib/badges';
+import { isValidImageUrl } from '@/lib/urlValidation';
 
 interface FullProfile {
   id: string;
@@ -306,7 +307,7 @@ export default function ProfilePage() {
         {/* Profile Header */}
         <div className="flex flex-col items-center text-center space-y-3">
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center text-2xl font-bold text-white shadow-lg shadow-[#4F46E5]/20">
-            {profile.avatar ? (
+            {profile.avatar && isValidImageUrl(profile.avatar) ? (
               <img src={profile.avatar} alt={profile.name} className="w-full h-full rounded-full object-cover" />
             ) : (
               initials
@@ -666,7 +667,7 @@ export default function ProfilePage() {
                         className="bg-[#1E293B] rounded-2xl p-4 flex items-center gap-3"
                       >
                         <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
-                          {friend.avatar ? (
+                          {friend.avatar && isValidImageUrl(friend.avatar) ? (
                             <img src={friend.avatar} alt={friend.name} className="w-full h-full rounded-full object-cover" />
                           ) : (
                             friendInitials
@@ -725,7 +726,7 @@ export default function ProfilePage() {
                           className="bg-[#1E293B] rounded-2xl p-4 flex items-center gap-3"
                         >
                           <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#6366F1] to-[#A78BFA] flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
-                            {suggested.avatar ? (
+                            {suggested.avatar && isValidImageUrl(suggested.avatar) ? (
                               <img src={suggested.avatar} alt={suggested.name} className="w-full h-full rounded-full object-cover" />
                             ) : (
                               suggestedInitials
