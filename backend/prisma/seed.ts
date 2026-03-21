@@ -427,7 +427,7 @@ async function main() {
   console.log(`- ${universities.length} universities`);
   console.log(`- ${coursesData.length} courses`);
   console.log(`- ${createdOpps.length} opportunities`);
-  console.log(`- 5 demo users (password: password123)`);
+  console.log(`- 5 demo users (password: Password123)`);
 }
 
 main()
