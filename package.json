@@ -9,7 +9,9 @@
     "db:up": "docker-compose up -d",
     "db:migrate": "npm run migrate --workspace=backend",
     "db:seed": "npm run seed --workspace=backend",
-    "install:all": "npm install"
+    "install:all": "npm install",
+    "test": "npm test --workspace=backend",
+    "test:watch": "npm run test:watch --workspace=backend"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

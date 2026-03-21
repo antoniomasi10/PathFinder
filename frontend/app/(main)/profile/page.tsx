@@ -9,6 +9,7 @@ import { useSavedCourses } from '@/lib/savedCourses';
 import { getSavedSimulations, SavedSimulation } from '@/components/AdmissionSimulator';
 import { BADGES, getAllBadgeStates, getUnlockedCount, RARITY_COLORS, RARITY_LABELS, type BadgeDefinition, type BadgeProgress } from '@/lib/badges';
 import { isValidImageUrl } from '@/lib/urlValidation';
+import { isPushSupported, subscribeToPush, unsubscribeFromPush, getPushPermissionState } from '@/lib/pushManager';
 
 interface FullProfile {
   id: string;
@@ -90,6 +91,18 @@ export default function ProfilePage() {
   const [showHelpSheet, setShowHelpSheet] = useState(false);
   const [showInfoSheet, setShowInfoSheet] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [showNotificationSheet, setShowNotificationSheet] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState({
+    pushEnabled: true,
+    networking: true,
+    opportunities: true,
+    universities: true,
+    social: true,
+    postLikes: false,
+    chat: true,
+    achievements: true,
+    system: true,
+  });
   // Privacy sheet state
   const [privacyProfile, setPrivacyProfile] = useState<'Tutti' | 'Pathmates' | 'Nessuno'>('Tutti');
   const [privacySkills, setPrivacySkills] = useState<'Tutti' | 'Pathmates' | 'Nessuno'>('Tutti');
@@ -543,7 +556,18 @@ export default function ProfilePage() {
               <div className="bg-[#1E293B] rounded-2xl p-4">
                 <h4 className="text-sm font-semibold text-white mb-3">Preferenze</h4>
                 <div>
-                  <div className="flex items-center justify-between py-2">
+                  <button
+                    className="flex items-center justify-between py-2 w-full"
+                    onClick={() => {
+                      api.get('/notifications/preferences')
+                        .then(({ data }) => {
+                          const { id, userId, ...prefs } = data;
+                          setNotifPrefs(prefs);
+                        })
+                        .catch(() => {});
+                      setShowNotificationSheet(true);
+                    }}
+                  >
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center">
                         <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -552,8 +576,10 @@ export default function ProfilePage() {
                       </div>
                       <span className="text-sm text-white">Notifiche</span>
                     </div>
-                    <ToggleSwitch defaultOn />
-                  </div>
+                    <svg className="w-5 h-5 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
                   <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
                   <div className="flex items-center justify-between py-2">
                     <div className="flex items-center gap-3">
@@ -1375,6 +1401,101 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* ── Notification Settings Sheet ──────────────────────────── */}
+      <div
+        className={`fixed inset-0 z-[60] bg-black/60 transition-opacity duration-300 ${
+          showNotificationSheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setShowNotificationSheet(false)}
+      />
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-[60] max-w-lg mx-auto bg-[#161B22] rounded-t-3xl transition-transform duration-300 ease-out ${
+          showNotificationSheet ? 'translate-y-0' : 'translate-y-full'
+        }`}
+      >
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-[#334155]" />
+        </div>
+        <div className="flex items-center justify-between px-5 pt-3 pb-4 border-b border-[#1E293B]">
+          <h2 className="text-white font-bold text-lg">Notifiche</h2>
+          <button onClick={() => setShowNotificationSheet(false)} className="p-1 rounded-full hover:bg-[#334155] transition-colors">
+            <svg className="w-5 h-5 text-[#94A3B8]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="px-5 pb-8 pt-4 space-y-4 max-h-[75vh] overflow-y-auto no-scrollbar">
+          {/* Master push toggle */}
+          <div className="bg-[#1E293B] rounded-2xl p-4">
+            <h4 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3">Notifiche push</h4>
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm text-white block">Notifiche push del browser</span>
+                <span className="text-xs text-[#64748B]">
+                  {getPushPermissionState() === 'denied'
+                    ? 'Bloccate — abilita nelle impostazioni del browser'
+                    : 'Ricevi notifiche anche quando l\'app è chiusa'}
+                </span>
+              </div>
+              <ToggleSwitch
+                on={notifPrefs.pushEnabled}
+                onChange={async (v) => {
+                  if (v) {
+                    if (!isPushSupported()) return;
+                    const perm = getPushPermissionState();
+                    if (perm === 'denied') return;
+                    if (perm === 'default') {
+                      const result = await Notification.requestPermission();
+                      if (result !== 'granted') return;
+                    }
+                    await subscribeToPush();
+                  } else {
+                    await unsubscribeFromPush();
+                  }
+                  setNotifPrefs(p => ({ ...p, pushEnabled: v }));
+                  api.put('/notifications/preferences', { pushEnabled: v }).catch(() => {});
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Category toggles */}
+          <div className="bg-[#1E293B] rounded-2xl p-4">
+            <h4 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3">Categorie</h4>
+            <div>
+              {([
+                { key: 'networking' as const, label: 'Networking', desc: 'Richieste di amicizia e connessioni' },
+                { key: 'opportunities' as const, label: 'Opportunità', desc: 'Nuove opportunità e scadenze' },
+                { key: 'universities' as const, label: 'Università', desc: 'Corsi e scadenze accademiche' },
+                { key: 'social' as const, label: 'Social', desc: 'Commenti e risposte ai tuoi post' },
+                { key: 'postLikes' as const, label: 'Like ai post', desc: 'Quando qualcuno mette like' },
+                { key: 'chat' as const, label: 'Chat', desc: 'Nuovi messaggi' },
+                { key: 'achievements' as const, label: 'Traguardi', desc: 'Badge e obiettivi sbloccati' },
+                { key: 'system' as const, label: 'Sistema', desc: 'Aggiornamenti e comunicazioni' },
+              ] as const).map((item, i, arr) => (
+                <div key={item.key}>
+                  <div className="flex items-center justify-between py-2.5">
+                    <div>
+                      <span className="text-sm text-white block">{item.label}</span>
+                      <span className="text-xs text-[#64748B]">{item.desc}</span>
+                    </div>
+                    <ToggleSwitch
+                      on={notifPrefs[item.key]}
+                      onChange={(v) => {
+                        setNotifPrefs(p => ({ ...p, [item.key]: v }));
+                        api.put('/notifications/preferences', { [item.key]: v }).catch(() => {});
+                      }}
+                      disabled={!notifPrefs.pushEnabled}
+                    />
+                  </div>
+                  {i < arr.length - 1 && <div className="h-px bg-[#334155]/50" />}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* ── Info Sheet ─────────────────────────────────────────────── */}
       <div
         className={`fixed inset-0 z-[60] bg-black/60 transition-opacity duration-300 ${
@@ -1488,15 +1609,24 @@ export default function ProfilePage() {
   );
 }
 
-function ToggleSwitch({ defaultOn = false }: { defaultOn?: boolean }) {
-  const [on, setOn] = useState(defaultOn);
+function ToggleSwitch({ defaultOn = false, on: controlledOn, onChange, disabled }: { defaultOn?: boolean; on?: boolean; onChange?: (v: boolean) => void; disabled?: boolean }) {
+  const [internalOn, setInternalOn] = useState(defaultOn);
+  const isControlled = controlledOn !== undefined;
+  const on = isControlled ? controlledOn : internalOn;
 
   return (
     <button
-      onClick={() => setOn(!on)}
-      className={`relative w-11 h-6 rounded-full transition-colors ${
-        on ? 'bg-[#4F46E5]' : 'bg-[#334155]'
-      }`}
+      onClick={() => {
+        if (disabled) return;
+        if (isControlled && onChange) {
+          onChange(!on);
+        } else {
+          setInternalOn(!on);
+        }
+      }}
+      className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
+        disabled ? 'opacity-40 cursor-not-allowed' : ''
+      } ${on ? 'bg-[#4F46E5]' : 'bg-[#334155]'}`}
     >
       <span
         className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${

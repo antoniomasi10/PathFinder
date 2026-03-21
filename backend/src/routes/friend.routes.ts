@@ -72,11 +72,23 @@ router.post('/request', authMiddleware, validate(friendRequestSchema), async (re
       return;
     }
 
+    const fromUser = await prisma.user.findUnique({
+      where: { id: req.user!.userId },
+      select: { name: true },
+    });
+
     const request = await prisma.friendRequest.create({
       data: { fromUserId: req.user!.userId, toUserId, status: 'PENDING' },
     });
 
-    await createNotification(toUserId, 'GENERAL', 'Hai ricevuto una richiesta di amicizia', `/profile/${req.user!.userId}`);
+    await createNotification(
+      toUserId,
+      'FRIEND_REQUEST',
+      `${fromUser?.name || 'Qualcuno'} ti ha inviato una richiesta di amicizia`,
+      `/profile/${req.user!.userId}`,
+      '\u{1F465}',
+      { fromUserId: req.user!.userId }
+    );
 
     res.status(201).json(request);
   } catch (err: any) {
@@ -99,7 +111,18 @@ router.patch('/request/:id', authMiddleware, async (req: Request, res: Response)
     });
 
     if (status === 'ACCEPTED') {
-      await createNotification(request.fromUserId, 'FRIEND_ACCEPTED', 'La tua richiesta di connessione è stata accettata!', `/profile/${req.user!.userId}`);
+      const acceptor = await prisma.user.findUnique({
+        where: { id: req.user!.userId },
+        select: { name: true },
+      });
+      await createNotification(
+        request.fromUserId,
+        'FRIEND_ACCEPTED',
+        `${acceptor?.name || 'Qualcuno'} ha accettato la tua richiesta di connessione`,
+        `/profile/${req.user!.userId}`,
+        '\u{1F91D}',
+        { fromUserId: req.user!.userId }
+      );
     }
 
     res.json(request);

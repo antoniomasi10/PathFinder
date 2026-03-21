@@ -22,6 +22,9 @@ import userRoutes from './routes/user.routes';
 import courseRoutes from './routes/course.routes';
 import { setupChatSocket } from './socket/chatHandler';
 import { logger } from './utils/logger';
+import { setupNotificationSocket } from './socket/notificationHandler';
+import { setIO } from './socketManager';
+import { startDeadlineChecker } from './services/deadlineChecker';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
 if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
@@ -86,11 +89,14 @@ app.get('/api/health', (_req, res) => {
 });
 
 // Socket.IO
+setIO(io);
 setupChatSocket(io);
+setupNotificationSocket(io);
 
 const PORT = process.env.PORT || 4000;
 httpServer.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
+  startDeadlineChecker();
 });
 
 export { io };
