@@ -21,11 +21,13 @@ import groupRoutes from './routes/group.routes';
 import userRoutes from './routes/user.routes';
 import courseRoutes from './routes/course.routes';
 import badgeRoutes from './routes/badge.routes';
+import importRoutes from './routes/import.routes';
 import { setupChatSocket } from './socket/chatHandler';
 import { logger } from './utils/logger';
 import { setupNotificationSocket } from './socket/notificationHandler';
 import { setIO } from './socketManager';
 import { startDeadlineChecker } from './services/deadlineChecker';
+import { startImportScheduler } from './services/import/scheduler';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
 if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
@@ -84,6 +86,7 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/badges', badgeRoutes);
+app.use('/api/import', importRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -99,6 +102,7 @@ const PORT = process.env.PORT || 4000;
 httpServer.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
   startDeadlineChecker();
+  startImportScheduler();
 });
 
 export { io };
