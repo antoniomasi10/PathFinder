@@ -36,10 +36,18 @@ export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
   const course = MOCK_COURSES.find((c) => c.id === Number(params.id));
+  const [backendCourse, setBackendCourse] = useState<any>(null);
   const { savedIds, toggleSave } = useSavedCourses();
   const { track } = useBadges();
 
-  const bookmarked = course ? savedIds.has(course.id) : false;
+  // Also fetch from backend API for real data sync
+  useEffect(() => {
+    if (params.id) {
+      api.get(`/courses/${params.id}`).then((res) => setBackendCourse(res.data)).catch(() => {});
+    }
+  }, [params.id]);
+
+  const bookmarked = course ? savedIds.has(String(course.id)) : false;
   const [checklist, setChecklist] = useState<Record<number, boolean>>({});
   const [calendarAdded, setCalendarAdded] = useState<Set<number>>(new Set());
   const [showSimulator, setShowSimulator] = useState(false);
@@ -246,7 +254,7 @@ export default function CourseDetailPage() {
             <ArrowLeft className="w-5 h-5 text-white" />
           </button>
           <button
-            onClick={() => toggleSave({ id: course.id, title: course.title, university: course.university, city: course.city })}
+            onClick={() => toggleSave({ id: String(course.id), name: course.title, university: { name: course.university, city: course.city } })}
             className="w-10 h-10 rounded-full flex items-center justify-center"
             style={{ backgroundColor: 'rgba(28,47,67,0.8)', backdropFilter: 'blur(8px)' }}
           >
@@ -557,7 +565,7 @@ export default function CourseDetailPage() {
       >
         <div className="flex gap-3 max-w-md mx-auto">
           <button
-            onClick={() => { if (!bookmarked) track('courses_saved'); toggleSave({ id: course.id, title: course.title, university: course.university, city: course.city }); }}
+            onClick={() => { if (!bookmarked) track('courses_saved'); toggleSave({ id: String(course.id), name: course.title, university: { name: course.university, city: course.city } }); }}
             className="flex-1 py-3 rounded-xl font-semibold shadow-md transition-colors"
             style={{
               backgroundColor: bookmarked ? '#2A3F54' : '#4A9EFF',

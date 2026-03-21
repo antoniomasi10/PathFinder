@@ -675,72 +675,6 @@ function FilterSheet({
   );
 }
 
-const MOCK_OPPORTUNITIES: Opportunity[] = [
-  {
-    id: 'mock-1',
-    title: 'Software Engineer Intern',
-    company: 'TechNova Solutions',
-    badge: 'FULL-TIME • REMOTE',
-    description: 'Siamo alla ricerca di uno studente appassionato di sviluppo web per unirsi al nostro team di ingegneria. Lavorerai su progetti reali con impatto diretto sul prodotto, collaborando con ingegneri senior su feature front-end e back-end. Richiediamo conoscenza di JavaScript/TypeScript e dei fondamentali del web. È previsto un compenso mensile e la possibilità di assunzione a tempo indeterminato al termine del percorso.',
-    matchScore: 85,
-    location: 'Milano, IT • Remoto',
-    about: 'TechNova Solutions è una startup fintech in rapida crescita con sede a Milano. Lavoriamo per rivoluzionare il settore dei pagamenti digitali con soluzioni basate su intelligenza artificiale e blockchain. Il nostro team è composto da oltre 50 ingegneri provenienti da tutta Europa, uniti dalla passione per la tecnologia e dall\'impatto sociale del nostro lavoro.',
-    url: 'https://www.technova.io/careers/software-engineer-intern',
-    type: 'INTERNSHIP',
-    remote: true,
-    skills: ['JavaScript', 'TypeScript', 'React'],
-    matchReason: 'In linea con i tuoi interessi tech',
-    deadline: '',
-  },
-  {
-    id: 'mock-2',
-    title: 'Product Design Workshop',
-    company: 'Creative Hub Milan',
-    badge: 'WORKSHOP • HYBRID',
-    description: 'Unisciti a noi per una settimana intensiva di Design Thinking e prototyping applicato al mondo reale. Il programma include sessioni mattutine di teoria, pomeriggi di hands-on workshop con mentori del settore e una presentazione finale davanti a un panel di aziende partner. Partecipazione gratuita con borsa di studio disponibile.',
-    matchScore: 62,
-    location: 'Milano, IT • Ibrido',
-    about: 'Creative Hub Milan è un centro di innovazione dedicato alla cultura del design e alla creatività applicata. Ogni anno formiamo centinaia di giovani designer attraverso workshop intensivi e programmi di mentorship con professionisti del settore. Collaboriamo con oltre 80 aziende italiane e internazionali.',
-    url: 'https://www.creativehubmilan.it/workshop/product-design',
-    type: 'EXTRACURRICULAR',
-    remote: false,
-    skills: ['Design Thinking', 'UI/UX', 'Prototyping'],
-    matchReason: 'Adatto al tuo profilo creativo',
-    deadline: '',
-  },
-  {
-    id: 'mock-3',
-    title: 'Data Analyst Junior',
-    company: 'Fintech Alpha',
-    badge: 'JUNIOR • IN-PERSON',
-    description: 'Analisi di dataset complessi per l\'ottimizzazione dei processi di credito e gestione del rischio. Il ruolo prevede elaborazione dati in Python, creazione di dashboard in Tableau e reporting settimanale ai manager. Sono richieste esperienza pregressa in analisi dati e conoscenza di SQL. Contratto a tempo determinato con possibilità di rinnovo.',
-    matchScore: 35,
-    location: 'Roma, IT • In presenza',
-    about: 'Fintech Alpha è una società fintech specializzata nella gestione del rischio di credito. Utilizziamo modelli statistici avanzati e machine learning per ottimizzare i processi di valutazione del credito, operando con oltre 200 partner bancari in tutta Italia.',
-    url: '',
-    type: 'INTERNSHIP',
-    remote: false,
-    skills: ['Python', 'SQL', 'Tableau'],
-    matchReason: '',
-    deadline: '',
-  },
-  {
-    id: 'mock-4',
-    title: 'Master in AI Ethics',
-    company: 'Politecnico di Milano',
-    badge: 'EDUCATION • PART-TIME',
-    description: 'Un percorso formativo avanzato che esplora le implicazioni etiche dell\'intelligenza artificiale in contesti aziendali, legali e sociali. Il corso è erogato in modalità ibrida con 6 moduli da 4 settimane ciascuno, inclusi casi studio con aziende leader del settore tech. Titolo riconosciuto a livello europeo.',
-    matchScore: 92,
-    location: 'Milano, IT • Part-time',
-    about: 'Il Politecnico di Milano, una delle migliori università tecniche d\'Europa, propone questo programma d\'eccellenza dedicato alle sfide etiche dell\'intelligenza artificiale. Il programma è riconosciuto a livello europeo e offre accesso a una rete di alumni in oltre 30 paesi, con placement rate del 94%.',
-    url: 'https://www.polimi.it/formazione/master-e-corsi/master/master-in-ai-ethics',
-    type: 'FELLOWSHIP',
-    remote: false,
-    skills: ['AI', 'Ethics', 'Machine Learning'],
-    matchReason: 'Opportunità consigliata per te',
-    deadline: '',
-  },
-];
 
 /* ── Page ────────────────────────────────────────────────────────── */
 
@@ -773,10 +707,10 @@ export default function HomePage() {
           matchReason: opp.matchReason || '',
           deadline: opp.deadline || '',
         }));
-        setOpportunities(mapped.length > 0 ? mapped : MOCK_OPPORTUNITIES);
+        setOpportunities(mapped);
       })
       .catch(() => {
-        setOpportunities(MOCK_OPPORTUNITIES);
+        setOpportunities([]);
       })
       .finally(() => setLoadingOpps(false));
   }, []);

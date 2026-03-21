@@ -20,6 +20,7 @@ import messageRoutes from './routes/message.routes';
 import groupRoutes from './routes/group.routes';
 import userRoutes from './routes/user.routes';
 import courseRoutes from './routes/course.routes';
+import badgeRoutes from './routes/badge.routes';
 import { setupChatSocket } from './socket/chatHandler';
 import { logger } from './utils/logger';
 import { setupNotificationSocket } from './socket/notificationHandler';
@@ -82,6 +83,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
+app.use('/api/badges', badgeRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

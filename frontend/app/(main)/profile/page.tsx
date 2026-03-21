@@ -458,8 +458,8 @@ export default function ProfilePage() {
                       <span className="text-white text-lg">🎓</span>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-sm font-semibold text-white line-clamp-2 mb-0.5">{c.title}</h4>
-                      <p className="text-xs text-[#64748B] truncate">{c.university} — {c.city}</p>
+                      <h4 className="text-sm font-semibold text-white line-clamp-2 mb-0.5">{c.name}</h4>
+                      <p className="text-xs text-[#64748B] truncate">{c.university?.name} — {c.university?.city}</p>
                     </div>
                   </div>
                 ))}
@@ -1726,7 +1726,17 @@ function BadgesSection() {
   const [selectedBadge, setSelectedBadge] = useState<{ badge: BadgeDefinition; progress: BadgeProgress; unlocked: boolean } | null>(null);
 
   useEffect(() => {
+    // Load from localStorage immediately for fast render
     setBadges(getAllBadgeStates());
+    // Then sync from backend
+    api.get('/badges').then((res) => {
+      const serverBadges = res.data.map((b: any) => ({
+        badge: { id: b.id, name: b.name, icon: b.icon, description: b.description, rarity: b.rarity, category: b.category, target: b.target, trackingKey: b.trackingKey },
+        progress: { current: b.progress, unlockedAt: b.unlockedAt },
+        unlocked: b.unlocked,
+      }));
+      if (serverBadges.length > 0) setBadges(serverBadges);
+    }).catch(() => {});
   }, []);
 
   const unlockedCount = badges.filter((b) => b.unlocked).length;

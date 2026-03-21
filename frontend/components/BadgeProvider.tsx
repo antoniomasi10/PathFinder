@@ -1,8 +1,9 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { BadgeDefinition, trackAction, setTrackingValue } from '@/lib/badges';
+import { BadgeDefinition, trackAction as localTrackAction, setTrackingValue as localSetTrackingValue } from '@/lib/badges';
 import BadgeUnlockModal from './BadgeToast';
+import api from '@/lib/api';
 
 interface BadgeContextType {
   track: (trackingKey: string, increment?: number) => void;
@@ -28,13 +29,20 @@ export default function BadgeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const track = useCallback((trackingKey: string, increment = 1) => {
-    const unlocked = trackAction(trackingKey, increment);
+    // Local tracking (immediate UI feedback)
+    const unlocked = localTrackAction(trackingKey, increment);
     enqueue(unlocked);
+
+    // Sync to backend (fire and forget)
+    api.post('/badges/track', { key: trackingKey, increment }).catch(() => {});
   }, [enqueue]);
 
   const setAbsolute = useCallback((trackingKey: string, value: number) => {
-    const unlocked = setTrackingValue(trackingKey, value);
+    const unlocked = localSetTrackingValue(trackingKey, value);
     enqueue(unlocked);
+
+    // Sync to backend
+    api.post('/badges/track', { key: trackingKey, increment: 0, value }).catch(() => {});
   }, [enqueue]);
 
   const dismissCurrent = useCallback(() => {

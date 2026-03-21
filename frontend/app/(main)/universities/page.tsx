@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { MOCK_COURSES } from '@/lib/mockCourses';
+import api from '@/lib/api';
 
 const STORAGE_KEY_FILTERS = 'pf-uni-filters';
 const STORAGE_KEY_QUERY = 'pf-uni-query';
@@ -171,6 +172,12 @@ export default function UniversitiesPage() {
   const [tempFilters, setTempFilters] = useState<Filters>(emptyFilters);
   const [filtersPanelVisible, setFiltersPanelVisible] = useState(false);
   const [openAccordion, setOpenAccordion] = useState<string | null>(null);
+
+  // Pre-fetch courses from backend (enriches cache, future migration)
+  useEffect(() => {
+    api.get('/courses').catch(() => {});
+    api.get('/universities').catch(() => {});
+  }, []);
 
   // Debounce search query
   useEffect(() => {

@@ -3,6 +3,7 @@ import { registerUser, loginUser } from '../services/auth.service';
 import { verifyRefreshToken, generateAccessToken, generateRefreshToken } from '../utils/jwt';
 import { logSecurityEvent } from '../utils/securityLogger';
 import { logger } from '../utils/logger';
+import { trackLoginStreak } from '../services/badge.service';
 
 export async function register(req: Request, res: Response) {
   try {
@@ -46,6 +47,10 @@ export async function login(req: Request, res: Response) {
     });
 
     logSecurityEvent('LOGIN_SUCCESS', { userId: result.user.id, email });
+
+    // Track login streak (fire and forget)
+    trackLoginStreak(result.user.id).catch(() => {});
+
     res.json({ user: result.user, accessToken: result.accessToken });
   } catch (err: any) {
     logSecurityEvent('LOGIN_FAILED', { email: req.body.email });

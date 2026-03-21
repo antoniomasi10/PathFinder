@@ -102,6 +102,8 @@ model User {
   savedCourses           Course[]           @relation("SavedCourses")
   notificationPreference NotificationPreference?
   pushSubscriptions      PushSubscription[]
+  badges                 UserBadge[]
+  tracking               UserTracking[]
 
   @@index([universityId])
 }
@@ -317,4 +319,30 @@ model PushSubscription {
   auth      String
   userAgent String?
   createdAt DateTime @default(now())
+}
+
+model UserBadge {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId    String
+  progress   Int      @default(0)
+  unlockedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+}
+
+model UserTracking {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key       String
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+  @@index([userId])
 }
