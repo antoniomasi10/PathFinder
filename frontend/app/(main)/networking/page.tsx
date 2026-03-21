@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, ChangeEvent } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { getSocket } from '@/lib/socket';
@@ -84,6 +85,7 @@ function savePinnedIds(ids: Set<string>) {
 
 export default function NetworkingPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<'messaggi' | 'esplora'>('messaggi');
   const [unifiedConversations, setUnifiedConversations] = useState<UnifiedConversation[]>([]);
   const [selectedUser, setSelectedUser] = useState<{ id: string; name: string; avatar?: string; university?: string } | null>(null);
@@ -296,22 +298,30 @@ export default function NetworkingPage() {
     }
   }, [selectedUser?.id]);
 
+  // Auto-select chat user from query parameter (e.g. /networking?chat=userId)
+  useEffect(() => {
+    const chatUserId = searchParams.get('chat');
+    if (chatUserId && !selectedUser) {
+      api.get(`/profile/${chatUserId}`)
+        .then(({ data }) => {
+          setSelectedUser({
+            id: data.id,
+            name: data.name,
+            avatar: data.avatar,
+            university: data.university?.name,
+          });
+          setTab('messaggi');
+        })
+        .catch((err) => console.error('Failed to load chat user:', err));
+    }
+  }, [searchParams]);
+
   // Lock page scroll when in chat mode so scrollIntoView only affects the messages container
   useEffect(() => {
     if (selectedUser || selectedGroup) {
-      const scrollY = window.scrollY;
-      document.documentElement.style.overflow = 'hidden';
       document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = '100%';
       return () => {
-        document.documentElement.style.overflow = '';
         document.body.style.overflow = '';
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.width = '';
-        window.scrollTo(0, scrollY);
       };
     }
   }, [selectedUser, selectedGroup]);
@@ -591,7 +601,7 @@ export default function NetworkingPage() {
   return (
     <div className={`bg-chat-gradient ${
       selectedUser || selectedGroup
-        ? 'fixed inset-0 z-40 flex flex-col overflow-hidden pt-14 pb-16 px-6'
+        ? 'fixed inset-x-0 top-0 bottom-[68px] z-[45] flex flex-col overflow-hidden pt-14 px-6'
         : '-mx-4 -mt-4 px-6 pt-6 min-h-screen pb-24'
     }`}>
 

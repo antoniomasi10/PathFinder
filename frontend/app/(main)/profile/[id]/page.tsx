@@ -95,7 +95,7 @@ export default function UserProfilePage() {
       {/* Action buttons */}
       <div className="flex gap-3 mb-6">
         <button
-          onClick={() => router.push(`/networking`)}
+          onClick={() => router.push(`/networking?chat=${id}`)}
           className="btn-primary flex-1 text-sm"
         >
           Invia messaggio

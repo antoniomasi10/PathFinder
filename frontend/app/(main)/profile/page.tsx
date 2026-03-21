@@ -680,7 +680,7 @@ export default function ProfilePage() {
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <button
-                            onClick={() => router.push('/networking')}
+                            onClick={() => router.push(`/networking?chat=${friend.id}`)}
                             className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center hover:bg-[#4F46E5]/30 transition-colors"
                           >
                             <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

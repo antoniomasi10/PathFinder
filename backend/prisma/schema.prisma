@@ -115,6 +115,8 @@ model Opportunity {
   id                   String          @id @default(uuid())
   title                String
   description          String
+  about                String?
+  url                  String?
   type                 OpportunityType
   universityId         String?
   university           University?     @relation(fields: [universityId], references: [id])
