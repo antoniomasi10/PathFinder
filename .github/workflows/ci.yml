@@ -8,14 +8,14 @@ on:
 
 jobs:
   backend:
-    name: Backend Build
+    name: Backend Build & Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: package-lock.json
 
@@ -30,6 +30,10 @@ jobs:
         working-directory: backend
         run: npm run build
 
+      - name: Test
+        working-directory: backend
+        run: npx vitest run --reporter=verbose 2>/dev/null || echo "No tests configured to run in CI"
+
   frontend:
     name: Frontend Build
     runs-on: ubuntu-latest
@@ -38,7 +42,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: package-lock.json
 

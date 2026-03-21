@@ -111,6 +111,10 @@ export async function getProfile(userId: string) {
       university: true,
     },
   });
+  if (user) {
+    const { passwordHash, ...safeUser } = user;
+    return safeUser;
+  }
   return user;
 }
 
