@@ -599,11 +599,10 @@ export default function NetworkingPage() {
   };
 
   return (
-    <div className={`bg-chat-gradient ${
-      selectedUser || selectedGroup
-        ? 'fixed inset-x-0 top-0 bottom-[68px] z-[45] flex flex-col overflow-hidden pt-14 px-6'
-        : '-mx-4 -mt-4 px-6 pt-6 min-h-screen pb-24'
-    }`}>
+    <div className={selectedUser || selectedGroup
+      ? 'fixed inset-0 z-[60] flex flex-col bg-[#0D1117] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]'
+      : 'px-2 pt-2 pb-4'
+    }>
 
       {!selectedUser && !selectedGroup && (
         <>
