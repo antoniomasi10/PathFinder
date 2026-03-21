@@ -58,17 +58,33 @@ router.post('/request', authMiddleware, validate(friendRequestSchema), async (re
       return;
     }
 
+    // Delete old rejected requests so a new one can be sent
+    await prisma.friendRequest.deleteMany({
+      where: {
+        OR: [
+          { fromUserId: req.user!.userId, toUserId },
+          { fromUserId: toUserId, toUserId: req.user!.userId },
+        ],
+        status: 'REJECTED',
+      },
+    });
+
     const existing = await prisma.friendRequest.findFirst({
       where: {
         OR: [
           { fromUserId: req.user!.userId, toUserId },
           { fromUserId: toUserId, toUserId: req.user!.userId },
         ],
+        status: { in: ['PENDING', 'ACCEPTED'] },
       },
     });
 
     if (existing) {
-      res.status(400).json({ error: 'Richiesta già esistente' });
+      res.status(400).json({
+        error: existing.status === 'ACCEPTED'
+          ? 'Siete già connessi'
+          : 'Richiesta già inviata',
+      });
       return;
     }
 
@@ -140,6 +156,7 @@ router.get('/suggestions', authMiddleware, async (req: Request, res: Response) =
           { fromUserId: req.user!.userId },
           { toUserId: req.user!.userId },
         ],
+        status: { in: ['PENDING', 'ACCEPTED'] },
       },
       select: { fromUserId: true, toUserId: true },
     });
