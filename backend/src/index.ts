@@ -45,22 +45,25 @@ app.use(cors({
   credentials: true,
 }));
 
+// General rate limit: 1000 requests per 15 minutes per IP
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 500,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.path.startsWith('/api/auth'), // auth has its own limiter
 });
 app.use(limiter);
 
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
 
-// Auth rate limiter (stricter)
+// Auth rate limiter: login/register only (not refresh/logout)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 15,
   message: { error: 'Troppi tentativi, riprova più tardi' },
+  skip: (req) => req.path === '/refresh' || req.path === '/logout',
 });
 app.use('/api/auth', authLimiter);
 
