@@ -338,7 +338,7 @@ export default function NetworkingPage() {
   const loadMessages = async (userId: string) => {
     try {
       const { data } = await api.get(`/messages/${userId}`);
-      setMessages(data);
+      setMessages(data.data || data);
     } catch (err) {
       console.error('Failed to load messages:', err);
     }
@@ -369,7 +369,7 @@ export default function NetworkingPage() {
   const loadGroupMessages = async (groupId: string) => {
     try {
       const { data } = await api.get(`/messages/group/${groupId}`);
-      setGroupMessages(data);
+      setGroupMessages(data.data || data);
     } catch (err) {
       console.error('Failed to load group messages:', err);
     }
@@ -589,8 +589,10 @@ export default function NetworkingPage() {
   };
 
   return (
-    <div className={`bg-chat-gradient -mx-4 -mt-4 px-6 pt-6 ${
-      selectedUser || selectedGroup ? 'h-[calc(100dvh-116px)] flex flex-col overflow-hidden -mb-20' : 'min-h-screen pb-24'
+    <div className={`bg-chat-gradient ${
+      selectedUser || selectedGroup
+        ? 'fixed inset-0 z-40 flex flex-col overflow-hidden pt-14 pb-16 px-6'
+        : '-mx-4 -mt-4 px-6 pt-6 min-h-screen pb-24'
     }`}>
 
       {!selectedUser && !selectedGroup && (
