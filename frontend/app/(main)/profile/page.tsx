@@ -32,6 +32,7 @@ interface Friend {
   avatar?: string;
   courseOfStudy?: string;
   university?: { name: string };
+  requestSent?: boolean;
 }
 
 const CLUSTER_COLORS: Record<string, string> = {
@@ -230,11 +231,9 @@ export default function ProfilePage() {
     setSendingRequest(userId);
     try {
       await api.post('/friends/request', { toUserId: userId });
-      const added = suggestedUsers.find((u) => u.id === userId);
-      setSuggestedUsers((prev) => prev.filter((u) => u.id !== userId));
-      if (added) {
-        setFriends((prev) => [added, ...prev]);
-      }
+      setSuggestedUsers((prev) => prev.map((u) =>
+        u.id === userId ? { ...u, requestSent: true } : u
+      ));
     } catch (err) {
       console.error('Failed to send friend request:', err);
     } finally {
@@ -681,7 +680,7 @@ export default function ProfilePage() {
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <button
-                            onClick={() => router.push('/messages')}
+                            onClick={() => router.push('/networking')}
                             className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center hover:bg-[#4F46E5]/30 transition-colors"
                           >
                             <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -738,16 +737,20 @@ export default function ProfilePage() {
                               {suggested.courseOfStudy || suggested.university?.name || ''}
                             </p>
                           </div>
-                          <button
-                            onClick={() => sendFriendRequest(suggested.id)}
-                            disabled={sendingRequest === suggested.id}
-                            className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center hover:bg-[#4F46E5]/30 transition-colors disabled:opacity-50 flex-shrink-0"
-                          >
-                            <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M20 8v6m3-3h-6" />
-                            </svg>
-                          </button>
+                          {suggested.requestSent ? (
+                            <span className="text-xs text-[#4F46E5] font-medium px-2 flex-shrink-0">Inviata</span>
+                          ) : (
+                            <button
+                              onClick={() => sendFriendRequest(suggested.id)}
+                              disabled={sendingRequest === suggested.id}
+                              className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center hover:bg-[#4F46E5]/30 transition-colors disabled:opacity-50 flex-shrink-0"
+                            >
+                              <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M20 8v6m3-3h-6" />
+                              </svg>
+                            </button>
+                          )}
                         </div>
                       );
                     })}

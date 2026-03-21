@@ -47,7 +47,7 @@ app.use(cors({
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 500,
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -59,7 +59,7 @@ app.use(cookieParser());
 // Auth rate limiter (stricter)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 15,
   message: { error: 'Troppi tentativi, riprova più tardi' },
 });
 app.use('/api/auth', authLimiter);
