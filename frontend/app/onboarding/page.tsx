@@ -3,43 +3,40 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import OnboardingFlow from '@/components/onboarding';
+import AvatarReveal from '@/components/onboarding/AvatarReveal';
 import type { ProfileData } from '@/components/onboarding';
-import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
 export default function OnboardingPage() {
-  const { user, setUser } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
-  const [error, setError] = useState('');
-  const [saving, setSaving] = useState(false);
+
+  const [revealData, setRevealData] = useState<{
+    profileData: ProfileData;
+    avatarId: string;
+    bgColor: string;
+  } | null>(null);
 
   if (user?.profileCompleted) {
     router.replace('/home');
     return null;
   }
 
-  const handleComplete = async (profileData: ProfileData) => {
-    if (saving) return;
-    setError('');
-    setSaving(true);
-    try {
-      await api.post('/profile/questionnaire', profileData);
-      if (user) setUser({ ...user, profileCompleted: true });
-      router.push('/home');
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Errore durante il salvataggio. Riprova.');
-      setSaving(false);
-    }
+  const handleAvatarSelected = (profileData: ProfileData, avatarId: string, bgColor: string) => {
+    setRevealData({ profileData, avatarId, bgColor });
   };
 
-  return (
-    <>
-      <OnboardingFlow onComplete={handleComplete} />
-      {error && (
-        <div className="fixed bottom-4 left-4 right-4 bg-red-900/90 text-white px-4 py-3 rounded-xl text-sm text-center z-50">
-          {error}
-        </div>
-      )}
-    </>
-  );
+  // Show reveal animation
+  if (revealData) {
+    return (
+      <AvatarReveal
+        avatarId={revealData.avatarId}
+        bgColor={revealData.bgColor}
+        profileData={revealData.profileData}
+      />
+    );
+  }
+
+  // Show questionnaire + avatar selection flow
+  return <OnboardingFlow onAvatarSelected={handleAvatarSelected} />;
 }

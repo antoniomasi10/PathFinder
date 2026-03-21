@@ -75,6 +75,7 @@ model User {
   passwordHash      String
   name              String
   avatar            String?
+  avatarBgColor     String?
   bio               String?
   universityId      String?
   university        University?            @relation(fields: [universityId], references: [id])

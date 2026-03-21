@@ -3,14 +3,18 @@
 import { useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { QUESTIONS, TOTAL_STEPS, buildProfileData } from './onboarding-data';
-import type { OnboardingProps } from './onboarding-data';
+import type { ProfileData } from './onboarding-data';
 import AmbientBackground from './AmbientBackground';
 import ProgressBar from './ProgressBar';
 import QuestionCard from './QuestionCard';
 import OptionButton from './OptionButton';
 import NextButton from './NextButton';
 import BackButton from './BackButton';
-import CompletionScreen from './CompletionScreen';
+import AvatarSelection from './AvatarSelection';
+
+interface OnboardingFlowProps {
+  onAvatarSelected: (profileData: ProfileData, avatarId: string, bgColor: string) => void;
+}
 
 const slideVariants = {
   enter: (direction: number) => ({ x: direction > 0 ? 80 : -80, opacity: 0 }),
@@ -20,7 +24,7 @@ const slideVariants = {
 
 const slideTransition = { duration: 0.5, ease: [0.4, 0, 0.2, 1] as const };
 
-export default function OnboardingFlow({ onComplete }: OnboardingProps) {
+export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [multiAnswers, setMultiAnswers] = useState<Record<number, string[]>>({});
@@ -78,17 +82,17 @@ export default function OnboardingFlow({ onComplete }: OnboardingProps) {
     [questionId],
   );
 
-  const handleComplete = useCallback(() => {
+  const handleAvatarContinue = useCallback((avatarId: string, bgColor: string) => {
     const profileData = buildProfileData(answers, multiAnswers, otherTexts);
-    onComplete(profileData);
-  }, [answers, multiAnswers, otherTexts, onComplete]);
+    onAvatarSelected(profileData, avatarId, bgColor);
+  }, [answers, multiAnswers, otherTexts, onAvatarSelected]);
 
-  // ---------- Completion Screen ----------
+  // ---------- Avatar Selection Screen (after questionnaire) ----------
   if (currentStep === TOTAL_STEPS) {
     return (
       <>
         <AmbientBackground />
-        <CompletionScreen onComplete={handleComplete} />
+        <AvatarSelection onContinue={handleAvatarContinue} />
       </>
     );
   }
