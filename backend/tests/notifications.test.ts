@@ -152,7 +152,8 @@ describe('Notification Creation', () => {
 // ── Notification Retrieval ──────────────────────────────────
 describe('Notification Retrieval', () => {
   it('fetches all notifications for a user', async () => {
-    const notifs = await getNotifications(users.userA.id);
+    const result = await getNotifications(users.userA.id);
+    const notifs = result.data;
     expect(notifs.length).toBeGreaterThanOrEqual(1);
     // Should be ordered by createdAt desc
     for (let i = 1; i < notifs.length; i++) {
@@ -172,8 +173,8 @@ describe('Notification Retrieval', () => {
       '\u{1F4AC}'
     );
 
-    const notifs = await getNotifications(users.userA.id);
-    const messageNotifs = notifs.filter((n) => n.type === 'NEW_MESSAGE');
+    const result = await getNotifications(users.userA.id);
+    const messageNotifs = result.data.filter((n: any) => n.type === 'NEW_MESSAGE');
     expect(messageNotifs.length).toBe(0);
   });
 
@@ -194,8 +195,8 @@ describe('Notification Retrieval', () => {
 // ── Mark As Read ────────────────────────────────────────────
 describe('Mark As Read', () => {
   it('marks a single notification as read', async () => {
-    const notifs = await getNotifications(users.userB.id);
-    const unread = notifs.find((n) => !n.isRead);
+    const result = await getNotifications(users.userB.id);
+    const unread = result.data.find((n: any) => !n.isRead);
     expect(unread).toBeDefined();
 
     const updated = await markAsRead(unread!.id);
@@ -422,13 +423,13 @@ describe('Edge Cases', () => {
   });
 
   it('getNotifications returns max 50 results', async () => {
-    const notifs = await getNotifications(users.userA.id);
-    expect(notifs.length).toBeLessThanOrEqual(50);
+    const result = await getNotifications(users.userA.id);
+    expect(result.data.length).toBeLessThanOrEqual(50);
   });
 
   it('markAsRead on already-read notification does not error', async () => {
-    const notifs = await getNotifications(users.userA.id);
-    const readNotif = notifs.find((n) => n.isRead);
+    const result = await getNotifications(users.userA.id);
+    const readNotif = result.data.find((n: any) => n.isRead);
     if (readNotif) {
       const result = await markAsRead(readNotif.id);
       expect(result.isRead).toBe(true);

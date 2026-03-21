@@ -31,15 +31,23 @@ export async function createPost(authorId: string, content: string, images: stri
 }
 
 export async function likePost(postId: string, userId: string) {
-  return prisma.postLike.create({
-    data: { postId, userId },
-  });
+  try {
+    return await prisma.postLike.create({ data: { postId, userId } });
+  } catch (err: any) {
+    // Unique constraint violation - already liked
+    if (err.code === 'P2002') return null;
+    throw err;
+  }
 }
 
 export async function unlikePost(postId: string, userId: string) {
-  return prisma.postLike.delete({
-    where: { postId_userId: { postId, userId } },
-  });
+  try {
+    return await prisma.postLike.delete({ where: { postId_userId: { postId, userId } } });
+  } catch (err: any) {
+    // Record not found - already unliked
+    if (err.code === 'P2025') return null;
+    throw err;
+  }
 }
 
 export async function getComments(postId: string) {

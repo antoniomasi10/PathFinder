@@ -1,6 +1,9 @@
 import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+if (typeof window !== 'undefined' && !process.env.NEXT_PUBLIC_API_URL && window.location.hostname !== 'localhost') {
+  console.warn('NEXT_PUBLIC_API_URL is not set - using localhost fallback');
+}
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
@@ -19,6 +22,16 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    // Rate limited — wait and retry once
+    if (error.response?.status === 429 && !originalRequest._rateLimitRetry) {
+      originalRequest._rateLimitRetry = true;
+      const retryAfter = parseInt(error.response.headers['retry-after'] || '5', 10);
+      await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000));
+      return api(originalRequest);
+    }
+
+    // Token expired — refresh and retry
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
@@ -31,6 +44,7 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
     }
+
     return Promise.reject(error);
   }
 );

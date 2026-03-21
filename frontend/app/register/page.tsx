@@ -27,7 +27,9 @@ export default function RegisterPage() {
     // Fetch universities for dropdown (public endpoint alternative - fallback to empty)
     api.get('/universities').then(({ data }) => {
       setUniversities(data);
-    }).catch(() => {});
+    }).catch((err) => {
+      console.error('Failed to fetch universities:', err);
+    });
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {

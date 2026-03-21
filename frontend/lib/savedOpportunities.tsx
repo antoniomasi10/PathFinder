@@ -37,7 +37,9 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
         setSavedOpps(opps);
         setSavedIds(new Set(opps.map((o) => o.id)));
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error('Failed to load saved opportunities:', err);
+      });
   }, []);
 
   function toggleSave(
@@ -45,6 +47,10 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
     data?: { title?: string; company?: string; type?: string },
   ) {
     const isSaved = savedIdsRef.current.has(oppId);
+
+    // Save previous state for rollback
+    const previousIds = new Set(savedIdsRef.current);
+    const previousOpps = [...savedOpps];
 
     // Optimistic update
     if (isSaved) {
@@ -69,8 +75,12 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
       }
     }
 
-    // Persist to server (fire and forget)
-    api.post(`/opportunities/${oppId}/save`).catch(() => {});
+    // Persist to server with rollback on error
+    api.post(`/opportunities/${oppId}/save`).catch((err) => {
+      console.error('Failed to save opportunity:', err);
+      setSavedIds(previousIds);
+      setSavedOpps(previousOpps);
+    });
   }
 
   return (

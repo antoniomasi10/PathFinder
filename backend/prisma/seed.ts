@@ -1,6 +1,11 @@
 import { PrismaClient, GpaRange, EnglishLevel, WillingnessToRelocate, OpportunityType, CourseType } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
+if (process.env.NODE_ENV === 'production') {
+  console.error('Seed non può essere eseguito in produzione!');
+  process.exit(1);
+}
+
 const prisma = new PrismaClient();
 
 async function main() {
@@ -195,7 +200,7 @@ async function main() {
   }
 
   // ============ DEMO USERS ============
-  const passwordHash = await bcrypt.hash('password123', 10);
+  const passwordHash = await bcrypt.hash('Password123', 10);
 
   const user1 = await prisma.user.create({
     data: {
@@ -422,7 +427,7 @@ async function main() {
   console.log(`- ${universities.length} universities`);
   console.log(`- ${coursesData.length} courses`);
   console.log(`- ${createdOpps.length} opportunities`);
-  console.log(`- 5 demo users (password: password123)`);
+  console.log(`- 5 demo users (password: Password123)`);
 }
 
 main()

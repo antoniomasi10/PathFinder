@@ -8,6 +8,7 @@ import { useSavedOpportunities } from '@/lib/savedOpportunities';
 import { useSavedCourses } from '@/lib/savedCourses';
 import { getSavedSimulations, SavedSimulation } from '@/components/AdmissionSimulator';
 import { BADGES, getAllBadgeStates, getUnlockedCount, RARITY_COLORS, RARITY_LABELS, type BadgeDefinition, type BadgeProgress } from '@/lib/badges';
+import { isValidImageUrl } from '@/lib/urlValidation';
 import { isPushSupported, subscribeToPush, unsubscribeFromPush, getPushPermissionState } from '@/lib/pushManager';
 
 interface FullProfile {
@@ -32,6 +33,7 @@ interface Friend {
   avatar?: string;
   courseOfStudy?: string;
   university?: { name: string };
+  requestSent?: boolean;
 }
 
 const CLUSTER_COLORS: Record<string, string> = {
@@ -137,7 +139,8 @@ export default function ProfilePage() {
       setEditSkills(profileRes.data.profile?.passions || []);
       setFriends(friendsRes.data);
       setSuggestedUsers(suggestionsRes.data);
-    } catch {
+    } catch (err) {
+      console.error('Failed to load profile data:', err);
     } finally {
       setLoading(false);
     }
@@ -166,7 +169,8 @@ export default function ProfilePage() {
       });
       setShowEditDialog(false);
       loadData();
-    } catch {
+    } catch (err) {
+      console.error('Failed to save profile:', err);
     } finally {
       setSaving(false);
     }
@@ -226,8 +230,11 @@ export default function ProfilePage() {
       await api.delete(`/friends/${friendId}`);
       setFriends((prev) => prev.filter((f) => f.id !== friendId));
       // Refresh suggestions since the removed user might now appear
-      api.get('/friends/suggestions').then((res) => setSuggestedUsers(res.data)).catch(() => {});
-    } catch {
+      api.get('/friends/suggestions').then((res) => setSuggestedUsers(res.data)).catch((err) => {
+        console.error('Failed to refresh friend suggestions:', err);
+      });
+    } catch (err) {
+      console.error('Failed to remove friend:', err);
     } finally {
       setRemovingFriend(null);
     }
@@ -237,12 +244,11 @@ export default function ProfilePage() {
     setSendingRequest(userId);
     try {
       await api.post('/friends/request', { toUserId: userId });
-      const added = suggestedUsers.find((u) => u.id === userId);
-      setSuggestedUsers((prev) => prev.filter((u) => u.id !== userId));
-      if (added) {
-        setFriends((prev) => [added, ...prev]);
-      }
-    } catch {
+      setSuggestedUsers((prev) => prev.map((u) =>
+        u.id === userId ? { ...u, requestSent: true } : u
+      ));
+    } catch (err) {
+      console.error('Failed to send friend request:', err);
     } finally {
       setSendingRequest(null);
     }
@@ -313,7 +319,7 @@ export default function ProfilePage() {
         {/* Profile Header */}
         <div className="flex flex-col items-center text-center space-y-3">
           <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center text-2xl font-bold text-white shadow-lg shadow-[#4F46E5]/20">
-            {profile.avatar ? (
+            {profile.avatar && isValidImageUrl(profile.avatar) ? (
               <img src={profile.avatar} alt={profile.name} className="w-full h-full rounded-full object-cover" />
             ) : (
               initials
@@ -686,7 +692,7 @@ export default function ProfilePage() {
                         className="bg-[#1E293B] rounded-2xl p-4 flex items-center gap-3"
                       >
                         <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
-                          {friend.avatar ? (
+                          {friend.avatar && isValidImageUrl(friend.avatar) ? (
                             <img src={friend.avatar} alt={friend.name} className="w-full h-full rounded-full object-cover" />
                           ) : (
                             friendInitials
@@ -700,7 +706,7 @@ export default function ProfilePage() {
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <button
-                            onClick={() => router.push('/messages')}
+                            onClick={() => router.push(`/networking?chat=${friend.id}`)}
                             className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center hover:bg-[#4F46E5]/30 transition-colors"
                           >
                             <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -745,7 +751,7 @@ export default function ProfilePage() {
                           className="bg-[#1E293B] rounded-2xl p-4 flex items-center gap-3"
                         >
                           <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#6366F1] to-[#A78BFA] flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
-                            {suggested.avatar ? (
+                            {suggested.avatar && isValidImageUrl(suggested.avatar) ? (
                               <img src={suggested.avatar} alt={suggested.name} className="w-full h-full rounded-full object-cover" />
                             ) : (
                               suggestedInitials
@@ -757,16 +763,20 @@ export default function ProfilePage() {
                               {suggested.courseOfStudy || suggested.university?.name || ''}
                             </p>
                           </div>
-                          <button
-                            onClick={() => sendFriendRequest(suggested.id)}
-                            disabled={sendingRequest === suggested.id}
-                            className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center hover:bg-[#4F46E5]/30 transition-colors disabled:opacity-50 flex-shrink-0"
-                          >
-                            <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M20 8v6m3-3h-6" />
-                            </svg>
-                          </button>
+                          {suggested.requestSent ? (
+                            <span className="text-xs text-[#4F46E5] font-medium px-2 flex-shrink-0">Inviata</span>
+                          ) : (
+                            <button
+                              onClick={() => sendFriendRequest(suggested.id)}
+                              disabled={sendingRequest === suggested.id}
+                              className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center hover:bg-[#4F46E5]/30 transition-colors disabled:opacity-50 flex-shrink-0"
+                            >
+                              <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M20 8v6m3-3h-6" />
+                              </svg>
+                            </button>
+                          )}
                         </div>
                       );
                     })}

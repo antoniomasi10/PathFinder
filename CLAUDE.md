@@ -70,4 +70,4 @@ Frontend `.env.local`: `NEXT_PUBLIC_API_URL=http://localhost:4000`
 
 ## Seed Users
 
-All use password `password123`: marco@example.com, giulia@example.com, luca@example.com, sara@example.com, alessandro@example.com
+All use password `Password123`: marco@example.com, giulia@example.com, luca@example.com, sara@example.com, alessandro@example.com

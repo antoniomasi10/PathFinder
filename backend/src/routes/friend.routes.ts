@@ -1,5 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { friendRequestSchema, batchStatusSchema } from '../schemas';
 import prisma from '../lib/prisma';
 import { createNotification } from '../services/notification.service';
 
@@ -48,7 +50,7 @@ router.get('/requests', authMiddleware, async (req: Request, res: Response) => {
 });
 
 // Send friend request
-router.post('/request', authMiddleware, async (req: Request, res: Response) => {
+router.post('/request', authMiddleware, validate(friendRequestSchema), async (req: Request, res: Response) => {
   try {
     const { toUserId } = req.body;
     if (toUserId === req.user!.userId) {
@@ -56,17 +58,33 @@ router.post('/request', authMiddleware, async (req: Request, res: Response) => {
       return;
     }
 
+    // Delete old rejected requests so a new one can be sent
+    await prisma.friendRequest.deleteMany({
+      where: {
+        OR: [
+          { fromUserId: req.user!.userId, toUserId },
+          { fromUserId: toUserId, toUserId: req.user!.userId },
+        ],
+        status: 'REJECTED',
+      },
+    });
+
     const existing = await prisma.friendRequest.findFirst({
       where: {
         OR: [
           { fromUserId: req.user!.userId, toUserId },
           { fromUserId: toUserId, toUserId: req.user!.userId },
         ],
+        status: { in: ['PENDING', 'ACCEPTED'] },
       },
     });
 
     if (existing) {
-      res.status(400).json({ error: 'Richiesta già esistente' });
+      res.status(400).json({
+        error: existing.status === 'ACCEPTED'
+          ? 'Siete già connessi'
+          : 'Richiesta già inviata',
+      });
       return;
     }
 
@@ -76,15 +94,15 @@ router.post('/request', authMiddleware, async (req: Request, res: Response) => {
     });
 
     const request = await prisma.friendRequest.create({
-      data: { fromUserId: req.user!.userId, toUserId, status: 'ACCEPTED' },
+      data: { fromUserId: req.user!.userId, toUserId, status: 'PENDING' },
     });
 
     await createNotification(
       toUserId,
-      'FRIEND_ACCEPTED',
-      `${fromUser?.name || 'Qualcuno'} ti ha aggiunto ai Pathmates!`,
+      'FRIEND_REQUEST',
+      `${fromUser?.name || 'Qualcuno'} ti ha inviato una richiesta di amicizia`,
       `/profile/${req.user!.userId}`,
-      '\u{1F91D}',
+      '\u{1F465}',
       { fromUserId: req.user!.userId }
     );
 
@@ -138,6 +156,7 @@ router.get('/suggestions', authMiddleware, async (req: Request, res: Response) =
           { fromUserId: req.user!.userId },
           { toUserId: req.user!.userId },
         ],
+        status: { in: ['PENDING', 'ACCEPTED'] },
       },
       select: { fromUserId: true, toUserId: true },
     });
@@ -211,23 +230,15 @@ router.get('/status/:userId', authMiddleware, async (req: Request, res: Response
 });
 
 // Batch check friendship status for multiple users
-router.post('/status/batch', authMiddleware, async (req: Request, res: Response) => {
+router.post('/status/batch', authMiddleware, validate(batchStatusSchema), async (req: Request, res: Response) => {
   try {
     const { userIds } = req.body;
-    const validIds = (Array.isArray(userIds) ? userIds : [])
-      .filter((id: any) => typeof id === 'string')
-      .slice(0, 50);
-
-    if (validIds.length === 0) {
-      res.json({});
-      return;
-    }
 
     const requests = await prisma.friendRequest.findMany({
       where: {
         OR: [
-          { fromUserId: req.user!.userId, toUserId: { in: validIds } },
-          { fromUserId: { in: validIds }, toUserId: req.user!.userId },
+          { fromUserId: req.user!.userId, toUserId: { in: userIds } },
+          { fromUserId: { in: userIds }, toUserId: req.user!.userId },
         ],
       },
     });

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { isValidImageUrl } from '@/lib/urlValidation';
 
 interface ImageLightboxProps {
   images: string[];
@@ -65,6 +66,7 @@ export default function ImageLightbox({ images, initialIndex, onClose }: ImageLi
       )}
 
       {/* Image */}
+      {isValidImageUrl(images[current]) ? (
       <img
         src={images[current]}
         alt=""
@@ -79,6 +81,14 @@ export default function ImageLightbox({ images, initialIndex, onClose }: ImageLi
           setTouchStart(null);
         }}
       />
+      ) : (
+        <div
+          className="max-w-[90vw] max-h-[85vh] flex items-center justify-center text-white/50 text-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          Immagine non disponibile
+        </div>
+      )}
 
       {/* Dots indicator */}
       {images.length > 1 && (

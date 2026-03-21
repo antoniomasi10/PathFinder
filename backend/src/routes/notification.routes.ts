@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth';
+import prisma from '../lib/prisma';
 import * as notificationService from '../services/notification.service';
 import * as prefService from '../services/notificationPreference.service';
 import * as webPushService from '../services/webPush.service';
@@ -75,9 +76,11 @@ router.post('/push/test', authMiddleware, async (req: Request, res: Response) =>
 // ── Notifications ──────────────────────────────────────────
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
     const filter = req.query.filter as string | undefined;
-    const notifications = await notificationService.getNotifications(req.user!.userId, filter);
-    res.json(notifications);
+    const result = await notificationService.getNotifications(req.user!.userId, page, limit, filter);
+    res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -112,8 +115,22 @@ router.patch('/read-all', authMiddleware, async (req: Request, res: Response) =>
 
 router.patch('/:id/read', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const notification = await notificationService.markAsRead(req.params.id);
-    res.json(notification);
+    const notification = await prisma.notification.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!notification) {
+      res.status(404).json({ error: 'Notifica non trovata' });
+      return;
+    }
+
+    if (notification.userId !== req.user!.userId) {
+      res.status(403).json({ error: 'Non autorizzato' });
+      return;
+    }
+
+    const updated = await notificationService.markAsRead(req.params.id);
+    res.json(updated);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
   }

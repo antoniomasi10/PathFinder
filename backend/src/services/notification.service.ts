@@ -7,6 +7,15 @@ import { sendPushToUser } from './webPush.service';
 // Types that should NOT appear in notification center (chat messages)
 const CHAT_ONLY_TYPES: NotificationType[] = ['NEW_MESSAGE'];
 
+function isValidLinkTo(linkTo?: string): string | undefined {
+  if (!linkTo) return undefined;
+  // Only allow relative paths starting with /
+  if (!linkTo.startsWith('/')) return undefined;
+  // Block javascript: and data: protocols that could be embedded
+  if (linkTo.includes(':')) return undefined;
+  return linkTo;
+}
+
 export async function createNotification(
   userId: string,
   type: NotificationType,
@@ -20,7 +29,7 @@ export async function createNotification(
   if (!allowed) return null;
 
   const notification = await prisma.notification.create({
-    data: { userId, type, content, linkTo, icon, data: data || undefined },
+    data: { userId, type, content, linkTo: isValidLinkTo(linkTo), icon, data: data || undefined },
   });
 
   // Emit real-time event via Socket.IO (will be picked up by the notification namespace)
@@ -54,7 +63,9 @@ export async function createNotification(
   return notification;
 }
 
-export async function getNotifications(userId: string, filter?: string) {
+export async function getNotifications(userId: string, page: number = 1, limit: number = 20, filter?: string) {
+  limit = Math.min(limit, 50);
+  const skip = (page - 1) * limit;
   const where: any = { userId };
 
   // Exclude chat-only types from notification center
@@ -76,11 +87,16 @@ export async function getNotifications(userId: string, filter?: string) {
     }
   }
 
-  return prisma.notification.findMany({
-    where,
-    orderBy: { createdAt: 'desc' },
-    take: 50,
-  });
+  const [notifications, total] = await Promise.all([
+    prisma.notification.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip,
+    }),
+    prisma.notification.count({ where }),
+  ]);
+  return { data: notifications, total, page, totalPages: Math.ceil(total / limit) };
 }
 
 export async function markAsRead(notificationId: string) {

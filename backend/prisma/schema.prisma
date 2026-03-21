@@ -70,74 +70,82 @@ enum GroupMemberRole {
 }
 
 model User {
-  id             String    @id @default(uuid())
-  email          String    @unique
-  passwordHash   String
-  name           String
-  avatar         String?
-  bio            String?
-  universityId   String?
-  university     University? @relation(fields: [universityId], references: [id])
-  courseOfStudy   String?
-  yearOfStudy    Int?
-  gpa            GpaRange?
-  englishLevel   EnglishLevel?
+  id                String                 @id @default(uuid())
+  email             String                 @unique
+  passwordHash      String
+  name              String
+  avatar            String?
+  bio               String?
+  universityId      String?
+  university        University?            @relation(fields: [universityId], references: [id])
+  courseOfStudy     String?
+  yearOfStudy       Int?
+  gpa               GpaRange?
+  englishLevel      EnglishLevel?
   willingToRelocate WillingnessToRelocate?
-  profileCompleted Boolean @default(false)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  profileCompleted  Boolean                @default(false)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
 
-  profile        UserProfile?
-  sentMessages   PathMatesMessage[] @relation("SentMessages")
-  receivedMessages PathMatesMessage[] @relation("ReceivedMessages")
-  createdGroups  PathMatesGroup[] @relation("GroupCreator")
-  groupMemberships GroupMember[]
-  notifications  Notification[]
-  sentFriendRequests     FriendRequest[] @relation("FriendRequestFrom")
-  receivedFriendRequests FriendRequest[] @relation("FriendRequestTo")
-  posts          Post[]
-  postLikes      PostLike[]
-  postComments   PostComment[]
-  savedOpportunities Opportunity[] @relation("SavedOpportunities")
-  savedCourses       Course[]     @relation("SavedCourses")
+  profile                UserProfile?
+  sentMessages           PathMatesMessage[] @relation("SentMessages")
+  receivedMessages       PathMatesMessage[] @relation("ReceivedMessages")
+  createdGroups          PathMatesGroup[]   @relation("GroupCreator")
+  groupMemberships       GroupMember[]
+  notifications          Notification[]
+  sentFriendRequests     FriendRequest[]    @relation("FriendRequestFrom")
+  receivedFriendRequests FriendRequest[]    @relation("FriendRequestTo")
+  posts                  Post[]
+  postLikes              PostLike[]
+  postComments           PostComment[]
+  savedOpportunities     Opportunity[]      @relation("SavedOpportunities")
+  savedCourses           Course[]           @relation("SavedCourses")
   notificationPreference NotificationPreference?
-  pushSubscriptions  PushSubscription[]
+  pushSubscriptions      PushSubscription[]
+
+  @@index([universityId])
 }
 
 model UserProfile {
-  id                String   @id @default(uuid())
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  primaryInterest   String?
-  naturalActivity   String?
-  freeTimeActivity  String?
+  id                  String    @id @default(uuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  primaryInterest     String?
+  naturalActivity     String?
+  freeTimeActivity    String?
   problemSolvingStyle String?
-  riskTolerance     String?
-  careerVision      String?
-  professionalGoal  String?
-  passions          String[]
-  clusterTag        String?
-  completedAt       DateTime?
+  riskTolerance       String?
+  careerVision        String?
+  professionalGoal    String?
+  passions            String[]
+  clusterTag          String?
+  completedAt         DateTime?
 }
 
 model Opportunity {
-  id                  String          @id @default(uuid())
-  title               String
-  description         String
-  type                OpportunityType
-  universityId        String?
-  university          University?     @relation(fields: [universityId], references: [id])
-  company             String?
-  location            String?
-  isRemote            Boolean         @default(false)
-  isAbroad            Boolean         @default(false)
+  id                   String          @id @default(uuid())
+  title                String
+  description          String
+  about                String?
+  url                  String?
+  type                 OpportunityType
+  universityId         String?
+  university           University?     @relation(fields: [universityId], references: [id])
+  company              String?
+  location             String?
+  isRemote             Boolean         @default(false)
+  isAbroad             Boolean         @default(false)
   requiredEnglishLevel EnglishLevel?
-  minGpa              GpaRange?
-  tags                String[]
-  deadline            DateTime?
-  postedAt            DateTime        @default(now())
-  expiresAt           DateTime?
-  savedBy             User[]          @relation("SavedOpportunities")
+  minGpa               GpaRange?
+  tags                 String[]
+  deadline             DateTime?
+  postedAt             DateTime        @default(now())
+  expiresAt            DateTime?
+  savedBy              User[]          @relation("SavedOpportunities")
+
+  @@index([universityId])
+  @@index([type])
+  @@index([deadline])
 }
 
 model University {
@@ -157,46 +165,51 @@ model University {
 }
 
 model Course {
-  id                        String     @id @default(uuid())
-  universityId              String
-  university                University @relation(fields: [universityId], references: [id], onDelete: Cascade)
-  name                      String
-  type                      CourseType
-  field                     String?
-  employmentRate            Float?
-  avgSalaryAfterGraduation  Int?
-  internshipsAvailable      Int?
-  internationalOpportunities Boolean   @default(false)
-  programDuration           String?
-  languageOfInstruction     String?
-  tags                      String[]   @default([])
-  savedBy                   User[]     @relation("SavedCourses")
+  id                         String     @id @default(uuid())
+  universityId               String
+  university                 University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  name                       String
+  type                       CourseType
+  field                      String?
+  employmentRate             Float?
+  avgSalaryAfterGraduation   Int?
+  internshipsAvailable       Int?
+  internationalOpportunities Boolean    @default(false)
+  programDuration            String?
+  languageOfInstruction      String?
+  tags                       String[]   @default([])
+  savedBy                    User[]     @relation("SavedCourses")
 }
 
 model PathMatesMessage {
-  id         String   @id @default(uuid())
+  id         String          @id @default(uuid())
   senderId   String
-  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  sender     User            @relation("SentMessages", fields: [senderId], references: [id])
   receiverId String?
-  receiver   User?    @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  receiver   User?           @relation("ReceivedMessages", fields: [receiverId], references: [id])
   groupId    String?
   group      PathMatesGroup? @relation(fields: [groupId], references: [id])
   content    String
-  images     String[] @default([])
-  sentAt     DateTime @default(now())
+  images     String[]        @default([])
+  sentAt     DateTime        @default(now())
   readAt     DateTime?
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([groupId])
+  @@index([senderId, receiverId])
 }
 
 model PathMatesGroup {
-  id          String   @id @default(uuid())
+  id          String             @id @default(uuid())
   name        String
   description String?
   image       String?
   createdById String
-  createdBy   User     @relation("GroupCreator", fields: [createdById], references: [id])
+  createdBy   User               @relation("GroupCreator", fields: [createdById], references: [id])
   members     GroupMember[]
   messages    PathMatesMessage[]
-  createdAt   DateTime @default(now())
+  createdAt   DateTime           @default(now())
 }
 
 model GroupMember {
@@ -209,6 +222,7 @@ model GroupMember {
   joinedAt DateTime        @default(now())
 
   @@unique([groupId, userId])
+  @@index([userId])
 }
 
 model Notification {
@@ -222,6 +236,8 @@ model Notification {
   icon      String?
   data      Json?
   createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
 }
 
 model FriendRequest {
@@ -234,6 +250,9 @@ model FriendRequest {
   createdAt  DateTime            @default(now())
 
   @@unique([fromUserId, toUserId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([status])
 }
 
 model Post {
@@ -245,6 +264,9 @@ model Post {
   createdAt DateTime      @default(now())
   likes     PostLike[]
   comments  PostComment[]
+
+  @@index([authorId])
+  @@index([createdAt])
 }
 
 model PostLike {
@@ -256,6 +278,7 @@ model PostLike {
   createdAt DateTime @default(now())
 
   @@unique([postId, userId])
+  @@index([postId])
 }
 
 model PostComment {
@@ -266,6 +289,8 @@ model PostComment {
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   content   String
   createdAt DateTime @default(now())
+
+  @@index([postId])
 }
 
 model NotificationPreference {

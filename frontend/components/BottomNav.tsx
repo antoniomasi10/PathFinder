@@ -73,6 +73,7 @@ export default function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              aria-label={item.label}
               className={`flex-1 flex flex-col items-center py-3 transition-colors relative ${
                 isActive ? 'text-indigo-400' : 'text-gray-500 hover:text-gray-400'
               }`}

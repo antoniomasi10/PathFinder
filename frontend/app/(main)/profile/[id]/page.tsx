@@ -50,14 +50,18 @@ export default function UserProfilePage() {
       setProfile(data);
       const { data: status } = await api.get(`/friends/status/${id}`);
       setFriendStatus(status.status);
-    } catch {} finally { setLoading(false); }
+    } catch (err) {
+      console.error('Failed to load user profile:', err);
+    } finally { setLoading(false); }
   };
 
   const sendFriendRequest = async () => {
     try {
       await api.post('/friends/request', { toUserId: id });
       setFriendStatus('PENDING');
-    } catch {}
+    } catch (err) {
+      console.error('Failed to send friend request:', err);
+    }
   };
 
   if (loading) {
@@ -91,7 +95,7 @@ export default function UserProfilePage() {
       {/* Action buttons */}
       <div className="flex gap-3 mb-6">
         <button
-          onClick={() => router.push(`/networking`)}
+          onClick={() => router.push(`/networking?chat=${id}`)}
           className="btn-primary flex-1 text-sm"
         >
           Invia messaggio
