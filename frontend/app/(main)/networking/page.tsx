@@ -600,7 +600,7 @@ export default function NetworkingPage() {
 
   return (
     <div className={selectedUser || selectedGroup
-      ? 'fixed inset-0 z-[60] flex flex-col bg-[#0D1117] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]'
+      ? 'fixed inset-0 z-[60] flex flex-col bg-[#0D1117] overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]'
       : 'px-2 pt-2 pb-4'
     }>
 
