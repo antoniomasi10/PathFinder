@@ -318,9 +318,22 @@ export default function ProfilePage() {
 
         {/* Profile Header */}
         <div className="flex flex-col items-center text-center space-y-3">
-          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center text-2xl font-bold text-white shadow-lg shadow-[#4F46E5]/20">
-            {profile.avatar && isValidImageUrl(profile.avatar) ? (
-              <img src={profile.avatar} alt={profile.name} className="w-full h-full rounded-full object-cover" />
+          <div
+            className="w-24 h-24 rounded-full flex items-center justify-center text-2xl font-bold text-white shadow-lg overflow-hidden"
+            style={{
+              backgroundColor: currentAvatar && isValidImageUrl(currentAvatar) ? '#FFFFFF' : undefined,
+              background: !(currentAvatar && isValidImageUrl(currentAvatar))
+                ? 'linear-gradient(135deg, #4F46E5, #7C3AED)'
+                : undefined,
+              boxShadow: '0 10px 15px -3px rgba(79,70,229,0.2)',
+            }}
+          >
+            {currentAvatar && isValidImageUrl(currentAvatar) ? (
+              <img
+                src={currentAvatar}
+                alt={profile.name}
+                className="w-full h-full rounded-full object-cover"
+              />
             ) : (
               initials
             )}

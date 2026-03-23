@@ -7,7 +7,7 @@ export async function getPosts(page: number = 1, limit: number = 20, currentUser
     take: limit,
     orderBy: { createdAt: 'desc' },
     include: {
-      author: { select: { id: true, name: true, avatar: true, courseOfStudy: true, university: { select: { name: true } } } },
+      author: { select: { id: true, name: true, avatar: true, avatarBgColor: true, courseOfStudy: true, university: { select: { name: true } } } },
       _count: { select: { likes: true, comments: true } },
       likes: currentUserId ? { where: { userId: currentUserId }, select: { userId: true } } : false,
     },
@@ -23,7 +23,7 @@ export async function createPost(authorId: string, content: string, images: stri
   const post = await prisma.post.create({
     data: { authorId, content, images },
     include: {
-      author: { select: { id: true, name: true, avatar: true, courseOfStudy: true, university: { select: { name: true } } } },
+      author: { select: { id: true, name: true, avatar: true, avatarBgColor: true, courseOfStudy: true, university: { select: { name: true } } } },
       _count: { select: { likes: true, comments: true } },
     },
   });
@@ -55,7 +55,7 @@ export async function getComments(postId: string) {
     where: { postId },
     orderBy: { createdAt: 'asc' },
     include: {
-      author: { select: { id: true, name: true, avatar: true } },
+      author: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
     },
   });
 }
@@ -71,7 +71,7 @@ export async function createComment(postId: string, authorId: string, content: s
   return prisma.postComment.create({
     data: { postId, authorId, content },
     include: {
-      author: { select: { id: true, name: true, avatar: true } },
+      author: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
     },
   });
 }

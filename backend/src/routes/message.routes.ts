@@ -22,8 +22,8 @@ router.get('/conversations', authMiddleware, async (req: Request, res: Response)
       },
       orderBy: { sentAt: 'desc' },
       include: {
-        sender: { select: { id: true, name: true, avatar: true } },
-        receiver: { select: { id: true, name: true, avatar: true } },
+        sender: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
+        receiver: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
       },
     });
 
@@ -84,7 +84,7 @@ router.get('/:userId', authMiddleware, async (req: Request, res: Response) => {
         take: limit,
         skip,
         include: {
-          sender: { select: { id: true, name: true, avatar: true } },
+          sender: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
         },
       }),
       prisma.pathMatesMessage.count({ where }),
@@ -124,7 +124,7 @@ router.get('/group/:groupId', authMiddleware, async (req: Request, res: Response
       where: { groupId },
       orderBy: { sentAt: 'asc' },
       include: {
-        sender: { select: { id: true, name: true, avatar: true } },
+        sender: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
       },
     });
 
@@ -158,7 +158,7 @@ router.post('/group/:groupId', authMiddleware, async (req: Request, res: Respons
         images: validImages,
       },
       include: {
-        sender: { select: { id: true, name: true, avatar: true } },
+        sender: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
       },
     });
 
@@ -201,7 +201,7 @@ router.post('/', authMiddleware, validate(sendMessageSchema), async (req: Reques
         images: validImages,
       },
       include: {
-        sender: { select: { id: true, name: true, avatar: true } },
+        sender: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
       },
     });
     res.status(201).json(message);

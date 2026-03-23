@@ -2,6 +2,8 @@ export function isValidImageUrl(url: string | null | undefined): boolean {
   if (!url) return false;
   // Allow data:image URIs and https URLs
   if (url.startsWith('data:image/')) return true;
+  // Allow local avatar paths from onboarding
+  if (url.startsWith('/avatars/')) return true;
   try {
     const parsed = new URL(url);
     return parsed.protocol === 'https:';

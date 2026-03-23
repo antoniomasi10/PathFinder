@@ -81,7 +81,7 @@ export function setupChatSocket(io: Server) {
             images: validImages,
           },
           include: {
-            sender: { select: { id: true, name: true, avatar: true } },
+            sender: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
           },
         });
 
@@ -128,7 +128,7 @@ export function setupChatSocket(io: Server) {
             images: validImages,
           },
           include: {
-            sender: { select: { id: true, name: true, avatar: true } },
+            sender: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
           },
         });
 

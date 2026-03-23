@@ -19,8 +19,8 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
         ],
       },
       include: {
-        fromUser: { select: { id: true, name: true, avatar: true, courseOfStudy: true, university: { select: { name: true } } } },
-        toUser: { select: { id: true, name: true, avatar: true, courseOfStudy: true, university: { select: { name: true } } } },
+        fromUser: { select: { id: true, name: true, avatar: true, avatarBgColor: true, courseOfStudy: true, university: { select: { name: true } } } },
+        toUser: { select: { id: true, name: true, avatar: true, avatarBgColor: true, courseOfStudy: true, university: { select: { name: true } } } },
       },
     });
 
@@ -40,7 +40,7 @@ router.get('/requests', authMiddleware, async (req: Request, res: Response) => {
     const requests = await prisma.friendRequest.findMany({
       where: { toUserId: req.user!.userId, status: 'PENDING' },
       include: {
-        fromUser: { select: { id: true, name: true, avatar: true, courseOfStudy: true, university: { select: { name: true } } } },
+        fromUser: { select: { id: true, name: true, avatar: true, avatarBgColor: true, courseOfStudy: true, university: { select: { name: true } } } },
       },
     });
     res.json(requests);

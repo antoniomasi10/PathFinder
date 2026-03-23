@@ -13,7 +13,7 @@ import BackButton from './BackButton';
 import AvatarSelection from './AvatarSelection';
 
 interface OnboardingFlowProps {
-  onAvatarSelected: (profileData: ProfileData, avatarId: string, bgColor: string) => void;
+  onAvatarSelected: (profileData: ProfileData, avatarId: string) => void;
 }
 
 const slideVariants = {
@@ -82,9 +82,9 @@ export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps
     [questionId],
   );
 
-  const handleAvatarContinue = useCallback((avatarId: string, bgColor: string) => {
+  const handleAvatarContinue = useCallback((avatarId: string) => {
     const profileData = buildProfileData(answers, multiAnswers, otherTexts);
-    onAvatarSelected(profileData, avatarId, bgColor);
+    onAvatarSelected(profileData, avatarId);
   }, [answers, multiAnswers, otherTexts, onAvatarSelected]);
 
   // ---------- Avatar Selection Screen (after questionnaire) ----------

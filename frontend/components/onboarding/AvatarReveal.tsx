@@ -11,136 +11,203 @@ import type { ProfileData } from './onboarding-data';
 
 interface Props {
   avatarId: string;
-  bgColor: string;
   profileData: ProfileData;
 }
 
-type Phase = 'enter' | 'video' | 'celebration' | 'exit' | 'error';
-
 const MIN_ANIMATION_MS = 3000;
+const NAVIGATION_TIMEOUT_MS = 10000;
 
-export default function AvatarReveal({ avatarId, bgColor, profileData }: Props) {
+// --- Transition variants ---
+
+// Entrance: screen fades in (400ms), video scales from 0.8→1.0 with spring
+const screenEnterVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] as const },
+  },
+  exit: {
+    opacity: 0,
+    transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] as const },
+  },
+};
+
+const videoEnterVariants = {
+  hidden: { opacity: 0, scale: 0.8 },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    transition: {
+      opacity: { duration: 0.3 },
+      scale: { type: 'spring' as const, tension: 50, friction: 7, mass: 1 },
+    },
+  },
+};
+
+// Exit: video scales to 0.9 and fades out (400ms parallel)
+const videoExitVariants = {
+  scale: 0.9,
+  opacity: 0,
+  transition: {
+    duration: 0.4,
+    ease: [0.33, 0, 0.67, 1] as const, // ease-out cubic
+  },
+};
+
+export default function AvatarReveal({ avatarId, profileData }: Props) {
   const router = useRouter();
   const { user, setUser } = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hasNavigated = useRef(false);
 
-  const [phase, setPhase] = useState<Phase>('enter');
-  const [loadingDone, setLoadingDone] = useState(false);
-  const [animationDone, setAnimationDone] = useState(false);
+  const [loadingComplete, setLoadingComplete] = useState(false);
+  const [videoFinished, setVideoFinished] = useState(false);
+  const [minTimePassed, setMinTimePassed] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showError, setShowError] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
+  const [exiting, setExiting] = useState(false);
 
   const avatar = getAvatar(avatarId);
-  const bothDone = loadingDone && animationDone;
+
+  // Animation is complete when BOTH video finished AND min time passed
+  const animationComplete = (videoFinished || videoError) && minTimePassed;
+
+  console.log('[AvatarReveal] Mounted:', { avatarId, video: avatar.video });
+
+  // --- Navigate to home (called once, AFTER exit animation) ---
+  const navigateToHome = useCallback(() => {
+    if (hasNavigated.current) return;
+    hasNavigated.current = true;
+    console.log('[AvatarReveal] >>> Navigating to /home');
+    if (user) setUser({ ...user, profileCompleted: true });
+    router.replace('/home');
+  }, [user, setUser, router]);
+
+  // --- Start exit animation, then navigate ---
+  const startExit = useCallback(() => {
+    if (exiting) return;
+    console.log('[AvatarReveal] Starting exit animation');
+    setExiting(true);
+    // Navigate AFTER exit animation completes (400ms fade + small buffer)
+    setTimeout(navigateToHome, 500);
+  }, [exiting, navigateToHome]);
 
   // --- Parallel data loading ---
   const loadAppData = useCallback(async () => {
+    console.log('[AvatarReveal] Loading started');
     try {
-      // Save profile + avatar selection
+      // Save profile + avatar as revealed image path
       await api.post('/profile/questionnaire', {
         ...profileData,
-        avatarId,
-        avatarBgColor: bgColor,
+        avatarId: avatar.revealed,
       });
+      console.log('[AvatarReveal] Profile saved with avatar:', avatar.revealed);
 
-      // Parallel: fetch opportunities + preload home assets
+      // Parallel: preload home data
       await Promise.all([
         api.get('/opportunities?matched=true&limit=20').catch(() => {}),
         api.get('/notifications/unread-count').catch(() => {}),
       ]);
+      console.log('[AvatarReveal] App data preloaded');
 
       // Save to localStorage for resume support
       localStorage.setItem('selected_avatar', avatarId);
-      localStorage.setItem('selected_bg', bgColor);
       localStorage.setItem('onboarding_step', 'complete');
 
-      setLoadingDone(true);
+      console.log('[AvatarReveal] Loading complete');
+      setLoadingComplete(true);
     } catch (err: any) {
+      console.error('[AvatarReveal] Loading error:', err);
       setErrorMsg(err.response?.data?.error || 'Errore di rete. Riprova.');
-      setPhase('error');
+      setShowError(true);
     }
-  }, [profileData, avatarId, bgColor]);
+  }, [profileData, avatarId, avatar.revealed]);
 
-  // --- Start loading + animation timer on mount ---
+  // --- Start loading + min timer on mount ---
   useEffect(() => {
     loadAppData();
 
-    // Minimum animation duration
-    const timer = setTimeout(() => {
-      setAnimationDone(true);
+    const minTimer = setTimeout(() => {
+      console.log('[AvatarReveal] Min animation time (3s) reached');
+      setMinTimePassed(true);
     }, MIN_ANIMATION_MS);
 
-    // Show subtle loader if loading takes > 5 seconds
     const loaderTimer = setTimeout(() => {
       setShowLoader(true);
     }, 5000);
 
-    // Transition from enter to video phase
-    const enterTimer = setTimeout(() => {
-      setPhase('video');
-    }, 800);
-
     return () => {
-      clearTimeout(timer);
+      clearTimeout(minTimer);
       clearTimeout(loaderTimer);
-      clearTimeout(enterTimer);
     };
   }, [loadAppData]);
 
-  // --- When both done, proceed to celebration & exit ---
+  // --- When both animation + loading done → start exit animation ---
   useEffect(() => {
-    if (!bothDone || phase === 'error') return;
+    console.log('[AvatarReveal] State check:', {
+      animationComplete,
+      loadingComplete,
+      videoFinished,
+      minTimePassed,
+      showError,
+      exiting,
+    });
 
-    setPhase('celebration');
+    if (!animationComplete || showError || exiting) return;
 
-    const celebrationTimer = setTimeout(() => {
-      setPhase('exit');
-    }, 600);
+    if (loadingComplete) {
+      console.log('[AvatarReveal] Both complete → starting exit animation');
+      startExit();
+    } else {
+      console.log('[AvatarReveal] Animation done, waiting for loading...');
+    }
+  }, [animationComplete, loadingComplete, showError, exiting, startExit, videoFinished, minTimePassed]);
 
-    const exitTimer = setTimeout(() => {
-      // Update auth state
-      if (user) setUser({ ...user, profileCompleted: true });
-      router.replace('/home');
-    }, 1500);
+  // --- Timeout fallback ---
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!hasNavigated.current && !showError) {
+        console.warn('[AvatarReveal] Timeout after', NAVIGATION_TIMEOUT_MS, 'ms — forcing navigation');
+        navigateToHome();
+      }
+    }, NAVIGATION_TIMEOUT_MS);
+    return () => clearTimeout(timeout);
+  }, [navigateToHome, showError]);
 
-    return () => {
-      clearTimeout(celebrationTimer);
-      clearTimeout(exitTimer);
-    };
-  }, [bothDone, phase, user, setUser, router]);
-
-  // --- Video ended handler ---
+  // --- Video ended: mark finished, loop if loading still pending ---
   const handleVideoEnd = useCallback(() => {
-    // If loading isn't done yet, loop the video
-    if (!loadingDone && videoRef.current) {
-      videoRef.current.currentTime = videoRef.current.duration - 0.5;
+    console.log('[AvatarReveal] Video ended naturally. loadingComplete:', loadingComplete);
+    setVideoFinished(true);
+
+    if (!loadingComplete && videoRef.current) {
+      console.log('[AvatarReveal] Looping video while waiting for loading');
+      videoRef.current.currentTime = Math.max(0, videoRef.current.duration - 0.5);
       videoRef.current.play().catch(() => {});
     }
-  }, [loadingDone]);
+  }, [loadingComplete]);
 
-  // --- Video error: fallback to static crossfade ---
   const handleVideoError = useCallback(() => {
+    console.warn('[AvatarReveal] Video error — falling back to static crossfade');
     setVideoError(true);
   }, []);
 
-  // --- Retry on error ---
   const handleRetry = useCallback(() => {
+    console.log('[AvatarReveal] Retrying...');
     setErrorMsg('');
-    setPhase('video');
+    setShowError(false);
+    setLoadingComplete(false);
     loadAppData();
   }, [loadAppData]);
 
-  return (
-    <motion.div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden"
-      style={{ backgroundColor: bgColor }}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-    >
-      {/* Error state */}
-      {phase === 'error' && (
+  // --- Error state ---
+  if (showError) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden"
+        style={{ backgroundColor: '#0F172A' }}
+      >
         <motion.div
           className="flex flex-col items-center gap-4 px-6 text-center"
           initial={{ opacity: 0, y: 20 }}
@@ -163,87 +230,100 @@ export default function AvatarReveal({ avatarId, bgColor, profileData }: Props) 
             Riprova
           </button>
         </motion.div>
-      )}
+      </div>
+    );
+  }
 
-      {/* Main reveal content */}
-      {phase !== 'error' && (
-        <>
-          <motion.div
-            className="relative"
-            style={{ width: '80vw', maxWidth: 400, aspectRatio: '1/1' }}
-            initial={{ scale: 0.4, opacity: 0 }}
-            animate={
-              phase === 'exit'
-                ? { scale: 0.15, opacity: 0, x: '35vw', y: '-40vh' }
-                : phase === 'celebration'
-                  ? { scale: 1, opacity: 1, y: [0, -15, 0] }
-                  : { scale: 1, opacity: 1 }
-            }
-            transition={
-              phase === 'exit'
-                ? { duration: 0.4, ease: [0.4, 0, 0.2, 1] }
-                : phase === 'celebration'
-                  ? { y: { duration: 0.5, ease: 'easeInOut' }, scale: { duration: 0.3 } }
-                  : { duration: 0.5, ease: [0, 0, 0.2, 1] }
-            }
-          >
-            {/* Video reveal or static fallback */}
-            {!videoError && phase !== 'enter' ? (
-              <video
-                ref={videoRef}
-                src={avatar.video}
-                className="w-full h-full object-contain rounded-3xl"
-                autoPlay
-                muted
-                playsInline
-                onEnded={handleVideoEnd}
-                onError={handleVideoError}
-                aria-label="Animazione rivelazione avatar"
+  // --- Main reveal with entrance/exit transitions ---
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden"
+      style={{ backgroundColor: '#0F172A' }}
+      variants={screenEnterVariants}
+      initial="hidden"
+      animate={exiting ? 'exit' : 'visible'}
+      aria-label="Avatar reveal animation in progress"
+    >
+      {/* Blurred faux-app background matching the real app theme */}
+      <div className="absolute inset-0 overflow-hidden" style={{ filter: 'blur(24px)', opacity: 0.5 }}>
+        <div className="absolute top-0 left-0 right-0 h-14" style={{ backgroundColor: '#1E293B' }} />
+        <div className="absolute top-20 left-4 right-4 space-y-3">
+          <div className="h-32 rounded-2xl" style={{ backgroundColor: '#1E293B' }} />
+          <div className="h-32 rounded-2xl" style={{ backgroundColor: '#1E293B' }} />
+          <div className="h-32 rounded-2xl" style={{ backgroundColor: '#1E293B' }} />
+          <div className="h-32 rounded-2xl" style={{ backgroundColor: '#1E293B' }} />
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 h-16" style={{ backgroundColor: '#1E293B' }} />
+      </div>
+
+      {/* Subtle radial overlay for depth */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: 'radial-gradient(ellipse at center, rgba(15,23,42,0.4) 0%, rgba(15,23,42,0.7) 60%, rgba(15,23,42,0.9) 100%)',
+        }}
+      />
+
+      {/* Video container — spring scale-in entrance, scale+fade exit */}
+      <motion.div
+        className="relative flex items-center justify-center rounded-full overflow-hidden"
+        style={{
+          width: 'min(80vw, 360px)',
+          height: 'min(80vw, 360px)',
+        }}
+        variants={videoEnterVariants}
+        initial="hidden"
+        animate={exiting ? videoExitVariants : 'visible'}
+      >
+        {!videoError ? (
+          <video
+            ref={videoRef}
+            src={avatar.video}
+            className="w-full h-full object-cover"
+            autoPlay
+            muted
+            playsInline
+            onEnded={handleVideoEnd}
+            onError={handleVideoError}
+            aria-label="Animazione rivelazione avatar"
+          />
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={minTimePassed ? 'revealed' : 'blind'}
+              className="w-full h-full relative"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.8 }}
+            >
+              <Image
+                src={minTimePassed ? avatar.revealed : avatar.blindfolded}
+                alt="Avatar"
+                fill
+                className="object-cover"
+                priority
               />
-            ) : (
-              /* Static image fallback / enter phase */
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={animationDone && phase !== 'enter' ? 'revealed' : 'blind'}
-                  className="w-full h-full relative rounded-3xl overflow-hidden"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.8 }}
-                >
-                  <Image
-                    src={
-                      animationDone && phase !== 'enter'
-                        ? avatar.revealed
-                        : avatar.blindfolded
-                    }
-                    alt="Avatar"
-                    fill
-                    className="object-contain"
-                    priority
-                  />
-                </motion.div>
-              </AnimatePresence>
-            )}
-          </motion.div>
-
-          {/* Subtle loading indicator (only if loading > 5s) */}
-          <AnimatePresence>
-            {showLoader && !loadingDone && (
-              <motion.div
-                className="mt-8 flex items-center gap-2"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.6 }}
-                exit={{ opacity: 0 }}
-              >
-                <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" style={{ animationDelay: '0.2s' }} />
-                <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" style={{ animationDelay: '0.4s' }} />
-              </motion.div>
-            )}
+            </motion.div>
           </AnimatePresence>
-        </>
-      )}
+        )}
+      </motion.div>
+
+      {/* Subtle loading indicator */}
+      <AnimatePresence>
+        {((showLoader && !loadingComplete) || (animationComplete && !loadingComplete)) && !exiting && (
+          <motion.div
+            className="absolute bottom-20 flex items-center gap-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.7 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+            <div className="w-2 h-2 rounded-full bg-white animate-pulse" style={{ animationDelay: '0.2s' }} />
+            <div className="w-2 h-2 rounded-full bg-white animate-pulse" style={{ animationDelay: '0.4s' }} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

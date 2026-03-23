@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
+import { isValidImageUrl } from '@/lib/urlValidation';
 
 interface UserProfile {
   id: string;
@@ -82,8 +83,24 @@ export default function UserProfilePage() {
   return (
     <div className="px-4 py-4">
       <div className="flex items-center gap-4 mb-6">
-        <div className="w-20 h-20 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center text-2xl font-bold text-white">
-          {profile.name[0]}
+        <div
+          className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white overflow-hidden"
+          style={{
+            backgroundColor: profile.avatar && isValidImageUrl(profile.avatar) ? '#FFFFFF' : undefined,
+            background: !(profile.avatar && isValidImageUrl(profile.avatar))
+              ? 'linear-gradient(135deg, #4F46E5, #7C3AED)'
+              : undefined,
+          }}
+        >
+          {profile.avatar && isValidImageUrl(profile.avatar) ? (
+            <img
+              src={profile.avatar}
+              alt={profile.name}
+              className="w-full h-full rounded-full object-cover"
+            />
+          ) : (
+            profile.name[0]
+          )}
         </div>
         <div>
           <h2 className="text-xl font-display font-bold">{profile.name}</h2>

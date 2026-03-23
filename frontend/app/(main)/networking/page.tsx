@@ -1015,8 +1015,24 @@ export default function NetworkingPage() {
               <div key={post.id} className="card">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center text-sm font-bold text-primary">
-                      {post.author.name[0]}
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold overflow-hidden"
+                      style={{
+                        backgroundColor: post.author.avatar && isValidImageUrl(post.author.avatar)
+                          ? '#FFFFFF'
+                          : 'rgba(79,70,229,0.2)',
+                        color: '#4F46E5',
+                      }}
+                    >
+                      {post.author.avatar && isValidImageUrl(post.author.avatar) ? (
+                        <img
+                          src={post.author.avatar}
+                          alt={post.author.name}
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        post.author.name[0]
+                      )}
                     </div>
                     <div>
                       <p className="font-medium text-sm text-text-primary">{post.author.name}</p>

@@ -14,7 +14,6 @@ export default function OnboardingPage() {
   const [revealData, setRevealData] = useState<{
     profileData: ProfileData;
     avatarId: string;
-    bgColor: string;
   } | null>(null);
 
   if (user?.profileCompleted) {
@@ -22,8 +21,8 @@ export default function OnboardingPage() {
     return null;
   }
 
-  const handleAvatarSelected = (profileData: ProfileData, avatarId: string, bgColor: string) => {
-    setRevealData({ profileData, avatarId, bgColor });
+  const handleAvatarSelected = (profileData: ProfileData, avatarId: string) => {
+    setRevealData({ profileData, avatarId });
   };
 
   // Show reveal animation
@@ -31,7 +30,6 @@ export default function OnboardingPage() {
     return (
       <AvatarReveal
         avatarId={revealData.avatarId}
-        bgColor={revealData.bgColor}
         profileData={revealData.profileData}
       />
     );
