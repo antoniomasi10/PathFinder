@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AnimatePresence, motion } from 'framer-motion';
 import OnboardingFlow from '@/components/onboarding';
 import AvatarReveal from '@/components/onboarding/AvatarReveal';
 import type { ProfileData } from '@/components/onboarding';
@@ -25,16 +26,31 @@ export default function OnboardingPage() {
     setRevealData({ profileData, avatarId });
   };
 
-  // Show reveal animation
-  if (revealData) {
-    return (
-      <AvatarReveal
-        avatarId={revealData.avatarId}
-        profileData={revealData.profileData}
-      />
-    );
-  }
-
-  // Show questionnaire + avatar selection flow
-  return <OnboardingFlow onAvatarSelected={handleAvatarSelected} />;
+  return (
+    <AnimatePresence mode="wait">
+      {revealData ? (
+        <motion.div
+          key="reveal"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] as const, delay: 0.2 }}
+          className="contents"
+        >
+          <AvatarReveal
+            avatarId={revealData.avatarId}
+            profileData={revealData.profileData}
+          />
+        </motion.div>
+      ) : (
+        <motion.div
+          key="flow"
+          exit={{ opacity: 0, scale: 0.98 }}
+          transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] as const }}
+          className="contents"
+        >
+          <OnboardingFlow onAvatarSelected={handleAvatarSelected} />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 }

@@ -16,106 +16,207 @@ export default function AvatarSelection({ onContinue }: Props) {
   const avatar = getAvatar(selectedAvatar);
 
   const handleAvatarSelect = useCallback((id: string) => {
-    console.log('[AvatarSelection] Avatar selected:', id);
     setSelectedAvatar(id);
     if (navigator.vibrate) navigator.vibrate(10);
   }, []);
 
   const handleContinue = useCallback(() => {
-    console.log('[AvatarSelection] Continue pressed:', selectedAvatar);
-    console.log('[AvatarSelection] Video that will play:', getAvatar(selectedAvatar).video);
     if (navigator.vibrate) navigator.vibrate([10, 50, 20]);
     onContinue(selectedAvatar);
   }, [selectedAvatar, onContinue]);
 
   return (
     <motion.div
-      className="min-h-screen flex flex-col items-center relative z-10 px-6 pt-10 pb-8"
-      style={{ backgroundColor: '#0D1117' }}
+      className="min-h-screen flex flex-col relative z-10 px-6 pt-14 pb-8"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] as const }}
     >
-      {/* Large preview — white circular frame */}
-      <div
-        className="relative rounded-full overflow-hidden flex items-center justify-center mb-8"
-        style={{ width: 240, height: 240, backgroundColor: '#FFFFFF' }}
-      >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={selectedAvatar}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className="w-full h-full relative"
-          >
-            <Image
-              src={avatar.blindfolded}
-              alt="Avatar selezionato"
-              fill
-              className="object-cover"
-              priority
-            />
-          </motion.div>
-        </AnimatePresence>
+      {/* Header */}
+      <div className="mb-8">
+        {/* Sparkle icon */}
+        <motion.svg
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="none"
+          className="mb-4"
+          initial={{ rotate: -20, opacity: 0 }}
+          animate={{ rotate: 0, opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+        >
+          <path
+            d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z"
+            fill="url(#sparkleGrad)"
+          />
+          <defs>
+            <linearGradient id="sparkleGrad" x1="3" y1="2" x2="21" y2="22" gradientUnits="userSpaceOnUse">
+              <stop stopColor="#6366f1" />
+              <stop offset="1" stopColor="#8b5cf6" />
+            </linearGradient>
+          </defs>
+        </motion.svg>
+
+        <motion.h1
+          className="text-3xl font-bold text-white font-display leading-tight"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+        >
+          Scegli il tuo Avatar
+        </motion.h1>
+
+        <motion.p
+          className="text-sm mt-2 leading-relaxed"
+          style={{ color: '#8B8FA8' }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+        >
+          Personalizza la tua esperienza selezionando{'\n'}l&apos;avatar perfetto per te
+        </motion.p>
       </div>
 
-      {/* Section: Choose avatar */}
-      <h2 className="text-white text-lg font-semibold mb-4 self-start">
-        Scegli il tuo avatar
-      </h2>
-
-      {/* Avatar grid - horizontal scroll */}
-      <div
-        ref={scrollRef}
-        className="w-full overflow-x-auto pb-4 mb-6 scrollbar-hide"
-        style={{ scrollSnapType: 'x mandatory' }}
+      {/* Large circular preview */}
+      <motion.div
+        className="self-center relative mb-8"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
       >
-        <div className="flex gap-3" style={{ width: 'max-content' }}>
-          {AVATARS.map((av) => {
-            const isSelected = av.id === selectedAvatar;
-            return (
-              <motion.button
-                key={av.id}
-                onClick={() => handleAvatarSelect(av.id)}
-                className="relative flex-shrink-0 rounded-full overflow-hidden"
-                style={{
-                  width: 60,
-                  height: 60,
-                  backgroundColor: '#FFFFFF',
-                  scrollSnapAlign: 'start',
-                  border: isSelected ? '3px solid white' : '3px solid transparent',
-                  boxShadow: isSelected ? '0 0 12px rgba(255,255,255,0.3)' : 'none',
-                }}
-                whileTap={{ scale: 0.92 }}
-                transition={{ duration: 0.15 }}
-                aria-label={`Avatar ${av.id.replace('avatar_', '')}`}
+        {/* Glow ring */}
+        <div
+          className="absolute inset-0 rounded-full"
+          style={{
+            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            padding: 3,
+            filter: 'blur(1px)',
+          }}
+        />
+        {/* Outer ring */}
+        <div
+          className="relative rounded-full p-[3px]"
+          style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+        >
+          {/* Avatar circle */}
+          <div
+            className="rounded-full overflow-hidden flex items-center justify-center"
+            style={{ width: 280, height: 280, backgroundColor: '#FFFFFF' }}
+          >
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={selectedAvatar}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="w-full h-full relative"
               >
                 <Image
-                  src={av.blindfolded}
-                  alt={`Avatar ${av.id.replace('avatar_', '')}`}
+                  src={avatar.blindfolded}
+                  alt="Avatar selezionato"
                   fill
                   className="object-cover"
-                  sizes="60px"
+                  priority
                 />
-              </motion.button>
-            );
-          })}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
-      </div>
 
-      {/* Spacer */}
-      <div className="flex-1" />
+        {/* Checkmark badge — bottom right */}
+        <AnimatePresence>
+          {selectedAvatar && (
+            <motion.div
+              className="absolute flex items-center justify-center rounded-full"
+              style={{
+                width: 48,
+                height: 48,
+                bottom: 8,
+                right: 8,
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                boxShadow: '0 4px 16px rgba(99,102,241,0.4)',
+              }}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring' as const, stiffness: 400, damping: 15, delay: 0.1 }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
 
-      {/* Continue button */}
+      {/* Avatar grid — always visible, 3 columns */}
+      <motion.div
+        className="w-full flex-1 min-h-0 mb-6"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.4 }}
+      >
+        <div
+          ref={scrollRef}
+          className="w-full h-full overflow-y-auto"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
+          <div
+            className="grid justify-items-center"
+            style={{
+              gridTemplateColumns: 'repeat(4, 70px)',
+              columnGap: 12,
+              rowGap: 20,
+              justifyContent: 'center',
+              padding: '4px 0',
+            }}
+          >
+            {AVATARS.map((av) => {
+              const isSelected = av.id === selectedAvatar;
+              return (
+                <motion.button
+                  key={av.id}
+                  onClick={() => handleAvatarSelect(av.id)}
+                  className="relative rounded-full overflow-hidden"
+                  style={{
+                    width: 70,
+                    height: 70,
+                    backgroundColor: '#FFFFFF',
+                    border: isSelected ? '2.5px solid #6366f1' : '2.5px solid transparent',
+                    boxShadow: isSelected ? '0 0 16px rgba(99,102,241,0.35)' : '0 2px 8px rgba(0,0,0,0.2)',
+                  }}
+                  whileTap={{ scale: 0.92 }}
+                  transition={{ duration: 0.15 }}
+                  aria-label={`Avatar ${av.id.replace('avatar_', '')}`}
+                >
+                  <Image
+                    src={av.blindfolded}
+                    alt={`Avatar ${av.id.replace('avatar_', '')}`}
+                    fill
+                    className="object-cover"
+                    sizes="70px"
+                  />
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Continue button — full width */}
       <motion.button
         onClick={handleContinue}
-        className="self-end px-8 py-3 rounded-xl text-white font-semibold text-base flex items-center gap-2"
-        style={{ backgroundColor: '#6C63FF' }}
-        whileHover={{ scale: 1.03, boxShadow: '0 0 20px rgba(108,99,255,0.4)' }}
+        className="w-full py-4 rounded-2xl text-white font-semibold text-base flex items-center justify-center gap-2"
+        style={{
+          background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+          boxShadow: '0 4px 20px rgba(99,102,241,0.3)',
+        }}
+        whileHover={{ scale: 1.02, boxShadow: '0 6px 28px rgba(99,102,241,0.45)' }}
         whileTap={{ scale: 0.97 }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, duration: 0.4 }}
         aria-label="Continua alla rivelazione dell'avatar"
       >
         Continua
