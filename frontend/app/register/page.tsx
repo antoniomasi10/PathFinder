@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import GoogleAuthButton from '@/components/GoogleAuthButton';
 
 interface University {
   id: string;
@@ -24,7 +25,6 @@ export default function RegisterPage() {
   const { setUser } = useAuth();
 
   useEffect(() => {
-    // Fetch universities for dropdown (public endpoint alternative - fallback to empty)
     api.get('/universities').then(({ data }) => {
       setUniversities(data);
     }).catch((err) => {
@@ -43,7 +43,8 @@ export default function RegisterPage() {
       });
       localStorage.setItem('accessToken', data.accessToken);
       setUser(data.user);
-      router.push('/onboarding');
+      // Redirect to email verification (OTP)
+      router.push('/verify-email');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Errore durante la registrazione');
     } finally {
@@ -61,82 +62,94 @@ export default function RegisterPage() {
           <p className="text-text-secondary">Crea il tuo account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="card space-y-4">
+        <div className="card space-y-4">
           {error && (
             <div className="bg-error/10 text-error rounded-xl px-4 py-3 text-sm">
               {error}
             </div>
           )}
 
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">Nome completo</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="input-field"
-              placeholder="Mario Rossi"
-              required
-            />
+          {/* Google OAuth */}
+          <GoogleAuthButton />
+
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-white/10" />
+            <span className="text-text-secondary text-sm">oppure</span>
+            <div className="flex-1 h-px bg-white/10" />
           </div>
 
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input-field"
-              placeholder="mario.rossi@email.it"
-              required
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm text-text-secondary mb-1.5">Nome completo</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="input-field"
+                placeholder="Mario Rossi"
+                required
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input-field"
-              placeholder="Minimo 6 caratteri"
-              minLength={6}
-              required
-            />
-          </div>
+            <div>
+              <label className="block text-sm text-text-secondary mb-1.5">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input-field"
+                placeholder="mario.rossi@email.it"
+                required
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">Università</label>
-            <select
-              value={universityId}
-              onChange={(e) => setUniversityId(e.target.value)}
-              className="input-field"
+            <div>
+              <label className="block text-sm text-text-secondary mb-1.5">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input-field"
+                placeholder="Min 8 caratteri, 1 maiuscola, 1 numero"
+                minLength={8}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-text-secondary mb-1.5">Università</label>
+              <select
+                value={universityId}
+                onChange={(e) => setUniversityId(e.target.value)}
+                className="input-field"
+              >
+                <option value="">Seleziona università</option>
+                {universities.map((uni) => (
+                  <option key={uni.id} value={uni.id}>{uni.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm text-text-secondary mb-1.5">Corso di studi</label>
+              <input
+                type="text"
+                value={courseOfStudy}
+                onChange={(e) => setCourseOfStudy(e.target.value)}
+                className="input-field"
+                placeholder="es. Informatica"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full disabled:opacity-50"
             >
-              <option value="">Seleziona università</option>
-              {universities.map((uni) => (
-                <option key={uni.id} value={uni.id}>{uni.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">Corso di studi</label>
-            <input
-              type="text"
-              value={courseOfStudy}
-              onChange={(e) => setCourseOfStudy(e.target.value)}
-              className="input-field"
-              placeholder="es. Informatica"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary w-full disabled:opacity-50"
-          >
-            {loading ? 'Registrazione...' : 'Registrati'}
-          </button>
+              {loading ? 'Registrazione...' : 'Registrati'}
+            </button>
+          </form>
 
           <p className="text-center text-sm text-text-secondary">
             Hai già un account?{' '}
@@ -144,7 +157,7 @@ export default function RegisterPage() {
               Accedi
             </Link>
           </p>
-        </form>
+        </div>
       </div>
     </div>
   );

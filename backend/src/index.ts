@@ -69,7 +69,7 @@ const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 15,
   message: { error: 'Troppi tentativi, riprova più tardi' },
-  skip: (req) => req.path === '/refresh' || req.path === '/logout',
+  skip: (req) => ['/refresh', '/logout', '/verify-email', '/resend-otp'].includes(req.path),
 });
 app.use('/api/auth', authLimiter);
 

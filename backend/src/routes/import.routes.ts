@@ -2,7 +2,7 @@
  * Import Admin Routes — manual triggers + data freshness stats.
  */
 import { Router, Request, Response } from 'express';
-import { authMiddleware } from '../middleware/auth';
+import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import { importUniversities, importCourses } from '../services/import/mur.import';
 import { importOpportunities } from '../services/import/eures.import';
 import { importEUOpportunities } from '../services/import/eu-youth.import';

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { authMiddleware } from '../middleware/auth';
+import { authMiddleware, verifiedMiddleware } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { updateProfileSchema } from '../schemas';
 import { saveQuestionnaire, getProfile, updateProfile } from '../services/profile.service';
@@ -7,7 +7,7 @@ import prisma from '../lib/prisma';
 
 const router = Router();
 
-router.post('/questionnaire', authMiddleware, async (req: Request, res: Response) => {
+router.post('/questionnaire', verifiedMiddleware, async (req: Request, res: Response) => {
   try {
     const profile = await saveQuestionnaire(req.user!.userId, req.body);
     res.json(profile);
@@ -29,7 +29,7 @@ router.get('/me', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
+router.get('/:id', verifiedMiddleware, async (req: Request, res: Response) => {
   try {
     const profile = await getProfile(req.params.id);
     if (!profile) {
@@ -65,7 +65,7 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-router.patch('/me', authMiddleware, validate(updateProfileSchema), async (req: Request, res: Response) => {
+router.patch('/me', verifiedMiddleware, validate(updateProfileSchema), async (req: Request, res: Response) => {
   try {
     const updated = await updateProfile(req.user!.userId, req.body);
     res.json(updated);

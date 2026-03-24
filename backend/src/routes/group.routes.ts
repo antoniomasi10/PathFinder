@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { authMiddleware } from '../middleware/auth';
+import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { createGroupSchema } from '../schemas';
 import * as groupService from '../services/group.service';

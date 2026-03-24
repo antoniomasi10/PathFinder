@@ -14,6 +14,23 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password obbligatoria'),
 });
 
+export const verifyEmailSchema = z.object({
+  code: z.string().length(6, 'Il codice deve essere di 6 cifre').regex(/^\d+$/, 'Il codice deve contenere solo numeri'),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email('Email non valida'),
+});
+
+export const resetPasswordSchema = z.object({
+  email: z.string().email('Email non valida'),
+  code: z.string().length(6, 'Il codice deve essere di 6 cifre').regex(/^\d+$/, 'Il codice deve contenere solo numeri'),
+  newPassword: z.string()
+    .min(8, 'La password deve avere almeno 8 caratteri')
+    .regex(/[A-Z]/, 'La password deve contenere almeno una lettera maiuscola')
+    .regex(/[0-9]/, 'La password deve contenere almeno un numero'),
+});
+
 export const sendMessageSchema = z.object({
   receiverId: z.string().uuid('ID destinatario non valido'),
   content: z.string().min(1, 'Il messaggio non può essere vuoto').max(5000),

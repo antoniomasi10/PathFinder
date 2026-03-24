@@ -7,6 +7,8 @@ export interface AuthUser {
   name: string;
   email: string;
   profileCompleted: boolean;
+  emailVerified: boolean;
+  provider: 'LOCAL' | 'GOOGLE';
   university?: { id: string; name: string } | null;
 }
 

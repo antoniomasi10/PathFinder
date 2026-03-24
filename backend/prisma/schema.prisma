@@ -58,6 +58,16 @@ enum NotificationType {
   GENERAL
 }
 
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
+enum VerificationCodeType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
 enum FriendRequestStatus {
   PENDING
   ACCEPTED
@@ -72,8 +82,11 @@ enum GroupMemberRole {
 model User {
   id                String                 @id @default(uuid())
   email             String                 @unique
-  passwordHash      String
+  passwordHash      String?
   name              String
+  googleId          String?                @unique
+  provider          AuthProvider           @default(LOCAL)
+  emailVerified     Boolean                @default(false)
   avatar            String?
   bio               String?
   universityId      String?
@@ -104,8 +117,10 @@ model User {
   pushSubscriptions      PushSubscription[]
   badges                 UserBadge[]
   tracking               UserTracking[]
+  verificationCodes      VerificationCode[]
 
   @@index([universityId])
+  @@index([googleId])
 }
 
 model UserProfile {
@@ -374,4 +389,18 @@ model ImportLog {
 
   @@index([source, type])
   @@index([startedAt])
+}
+
+model VerificationCode {
+  id        String               @id @default(uuid())
+  userId    String
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String
+  type      VerificationCodeType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime             @default(now())
+
+  @@index([userId, type])
+  @@index([code, type])
 }
