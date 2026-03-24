@@ -176,6 +176,7 @@ router.get('/suggestions', authMiddleware, async (req: Request, res: Response) =
         id: true,
         name: true,
         avatar: true,
+        avatarBgColor: true,
         courseOfStudy: true,
         university: { select: { name: true } },
       },

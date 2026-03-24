@@ -150,7 +150,7 @@ export default function AvatarSelection({ onContinue }: Props) {
         </AnimatePresence>
       </motion.div>
 
-      {/* Avatar grid — always visible, 3 columns */}
+      {/* Avatar grid — always visible, 4 columns */}
       <motion.div
         className="w-full flex-1 min-h-0 mb-6"
         initial={{ opacity: 0, y: 20 }}
