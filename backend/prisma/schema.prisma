@@ -58,6 +58,16 @@ enum NotificationType {
   GENERAL
 }
 
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
+enum VerificationCodeType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
 enum FriendRequestStatus {
   PENDING
   ACCEPTED
@@ -72,8 +82,14 @@ enum GroupMemberRole {
 model User {
   id                String                 @id @default(uuid())
   email             String                 @unique
-  passwordHash      String
+  passwordHash      String?
   name              String
+  surname           String                 @default("")
+  username          String?                @unique
+  phone             String?
+  googleId          String?                @unique
+  provider          AuthProvider           @default(LOCAL)
+  emailVerified     Boolean                @default(false)
   avatar            String?
   avatarBgColor     String?
   bio               String?
@@ -105,8 +121,10 @@ model User {
   pushSubscriptions      PushSubscription[]
   badges                 UserBadge[]
   tracking               UserTracking[]
+  verificationCodes      VerificationCode[]
 
   @@index([universityId])
+  @@index([googleId])
 }
 
 model UserProfile {
@@ -145,10 +163,14 @@ model Opportunity {
   postedAt             DateTime        @default(now())
   expiresAt            DateTime?
   savedBy              User[]          @relation("SavedOpportunities")
+  sourceId             String?         // e.g. "eures-12345" — null = manual/seed
+  lastSyncedAt         DateTime?       // last time this record was refreshed by import
 
   @@index([universityId])
   @@index([type])
   @@index([deadline])
+  @@index([sourceId])
+  @@index([lastSyncedAt])
 }
 
 model University {
@@ -162,9 +184,14 @@ model University {
   websiteUrl    String?
   alumniCount   Int           @default(0)
   avgRating     Float         @default(0)
+  isActive      Boolean       @default(true)
+  sourceId      String?       // e.g. "mur-00001" — null = manual/seed
+  lastSyncedAt  DateTime?
   users         User[]
   courses       Course[]
   opportunities Opportunity[]
+
+  @@index([sourceId])
 }
 
 model Course {
@@ -182,6 +209,11 @@ model Course {
   languageOfInstruction      String?
   tags                       String[]   @default([])
   savedBy                    User[]     @relation("SavedCourses")
+  isActive                   Boolean    @default(true)
+  sourceId                   String?
+  lastSyncedAt               DateTime?
+
+  @@index([sourceId])
 }
 
 model PathMatesMessage {
@@ -346,4 +378,33 @@ model UserTracking {
 
   @@unique([userId, key])
   @@index([userId])
+}
+
+model ImportLog {
+  id        String   @id @default(uuid())
+  source    String   // mur, eures, almalaurea, istat
+  type      String   // universities, courses, opportunities, stats
+  status    String   // success, partial, failed
+  count     Int      @default(0)
+  error     String?
+  startedAt DateTime @default(now())
+  finishedAt DateTime?
+  metadata  Json?
+
+  @@index([source, type])
+  @@index([startedAt])
+}
+
+model VerificationCode {
+  id        String               @id @default(uuid())
+  userId    String
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String
+  type      VerificationCodeType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime             @default(now())
+
+  @@index([userId, type])
+  @@index([code, type])
 }

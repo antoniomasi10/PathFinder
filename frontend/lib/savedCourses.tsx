@@ -38,8 +38,8 @@ export function SavedCoursesProvider({ children }: { children: ReactNode }) {
         setSavedCourses(courses);
         setSavedIds(new Set(courses.map((c) => c.id)));
       })
-      .catch(() => {
-        // Not logged in or API error — start with empty
+      .catch((err) => {
+        console.error('Failed to load saved courses:', err.response?.status, err.response?.data || err.message);
       });
   }, []);
 
@@ -58,7 +58,8 @@ export function SavedCoursesProvider({ children }: { children: ReactNode }) {
       setSavedIds((prev) => new Set(prev).add(course.id));
     }
 
-    api.post(`/courses/${course.id}/save`).catch(() => {
+    api.post(`/courses/${course.id}/save`).catch((err) => {
+      console.error('Failed to save course:', err.response?.status, err.response?.data || err.message);
       // Revert on error
       setSavedCourses(previousCourses);
       setSavedIds(previousIds);

@@ -21,15 +21,32 @@ import groupRoutes from './routes/group.routes';
 import userRoutes from './routes/user.routes';
 import courseRoutes from './routes/course.routes';
 import badgeRoutes from './routes/badge.routes';
+import importRoutes from './routes/import.routes';
 import { setupChatSocket } from './socket/chatHandler';
 import { logger } from './utils/logger';
 import { setupNotificationSocket } from './socket/notificationHandler';
 import { setIO } from './socketManager';
 import { startDeadlineChecker } from './services/deadlineChecker';
+import { startImportScheduler } from './services/import/scheduler';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
 if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
   throw new Error('FRONTEND_URL must be set in production');
+}
+
+// Support multiple frontend origins (e.g. pathfinder-univ + pathfinder-italy on Vercel)
+const ALLOWED_ORIGINS = [
+  FRONTEND_URL,
+  ...(process.env.EXTRA_ORIGINS ? process.env.EXTRA_ORIGINS.split(',') : []),
+  'http://localhost:3000',
+].filter(Boolean);
+
+function corsOrigin(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+  if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+    callback(null, true);
+  } else {
+    callback(null, false);
+  }
 }
 
 const app = express();
@@ -37,15 +54,16 @@ const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: FRONTEND_URL,
+    origin: ALLOWED_ORIGINS,
     credentials: true,
   },
   maxHttpBufferSize: 5e6, // 5MB per supportare invio immagini via socket
 });
 
+app.set('trust proxy', 1); // trust first proxy (nginx/caddy)
 app.use(helmet());
 app.use(cors({
-  origin: FRONTEND_URL,
+  origin: corsOrigin,
   credentials: true,
 }));
 
@@ -67,7 +85,7 @@ const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 15,
   message: { error: 'Troppi tentativi, riprova più tardi' },
-  skip: (req) => req.path === '/refresh' || req.path === '/logout',
+  skip: (req) => ['/refresh', '/logout', '/verify-email', '/resend-otp'].includes(req.path),
 });
 app.use('/api/auth', authLimiter);
 
@@ -84,6 +102,7 @@ app.use('/api/groups', groupRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/badges', badgeRoutes);
+app.use('/api/import', importRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -99,6 +118,7 @@ const PORT = process.env.PORT || 4000;
 httpServer.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
   startDeadlineChecker();
+  startImportScheduler();
 });
 
 export { io };

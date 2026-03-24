@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import GoogleAuthButton from '@/components/GoogleAuthButton';
 
 interface University {
   id: string;
@@ -13,6 +14,9 @@ interface University {
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
+  const [surname, setSurname] = useState('');
+  const [username, setUsername] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [universityId, setUniversityId] = useState('');
@@ -20,11 +24,11 @@ export default function RegisterPage() {
   const [universities, setUniversities] = useState<University[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
   const router = useRouter();
   const { setUser } = useAuth();
 
   useEffect(() => {
-    // Fetch universities for dropdown (public endpoint alternative - fallback to empty)
     api.get('/universities').then(({ data }) => {
       setUniversities(data);
     }).catch((err) => {
@@ -32,18 +36,58 @@ export default function RegisterPage() {
     });
   }, []);
 
+  // Check username availability with debounce
+  useEffect(() => {
+    if (username.length < 3) {
+      setUsernameStatus('idle');
+      return;
+    }
+    setUsernameStatus('checking');
+    const timeout = setTimeout(async () => {
+      try {
+        const { data } = await api.get(`/auth/check-username?username=${encodeURIComponent(username)}`);
+        setUsernameStatus(data.available ? 'available' : 'taken');
+      } catch {
+        setUsernameStatus('idle');
+      }
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [username]);
+
+  const passwordChecks = {
+    length: password.length >= 8,
+    upper: /[A-Z]/.test(password),
+    lower: /[a-z]/.test(password),
+    number: /[0-9]/.test(password),
+    special: /[^A-Za-z0-9]/.test(password),
+  };
+  const passwordValid = Object.values(passwordChecks).every(Boolean);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!passwordValid) {
+      setError('La password non soddisfa tutti i requisiti');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const { data } = await api.post('/auth/register', {
-        name, email, password, universityId: universityId || undefined, courseOfStudy: courseOfStudy || undefined,
+        name,
+        surname,
+        username,
+        email,
+        password,
+        phone: phone || undefined,
+        universityId: universityId || undefined,
+        courseOfStudy: courseOfStudy || undefined,
       });
       localStorage.setItem('accessToken', data.accessToken);
       setUser(data.user);
-      router.push('/onboarding');
+      router.push('/verify-email');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Errore durante la registrazione');
     } finally {
@@ -61,82 +105,173 @@ export default function RegisterPage() {
           <p className="text-text-secondary">Crea il tuo account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="card space-y-4">
+        <div className="card space-y-4">
           {error && (
             <div className="bg-error/10 text-error rounded-xl px-4 py-3 text-sm">
               {error}
             </div>
           )}
 
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">Nome completo</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="input-field"
-              placeholder="Mario Rossi"
-              required
-            />
+          {/* Google OAuth */}
+          <GoogleAuthButton />
+
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-white/10" />
+            <span className="text-text-secondary text-sm">oppure</span>
+            <div className="flex-1 h-px bg-white/10" />
           </div>
 
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input-field"
-              placeholder="mario.rossi@email.it"
-              required
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Nome e Cognome */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm text-text-secondary mb-1.5">Nome</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="input-field"
+                  placeholder="Mario"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-text-secondary mb-1.5">Cognome</label>
+                <input
+                  type="text"
+                  value={surname}
+                  onChange={(e) => setSurname(e.target.value)}
+                  className="input-field"
+                  placeholder="Rossi"
+                  required
+                />
+              </div>
+            </div>
 
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input-field"
-              placeholder="Minimo 6 caratteri"
-              minLength={6}
-              required
-            />
-          </div>
+            {/* Username */}
+            <div>
+              <label className="block text-sm text-text-secondary mb-1.5">Username</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))}
+                  className="input-field pr-10"
+                  placeholder="mario.rossi"
+                  minLength={3}
+                  maxLength={30}
+                  required
+                />
+                {usernameStatus === 'checking' && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary text-xs">...</span>
+                )}
+                {usernameStatus === 'available' && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 text-sm">&#10003;</span>
+                )}
+                {usernameStatus === 'taken' && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-error text-sm">&#10007;</span>
+                )}
+              </div>
+              {usernameStatus === 'taken' && (
+                <p className="text-error text-xs mt-1">Username già in uso</p>
+              )}
+            </div>
 
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">Università</label>
-            <select
-              value={universityId}
-              onChange={(e) => setUniversityId(e.target.value)}
-              className="input-field"
+            {/* Email */}
+            <div>
+              <label className="block text-sm text-text-secondary mb-1.5">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input-field"
+                placeholder="mario.rossi@email.it"
+                required
+              />
+            </div>
+
+            {/* Telefono */}
+            <div>
+              <label className="block text-sm text-text-secondary mb-1.5">
+                Telefono <span className="text-text-secondary/50">(opzionale)</span>
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="input-field"
+                placeholder="+39 333 1234567"
+              />
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="block text-sm text-text-secondary mb-1.5">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input-field"
+                placeholder="Crea una password sicura"
+                required
+              />
+              {password && (
+                <div className="mt-2 space-y-1">
+                  {[
+                    { check: passwordChecks.length, label: 'Almeno 8 caratteri' },
+                    { check: passwordChecks.upper, label: 'Una lettera maiuscola' },
+                    { check: passwordChecks.lower, label: 'Una lettera minuscola' },
+                    { check: passwordChecks.number, label: 'Un numero' },
+                    { check: passwordChecks.special, label: 'Un carattere speciale (!@#$%...)' },
+                  ].map(({ check, label }) => (
+                    <p key={label} className={`text-xs flex items-center gap-1.5 ${check ? 'text-green-400' : 'text-text-secondary/50'}`}>
+                      <span>{check ? '\u2713' : '\u2717'}</span> {label}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Università */}
+            <div>
+              <label className="block text-sm text-text-secondary mb-1.5">
+                Università <span className="text-text-secondary/50">(opzionale)</span>
+              </label>
+              <select
+                value={universityId}
+                onChange={(e) => setUniversityId(e.target.value)}
+                className="input-field"
+              >
+                <option value="">Seleziona università</option>
+                {universities.map((uni) => (
+                  <option key={uni.id} value={uni.id}>{uni.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Corso di studi */}
+            <div>
+              <label className="block text-sm text-text-secondary mb-1.5">
+                Corso di studi <span className="text-text-secondary/50">(opzionale)</span>
+              </label>
+              <input
+                type="text"
+                value={courseOfStudy}
+                onChange={(e) => setCourseOfStudy(e.target.value)}
+                className="input-field"
+                placeholder="es. Informatica"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading || !passwordValid || usernameStatus === 'taken'}
+              className="btn-primary w-full disabled:opacity-50"
             >
-              <option value="">Seleziona università</option>
-              {universities.map((uni) => (
-                <option key={uni.id} value={uni.id}>{uni.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">Corso di studi</label>
-            <input
-              type="text"
-              value={courseOfStudy}
-              onChange={(e) => setCourseOfStudy(e.target.value)}
-              className="input-field"
-              placeholder="es. Informatica"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary w-full disabled:opacity-50"
-          >
-            {loading ? 'Registrazione...' : 'Registrati'}
-          </button>
+              {loading ? 'Registrazione...' : 'Registrati'}
+            </button>
+          </form>
 
           <p className="text-center text-sm text-text-secondary">
             Hai già un account?{' '}
@@ -144,7 +279,7 @@ export default function RegisterPage() {
               Accedi
             </Link>
           </p>
-        </form>
+        </div>
       </div>
     </div>
   );

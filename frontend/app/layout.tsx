@@ -3,6 +3,7 @@
 import { Sora, DM_Sans } from 'next/font/google';
 import './globals.css';
 import AuthProvider from '@/components/AuthProvider';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 const sora = Sora({
   subsets: ['latin'],
@@ -15,6 +16,8 @@ const dmSans = DM_Sans({
   variable: '--font-dm-sans',
   display: 'swap',
 });
+
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 
 export default function RootLayout({
   children,
@@ -38,7 +41,9 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
       <body className={`${sora.variable} ${dmSans.variable} font-body antialiased`}>
-        <AuthProvider>{children}</AuthProvider>
+        <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+          <AuthProvider>{children}</AuthProvider>
+        </GoogleOAuthProvider>
       </body>
     </html>
   );

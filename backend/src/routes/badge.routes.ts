@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { authMiddleware } from '../middleware/auth';
+import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import { getUserBadges, trackAction, getTrackingValues } from '../services/badge.service';
 
 const router = Router();

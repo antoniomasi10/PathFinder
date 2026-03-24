@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import GoogleAuthButton from '@/components/GoogleAuthButton';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -24,7 +25,9 @@ export default function LoginPage() {
       localStorage.setItem('accessToken', data.accessToken);
       setUser(data.user);
 
-      if (!data.user.profileCompleted) {
+      if (!data.user.emailVerified) {
+        router.push('/verify-email');
+      } else if (!data.user.profileCompleted) {
         router.push('/onboarding');
       } else {
         router.push('/home');
@@ -46,44 +49,61 @@ export default function LoginPage() {
           <p className="text-text-secondary">Accedi al tuo account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="card space-y-4">
+        <div className="card space-y-4">
           {error && (
             <div className="bg-error/10 text-error rounded-xl px-4 py-3 text-sm">
               {error}
             </div>
           )}
 
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input-field"
-              placeholder="la.tua@email.it"
-              required
-            />
+          {/* Google OAuth */}
+          <GoogleAuthButton />
+
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-white/10" />
+            <span className="text-text-secondary text-sm">oppure</span>
+            <div className="flex-1 h-px bg-white/10" />
           </div>
 
-          <div>
-            <label className="block text-sm text-text-secondary mb-1.5">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input-field"
-              placeholder="La tua password"
-              required
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm text-text-secondary mb-1.5">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input-field"
+                placeholder="la.tua@email.it"
+                required
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary w-full disabled:opacity-50"
-          >
-            {loading ? 'Accesso...' : 'Accedi'}
-          </button>
+            <div>
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="text-sm text-text-secondary">Password</label>
+                <Link href="/forgot-password" className="text-xs text-primary hover:underline">
+                  Password dimenticata?
+                </Link>
+              </div>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input-field"
+                placeholder="La tua password"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full disabled:opacity-50"
+            >
+              {loading ? 'Accesso...' : 'Accedi'}
+            </button>
+          </form>
 
           <p className="text-center text-sm text-text-secondary">
             Non hai un account?{' '}
@@ -91,7 +111,7 @@ export default function LoginPage() {
               Registrati
             </Link>
           </p>
-        </form>
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { authMiddleware } from '../middleware/auth';
+import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import * as notificationService from '../services/notification.service';
 import * as prefService from '../services/notificationPreference.service';

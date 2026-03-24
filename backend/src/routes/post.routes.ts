@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { authMiddleware } from '../middleware/auth';
+import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { createPostSchema, createCommentSchema } from '../schemas';
 import * as postService from '../services/post.service';
