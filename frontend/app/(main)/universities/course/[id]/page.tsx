@@ -187,10 +187,128 @@ export default function CourseDetailPage() {
     localStorage.setItem(`calendar-added-${params.id}`, JSON.stringify([...newSet]));
   };
 
+  // If no mock course but backend data exists, show a backend-powered detail view
+  if (!course && backendCourse) {
+    return (
+      <div className="min-h-screen bg-[#0A0E1A]">
+        {/* Header */}
+        <div className="sticky top-0 z-20 px-4 pt-4 pb-3 flex items-center justify-between" style={{ backgroundColor: 'rgba(10,14,26,0.95)', backdropFilter: 'blur(12px)' }}>
+          <button onClick={() => router.back()} className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(28,47,67,0.8)' }}>
+            <ArrowLeft className="w-5 h-5 text-white" />
+          </button>
+          <button
+            onClick={() => {
+              toggleSave({ id: courseId, name: backendCourse.name, university: backendCourse.university });
+            }}
+            className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(28,47,67,0.8)' }}
+          >
+            <Bookmark className={`w-5 h-5 ${bookmarked ? 'text-[#4A9EFF] fill-[#4A9EFF]' : 'text-white'}`} />
+          </button>
+        </div>
+
+        <div className="px-4 pb-32 space-y-6">
+          {/* Title */}
+          <div>
+            <h1 className="text-2xl font-bold text-white mb-2">{backendCourse.name}</h1>
+            <p className="text-[#4A9EFF] font-medium">{backendCourse.university?.name}</p>
+            {backendCourse.university?.city && (
+              <p className="text-[#64748B] text-sm mt-1">{backendCourse.university.city}</p>
+            )}
+          </div>
+
+          {/* Info pills */}
+          <div className="flex flex-wrap gap-2">
+            {backendCourse.type && (
+              <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-[#1E293B] text-[#94A3B8]">
+                {backendCourse.type === 'TRIENNALE' ? 'Triennale' : backendCourse.type === 'MAGISTRALE' ? 'Magistrale' : 'Ciclo Unico'}
+              </span>
+            )}
+            {backendCourse.languageOfInstruction && (
+              <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-[#1E293B] text-[#94A3B8]">
+                {backendCourse.languageOfInstruction}
+              </span>
+            )}
+            {backendCourse.programDuration && (
+              <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-[#1E293B] text-[#94A3B8]">
+                {backendCourse.programDuration}
+              </span>
+            )}
+            {backendCourse.internationalOpportunities && (
+              <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-[#4F46E5]/20 text-[#4F46E5]">
+                Opportunità internazionali
+              </span>
+            )}
+          </div>
+
+          {/* Stats */}
+          {(backendCourse.employmentRate || backendCourse.avgSalaryAfterGraduation) && (
+            <div className="grid grid-cols-2 gap-3">
+              {backendCourse.employmentRate && (
+                <div className="bg-[#161B22] rounded-2xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#4A9EFF]">{Math.round(backendCourse.employmentRate * 100)}%</p>
+                  <p className="text-xs text-[#64748B] mt-1">Tasso occupazione</p>
+                </div>
+              )}
+              {backendCourse.avgSalaryAfterGraduation && (
+                <div className="bg-[#161B22] rounded-2xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#22C55E]">{backendCourse.avgSalaryAfterGraduation.toLocaleString('it-IT')}€</p>
+                  <p className="text-xs text-[#64748B] mt-1">Stipendio medio</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tags */}
+          {backendCourse.tags?.length > 0 && (
+            <div>
+              <h3 className="text-white font-semibold mb-3">Aree tematiche</h3>
+              <div className="flex flex-wrap gap-2">
+                {backendCourse.tags.map((tag: string) => (
+                  <span key={tag} className="px-3 py-1.5 rounded-full text-xs font-medium bg-[#1E293B] text-[#94A3B8]">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {backendCourse.field && (
+            <div className="bg-[#161B22] rounded-2xl p-4">
+              <h3 className="text-white font-semibold mb-2">Campo di studio</h3>
+              <p className="text-[#94A3B8] text-sm">{backendCourse.field}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom bar */}
+        <div className="fixed bottom-0 left-0 right-0 p-4 z-30" style={{ backgroundColor: '#0D1117', borderTop: '1px solid #2A3F54' }}>
+          <div className="flex gap-3 max-w-md mx-auto">
+            <button
+              onClick={() => {
+                if (!bookmarked) track('courses_saved');
+                toggleSave({ id: courseId, name: backendCourse.name, university: backendCourse.university });
+              }}
+              className="flex-1 py-3 rounded-xl font-semibold shadow-md transition-colors"
+              style={{
+                backgroundColor: bookmarked ? '#2A3F54' : '#4A9EFF',
+                color: bookmarked ? '#4A9EFF' : 'white',
+                border: bookmarked ? '1px solid #4A9EFF' : 'none',
+              }}
+            >
+              {bookmarked ? '✓ Salvato' : '+ Salva corso'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Neither mock nor backend course found yet — show loading
   if (!course) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p style={{ color: '#8B8FA8', fontSize: '16px' }}>Corso non trovato</p>
+        <div className="animate-pulse text-[#8B8FA8] text-base">Caricamento corso...</div>
       </div>
     );
   }
