@@ -52,6 +52,13 @@ export async function registerUser(input: RegisterInput) {
   }
 
   const passwordHash = await hashPassword(input.password);
+
+  // Generate OTP before creating user
+  const otp = generateOTP();
+
+  // Try sending email BEFORE creating user to avoid orphans
+  await sendVerificationEmail(input.email, input.name, otp);
+
   const user = await prisma.user.create({
     data: {
       name: input.name,
@@ -68,8 +75,6 @@ export async function registerUser(input: RegisterInput) {
     include: { university: true },
   });
 
-  // Generate and send OTP
-  const otp = generateOTP();
   await prisma.verificationCode.create({
     data: {
       userId: user.id,
@@ -78,8 +83,6 @@ export async function registerUser(input: RegisterInput) {
       expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
     },
   });
-
-  await sendVerificationEmail(user.email, user.name, otp);
 
   const payload: JwtPayload = { userId: user.id, email: user.email };
   return {
