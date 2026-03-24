@@ -11,8 +11,11 @@ const googleClient = process.env.GOOGLE_CLIENT_ID
 
 interface RegisterInput {
   name: string;
+  surname: string;
+  username: string;
   email: string;
   password: string;
+  phone?: string;
   universityId?: string;
   courseOfStudy?: string;
 }
@@ -26,6 +29,9 @@ function userResponse(user: any) {
   return {
     id: user.id,
     name: user.name,
+    surname: user.surname,
+    username: user.username,
+    phone: user.phone,
     email: user.email,
     profileCompleted: user.profileCompleted,
     emailVerified: user.emailVerified,
@@ -40,10 +46,18 @@ export async function registerUser(input: RegisterInput) {
     throw new Error('Email già registrata');
   }
 
+  const existingUsername = await prisma.user.findUnique({ where: { username: input.username } });
+  if (existingUsername) {
+    throw new Error('Username già in uso');
+  }
+
   const passwordHash = await hashPassword(input.password);
   const user = await prisma.user.create({
     data: {
       name: input.name,
+      surname: input.surname,
+      username: input.username,
+      phone: input.phone || null,
       email: input.email,
       passwordHash,
       provider: 'LOCAL',

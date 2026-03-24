@@ -14,6 +14,9 @@ interface University {
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
+  const [surname, setSurname] = useState('');
+  const [username, setUsername] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [universityId, setUniversityId] = useState('');
@@ -21,6 +24,7 @@ export default function RegisterPage() {
   const [universities, setUniversities] = useState<University[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
   const router = useRouter();
   const { setUser } = useAuth();
 
@@ -32,18 +36,57 @@ export default function RegisterPage() {
     });
   }, []);
 
+  // Check username availability with debounce
+  useEffect(() => {
+    if (username.length < 3) {
+      setUsernameStatus('idle');
+      return;
+    }
+    setUsernameStatus('checking');
+    const timeout = setTimeout(async () => {
+      try {
+        const { data } = await api.get(`/auth/check-username?username=${encodeURIComponent(username)}`);
+        setUsernameStatus(data.available ? 'available' : 'taken');
+      } catch {
+        setUsernameStatus('idle');
+      }
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [username]);
+
+  const passwordChecks = {
+    length: password.length >= 8,
+    upper: /[A-Z]/.test(password),
+    lower: /[a-z]/.test(password),
+    number: /[0-9]/.test(password),
+    special: /[^A-Za-z0-9]/.test(password),
+  };
+  const passwordValid = Object.values(passwordChecks).every(Boolean);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!passwordValid) {
+      setError('La password non soddisfa tutti i requisiti');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const { data } = await api.post('/auth/register', {
-        name, email, password, universityId: universityId || undefined, courseOfStudy: courseOfStudy || undefined,
+        name,
+        surname,
+        username,
+        email,
+        password,
+        phone: phone || undefined,
+        universityId: universityId || undefined,
+        courseOfStudy: courseOfStudy || undefined,
       });
       localStorage.setItem('accessToken', data.accessToken);
       setUser(data.user);
-      // Redirect to email verification (OTP)
       router.push('/verify-email');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Errore durante la registrazione');
@@ -80,18 +123,62 @@ export default function RegisterPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">Nome completo</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="input-field"
-                placeholder="Mario Rossi"
-                required
-              />
+            {/* Nome e Cognome */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm text-text-secondary mb-1.5">Nome</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="input-field"
+                  placeholder="Mario"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-text-secondary mb-1.5">Cognome</label>
+                <input
+                  type="text"
+                  value={surname}
+                  onChange={(e) => setSurname(e.target.value)}
+                  className="input-field"
+                  placeholder="Rossi"
+                  required
+                />
+              </div>
             </div>
 
+            {/* Username */}
+            <div>
+              <label className="block text-sm text-text-secondary mb-1.5">Username</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))}
+                  className="input-field pr-10"
+                  placeholder="mario.rossi"
+                  minLength={3}
+                  maxLength={30}
+                  required
+                />
+                {usernameStatus === 'checking' && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary text-xs">...</span>
+                )}
+                {usernameStatus === 'available' && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 text-sm">&#10003;</span>
+                )}
+                {usernameStatus === 'taken' && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-error text-sm">&#10007;</span>
+                )}
+              </div>
+              {usernameStatus === 'taken' && (
+                <p className="text-error text-xs mt-1">Username già in uso</p>
+              )}
+            </div>
+
+            {/* Email */}
             <div>
               <label className="block text-sm text-text-secondary mb-1.5">Email</label>
               <input
@@ -104,6 +191,21 @@ export default function RegisterPage() {
               />
             </div>
 
+            {/* Telefono */}
+            <div>
+              <label className="block text-sm text-text-secondary mb-1.5">
+                Telefono <span className="text-text-secondary/50">(opzionale)</span>
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="input-field"
+                placeholder="+39 333 1234567"
+              />
+            </div>
+
+            {/* Password */}
             <div>
               <label className="block text-sm text-text-secondary mb-1.5">Password</label>
               <input
@@ -111,14 +213,31 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="input-field"
-                placeholder="Min 8 caratteri, 1 maiuscola, 1 numero"
-                minLength={8}
+                placeholder="Crea una password sicura"
                 required
               />
+              {password && (
+                <div className="mt-2 space-y-1">
+                  {[
+                    { check: passwordChecks.length, label: 'Almeno 8 caratteri' },
+                    { check: passwordChecks.upper, label: 'Una lettera maiuscola' },
+                    { check: passwordChecks.lower, label: 'Una lettera minuscola' },
+                    { check: passwordChecks.number, label: 'Un numero' },
+                    { check: passwordChecks.special, label: 'Un carattere speciale (!@#$%...)' },
+                  ].map(({ check, label }) => (
+                    <p key={label} className={`text-xs flex items-center gap-1.5 ${check ? 'text-green-400' : 'text-text-secondary/50'}`}>
+                      <span>{check ? '\u2713' : '\u2717'}</span> {label}
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
 
+            {/* Università */}
             <div>
-              <label className="block text-sm text-text-secondary mb-1.5">Università</label>
+              <label className="block text-sm text-text-secondary mb-1.5">
+                Università <span className="text-text-secondary/50">(opzionale)</span>
+              </label>
               <select
                 value={universityId}
                 onChange={(e) => setUniversityId(e.target.value)}
@@ -131,8 +250,11 @@ export default function RegisterPage() {
               </select>
             </div>
 
+            {/* Corso di studi */}
             <div>
-              <label className="block text-sm text-text-secondary mb-1.5">Corso di studi</label>
+              <label className="block text-sm text-text-secondary mb-1.5">
+                Corso di studi <span className="text-text-secondary/50">(opzionale)</span>
+              </label>
               <input
                 type="text"
                 value={courseOfStudy}
@@ -144,7 +266,7 @@ export default function RegisterPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !passwordValid || usernameStatus === 'taken'}
               className="btn-primary w-full disabled:opacity-50"
             >
               {loading ? 'Registrazione...' : 'Registrati'}

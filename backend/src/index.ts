@@ -45,6 +45,7 @@ const io = new Server(httpServer, {
   maxHttpBufferSize: 5e6, // 5MB per supportare invio immagini via socket
 });
 
+app.set('trust proxy', 1); // trust first proxy (nginx/caddy)
 app.use(helmet());
 app.use(cors({
   origin: FRONTEND_URL,

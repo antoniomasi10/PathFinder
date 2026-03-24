@@ -25,12 +25,12 @@ function setRefreshCookie(res: Response, token: string) {
 
 export async function register(req: Request, res: Response) {
   try {
-    const { name, email, password, universityId, courseOfStudy } = req.body;
-    if (!name || !email || !password) {
-      res.status(400).json({ error: 'Nome, email e password sono obbligatori' });
+    const { name, surname, username, email, password, phone, universityId, courseOfStudy } = req.body;
+    if (!name || !surname || !username || !email || !password) {
+      res.status(400).json({ error: 'Nome, cognome, username, email e password sono obbligatori' });
       return;
     }
-    const result = await registerUser({ name, email, password, universityId, courseOfStudy });
+    const result = await registerUser({ name, surname, username, email, password, phone, universityId, courseOfStudy });
 
     setRefreshCookie(res, result.refreshToken);
 

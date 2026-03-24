@@ -27,14 +27,12 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:4000:4000"
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
       PORT: 4000
       DATABASE_URL: postgresql://${POSTGRES_USER:-pathfinder}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-pathfinder}?schema=public
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
-      FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL is required}
-      LOG_LEVEL: info
     depends_on:
       postgres:
         condition: service_healthy

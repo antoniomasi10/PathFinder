@@ -28,6 +28,9 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         setUser({
           id: data.id,
           name: data.name,
+          surname: data.surname ?? '',
+          username: data.username ?? '',
+          phone: data.phone,
           email: data.email,
           profileCompleted: data.profileCompleted,
           emailVerified: data.emailVerified ?? true,

@@ -4,9 +4,18 @@ export const registerSchema = z.object({
   email: z.string().email('Email non valida'),
   password: z.string()
     .min(8, 'La password deve avere almeno 8 caratteri')
+    .max(64, 'La password non può superare 64 caratteri')
     .regex(/[A-Z]/, 'La password deve contenere almeno una lettera maiuscola')
-    .regex(/[0-9]/, 'La password deve contenere almeno un numero'),
-  name: z.string().min(1, 'Nome obbligatorio').max(100),
+    .regex(/[a-z]/, 'La password deve contenere almeno una lettera minuscola')
+    .regex(/[0-9]/, 'La password deve contenere almeno un numero')
+    .regex(/[^A-Za-z0-9]/, 'La password deve contenere almeno un carattere speciale (!@#$%...)'),
+  name: z.string().min(1, 'Nome obbligatorio').max(50),
+  surname: z.string().min(1, 'Cognome obbligatorio').max(50),
+  username: z.string()
+    .min(3, 'L\'username deve avere almeno 3 caratteri')
+    .max(30, 'L\'username non può superare 30 caratteri')
+    .regex(/^[a-zA-Z0-9._]+$/, 'L\'username può contenere solo lettere, numeri, punti e underscore'),
+  phone: z.string().regex(/^\+?[0-9]{6,15}$/, 'Numero di telefono non valido').optional().or(z.literal('')),
 });
 
 export const loginSchema = z.object({
