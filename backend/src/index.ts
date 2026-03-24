@@ -34,12 +34,27 @@ if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
   throw new Error('FRONTEND_URL must be set in production');
 }
 
+// Support multiple frontend origins (e.g. pathfinder-univ + pathfinder-italy on Vercel)
+const ALLOWED_ORIGINS = [
+  FRONTEND_URL,
+  ...(process.env.EXTRA_ORIGINS ? process.env.EXTRA_ORIGINS.split(',') : []),
+  'http://localhost:3000',
+].filter(Boolean);
+
+function corsOrigin(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+  if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+    callback(null, true);
+  } else {
+    callback(null, false);
+  }
+}
+
 const app = express();
 const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: FRONTEND_URL,
+    origin: ALLOWED_ORIGINS,
     credentials: true,
   },
   maxHttpBufferSize: 5e6, // 5MB per supportare invio immagini via socket
@@ -48,7 +63,7 @@ const io = new Server(httpServer, {
 app.set('trust proxy', 1); // trust first proxy (nginx/caddy)
 app.use(helmet());
 app.use(cors({
-  origin: FRONTEND_URL,
+  origin: corsOrigin,
   credentials: true,
 }));
 
