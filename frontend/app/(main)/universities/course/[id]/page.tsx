@@ -47,7 +47,8 @@ export default function CourseDetailPage() {
     }
   }, [params.id]);
 
-  const bookmarked = course ? savedIds.has(String(course.id)) : false;
+  const courseId = String(params.id);
+  const bookmarked = savedIds.has(courseId);
   const [checklist, setChecklist] = useState<Record<number, boolean>>({});
   const [calendarAdded, setCalendarAdded] = useState<Set<number>>(new Set());
   const [showSimulator, setShowSimulator] = useState(false);
@@ -254,7 +255,11 @@ export default function CourseDetailPage() {
             <ArrowLeft className="w-5 h-5 text-white" />
           </button>
           <button
-            onClick={() => toggleSave({ id: String(course.id), name: course.title, university: { name: course.university, city: course.city } })}
+            onClick={() => {
+              const name = backendCourse?.name || course?.title || '';
+              const uni = backendCourse?.university || (course ? { name: course.university, city: course.city } : undefined);
+              toggleSave({ id: courseId, name, university: uni });
+            }}
             className="w-10 h-10 rounded-full flex items-center justify-center"
             style={{ backgroundColor: 'rgba(28,47,67,0.8)', backdropFilter: 'blur(8px)' }}
           >
@@ -565,7 +570,12 @@ export default function CourseDetailPage() {
       >
         <div className="flex gap-3 max-w-md mx-auto">
           <button
-            onClick={() => { if (!bookmarked) track('courses_saved'); toggleSave({ id: String(course.id), name: course.title, university: { name: course.university, city: course.city } }); }}
+            onClick={() => {
+              if (!bookmarked) track('courses_saved');
+              const name = backendCourse?.name || course?.title || '';
+              const uni = backendCourse?.university || (course ? { name: course.university, city: course.city } : undefined);
+              toggleSave({ id: courseId, name, university: uni });
+            }}
             className="flex-1 py-3 rounded-xl font-semibold shadow-md transition-colors"
             style={{
               backgroundColor: bookmarked ? '#2A3F54' : '#4A9EFF',
