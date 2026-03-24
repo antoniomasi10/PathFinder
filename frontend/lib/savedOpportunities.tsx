@@ -6,15 +6,22 @@ import api from '@/lib/api';
 export interface SavedOpportunity {
   id: string;
   title: string;
+  description?: string;
+  about?: string;
   company?: string;
   type: string;
+  url?: string;
+  location?: string;
+  isRemote?: boolean;
+  deadline?: string;
+  tags?: string[];
   university?: { name: string };
 }
 
 interface SavedOpportunitiesContextType {
   savedIds: Set<string>;
   savedOpps: SavedOpportunity[];
-  toggleSave: (oppId: string, data?: { title?: string; company?: string; type?: string }) => void;
+  toggleSave: (oppId: string, data?: Partial<SavedOpportunity>) => void;
 }
 
 const SavedOpportunitiesContext = createContext<SavedOpportunitiesContextType>({
@@ -33,7 +40,20 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
     api
       .get('/opportunities/saved')
       .then((res) => {
-        const opps: SavedOpportunity[] = res.data;
+        const opps: SavedOpportunity[] = (res.data || []).map((o: any) => ({
+          id: o.id,
+          title: o.title,
+          description: o.description,
+          about: o.about,
+          company: o.company,
+          type: o.type,
+          url: o.url,
+          location: o.location,
+          isRemote: o.isRemote,
+          deadline: o.deadline,
+          tags: o.tags,
+          university: o.university,
+        }));
         setSavedOpps(opps);
         setSavedIds(new Set(opps.map((o) => o.id)));
       })
@@ -44,7 +64,7 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
 
   function toggleSave(
     oppId: string,
-    data?: { title?: string; company?: string; type?: string },
+    data?: Partial<SavedOpportunity>,
   ) {
     const isSaved = savedIdsRef.current.has(oppId);
 
@@ -68,8 +88,16 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
           {
             id: oppId,
             title: data.title!,
+            description: data.description,
+            about: data.about,
             company: data.company,
             type: data.type ?? 'INTERNSHIP',
+            url: data.url,
+            location: data.location,
+            isRemote: data.isRemote,
+            deadline: data.deadline,
+            tags: data.tags,
+            university: data.university,
           },
         ]);
       }
