@@ -14,10 +14,11 @@ import { logger } from '../utils/logger';
 import { trackLoginStreak } from '../services/badge.service';
 
 function setRefreshCookie(res: Response, token: string) {
+  const isProduction = process.env.NODE_ENV === 'production';
   res.cookie('refreshToken', token, {
     httpOnly: true,
     secure: true,
-    sameSite: 'strict',
+    sameSite: isProduction ? 'none' : 'strict', // 'none' needed for cross-origin (Vercel ↔ VPS)
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/api/auth',
   });

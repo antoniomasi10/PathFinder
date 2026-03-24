@@ -21,10 +21,11 @@ router.post('/register', validate(registerSchema), register);
 router.post('/login', validate(loginSchema), login);
 router.post('/refresh', refresh);
 router.post('/logout', (req: Request, res: Response) => {
+  const isProduction = process.env.NODE_ENV === 'production';
   res.clearCookie('refreshToken', {
     httpOnly: true,
     secure: true,
-    sameSite: 'strict',
+    sameSite: isProduction ? 'none' : 'strict',
     path: '/api/auth',
   });
   res.json({ message: 'Logout effettuato' });

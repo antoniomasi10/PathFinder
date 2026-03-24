@@ -47,11 +47,17 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
           router.replace('/home');
         }
       })
-      .catch(() => {
-        localStorage.removeItem('accessToken');
-        if (!publicPaths.includes(pathname)) {
-          router.replace('/login');
+      .catch((err) => {
+        // Only redirect to login if it's a clear auth failure (401)
+        // Network errors or server errors should not log out the user
+        if (err.response?.status === 401) {
+          localStorage.removeItem('accessToken');
+          if (!publicPaths.includes(pathname)) {
+            router.replace('/login');
+          }
         }
+        // For other errors (network, 500, etc.) keep the user logged in
+        // They can still use cached data or retry
       })
       .finally(() => setLoading(false));
   }, []);
