@@ -6,6 +6,8 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
+import SearchableSelect from '@/components/SearchableSelect';
+import { italianCourses } from '@/data/italianCourses';
 
 interface University {
   id: string;
@@ -69,6 +71,16 @@ export default function RegisterPage() {
 
     if (!passwordValid) {
       setError('La password non soddisfa tutti i requisiti');
+      return;
+    }
+
+    if (!universityId) {
+      setError('Seleziona la tua università');
+      return;
+    }
+
+    if (!courseOfStudy.trim()) {
+      setError('Inserisci il tuo corso di studi');
       return;
     }
 
@@ -238,17 +250,13 @@ export default function RegisterPage() {
               <label className="block text-sm text-text-secondary mb-1.5">
                 Università
               </label>
-              <select
+              <SearchableSelect
+                options={universities.map((uni) => ({ value: uni.id, label: uni.name }))}
                 value={universityId}
-                onChange={(e) => setUniversityId(e.target.value)}
-                className="input-field"
+                onChange={setUniversityId}
+                placeholder="Cerca la tua università..."
                 required
-              >
-                <option value="">Seleziona università</option>
-                {universities.map((uni) => (
-                  <option key={uni.id} value={uni.id}>{uni.name}</option>
-                ))}
-              </select>
+              />
             </div>
 
             {/* Corso di studi */}
@@ -256,13 +264,13 @@ export default function RegisterPage() {
               <label className="block text-sm text-text-secondary mb-1.5">
                 Corso di studi
               </label>
-              <input
-                type="text"
+              <SearchableSelect
+                options={italianCourses.map((c) => ({ value: c, label: c }))}
                 value={courseOfStudy}
-                onChange={(e) => setCourseOfStudy(e.target.value)}
-                className="input-field"
-                placeholder="es. Informatica"
+                onChange={setCourseOfStudy}
+                placeholder="Cerca il tuo corso..."
                 required
+                allowCustom
               />
             </div>
 
