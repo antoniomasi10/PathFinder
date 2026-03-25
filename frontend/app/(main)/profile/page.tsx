@@ -1717,7 +1717,7 @@ function LanguageDropdown() {
   const { language, setLanguage } = useLanguage();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const options: Language[] = ['Italiano', 'Inglese', 'Cinese', 'Spagnolo'];
+  const options: Language[] = ['Italiano', 'Inglese', 'Francese', 'Cinese', 'Spagnolo'];
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
