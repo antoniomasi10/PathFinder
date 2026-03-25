@@ -278,9 +278,12 @@ export default function NetworkingPage() {
     const socket = getSocket();
 
     const handleNewMessage = (msg: Message & { receiverId?: string }) => {
+      let isChatOpen = false;
+
       // Update the open chat if applicable
       setSelectedUser((current) => {
         if (current && msg.senderId === current.id) {
+          isChatOpen = true;
           setMessages((prev) => {
             if (prev.some((m) => m.id === msg.id)) return prev;
             return [...prev, msg];
@@ -302,7 +305,9 @@ export default function NetworkingPage() {
         const conv = { ...updated[idx] };
         conv.lastMessage = msg.content || (msg.images?.length ? '📷 Foto' : '');
         conv.lastMessageAt = msg.sentAt;
-        conv.unread += 1;
+        if (!isChatOpen) {
+          conv.unread += 1;
+        }
         updated.splice(idx, 1);
         // Re-insert respecting pinned order
         const insertIdx = updated.findIndex((c) => !c.pinned);
@@ -361,6 +366,10 @@ export default function NetworkingPage() {
   useEffect(() => {
     if (selectedUser) {
       loadMessages(selectedUser.id);
+      // Reset unread counter for this conversation
+      setUnifiedConversations((prev) =>
+        prev.map((c) => c.id === `direct-${selectedUser.id}` ? { ...c, unread: 0 } : c),
+      );
     }
   }, [selectedUser]);
 
@@ -490,6 +499,10 @@ export default function NetworkingPage() {
   useEffect(() => {
     if (selectedGroup) {
       loadGroupMessages(selectedGroup.id);
+      // Reset unread counter for this group conversation
+      setUnifiedConversations((prev) =>
+        prev.map((c) => c.id === `group-${selectedGroup.id}` ? { ...c, unread: 0 } : c),
+      );
     }
   }, [selectedGroup]);
 

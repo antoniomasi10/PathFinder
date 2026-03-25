@@ -12,7 +12,10 @@ const CLOUDINARY_CONFIGURED =
  */
 export async function uploadImage(dataUri: string, folder: string): Promise<string> {
   // Already a URL (e.g. previously uploaded or Google avatar) — passthrough
-  if (dataUri.startsWith('https://')) return dataUri;
+  if (
+    dataUri.startsWith('https://res.cloudinary.com/') ||
+    dataUri.startsWith('https://lh3.googleusercontent.com/')
+  ) return dataUri;
 
   if (!CLOUDINARY_CONFIGURED) return dataUri;
 

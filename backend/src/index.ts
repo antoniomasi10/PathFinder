@@ -10,7 +10,7 @@ import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
-import Redis from 'ioredis';
+import { createPubSubPair } from './lib/redis';
 import authRoutes from './routes/auth.routes';
 import profileRoutes from './routes/profile.routes';
 import opportunityRoutes from './routes/opportunity.routes';
@@ -113,18 +113,24 @@ app.get('/api/health', (_req, res) => {
 });
 
 // Socket.IO — attach Redis adapter for horizontal scaling (multi-instance)
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-const pubClient = new Redis(REDIS_URL);
-const subClient = pubClient.duplicate();
+const { pub: pubClient, sub: subClient } = createPubSubPair();
+const REDIS_ADAPTER_TIMEOUT = 5000;
 
-Promise.all([
-  new Promise<void>((resolve) => pubClient.on('ready', resolve)),
-  new Promise<void>((resolve) => subClient.on('ready', resolve)),
+Promise.race([
+  Promise.all([
+    new Promise<void>((resolve) => pubClient.on('ready', resolve)),
+    new Promise<void>((resolve) => subClient.on('ready', resolve)),
+  ]),
+  new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('Redis connection timeout')), REDIS_ADAPTER_TIMEOUT),
+  ),
 ]).then(() => {
   io.adapter(createAdapter(pubClient, subClient));
   logger.info('Socket.IO Redis adapter connected');
 }).catch((err) => {
   logger.warn('Redis adapter unavailable, falling back to in-memory adapter', { error: String(err) });
+  pubClient.disconnect();
+  subClient.disconnect();
 });
 
 setIO(io);

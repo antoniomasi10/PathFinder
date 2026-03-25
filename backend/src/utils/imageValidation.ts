@@ -25,8 +25,11 @@ export function validateImages(images: unknown): string[] {
   return images
     .filter((img): img is string => {
       if (typeof img !== 'string') return false;
-      // Passthrough already-uploaded HTTPS URLs
-      if (img.startsWith('https://')) return true;
+      // Passthrough already-uploaded Cloudinary / Google URLs
+      if (
+        img.startsWith('https://res.cloudinary.com/') ||
+        img.startsWith('https://lh3.googleusercontent.com/')
+      ) return true;
       return validateDataUri(img);
     })
     .slice(0, 5);
