@@ -53,16 +53,14 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
   savedIdsRef.current = savedIds;
 
   useEffect(() => {
+    // Show cached data immediately, then sync from server
     const cached = loadFromStorage();
-
     if (cached.length > 0) {
-      // localStorage has data — trust it completely, no API call needed
       setSavedOpps(cached);
       setSavedIds(new Set(cached.map((o) => o.id)));
-      return;
     }
 
-    // localStorage empty — hydrate from server once and seed localStorage
+    // Always fetch from server to stay in sync across devices
     api
       .get('/opportunities/saved')
       .then((res) => {

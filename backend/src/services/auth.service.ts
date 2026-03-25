@@ -100,8 +100,6 @@ export async function changePassword(userId: string, oldPassword: string, newPas
   const valid = await comparePassword(oldPassword, user.passwordHash);
   if (!valid) throw new Error('Password attuale non corretta');
 
-  if (newPassword.length < 6) throw new Error('La nuova password deve avere almeno 6 caratteri');
-
   const passwordHash = await hashPassword(newPassword);
   await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
 }

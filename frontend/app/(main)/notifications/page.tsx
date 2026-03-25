@@ -114,8 +114,8 @@ export default function NotificationsPage() {
 
   const todayNotifs = notifications.filter((n) => new Date(n.createdAt).getTime() >= startOfToday);
   const yesterdayNotifs = notifications.filter((n) => {
-    const t = new Date(n.createdAt).getTime();
-    return t >= startOfYesterday && t < startOfToday;
+    const ts = new Date(n.createdAt).getTime();
+    return ts >= startOfYesterday && ts < startOfToday;
   });
   const olderNotifs = notifications.filter((n) => new Date(n.createdAt).getTime() < startOfYesterday);
 
@@ -166,7 +166,17 @@ export default function NotificationsPage() {
 
   return (
     <div className="px-4 py-4">
-      <h2 className="text-2xl font-display font-bold mb-4">{t.notifications.title}</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-display font-bold">{t.notifications.title}</h2>
+        {hasUnread && (
+          <button
+            onClick={markAllRead}
+            className="text-xs text-primary font-medium hover:underline"
+          >
+            {t.notifications.markAllRead}
+          </button>
+        )}
+      </div>
 
       {/* Notification list */}
       {notifications.length === 0 ? (
@@ -179,6 +189,15 @@ export default function NotificationsPage() {
           {renderSection(t.notifications.today, todayNotifs)}
           {renderSection(t.notifications.yesterday, yesterdayNotifs)}
           {renderSection(t.notifications.earlier, olderNotifs)}
+          {page < totalPages && (
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="w-full py-3 text-sm text-primary font-medium hover:underline disabled:opacity-50"
+            >
+              {loadingMore ? '...' : t.notifications.loadMore}
+            </button>
+          )}
         </>
       )}
     </div>

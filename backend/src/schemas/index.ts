@@ -70,10 +70,29 @@ export const batchStatusSchema = z.object({
   userIds: z.array(z.string().uuid()).min(1).max(50),
 });
 
+const privacyOption = z.enum(['Tutti', 'Pathmates', 'Nessuno']);
+
 export const updateProfileSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   bio: z.string().max(500).optional(),
   avatar: z.string().optional(),
   courseOfStudy: z.string().max(200).optional(),
   passions: z.array(z.string().max(50)).max(20).optional(),
+  publicProfile: z.boolean().optional(),
+  privacySkills: privacyOption.optional(),
+  privacyUniversity: privacyOption.optional(),
+  privacySavedOpps: privacyOption.optional(),
+  privacyPathmates: privacyOption.optional(),
+  messagePrivacy: privacyOption.optional(),
+});
+
+export const changePasswordSchema = z.object({
+  oldPassword: z.string().min(1, 'Password attuale obbligatoria'),
+  newPassword: z.string()
+    .min(8, 'La password deve avere almeno 8 caratteri')
+    .max(64, 'La password non può superare 64 caratteri')
+    .regex(/[A-Z]/, 'La password deve contenere almeno una lettera maiuscola')
+    .regex(/[a-z]/, 'La password deve contenere almeno una lettera minuscola')
+    .regex(/[0-9]/, 'La password deve contenere almeno un numero')
+    .regex(/[^A-Za-z0-9]/, 'La password deve contenere almeno un carattere speciale (!@#$%...)'),
 });

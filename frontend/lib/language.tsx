@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export type Language = 'Italiano' | 'Inglese' | 'Cinese' | 'Spagnolo';
 
@@ -67,6 +67,8 @@ const it = {
     yesterday: 'Ieri',
     earlier: 'Precedenti',
     empty: 'Nessuna notifica',
+    markAllRead: 'Segna tutte come lette',
+    loadMore: 'Carica altro',
   },
   // Universities
   uni: {
@@ -394,6 +396,8 @@ const en: Translations = {
     yesterday: 'Yesterday',
     earlier: 'Earlier',
     empty: 'No notifications',
+    markAllRead: 'Mark all as read',
+    loadMore: 'Load more',
   },
   uni: {
     title: 'Universities',
@@ -451,7 +455,7 @@ const en: Translations = {
     noResults: 'No results found',
     noPathmates: 'No Pathmates yet',
     suggestedPathmates: 'Suggested Pathmates',
-    yearSuffix: 'st year',
+    yearSuffix: ' year',
     universityHidden: 'University hidden',
     deletingAccount: 'Deleting...',
     deleteIrreversibleMsg: 'This action is irreversible. All your data will be permanently deleted.',
@@ -600,7 +604,7 @@ const en: Translations = {
     leaveConfirmBtn: 'Leave',
     deleteConfirmMsg: 'This action is irreversible. All messages will be deleted and members will be notified.',
     deleteConfirmBtn: 'Delete',
-    deleteConfirmInput: 'ELIMINA',
+    deleteConfirmInput: 'DELETE',
     allFriendsInGroup: 'All your friends are already in the group',
     alreadyInGroup: 'Already in group',
     creator: 'Creator',
@@ -709,6 +713,8 @@ const zh: Translations = {
     yesterday: '昨天',
     earlier: '更早',
     empty: '暂无通知',
+    markAllRead: '全部标为已读',
+    loadMore: '加载更多',
   },
   uni: {
     title: '大学',
@@ -915,7 +921,7 @@ const zh: Translations = {
     leaveConfirmBtn: '退出',
     deleteConfirmMsg: '此操作不可逆。所有消息将被删除，成员将收到通知。',
     deleteConfirmBtn: '删除',
-    deleteConfirmInput: 'ELIMINA',
+    deleteConfirmInput: '删除',
     allFriendsInGroup: '你所有的朋友都已在群组中',
     alreadyInGroup: '已在群组中',
     creator: '创建者',
@@ -1024,6 +1030,8 @@ const es: Translations = {
     yesterday: 'Ayer',
     earlier: 'Anteriores',
     empty: 'Sin notificaciones',
+    markAllRead: 'Marcar todas como leídas',
+    loadMore: 'Cargar más',
   },
   uni: {
     title: 'Universidades',
@@ -1230,7 +1238,7 @@ const es: Translations = {
     leaveConfirmBtn: 'Salir',
     deleteConfirmMsg: 'Esta acción es irreversible. Todos los mensajes serán eliminados y los miembros serán notificados.',
     deleteConfirmBtn: 'Eliminar',
-    deleteConfirmInput: 'ELIMINA',
+    deleteConfirmInput: 'ELIMINAR',
     allFriendsInGroup: 'Todos tus amigos ya están en el grupo',
     alreadyInGroup: 'Ya en el grupo',
     creator: 'Creador',
@@ -1334,9 +1342,29 @@ const LanguageContext = createContext<LanguageContextType>({
   t: it,
 });
 
+const LANG_STORAGE_KEY = 'pathfinder_language';
+const VALID_LANGUAGES: Language[] = ['Italiano', 'Inglese', 'Cinese', 'Spagnolo'];
+
+function getStoredLanguage(): Language {
+  try {
+    const stored = localStorage.getItem(LANG_STORAGE_KEY);
+    if (stored && VALID_LANGUAGES.includes(stored as Language)) return stored as Language;
+  } catch {}
+  return 'Italiano';
+}
+
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguage] = useState<Language>('Italiano');
+  const [language, setLanguageState] = useState<Language>('Italiano');
   const t = TRANSLATIONS[language];
+
+  useEffect(() => {
+    setLanguageState(getStoredLanguage());
+  }, []);
+
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang);
+    try { localStorage.setItem(LANG_STORAGE_KEY, lang); } catch {}
+  };
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t }}>

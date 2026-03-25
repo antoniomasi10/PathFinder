@@ -13,7 +13,7 @@ import {
 } from '../controllers/auth.controller';
 import { validate } from '../middleware/validate';
 import { authMiddleware } from '../middleware/auth';
-import { registerSchema, loginSchema, verifyEmailSchema, resetPasswordSchema, forgotPasswordSchema } from '../schemas';
+import { registerSchema, loginSchema, verifyEmailSchema, resetPasswordSchema, forgotPasswordSchema, changePasswordSchema } from '../schemas';
 
 const router = Router();
 
@@ -55,6 +55,6 @@ router.get('/check-username', async (req: Request, res: Response) => {
 router.post('/google', googleAuthHandler);
 
 // Password management (authenticated)
-router.post('/change-password', authMiddleware, changePasswordHandler);
+router.post('/change-password', authMiddleware, validate(changePasswordSchema), changePasswordHandler);
 
 export default router;

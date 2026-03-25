@@ -176,20 +176,18 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
     : (savedOppsVisibility === 'Tutti' ||
        (savedOppsVisibility === 'Pathmates' && isPathmate) ||
        savedOppsVisibility === undefined);
-  let privacyPathmates = 'Tutti';
-  try {
-    const rawPrivacy = await prisma.$queryRawUnsafe<{ privacyPathmates: string }[]>(
-      `SELECT "privacyPathmates" FROM "User" WHERE id = $1 LIMIT 1`,
-      ownerId
-    );
-    privacyPathmates = rawPrivacy[0]?.privacyPathmates ?? 'Tutti';
-  } catch {}
+  const privacyPathmates = ((user as any).privacyPathmates as string | undefined) ?? 'Tutti';
   const messagePrivacy = ((user as any).messagePrivacy as string | undefined) ?? 'Pathmates';
   const privacySkills = ((user as any).privacySkills as string | undefined) ?? 'Tutti';
   const canSeeSkills =
     isPublic
       ? privacySkills === 'Tutti' || (privacySkills === 'Pathmates' && isPathmate)
       : isPathmate;
+
+  const canMessage =
+    messagePrivacy === 'Tutti' ||
+    (messagePrivacy === 'Pathmates' && isPathmate) ||
+    ownerId === viewerId;
 
   if (!canSeeProfile) {
     return {
@@ -210,6 +208,7 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
       iAmRequester,
       isPathmate,
       messagePrivacy,
+      canMessage,
       canSeeSkills: false,
     };
   }
@@ -236,16 +235,45 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
     iAmRequester,
     isPathmate,
     messagePrivacy,
+    canMessage,
     canSeeSkills,
   };
 }
 
-export async function updateProfile(userId: string, data: Record<string, any>) {
-  const { passions, ...userFields } = data;
+interface UpdateProfileData {
+  name?: string;
+  bio?: string;
+  avatar?: string;
+  courseOfStudy?: string;
+  passions?: string[];
+  publicProfile?: boolean;
+  privacySkills?: string;
+  privacyUniversity?: string;
+  privacySavedOpps?: string;
+  privacyPathmates?: string;
+  messagePrivacy?: string;
+}
+
+const ALLOWED_USER_FIELDS = [
+  'name', 'bio', 'avatar', 'courseOfStudy',
+  'publicProfile', 'privacySkills', 'privacyUniversity',
+  'privacySavedOpps', 'privacyPathmates', 'messagePrivacy',
+] as const;
+
+export async function updateProfile(userId: string, data: UpdateProfileData) {
+  const { passions, ...rawFields } = data;
+
+  // Whitelist only allowed fields to prevent mass assignment
+  const userFields: Record<string, unknown> = {};
+  for (const key of ALLOWED_USER_FIELDS) {
+    if (key in rawFields && rawFields[key as keyof typeof rawFields] !== undefined) {
+      userFields[key] = rawFields[key as keyof typeof rawFields];
+    }
+  }
 
   // Upload avatar to Cloudinary if it's a data URI
-  if (userFields.avatar && userFields.avatar.startsWith('data:image/')) {
-    userFields.avatar = await uploadImage(userFields.avatar, 'avatars');
+  if (typeof userFields.avatar === 'string' && userFields.avatar.startsWith('data:image/')) {
+    userFields.avatar = await uploadImage(userFields.avatar as string, 'avatars');
   }
 
   if (passions !== undefined) {
@@ -258,7 +286,7 @@ export async function updateProfile(userId: string, data: Record<string, any>) {
   if (Object.keys(userFields).length > 0) {
     return prisma.user.update({
       where: { id: userId },
-      data: userFields as any,
+      data: userFields,
       include: { profile: true, university: true },
     });
   }
@@ -294,12 +322,15 @@ export async function deleteAccount(userId: string) {
     }
   }
 
-  // 3. Delete all messages sent or received by this user (no cascade on User)
+  // 3. Remove group memberships (for groups the user is a member but not creator)
+  await prisma.groupMember.deleteMany({ where: { userId } });
+
+  // 4. Delete all messages sent or received by this user (no cascade on User)
   await prisma.pathMatesMessage.deleteMany({
     where: { OR: [{ senderId: userId }, { receiverId: userId }] },
   });
 
-  // 4. Delete the user — remaining relations have onDelete: Cascade
-  //    (UserProfile, GroupMember, Notification, Post, PostLike, PostComment)
+  // 5. Delete the user — remaining relations have onDelete: Cascade
+  //    (UserProfile, Notification, Post, PostLike, PostComment)
   await prisma.user.delete({ where: { id: userId } });
 }

@@ -278,36 +278,13 @@ export default function ProfilePage() {
     logout();
   };
 
-  const handleDownloadData = () => {
-    if (!profile) return;
-    const data = {
-      name: profile.name,
-      email: profile.email,
-      bio: profile.bio,
-      university: profile.university?.name,
-      courseOfStudy: profile.courseOfStudy,
-      yearOfStudy: profile.yearOfStudy,
-      skills: profile.profile?.passions ?? [],
-      clusterTag: profile.profile?.clusterTag,
-      pathmates: friends.map((f) => ({ id: f.id, name: f.name, university: f.university?.name })),
-      savedOpportunities: savedOpps.map((o) => ({ id: o.id, title: o.title, company: o.company })),
-      exportedAt: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'pathfinder-data.json';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const handleDeleteAccount = async () => {
     setDeletingAccount(true);
     try {
       await api.delete('/profile/me');
     } catch {
-      // Even if the API call fails, proceed with local cleanup and logout
+      setDeletingAccount(false);
+      return;
     }
     // Clear all user-specific data from localStorage
     [

@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
 import { useLanguage, getSkillLabel } from '@/lib/language';
-import { getMockUserById, type MockUser } from '@/lib/mock-users';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -146,13 +145,7 @@ export default function UserProfilePage() {
         setProfile(data);
       })
       .catch(() => {
-        // API failed — try mock data
-        const mock = getMockUserById(id);
-        if (mock) {
-          setProfile(mock as PublicProfile);
-        } else {
-          setNotFound(true);
-        }
+        setNotFound(true);
       })
       .finally(() => setLoading(false));
   }, [id, user?.id]);
@@ -164,8 +157,7 @@ export default function UserProfilePage() {
       await api.post('/friends/request', { toUserId: profile.id });
       setProfile((p) => (p ? { ...p, friendStatus: 'PENDING', iAmRequester: true } : p));
     } catch {
-      // optimistic update even if request fails (demo mode)
-      setProfile((p) => (p ? { ...p, friendStatus: 'PENDING', iAmRequester: true } : p));
+      // Request failed — do not update UI
     } finally {
       setSendingRequest(false);
     }

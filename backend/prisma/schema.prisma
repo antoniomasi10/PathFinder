@@ -106,6 +106,7 @@ model User {
   privacyPathmates    String    @default("Tutti")
   messagePrivacy      String    @default("Pathmates")
   privacySkills       String    @default("Tutti")
+  privacyUniversity   String    @default("Tutti")
   passwordResetToken  String?
   passwordResetExpiry DateTime?
   createdAt      DateTime  @default(now())
