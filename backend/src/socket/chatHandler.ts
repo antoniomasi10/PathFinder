@@ -129,6 +129,7 @@ export function setupChatSocket(io: Server) {
           }
         }
 
+        const validImages = validateImages(data.images);
         const message = await prisma.pathMatesMessage.create({
           data: {
             senderId: userId,

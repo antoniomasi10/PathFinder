@@ -67,14 +67,11 @@ const BASE_OPPORTUNITIES: BaseOpportunity[] = [
     badge: 'FULL-TIME • REMOTE',
     matchScore: 85,
     url: 'https://www.technova.io/careers/software-engineer-intern',
-    icon: (
-      <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
-      </svg>
-    ),
+    type: 'full-time',
+    remote: true,
+    skills: [],
+    matchReason: '',
+    deadline: '',
   },
   {
     id: '2',
@@ -83,12 +80,11 @@ const BASE_OPPORTUNITIES: BaseOpportunity[] = [
     badge: 'WORKSHOP • HYBRID',
     matchScore: 62,
     url: 'https://www.creativehubmilan.it/workshop/product-design',
-    icon: (
-      <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17l-5.1-5.1a3.12 3.12 0 114.41-4.41l.67.67.67-.67a3.12 3.12 0 114.41 4.41l-5.06 5.1z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2" />
-      </svg>
-    ),
+    type: 'workshop',
+    remote: false,
+    skills: [],
+    matchReason: '',
+    deadline: '',
   },
   {
     id: '3',
@@ -96,11 +92,11 @@ const BASE_OPPORTUNITIES: BaseOpportunity[] = [
     company: 'Fintech Alpha',
     badge: 'JUNIOR • IN-PERSON',
     matchScore: 35,
-    icon: (
-      <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h4v11H3zM10 3h4v18h-4zM17 7h4v14h-4z" />
-      </svg>
-    ),
+    type: 'junior',
+    remote: false,
+    skills: [],
+    matchReason: '',
+    deadline: '',
   },
   {
     id: '4',
@@ -109,7 +105,36 @@ const BASE_OPPORTUNITIES: BaseOpportunity[] = [
     badge: 'EDUCATION • PART-TIME',
     matchScore: 92,
     url: 'https://www.polimi.it/formazione/master-e-corsi/master/master-in-ai-ethics',
-    icon: (
+    type: 'education',
+    remote: false,
+    skills: [],
+    matchReason: '',
+    deadline: '',
+  },
+];
+
+function OpportunityIcon({ type }: { type: string }) {
+  const t = type.toLowerCase();
+  if (t.includes('full-time') || t.includes('intern')) {
+    return (
+      <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+      </svg>
+    );
+  }
+  if (t.includes('workshop')) {
+    return (
+      <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17l-5.1-5.1a3.12 3.12 0 114.41-4.41l.67.67.67-.67a3.12 3.12 0 114.41 4.41l-5.06 5.1z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2" />
+      </svg>
+    );
+  }
+  if (t.includes('education') || t.includes('master')) {
+    return (
       <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
       </svg>
@@ -738,9 +763,6 @@ export default function HomePage() {
   const allOpportunities = getOpportunities(t);
   const filterCategories = getFilterCategories(t);
 
-  // Always sort by match score descending in "Per te"
-  const opportunities = [...allOpportunities].sort((a, b) => b.matchScore - a.matchScore);
-
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loadingOpps, setLoadingOpps] = useState(true);
 
@@ -764,12 +786,13 @@ export default function HomePage() {
           matchReason: opp.matchReason || '',
           deadline: opp.deadline || '',
         }));
-        setOpportunities(mapped);
+        setOpportunities(mapped.length > 0 ? mapped : [...allOpportunities].sort((a, b) => b.matchScore - a.matchScore));
       })
       .catch(() => {
-        setOpportunities([]);
+        setOpportunities([...allOpportunities].sort((a, b) => b.matchScore - a.matchScore));
       })
       .finally(() => setLoadingOpps(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Filter sheet state

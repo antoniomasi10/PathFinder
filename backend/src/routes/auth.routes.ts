@@ -9,6 +9,7 @@ import {
   forgotPasswordHandler,
   resetPasswordHandler,
   googleAuthHandler,
+  changePasswordHandler,
 } from '../controllers/auth.controller';
 import { validate } from '../middleware/validate';
 import { authMiddleware } from '../middleware/auth';
@@ -53,9 +54,7 @@ router.get('/check-username', async (req: Request, res: Response) => {
 // Google OAuth
 router.post('/google', googleAuthHandler);
 
-// Password management
+// Password management (authenticated)
 router.post('/change-password', authMiddleware, changePasswordHandler);
-router.post('/forgot-password', authMiddleware, forgotPasswordHandler);
-router.post('/reset-password', resetPasswordHandler);
 
 export default router;

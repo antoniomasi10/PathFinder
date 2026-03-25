@@ -203,6 +203,7 @@ router.post('/', authMiddleware, validate(sendMessageSchema), async (req: Reques
       }
     }
 
+    const validImages = validateImages(images);
     const message = await prisma.pathMatesMessage.create({
       data: {
         senderId,

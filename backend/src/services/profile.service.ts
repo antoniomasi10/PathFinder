@@ -146,6 +146,8 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
   });
   const isPathmate = friendRequest?.status === 'ACCEPTED';
   const friendStatus = friendRequest?.status ?? null;
+  const friendRequestId = friendRequest?.id ?? null;
+  const iAmRequester = friendRequest ? friendRequest.fromUserId === viewerId : null;
 
   // Get pathmates of target
   const friendRequests = await prisma.friendRequest.findMany({
@@ -203,6 +205,8 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
       pathmates: [],
       pathmatesCount: pathmates.length,
       friendStatus,
+      friendRequestId,
+      iAmRequester,
       isPathmate,
       messagePrivacy,
       canSeeSkills: false,
@@ -227,6 +231,8 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
     pathmates,
     pathmatesCount: pathmates.length,
     friendStatus,
+    friendRequestId,
+    iAmRequester,
     isPathmate,
     messagePrivacy,
     canSeeSkills,

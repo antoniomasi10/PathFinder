@@ -108,6 +108,48 @@ export default function NotificationsPage() {
 
   const hasUnread = notifications.some((n) => !n.isRead);
 
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfYesterday = startOfToday - 86400000;
+
+  const todayNotifs = notifications.filter((n) => new Date(n.createdAt).getTime() >= startOfToday);
+  const yesterdayNotifs = notifications.filter((n) => {
+    const t = new Date(n.createdAt).getTime();
+    return t >= startOfYesterday && t < startOfToday;
+  });
+  const olderNotifs = notifications.filter((n) => new Date(n.createdAt).getTime() < startOfYesterday);
+
+  function renderSection(label: string, items: Notification[]) {
+    if (items.length === 0) return null;
+    return (
+      <div className="mb-4">
+        <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{label}</p>
+        <div className="space-y-2">
+          {items.map((notif) => (
+            <button
+              key={notif.id}
+              onClick={() => markAsRead(notif)}
+              className={`w-full text-left card flex items-start gap-3 transition-opacity active:opacity-75 ${notif.isRead ? 'opacity-60' : ''}`}
+            >
+              <span className="text-2xl flex-shrink-0 mt-0.5">
+                {notif.icon || TYPE_ICONS[notif.type] || TYPE_ICONS.GENERAL}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm leading-snug ${notif.isRead ? 'text-text-muted' : 'text-white font-medium'}`}>
+                  {notif.content}
+                </p>
+                <p className="text-xs text-text-muted mt-0.5">{formatTimeAgo(notif.createdAt)}</p>
+              </div>
+              {!notif.isRead && (
+                <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="px-4 py-4 space-y-3 animate-pulse">

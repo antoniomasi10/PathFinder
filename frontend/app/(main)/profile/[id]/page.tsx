@@ -37,6 +37,8 @@ interface PublicProfile {
   }>;
   pathmatesCount: number;
   friendStatus: string | null;
+  friendRequestId: string | null;
+  iAmRequester: boolean | null;
   isPathmate: boolean;
   messagePrivacy: string;
   canSeeSkills: boolean;
@@ -160,10 +162,10 @@ export default function UserProfilePage() {
     setSendingRequest(true);
     try {
       await api.post('/friends/request', { toUserId: profile.id });
-      setProfile((p) => (p ? { ...p, friendStatus: 'PENDING' } : p));
+      setProfile((p) => (p ? { ...p, friendStatus: 'PENDING', iAmRequester: true } : p));
     } catch {
       // optimistic update even if request fails (demo mode)
-      setProfile((p) => (p ? { ...p, friendStatus: 'PENDING' } : p));
+      setProfile((p) => (p ? { ...p, friendStatus: 'PENDING', iAmRequester: true } : p));
     } finally {
       setSendingRequest(false);
     }
@@ -180,6 +182,22 @@ export default function UserProfilePage() {
       setRemovingPathmate(false);
     }
     setProfile((p) => (p ? { ...p, isPathmate: false, friendStatus: null } : p));
+  };
+
+  const handleAcceptRequest = async () => {
+    if (!profile?.friendRequestId) return;
+    try {
+      await api.patch(`/friends/request/${profile.friendRequestId}`, { status: 'ACCEPTED' });
+      setProfile((p) => (p ? { ...p, isPathmate: true, friendStatus: 'ACCEPTED', iAmRequester: null } : p));
+    } catch {}
+  };
+
+  const handleRejectRequest = async () => {
+    if (!profile?.friendRequestId) return;
+    try {
+      await api.patch(`/friends/request/${profile.friendRequestId}`, { status: 'REJECTED' });
+      setProfile((p) => (p ? { ...p, friendStatus: null, friendRequestId: null, iAmRequester: null } : p));
+    } catch {}
   };
 
   const handleMessage = () => {
@@ -357,7 +375,23 @@ export default function UserProfilePage() {
               Rimuovi
             </button>
           ) : (
-            profile.friendStatus === 'PENDING' ? (
+            profile.friendStatus === 'PENDING' && !profile.iAmRequester ? (
+              // Incoming request: show Accept / Reject
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleAcceptRequest}
+                  className="flex items-center gap-1.5 text-sm text-white bg-[#4F46E5] px-4 py-2 rounded-xl hover:bg-[#4338CA] transition-colors"
+                >
+                  Accetta
+                </button>
+                <button
+                  onClick={handleRejectRequest}
+                  className="text-sm text-[#64748B] border border-[#334155] px-4 py-2 rounded-xl hover:bg-[#1E293B] transition-colors"
+                >
+                  Rifiuta
+                </button>
+              </div>
+            ) : profile.friendStatus === 'PENDING' ? (
               <span className="text-xs text-[#64748B] border border-[#334155] px-4 py-2 rounded-xl">
                 Richiesta inviata
               </span>

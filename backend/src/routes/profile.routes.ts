@@ -2,8 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authMiddleware, verifiedMiddleware } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { updateProfileSchema } from '../schemas';
-import { saveQuestionnaire, getProfile, updateProfile } from '../services/profile.service';
-import prisma from '../lib/prisma';
+import { saveQuestionnaire, getProfile, getProfileForViewer, updateProfile, deleteAccount } from '../services/profile.service';
 
 const router = Router();
 
@@ -29,35 +28,12 @@ router.get('/me', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-router.get('/:id', verifiedMiddleware, async (req: Request, res: Response) => {
+router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
     const profile = await getProfileForViewer(req.params.id, req.user!.userId);
     if (!profile) {
       res.status(404).json({ error: 'Profilo non trovato' });
       return;
-    }
-
-    const requesterId = req.user!.userId;
-    if (req.params.id !== requesterId) {
-      const friendship = await prisma.friendRequest.findFirst({
-        where: {
-          OR: [
-            { fromUserId: requesterId, toUserId: req.params.id, status: 'ACCEPTED' },
-            { fromUserId: req.params.id, toUserId: requesterId, status: 'ACCEPTED' },
-          ],
-        },
-      });
-      if (!friendship) {
-        // Return limited profile for non-friends
-        res.json({
-          id: profile.id,
-          name: profile.name,
-          avatar: profile.avatar,
-          university: profile.university,
-          courseOfStudy: profile.courseOfStudy,
-        });
-        return;
-      }
     }
     res.json(profile);
   } catch (err: any) {

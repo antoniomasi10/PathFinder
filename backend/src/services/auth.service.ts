@@ -96,6 +96,7 @@ export async function changePassword(userId: string, oldPassword: string, newPas
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error('Utente non trovato');
 
+  if (!user.passwordHash) throw new Error('Account senza password locale');
   const valid = await comparePassword(oldPassword, user.passwordHash);
   if (!valid) throw new Error('Password attuale non corretta');
 
@@ -105,50 +106,6 @@ export async function changePassword(userId: string, oldPassword: string, newPas
   await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
 }
 
-export async function requestPasswordReset(email: string) {
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) throw new Error('Nessun account trovato con questa email');
-
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
-
-  await prisma.user.update({
-    where: { email },
-    data: {
-      passwordResetToken: code,
-      passwordResetExpiry: expiry,
-    },
-  });
-
-  await sendPasswordResetEmail(email, code);
-}
-
-export async function resetPassword(email: string, code: string, newPassword: string) {
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || !user.passwordResetToken || !user.passwordResetExpiry) {
-    throw new Error('Codice non valido o scaduto');
-  }
-
-  if (user.passwordResetToken !== code) {
-    throw new Error('Codice non valido');
-  }
-
-  if (new Date() > user.passwordResetExpiry) {
-    throw new Error('Il codice è scaduto. Richiedine uno nuovo.');
-  }
-
-  if (newPassword.length < 6) throw new Error('La password deve avere almeno 6 caratteri');
-
-  const passwordHash = await hashPassword(newPassword);
-  await prisma.user.update({
-    where: { email },
-    data: {
-      passwordHash,
-      passwordResetToken: null,
-      passwordResetExpiry: null,
-    },
-  });
-}
 
 export async function loginUser(input: LoginInput) {
   const user = await prisma.user.findUnique({
