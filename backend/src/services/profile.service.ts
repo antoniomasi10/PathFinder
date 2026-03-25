@@ -179,9 +179,14 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
   const privacyPathmates = ((user as any).privacyPathmates as string | undefined) ?? 'Tutti';
   const messagePrivacy = ((user as any).messagePrivacy as string | undefined) ?? 'Pathmates';
   const privacySkills = ((user as any).privacySkills as string | undefined) ?? 'Tutti';
+  const privacyUniversity = ((user as any).privacyUniversity as string | undefined) ?? 'Tutti';
   const canSeeSkills =
     isPublic
       ? privacySkills === 'Tutti' || (privacySkills === 'Pathmates' && isPathmate)
+      : isPathmate;
+  const canSeeUniversity =
+    isPublic
+      ? privacyUniversity === 'Tutti' || (privacyUniversity === 'Pathmates' && isPathmate)
       : isPathmate;
 
   const canMessage =
@@ -194,7 +199,7 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
       id: user.id,
       name: user.name,
       avatar: user.avatar ?? null,
-      university: user.university ? { name: user.university.name } : null,
+      university: canSeeUniversity && user.university ? { name: user.university.name } : null,
       publicProfile: false,
       bio: null,
       courseOfStudy: null,
@@ -220,7 +225,7 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
     bio: user.bio ?? null,
     courseOfStudy: user.courseOfStudy ?? null,
     yearOfStudy: user.yearOfStudy ?? null,
-    university: user.university ? { name: user.university.name } : null,
+    university: canSeeUniversity && user.university ? { name: user.university.name } : null,
     publicProfile: isPublic,
     privacySavedOpps: savedOppsVisibility ?? 'Pathmates',
     privacyPathmates,

@@ -168,12 +168,12 @@ export default function UserProfilePage() {
     setRemovingPathmate(true);
     try {
       await api.delete(`/friends/${profile.id}`);
+      setProfile((p) => (p ? { ...p, isPathmate: false, friendStatus: null } : p));
     } catch {
-      // proceed with optimistic update even if API fails
+      // Request failed — do not update UI
     } finally {
       setRemovingPathmate(false);
     }
-    setProfile((p) => (p ? { ...p, isPathmate: false, friendStatus: null } : p));
   };
 
   const handleAcceptRequest = async () => {

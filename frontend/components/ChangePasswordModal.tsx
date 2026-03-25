@@ -96,7 +96,9 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
   // ── Cambia password ──────────────────────────────────────────────
   const handleChangePassword = async () => {
     setError('');
-    if (newPassword.length < 6) { setError(t.security.passwordTooShort); return; }
+    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[^A-Za-z0-9]/.test(newPassword)) {
+      setError(t.security.passwordTooShort); return;
+    }
     if (newPassword !== confirmPassword) { setError(t.security.passwordMismatch); return; }
     setLoading(true);
     try {
@@ -127,7 +129,9 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
   // ── Reimposta password con codice ────────────────────────────────
   const handleResetPassword = async () => {
     setError('');
-    if (resetNewPassword.length < 6) { setError(t.security.passwordTooShort); return; }
+    if (resetNewPassword.length < 8 || !/[A-Z]/.test(resetNewPassword) || !/[a-z]/.test(resetNewPassword) || !/[0-9]/.test(resetNewPassword) || !/[^A-Za-z0-9]/.test(resetNewPassword)) {
+      setError(t.security.passwordTooShort); return;
+    }
     if (resetNewPassword !== resetConfirmPassword) { setError(t.security.passwordMismatch); return; }
     if (!resetCode.trim()) return;
     setLoading(true);
