@@ -23,6 +23,7 @@ const memberSelect = {
       id: true,
       name: true,
       avatar: true,
+      avatarBgColor: true,
       courseOfStudy: true,
       university: { select: { name: true } },
     },
@@ -68,7 +69,7 @@ export async function createGroup(
       },
       include: {
         members: { select: memberSelect },
-        createdBy: { select: { id: true, name: true, avatar: true } },
+        createdBy: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
       },
     });
 
@@ -135,7 +136,7 @@ export async function updateGroup(
     data,
     include: {
       members: { select: memberSelect },
-      createdBy: { select: { id: true, name: true, avatar: true } },
+      createdBy: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
     },
   });
 }
@@ -145,7 +146,7 @@ export async function getGroup(groupId: string, userId: string) {
     where: { id: groupId },
     include: {
       members: { select: memberSelect },
-      createdBy: { select: { id: true, name: true, avatar: true } },
+      createdBy: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
     },
   });
 
@@ -168,7 +169,7 @@ export async function getUserGroups(userId: string) {
       group: {
         include: {
           members: { select: memberSelect },
-          createdBy: { select: { id: true, name: true, avatar: true } },
+          createdBy: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
           messages: {
             orderBy: { sentAt: 'desc' },
             take: 1,
@@ -214,7 +215,7 @@ export async function updateGroupPhoto(
     data: { image },
     include: {
       members: { select: memberSelect },
-      createdBy: { select: { id: true, name: true, avatar: true } },
+      createdBy: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
     },
   });
 }

@@ -91,6 +91,7 @@ model User {
   provider          AuthProvider           @default(LOCAL)
   emailVerified     Boolean                @default(false)
   avatar            String?
+  avatarBgColor     String?
   bio               String?
   universityId      String?
   university        University?            @relation(fields: [universityId], references: [id])
