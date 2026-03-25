@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { authMiddleware } from '../middleware/auth';
+import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import prisma from '../lib/prisma';
 
 const router = Router();
@@ -25,6 +25,7 @@ router.get('/search', authMiddleware, async (req: Request, res: Response) => {
         id: true,
         name: true,
         avatar: true,
+        avatarBgColor: true,
         courseOfStudy: true,
         university: { select: { name: true } },
       },

@@ -11,6 +11,8 @@ import { BADGES, getAllBadgeStates, getUnlockedCount, RARITY_COLORS, RARITY_LABE
 import { useLanguage, Language, LANGUAGE_DISPLAY_NAMES, SKILL_KEYS, getSkillLabel, normalizePassionToKey } from '@/lib/language';
 import { usePrivacy } from '@/lib/privacy';
 import ChangePasswordModal from '@/components/ChangePasswordModal';
+import { isValidImageUrl, isValidExternalUrl } from '@/lib/urlValidation';
+import { isPushSupported, subscribeToPush, unsubscribeFromPush, getPushPermissionState } from '@/lib/pushManager';
 
 interface FullProfile {
   id: string;
@@ -34,6 +36,7 @@ interface Friend {
   avatar?: string;
   courseOfStudy?: string;
   university?: { name: string };
+  requestSent?: boolean;
 }
 
 const CLUSTER_COLORS: Record<string, string> = {
@@ -57,7 +60,7 @@ const TYPE_ICONS: Record<string, string> = {
 export default function ProfilePage() {
   const { user, setUser, logout } = useAuth();
   const router = useRouter();
-  const { savedOpps } = useSavedOpportunities();
+  const { savedOpps, toggleSave } = useSavedOpportunities();
   const { savedCourses } = useSavedCourses();
   const [simulations, setSimulations] = useState<SavedSimulation[]>([]);
   const { language, setLanguage, t } = useLanguage();
@@ -92,7 +95,20 @@ export default function ProfilePage() {
     messagePrivacy, setMessagePrivacy,
     togglePrivateProfile,
   } = usePrivacy();
+  const [showNotificationSheet, setShowNotificationSheet] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState({
+    pushEnabled: true,
+    networking: true,
+    opportunities: true,
+    universities: true,
+    social: true,
+    postLikes: false,
+    chat: true,
+    achievements: true,
+    system: true,
+  });
   const [savedTab, setSavedTab] = useState<'opportunities' | 'universities'>('opportunities');
+  const [expandedOppId, setExpandedOppId] = useState<string | null>(null);
   const [suggestedUsers, setSuggestedUsers] = useState<Friend[]>([]);
   const [sendingRequest, setSendingRequest] = useState<string | null>(null);
   const [removingFriend, setRemovingFriend] = useState<string | null>(null);
@@ -133,7 +149,8 @@ export default function ProfilePage() {
       setEditSkills(normalizedPassions);
       setFriends(friendsRes.data);
       setSuggestedUsers(suggestionsRes.data);
-    } catch {
+    } catch (err) {
+      console.error('Failed to load profile data:', err);
     } finally {
       setLoading(false);
     }
@@ -168,7 +185,8 @@ export default function ProfilePage() {
         setUser({ ...user, avatar: avatarPreview });
       }
       setAvatarPreview(null);
-    } catch {
+    } catch (err) {
+      console.error('Failed to save profile:', err);
     } finally {
       setSaving(false);
     }
@@ -232,8 +250,11 @@ export default function ProfilePage() {
       await api.delete(`/friends/${friendId}`);
       setFriends((prev) => prev.filter((f) => f.id !== friendId));
       // Refresh suggestions since the removed user might now appear
-      api.get('/friends/suggestions').then((res) => setSuggestedUsers(res.data)).catch(() => {});
-    } catch {
+      api.get('/friends/suggestions').then((res) => setSuggestedUsers(res.data)).catch((err) => {
+        console.error('Failed to refresh friend suggestions:', err);
+      });
+    } catch (err) {
+      console.error('Failed to remove friend:', err);
     } finally {
       setRemovingFriend(null);
     }
@@ -243,12 +264,11 @@ export default function ProfilePage() {
     setSendingRequest(userId);
     try {
       await api.post('/friends/request', { toUserId: userId });
-      const added = suggestedUsers.find((u) => u.id === userId);
-      setSuggestedUsers((prev) => prev.filter((u) => u.id !== userId));
-      if (added) {
-        setFriends((prev) => [added, ...prev]);
-      }
-    } catch {
+      setSuggestedUsers((prev) => prev.map((u) =>
+        u.id === userId ? { ...u, requestSent: true } : u
+      ));
+    } catch (err) {
+      console.error('Failed to send friend request:', err);
     } finally {
       setSendingRequest(null);
     }
@@ -372,9 +392,22 @@ export default function ProfilePage() {
 
         {/* Profile Header */}
         <div className="flex flex-col items-center text-center space-y-3">
-          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center text-2xl font-bold text-white shadow-lg shadow-[#4F46E5]/20">
-            {currentAvatar ? (
-              <img src={currentAvatar} alt={profile.name} className="w-full h-full rounded-full object-cover" />
+          <div
+            className="w-24 h-24 rounded-full flex items-center justify-center text-2xl font-bold text-white shadow-lg overflow-hidden"
+            style={{
+              backgroundColor: currentAvatar && isValidImageUrl(currentAvatar) ? '#FFFFFF' : undefined,
+              background: !(currentAvatar && isValidImageUrl(currentAvatar))
+                ? 'linear-gradient(135deg, #4F46E5, #7C3AED)'
+                : undefined,
+              boxShadow: '0 10px 15px -3px rgba(79,70,229,0.2)',
+            }}
+          >
+            {currentAvatar && isValidImageUrl(currentAvatar) ? (
+              <img
+                src={currentAvatar}
+                alt={profile.name}
+                className="w-full h-full rounded-full object-cover"
+              />
             ) : (
               initials
             )}
@@ -470,29 +503,116 @@ export default function ProfilePage() {
                 </button>
               </div>
             ) : (
-              <div className="bg-[#161B22] rounded-2xl p-3">
-                <div
-                  ref={scrollRef}
-                  className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide"
-                  style={{ scrollSnapType: 'x mandatory' }}
-                >
-                  {savedOpps.map((opp) => (
-                    <div
-                      key={opp.id}
-                      className="flex-shrink-0 w-56 bg-[#1E293B] rounded-2xl p-4"
-                      style={{ scrollSnapAlign: 'start' }}
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg">{TYPE_ICONS[opp.type] || '📌'}</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#4F46E5]/20 text-[#4F46E5] font-medium uppercase">
-                          {opp.type}
-                        </span>
+              <div className="space-y-3">
+                {savedOpps.map((opp) => {
+                  const isExpanded = expandedOppId === opp.id;
+                  return (
+                    <div key={opp.id} className="bg-[#161B22] rounded-2xl overflow-hidden">
+                      <button
+                        onClick={() => setExpandedOppId(isExpanded ? null : opp.id)}
+                        className="w-full text-left p-4 active:opacity-75 transition-opacity"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-[#1E293B] flex items-center justify-center flex-shrink-0">
+                            <span className="text-lg">{TYPE_ICONS[opp.type] || '📌'}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-semibold text-white line-clamp-2">{opp.title}</h4>
+                            <p className="text-xs text-[#64748B] truncate">{opp.company || opp.university?.name || ''}</p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#4F46E5]/20 text-[#4F46E5] font-medium uppercase">
+                              {opp.type}
+                            </span>
+                            <svg
+                              className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
+                              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </div>
+                      </button>
+
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateRows: isExpanded ? '1fr' : '0fr',
+                          transition: 'grid-template-rows 0.32s cubic-bezier(0.4, 0, 0.2, 1)',
+                        }}
+                      >
+                        <div style={{ overflow: 'hidden', minHeight: 0 }}>
+                          <div className="px-4 pb-4 space-y-3">
+                            <div className="h-px bg-[#1E293B]" />
+
+                            {opp.description && (
+                              <p className="text-gray-400 text-sm leading-relaxed">{opp.description}</p>
+                            )}
+
+                            {(opp.location || opp.isRemote || opp.deadline) && (
+                              <div className="flex flex-wrap gap-2">
+                                {opp.location && (
+                                  <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-3 py-2">
+                                    <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                                    </svg>
+                                    <span className="text-gray-300 text-xs">{opp.location}</span>
+                                  </div>
+                                )}
+                                {opp.isRemote && (
+                                  <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-3 py-2">
+                                    <span className="text-gray-300 text-xs">Remoto</span>
+                                  </div>
+                                )}
+                                {opp.deadline && (
+                                  <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-3 py-2">
+                                    <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                                    </svg>
+                                    <span className="text-gray-300 text-xs">Scadenza: {new Date(opp.deadline).toLocaleDateString('it-IT')}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {opp.about && (
+                              <>
+                                <div className="h-px bg-[#1E293B]" />
+                                <div>
+                                  <p className="text-white font-semibold text-sm mb-1">{opp.company || opp.university?.name}</p>
+                                  <p className="text-gray-400 text-sm leading-relaxed">{opp.about}</p>
+                                </div>
+                              </>
+                            )}
+
+                            <div className="flex gap-3">
+                              <button
+                                onClick={() => opp.url && isValidExternalUrl(opp.url) && window.open(opp.url, '_blank', 'noopener,noreferrer')}
+                                disabled={!opp.url || !isValidExternalUrl(opp.url)}
+                                className={`flex-1 py-3 rounded-2xl font-semibold text-sm transition-opacity ${
+                                  opp.url && isValidExternalUrl(opp.url)
+                                    ? 'bg-primary text-white active:opacity-90'
+                                    : 'bg-[#1E293B] text-gray-500 cursor-not-allowed'
+                                }`}
+                              >
+                                {opp.url && isValidExternalUrl(opp.url) ? 'Vai all\u2019opportunità' : 'Link non disponibile'}
+                              </button>
+                              <button
+                                onClick={() => toggleSave(opp.id)}
+                                className="w-12 h-12 bg-[#0D1117] rounded-2xl flex items-center justify-center flex-shrink-0 text-primary"
+                              >
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <h4 className="text-sm font-semibold text-white line-clamp-2 mb-1">{opp.title}</h4>
-                      <p className="text-xs text-[#64748B] truncate">{opp.company || opp.university?.name || ''}</p>
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             )
           ) : savedCourses.length === 0 ? (
@@ -519,8 +639,8 @@ export default function ProfilePage() {
                       <span className="text-white text-lg">🎓</span>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-sm font-semibold text-white line-clamp-2 mb-0.5">{c.title}</h4>
-                      <p className="text-xs text-[#64748B] truncate">{c.university} — {c.city}</p>
+                      <h4 className="text-sm font-semibold text-white line-clamp-2 mb-0.5">{c.name}</h4>
+                      <p className="text-xs text-[#64748B] truncate">{c.university?.name} — {c.university?.city}</p>
                     </div>
                   </div>
                 ))}
@@ -619,7 +739,18 @@ export default function ProfilePage() {
               <div className="bg-[#1E293B] rounded-2xl p-4">
                 <h4 className="text-sm font-semibold text-white mb-3">{t.profile.preferences}</h4>
                 <div>
-                  <div className="flex items-center justify-between py-2">
+                  <button
+                    className="flex items-center justify-between py-2 w-full"
+                    onClick={() => {
+                      api.get('/notifications/preferences')
+                        .then(({ data }) => {
+                          const { id, userId, ...prefs } = data;
+                          setNotifPrefs(prefs);
+                        })
+                        .catch(() => {});
+                      setShowNotificationSheet(true);
+                    }}
+                  >
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center">
                         <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -628,8 +759,10 @@ export default function ProfilePage() {
                       </div>
                       <span className="text-sm text-white">{t.profile.notifications}</span>
                     </div>
-                    <ToggleSwitch defaultOn />
-                  </div>
+                    <svg className="w-5 h-5 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
                   <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
                   <div className="flex items-center justify-between py-2">
                     <div className="flex items-center gap-3">
@@ -741,7 +874,7 @@ export default function ProfilePage() {
                           onClick={() => router.push(`/profile/${friend.id}`)}
                           className="w-11 h-11 rounded-full bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center text-sm font-bold text-white flex-shrink-0 overflow-hidden"
                         >
-                          {friend.avatar ? (
+                          {friend.avatar && isValidImageUrl(friend.avatar) ? (
                             <img src={friend.avatar} alt={friend.name} className="w-full h-full rounded-full object-cover" />
                           ) : (
                             friendInitials
@@ -808,7 +941,7 @@ export default function ProfilePage() {
                             onClick={() => router.push(`/profile/${suggested.id}`)}
                             className="w-11 h-11 rounded-full bg-gradient-to-br from-[#6366F1] to-[#A78BFA] flex items-center justify-center text-sm font-bold text-white flex-shrink-0 overflow-hidden"
                           >
-                            {suggested.avatar ? (
+                            {suggested.avatar && isValidImageUrl(suggested.avatar) ? (
                               <img src={suggested.avatar} alt={suggested.name} className="w-full h-full rounded-full object-cover" />
                             ) : (
                               suggestedInitials
@@ -823,16 +956,20 @@ export default function ProfilePage() {
                               {suggested.courseOfStudy || suggested.university?.name || ''}
                             </p>
                           </button>
-                          <button
-                            onClick={() => sendFriendRequest(suggested.id)}
-                            disabled={sendingRequest === suggested.id}
-                            className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center hover:bg-[#4F46E5]/30 transition-colors disabled:opacity-50 flex-shrink-0"
-                          >
-                            <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M20 8v6m3-3h-6" />
-                            </svg>
-                          </button>
+                          {suggested.requestSent ? (
+                            <span className="text-xs text-[#4F46E5] font-medium px-2 flex-shrink-0">Inviata</span>
+                          ) : (
+                            <button
+                              onClick={() => sendFriendRequest(suggested.id)}
+                              disabled={sendingRequest === suggested.id}
+                              className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center hover:bg-[#4F46E5]/30 transition-colors disabled:opacity-50 flex-shrink-0"
+                            >
+                              <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M20 8v6m3-3h-6" />
+                              </svg>
+                            </button>
+                          )}
                         </div>
                       );
                     })}
@@ -1322,6 +1459,101 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* ── Notification Settings Sheet ──────────────────────────── */}
+      <div
+        className={`fixed inset-0 z-[60] bg-black/60 transition-opacity duration-300 ${
+          showNotificationSheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setShowNotificationSheet(false)}
+      />
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-[60] max-w-lg mx-auto bg-[#161B22] rounded-t-3xl transition-transform duration-300 ease-out ${
+          showNotificationSheet ? 'translate-y-0' : 'translate-y-full'
+        }`}
+      >
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-[#334155]" />
+        </div>
+        <div className="flex items-center justify-between px-5 pt-3 pb-4 border-b border-[#1E293B]">
+          <h2 className="text-white font-bold text-lg">Notifiche</h2>
+          <button onClick={() => setShowNotificationSheet(false)} className="p-1 rounded-full hover:bg-[#334155] transition-colors">
+            <svg className="w-5 h-5 text-[#94A3B8]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="px-5 pb-8 pt-4 space-y-4 max-h-[75vh] overflow-y-auto no-scrollbar">
+          {/* Master push toggle */}
+          <div className="bg-[#1E293B] rounded-2xl p-4">
+            <h4 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3">Notifiche push</h4>
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm text-white block">Notifiche push del browser</span>
+                <span className="text-xs text-[#64748B]">
+                  {getPushPermissionState() === 'denied'
+                    ? 'Bloccate — abilita nelle impostazioni del browser'
+                    : 'Ricevi notifiche anche quando l\'app è chiusa'}
+                </span>
+              </div>
+              <ToggleSwitch
+                on={notifPrefs.pushEnabled}
+                onChange={async (v) => {
+                  if (v) {
+                    if (!isPushSupported()) return;
+                    const perm = getPushPermissionState();
+                    if (perm === 'denied') return;
+                    if (perm === 'default') {
+                      const result = await Notification.requestPermission();
+                      if (result !== 'granted') return;
+                    }
+                    await subscribeToPush();
+                  } else {
+                    await unsubscribeFromPush();
+                  }
+                  setNotifPrefs(p => ({ ...p, pushEnabled: v }));
+                  api.put('/notifications/preferences', { pushEnabled: v }).catch(() => {});
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Category toggles */}
+          <div className="bg-[#1E293B] rounded-2xl p-4">
+            <h4 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3">Categorie</h4>
+            <div>
+              {([
+                { key: 'networking' as const, label: 'Networking', desc: 'Richieste di amicizia e connessioni' },
+                { key: 'opportunities' as const, label: 'Opportunità', desc: 'Nuove opportunità e scadenze' },
+                { key: 'universities' as const, label: 'Università', desc: 'Corsi e scadenze accademiche' },
+                { key: 'social' as const, label: 'Social', desc: 'Commenti e risposte ai tuoi post' },
+                { key: 'postLikes' as const, label: 'Like ai post', desc: 'Quando qualcuno mette like' },
+                { key: 'chat' as const, label: 'Chat', desc: 'Nuovi messaggi' },
+                { key: 'achievements' as const, label: 'Traguardi', desc: 'Badge e obiettivi sbloccati' },
+                { key: 'system' as const, label: 'Sistema', desc: 'Aggiornamenti e comunicazioni' },
+              ] as const).map((item, i, arr) => (
+                <div key={item.key}>
+                  <div className="flex items-center justify-between py-2.5">
+                    <div>
+                      <span className="text-sm text-white block">{item.label}</span>
+                      <span className="text-xs text-[#64748B]">{item.desc}</span>
+                    </div>
+                    <ToggleSwitch
+                      on={notifPrefs[item.key]}
+                      onChange={(v) => {
+                        setNotifPrefs(p => ({ ...p, [item.key]: v }));
+                        api.put('/notifications/preferences', { [item.key]: v }).catch(() => {});
+                      }}
+                      disabled={!notifPrefs.pushEnabled}
+                    />
+                  </div>
+                  {i < arr.length - 1 && <div className="h-px bg-[#334155]/50" />}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* ── Info Sheet ─────────────────────────────────────────────── */}
       <div
         className={`fixed inset-0 z-[60] bg-black/60 transition-opacity duration-300 ${
@@ -1460,15 +1692,24 @@ export default function ProfilePage() {
   );
 }
 
-function ToggleSwitch({ defaultOn = false }: { defaultOn?: boolean }) {
-  const [on, setOn] = useState(defaultOn);
+function ToggleSwitch({ defaultOn = false, on: controlledOn, onChange, disabled }: { defaultOn?: boolean; on?: boolean; onChange?: (v: boolean) => void; disabled?: boolean }) {
+  const [internalOn, setInternalOn] = useState(defaultOn);
+  const isControlled = controlledOn !== undefined;
+  const on = isControlled ? controlledOn : internalOn;
 
   return (
     <button
-      onClick={() => setOn(!on)}
-      className={`relative w-11 h-6 rounded-full transition-colors ${
-        on ? 'bg-[#4F46E5]' : 'bg-[#334155]'
-      }`}
+      onClick={() => {
+        if (disabled) return;
+        if (isControlled && onChange) {
+          onChange(!on);
+        } else {
+          setInternalOn(!on);
+        }
+      }}
+      className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${
+        disabled ? 'opacity-40 cursor-not-allowed' : ''
+      } ${on ? 'bg-[#4F46E5]' : 'bg-[#334155]'}`}
     >
       <span
         className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
@@ -1561,7 +1802,17 @@ function BadgesSection() {
   const [selectedBadge, setSelectedBadge] = useState<{ badge: BadgeDefinition; progress: BadgeProgress; unlocked: boolean } | null>(null);
 
   useEffect(() => {
+    // Load from localStorage immediately for fast render
     setBadges(getAllBadgeStates());
+    // Then sync from backend
+    api.get('/badges').then((res) => {
+      const serverBadges = res.data.map((b: any) => ({
+        badge: { id: b.id, name: b.name, icon: b.icon, description: b.description, rarity: b.rarity, category: b.category, target: b.target, trackingKey: b.trackingKey },
+        progress: { current: b.progress, unlockedAt: b.unlockedAt },
+        unlocked: b.unlocked,
+      }));
+      if (serverBadges.length > 0) setBadges(serverBadges);
+    }).catch(() => {});
   }, []);
 
   const unlockedCount = badges.filter((b) => b.unlocked).length;

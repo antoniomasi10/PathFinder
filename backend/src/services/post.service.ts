@@ -7,7 +7,7 @@ export async function getPosts(page: number = 1, limit: number = 20, currentUser
     take: limit,
     orderBy: { createdAt: 'desc' },
     include: {
-      author: { select: { id: true, name: true, avatar: true, courseOfStudy: true, university: { select: { name: true } } } },
+      author: { select: { id: true, name: true, avatar: true, avatarBgColor: true, courseOfStudy: true, university: { select: { name: true } } } },
       _count: { select: { likes: true, comments: true } },
       likes: currentUserId ? { where: { userId: currentUserId }, select: { userId: true } } : false,
     },
@@ -23,7 +23,7 @@ export async function createPost(authorId: string, content: string, images: stri
   const post = await prisma.post.create({
     data: { authorId, content, images },
     include: {
-      author: { select: { id: true, name: true, avatar: true, courseOfStudy: true, university: { select: { name: true } } } },
+      author: { select: { id: true, name: true, avatar: true, avatarBgColor: true, courseOfStudy: true, university: { select: { name: true } } } },
       _count: { select: { likes: true, comments: true } },
     },
   });
@@ -31,15 +31,23 @@ export async function createPost(authorId: string, content: string, images: stri
 }
 
 export async function likePost(postId: string, userId: string) {
-  return prisma.postLike.create({
-    data: { postId, userId },
-  });
+  try {
+    return await prisma.postLike.create({ data: { postId, userId } });
+  } catch (err: any) {
+    // Unique constraint violation - already liked
+    if (err.code === 'P2002') return null;
+    throw err;
+  }
 }
 
 export async function unlikePost(postId: string, userId: string) {
-  return prisma.postLike.delete({
-    where: { postId_userId: { postId, userId } },
-  });
+  try {
+    return await prisma.postLike.delete({ where: { postId_userId: { postId, userId } } });
+  } catch (err: any) {
+    // Record not found - already unliked
+    if (err.code === 'P2025') return null;
+    throw err;
+  }
 }
 
 export async function getComments(postId: string) {
@@ -47,7 +55,7 @@ export async function getComments(postId: string) {
     where: { postId },
     orderBy: { createdAt: 'asc' },
     include: {
-      author: { select: { id: true, name: true, avatar: true } },
+      author: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
     },
   });
 }
@@ -55,7 +63,7 @@ export async function getComments(postId: string) {
 export async function getPostById(postId: string) {
   return prisma.post.findUnique({
     where: { id: postId },
-    select: { authorId: true },
+    select: { id: true, authorId: true },
   });
 }
 
@@ -63,7 +71,7 @@ export async function createComment(postId: string, authorId: string, content: s
   return prisma.postComment.create({
     data: { postId, authorId, content },
     include: {
-      author: { select: { id: true, name: true, avatar: true } },
+      author: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
     },
   });
 }

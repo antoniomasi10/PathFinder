@@ -12,6 +12,7 @@ import ChatHeader from '@/components/ChatHeader';
 import ActionMenu from '@/components/ActionMenu';
 import NewChatModal from '@/components/NewChatModal';
 import ImageLightbox from '@/components/ImageLightbox';
+import { isValidImageUrl } from '@/lib/urlValidation';
 
 interface Conversation {
   user: { id: string; name: string; avatar?: string };
@@ -119,6 +120,12 @@ export default function NetworkingPage() {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentSending, setCommentSending] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
+  const [convPage, setConvPage] = useState(1);
+  const [convTotalPages, setConvTotalPages] = useState(1);
+  const [loadingMoreConv, setLoadingMoreConv] = useState(false);
+  const [postPage, setPostPage] = useState(1);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
+  const [loadingMorePosts, setLoadingMorePosts] = useState(false);
 
   function compressImage(file: File, maxSize = 800): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -236,11 +243,42 @@ export default function NetworkingPage() {
       ]);
       const pinned = getPinnedIds();
       setPinnedIds(pinned);
-      setUnifiedConversations(buildUnifiedList(convRes.data, groupRes.data, pinned));
-    } catch {} finally {
+      const convData = convRes.data.data || convRes.data;
+      if (convRes.data.totalPages) setConvTotalPages(convRes.data.totalPages);
+      setConvPage(1);
+      setUnifiedConversations(buildUnifiedList(convData, groupRes.data, pinned));
+    } catch (err) {
+      console.error('Failed to load conversations:', err);
+    } finally {
       setLoading(false);
     }
   }, [buildUnifiedList]);
+
+  const loadMoreConversations = useCallback(async () => {
+    if (loadingMoreConv || convPage >= convTotalPages) return;
+    setLoadingMoreConv(true);
+    try {
+      const nextPage = convPage + 1;
+      const [convRes, groupRes] = await Promise.all([
+        api.get(`/messages/conversations?page=${nextPage}&limit=20`),
+        api.get('/groups'),
+      ]);
+      const pinned = getPinnedIds();
+      const convData = convRes.data.data || convRes.data;
+      const newItems = buildUnifiedList(convData, groupRes.data, pinned);
+      setUnifiedConversations((prev) => {
+        const existingIds = new Set(prev.map(c => c.id));
+        const unique = newItems.filter(item => !existingIds.has(item.id));
+        return [...prev, ...unique];
+      });
+      setConvPage(nextPage);
+      if (convRes.data.totalPages) setConvTotalPages(convRes.data.totalPages);
+    } catch (err) {
+      console.error('Failed to load more conversations:', err);
+    } finally {
+      setLoadingMoreConv(false);
+    }
+  }, [convPage, convTotalPages, loadingMoreConv, buildUnifiedList]);
 
   useEffect(() => {
     if (tab === 'messaggi') {
@@ -286,26 +324,36 @@ export default function NetworkingPage() {
             canMessage: data.canMessage,
           } : prev);
         })
-        .catch(() => {});
+        .catch((err) => {
+          console.error('Failed to fetch user profile:', err);
+        });
     }
   }, [selectedUser?.id]);
+
+  // Auto-select chat user from query parameter (e.g. /networking?chat=userId)
+  useEffect(() => {
+    const chatUserId = searchParams.get('chat');
+    if (chatUserId && !selectedUser) {
+      api.get(`/profile/${chatUserId}`)
+        .then(({ data }) => {
+          setSelectedUser({
+            id: data.id,
+            name: data.name,
+            avatar: data.avatar,
+            university: data.university?.name,
+          });
+          setTab('messaggi');
+        })
+        .catch((err) => console.error('Failed to load chat user:', err));
+    }
+  }, [searchParams]);
 
   // Lock page scroll when in chat mode so scrollIntoView only affects the messages container
   useEffect(() => {
     if (selectedUser || selectedGroup) {
-      const scrollY = window.scrollY;
-      document.documentElement.style.overflow = 'hidden';
       document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = '100%';
       return () => {
-        document.documentElement.style.overflow = '';
         document.body.style.overflow = '';
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.width = '';
-        window.scrollTo(0, scrollY);
       };
     }
   }, [selectedUser, selectedGroup]);
@@ -332,8 +380,10 @@ export default function NetworkingPage() {
   const loadMessages = async (userId: string) => {
     try {
       const { data } = await api.get(`/messages/${userId}`);
-      setMessages(data);
-    } catch {}
+      setMessages(data.data || data);
+    } catch (err) {
+      console.error('Failed to load messages:', err);
+    }
   };
 
   const sendMessage = async () => {
@@ -353,14 +403,18 @@ export default function NetworkingPage() {
       }]);
       setNewMessage('');
       setChatImages([]);
-    } catch {}
+    } catch (err) {
+      console.error('Failed to send message:', err);
+    }
   };
 
   const loadGroupMessages = async (groupId: string) => {
     try {
       const { data } = await api.get(`/messages/group/${groupId}`);
-      setGroupMessages(data);
-    } catch {}
+      setGroupMessages(data.data || data);
+    } catch (err) {
+      console.error('Failed to load group messages:', err);
+    }
   };
 
   const sendGroupMessage = async () => {
@@ -380,7 +434,9 @@ export default function NetworkingPage() {
       }]);
       setNewMessage('');
       setChatImages([]);
-    } catch {}
+    } catch (err) {
+      console.error('Failed to send group message:', err);
+    }
   };
 
   useEffect(() => {
@@ -404,14 +460,34 @@ export default function NetworkingPage() {
   const loadPosts = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/posts');
+      const { data } = await api.get('/posts?page=1');
       setPosts(data);
+      setHasMorePosts(data.length >= 20);
+      setPostPage(1);
       const authorIds = [...new Set(data.map((p: Post) => p.author.id).filter((id: string) => id !== user?.id))] as string[];
       if (authorIds.length > 0) {
         const { data: statuses } = await api.post('/friends/status/batch', { userIds: authorIds });
         setConnectionStatuses(statuses);
       }
-    } catch {} finally { setLoading(false); }
+    } catch (err) {
+      console.error('Failed to load posts:', err);
+    } finally { setLoading(false); }
+  };
+
+  const loadMorePosts = async () => {
+    if (loadingMorePosts || !hasMorePosts) return;
+    setLoadingMorePosts(true);
+    try {
+      const nextPage = postPage + 1;
+      const { data } = await api.get(`/posts?page=${nextPage}`);
+      setPosts((prev) => [...prev, ...data]);
+      setPostPage(nextPage);
+      setHasMorePosts(data.length >= 20);
+    } catch (err) {
+      console.error('Failed to load more posts:', err);
+    } finally {
+      setLoadingMorePosts(false);
+    }
   };
 
   const submitPost = async () => {
@@ -421,7 +497,9 @@ export default function NetworkingPage() {
       setPosts((prev) => [data, ...prev]);
       setNewPost('');
       setPostImages([]);
-    } catch {}
+    } catch (err) {
+      console.error('Failed to submit post:', err);
+    }
   };
 
   const toggleLike = async (postId: string, liked: boolean) => {
@@ -434,7 +512,9 @@ export default function NetworkingPage() {
       setPosts((prev) => prev.map((p) =>
         p.id === postId ? { ...p, liked: !liked, _count: { ...p._count, likes: p._count.likes + (liked ? -1 : 1) } } : p
       ));
-    } catch {}
+    } catch (err) {
+      console.error('Failed to toggle like:', err);
+    }
   };
 
   const openComments = async (post: Post) => {
@@ -444,7 +524,9 @@ export default function NetworkingPage() {
     try {
       const { data } = await api.get(`/posts/${post.id}/comments`);
       setComments(data);
-    } catch {} finally {
+    } catch (err) {
+      console.error('Failed to load comments:', err);
+    } finally {
       setCommentsLoading(false);
     }
   };
@@ -460,7 +542,9 @@ export default function NetworkingPage() {
         p.id === commentPost.id ? { ...p, _count: { ...p._count, comments: p._count.comments + 1 } } : p
       ));
       setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-    } catch {} finally {
+    } catch (err) {
+      console.error('Failed to submit comment:', err);
+    } finally {
       setCommentSending(false);
     }
   };
@@ -472,7 +556,9 @@ export default function NetworkingPage() {
         ...prev,
         [toUserId]: { status: 'PENDING', requestId: null, fromUserId: user!.id },
       }));
-    } catch {}
+    } catch (err) {
+      console.error('Failed to send friend request:', err);
+    }
   };
 
 
@@ -515,7 +601,9 @@ export default function NetworkingPage() {
       const { data } = await api.get(`/groups/${selectedGroup.id}`);
       setGroupDetails(data);
       setShowGroupOptions(true);
-    } catch {}
+    } catch (err) {
+      console.error('Failed to open group options:', err);
+    }
   };
 
   const handleGroupUpdated = async () => {
@@ -528,7 +616,9 @@ export default function NetworkingPage() {
         setSelectedGroup({ id: data.id, name: data.name, memberCount: data.members.length, image: data.image });
         setGroupDetails(data);
         setShowGroupOptions(true);
-      } catch {}
+      } catch (err) {
+        console.error('Failed to reload group details:', err);
+      }
     }
     loadConversations();
   };
@@ -541,9 +631,10 @@ export default function NetworkingPage() {
   };
 
   return (
-    <div className={`bg-chat-gradient -mx-4 -mt-4 px-6 pt-6 ${
-      selectedUser || selectedGroup ? 'h-[calc(100dvh-116px)] flex flex-col overflow-hidden -mb-20' : 'min-h-screen pb-24'
-    }`}>
+    <div className={selectedUser || selectedGroup
+      ? 'fixed inset-0 z-[60] flex flex-col bg-[#0D1117] overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]'
+      : 'px-2 pt-2 pb-4'
+    }>
 
       {!selectedUser && !selectedGroup && (
         <>
@@ -635,7 +726,7 @@ export default function NetworkingPage() {
                     className={`w-14 h-14 rounded-full flex items-center justify-center cursor-pointer ${conv.name ? 'bg-gradient-to-br from-indigo-500 to-purple-600' : 'bg-[#1E293B]'}`}
                     style={conv.name ? { boxShadow: '0 0 20px rgba(99, 102, 241, 0.3)' } : undefined}
                   >
-                    {conv.avatar ? (
+                    {conv.avatar && isValidImageUrl(conv.avatar) ? (
                       <img src={conv.avatar} alt={conv.name} className="w-14 h-14 rounded-full object-cover" />
                     ) : !conv.name ? (
                       <svg className="w-7 h-7 text-[#475569]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -676,6 +767,15 @@ export default function NetworkingPage() {
                 </button>
               </div>
             ))
+          )}
+          {convPage < convTotalPages && (
+            <button
+              onClick={loadMoreConversations}
+              disabled={loadingMoreConv}
+              className="w-full py-3 text-sm text-primary hover:text-primary/80 font-medium disabled:opacity-50"
+            >
+              {loadingMoreConv ? 'Caricamento...' : 'Carica altro'}
+            </button>
           )}
         </div>
       )}
@@ -1125,6 +1225,15 @@ export default function NetworkingPage() {
                 </div>
               </div>
             ))
+          )}
+          {hasMorePosts && posts.length > 0 && (
+            <button
+              onClick={loadMorePosts}
+              disabled={loadingMorePosts}
+              className="w-full py-3 text-sm text-primary hover:text-primary/80 font-medium disabled:opacity-50"
+            >
+              {loadingMorePosts ? 'Caricamento...' : 'Carica altro'}
+            </button>
           )}
         </div>
       )}

@@ -1,0 +1,33 @@
+# PathFinder Caddy Configuration
+# Copy to /etc/caddy/Caddyfile, then: systemctl reload caddy
+#
+# Replace api.pathfinder.example.com with your actual domain
+
+api.pathfinder.example.com {
+	# Reverse proxy to backend
+	reverse_proxy localhost:4000
+
+	# WebSocket support for Socket.IO
+	@websocket {
+		header Connection *Upgrade*
+		header Upgrade websocket
+	}
+	reverse_proxy @websocket localhost:4000
+
+	# Security headers
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		-Server
+	}
+
+	# Logging
+	log {
+		output file /var/log/caddy/pathfinder.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+	}
+}

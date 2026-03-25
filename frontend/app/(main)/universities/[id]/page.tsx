@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/language';
+import { isValidExternalUrl } from '@/lib/urlValidation';
 
 interface Course {
   id: string;
@@ -124,7 +125,7 @@ export default function UniversityDetailPage() {
       )}
 
       {/* Website link */}
-      {university.websiteUrl && (
+      {university.websiteUrl && isValidExternalUrl(university.websiteUrl) && (
         <a
           href={university.websiteUrl}
           target="_blank"

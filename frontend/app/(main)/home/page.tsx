@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useSavedOpportunities } from '@/lib/savedOpportunities';
 import { useLanguage } from '@/lib/language';
+import { isValidExternalUrl } from '@/lib/urlValidation';
+import api from '@/lib/api';
 
 interface Opportunity {
   id: string;
@@ -14,8 +16,12 @@ interface Opportunity {
   matchScore: number;
   location: string;
   about: string;
-  icon: React.ReactNode;
   url?: string;
+  type: string;
+  remote: boolean;
+  skills: string[];
+  matchReason: string;
+  deadline: string;
 }
 
 function getScoreColor(score: number): string {
@@ -107,9 +113,15 @@ const BASE_OPPORTUNITIES: BaseOpportunity[] = [
       <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
       </svg>
-    ),
-  },
-];
+    );
+  }
+  // Default icon
+  return (
+    <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h4v11H3zM10 3h4v18h-4zM17 7h4v14h-4z" />
+    </svg>
+  );
+}
 
 function getOpportunities(t: ReturnType<typeof useLanguage>['t']): Opportunity[] {
   return BASE_OPPORTUNITIES.map((opp) => ({
@@ -262,7 +274,7 @@ function FullWidthCard({
       >
         <div className="flex items-start gap-3 mb-3">
           <div className="w-14 h-14 rounded-xl bg-[#1E293B] flex items-center justify-center flex-shrink-0">
-            {opp.icon}
+            <OpportunityIcon type={opp.type} />
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-white font-bold text-[17px] leading-tight">{opp.title}</h3>
@@ -333,10 +345,10 @@ function FullWidthCard({
           {/* CTA */}
           <div className="flex gap-3">
             <button
-              onClick={() => opp.url && window.open(opp.url, '_blank', 'noopener,noreferrer')}
-              disabled={!opp.url}
+              onClick={() => opp.url && isValidExternalUrl(opp.url) && window.open(opp.url, '_blank', 'noopener,noreferrer')}
+              disabled={!opp.url || !isValidExternalUrl(opp.url)}
               className={`flex-1 py-3.5 rounded-2xl font-semibold text-[15px] transition-opacity ${
-                opp.url
+                opp.url && isValidExternalUrl(opp.url)
                   ? 'bg-primary text-white active:opacity-90'
                   : 'bg-[#1E293B] text-gray-500 cursor-not-allowed'
               }`}
@@ -394,7 +406,7 @@ function HalfWidthCard({
       >
         <div className="flex items-start gap-2.5 mb-1.5">
           <div className="w-9 h-9 rounded-lg bg-[#1E293B] flex items-center justify-center flex-shrink-0">
-            {opp.icon}
+            <OpportunityIcon type={opp.type} />
           </div>
           <h3 className="text-white font-semibold text-[13px] leading-snug flex-1 min-w-0 line-clamp-2">
             {opp.title}
@@ -437,10 +449,10 @@ function HalfWidthCard({
           {/* CTA — scaled down to fit the narrow column */}
           <div className="flex gap-2 pt-1">
             <button
-              onClick={() => opp.url && window.open(opp.url, '_blank', 'noopener,noreferrer')}
-              disabled={!opp.url}
+              onClick={() => opp.url && isValidExternalUrl(opp.url) && window.open(opp.url, '_blank', 'noopener,noreferrer')}
+              disabled={!opp.url || !isValidExternalUrl(opp.url)}
               className={`flex-1 py-3 rounded-xl font-semibold text-[12px] transition-opacity ${
-                opp.url
+                opp.url && isValidExternalUrl(opp.url)
                   ? 'bg-primary text-white active:opacity-90'
                   : 'bg-[#1E293B] text-gray-500 cursor-not-allowed'
               }`}
@@ -714,6 +726,7 @@ function FilterSheet({
   );
 }
 
+
 /* ── Page ────────────────────────────────────────────────────────── */
 
 export default function HomePage() {
@@ -727,6 +740,37 @@ export default function HomePage() {
 
   // Always sort by match score descending in "Per te"
   const opportunities = [...allOpportunities].sort((a, b) => b.matchScore - a.matchScore);
+
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [loadingOpps, setLoadingOpps] = useState(true);
+
+  useEffect(() => {
+    api.get('/opportunities?matched=true&limit=20')
+      .then(({ data }) => {
+        const items = data.data || data;
+        const mapped = (Array.isArray(items) ? items : []).map((opp: any) => ({
+          id: opp.id,
+          title: opp.title,
+          company: opp.company || opp.university?.name || '',
+          badge: `${opp.type}${opp.isRemote ? ' \u2022 REMOTE' : ''}`,
+          description: opp.description || '',
+          matchScore: opp.matchScore || 0,
+          location: opp.location || opp.university?.city || '',
+          about: opp.about || '',
+          url: opp.url || '',
+          type: opp.type || '',
+          remote: opp.isRemote || false,
+          skills: opp.tags || [],
+          matchReason: opp.matchReason || '',
+          deadline: opp.deadline || '',
+        }));
+        setOpportunities(mapped);
+      })
+      .catch(() => {
+        setOpportunities([]);
+      })
+      .finally(() => setLoadingOpps(false));
+  }, []);
 
   // Filter sheet state
   const [filterOpen, setFilterOpen] = useState(false);
@@ -864,7 +908,24 @@ export default function HomePage() {
 
       {/* ── Cards ─────────────────────────────────────────────────── */}
       <div className="px-4 pb-4">
-        {tab === 'per-te' ? (
+        {loadingOpps && opportunities.length === 0 ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-[#161B22] rounded-2xl p-5 animate-pulse">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="w-14 h-14 rounded-xl bg-[#1E293B]" />
+                  <div className="flex-1">
+                    <div className="h-4 bg-[#1E293B] rounded w-3/4 mb-2" />
+                    <div className="h-3 bg-[#1E293B] rounded w-1/2" />
+                  </div>
+                </div>
+                <div className="h-3 bg-[#1E293B] rounded w-1/3 mb-3" />
+                <div className="h-3 bg-[#1E293B] rounded w-full mb-1" />
+                <div className="h-3 bg-[#1E293B] rounded w-5/6" />
+              </div>
+            ))}
+          </div>
+        ) : tab === 'per-te' ? (
           <div className="space-y-4">
             {opportunities.map((opp) => (
               <FullWidthCard

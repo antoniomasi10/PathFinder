@@ -1,6 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { authMiddleware } from '../middleware/auth';
+import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
+import { validate } from '../middleware/validate';
+import { createGroupSchema } from '../schemas';
 import * as groupService from '../services/group.service';
+import { validateDataUri } from '../utils/imageValidation';
 
 const router = Router();
 
@@ -27,7 +30,7 @@ router.get('/:groupId', authMiddleware, async (req: Request, res: Response) => {
 });
 
 // Create group
-router.post('/', authMiddleware, async (req: Request, res: Response) => {
+router.post('/', authMiddleware, validate(createGroupSchema), async (req: Request, res: Response) => {
   try {
     const { name, memberIds, description, image } = req.body;
     const group = await groupService.createGroup(
@@ -78,6 +81,10 @@ router.post('/:groupId/members', authMiddleware, async (req: Request, res: Respo
 // Update group photo
 router.put('/:groupId/photo', authMiddleware, async (req: Request, res: Response) => {
   try {
+    if (req.body.image && !validateDataUri(req.body.image)) {
+      res.status(400).json({ error: 'Immagine non valida' });
+      return;
+    }
     const group = await groupService.updateGroupPhoto(
       req.params.groupId,
       req.user!.userId,

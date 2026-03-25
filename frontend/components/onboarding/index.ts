@@ -1,2 +1,2 @@
 export { default } from './OnboardingFlow';
-export type { ProfileData, OnboardingProps } from './onboarding-data';
+export type { ProfileData } from './onboarding-data';

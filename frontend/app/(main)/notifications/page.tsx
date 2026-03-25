@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/language';
+import { useNotifications } from '@/lib/notificationContext';
 
 interface Notification {
   id: string;
@@ -11,80 +12,101 @@ interface Notification {
   content: string;
   isRead: boolean;
   linkTo?: string;
+  icon?: string;
   createdAt: string;
 }
 
 const TYPE_ICONS: Record<string, string> = {
-  FRIEND_REQUEST: '👥',
-  FRIEND_ACCEPTED: '🤝',
-  NEW_MESSAGE: '💬',
-  NEW_OPPORTUNITY: '💼',
-  GENERAL: '🔔',
+  FRIEND_REQUEST: '\u{1F465}',
+  FRIEND_ACCEPTED: '\u{1F91D}',
+  NEW_OPPORTUNITY: '\u{1F4BC}',
+  OPPORTUNITY_DEADLINE: '\u{23F0}',
+  COURSE_DEADLINE: '\u{1F4DA}',
+  COURSE_RECOMMENDED: '\u{2B50}',
+  BADGE_UNLOCKED: '\u{1F3C6}',
+  POST_LIKE: '\u{2764}\u{FE0F}',
+  POST_COMMENT: '\u{1F4AC}',
+  COMMENT_REPLY: '\u{21A9}\u{FE0F}',
+  GROUP_UPDATE: '\u{1F465}',
+  SYSTEM: '\u{2699}\u{FE0F}',
+  GENERAL: '\u{1F514}',
 };
+
+function formatTimeAgo(dateStr: string): string {
+  const now = Date.now();
+  const time = new Date(dateStr).getTime();
+  const diffMs = now - time;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Ora';
+  if (diffMins < 60) return `${diffMins} min fa`;
+  if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'ora' : 'ore'} fa`;
+  if (diffDays < 7) return `${diffDays} ${diffDays === 1 ? 'giorno' : 'giorni'} fa`;
+
+  return new Date(dateStr).toLocaleDateString('it-IT', {
+    day: 'numeric',
+    month: 'short',
+  });
+}
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
   const router = useRouter();
   const { t } = useLanguage();
+  const { refresh } = useNotifications();
 
   useEffect(() => {
-    api.get('/notifications')
-      .then(({ data }) => setNotifications(data))
+    api.get('/notifications?page=1&limit=20')
+      .then(({ data }) => {
+        const items = data.data || data;
+        setNotifications(Array.isArray(items) ? items : []);
+        if (data.totalPages) setTotalPages(data.totalPages);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  const loadMore = async () => {
+    if (loadingMore || page >= totalPages) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      const { data } = await api.get(`/notifications?page=${nextPage}&limit=20`);
+      const items = data.data || data;
+      setNotifications((prev) => [...prev, ...(Array.isArray(items) ? items : [])]);
+      setPage(nextPage);
+      if (data.totalPages) setTotalPages(data.totalPages);
+    } catch (err) {
+      console.error('Failed to load more notifications:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const markAsRead = async (notif: Notification) => {
     if (!notif.isRead) {
       await api.patch(`/notifications/${notif.id}/read`);
       setNotifications((prev) => prev.map((n) => n.id === notif.id ? { ...n, isRead: true } : n));
+      refresh();
     }
     if (notif.linkTo) {
       router.push(notif.linkTo);
     }
   };
 
-  const today = new Date().toDateString();
-  const yesterday = new Date(Date.now() - 86400000).toDateString();
-
-  const todayNotifs = notifications.filter((n) => new Date(n.createdAt).toDateString() === today);
-  const yesterdayNotifs = notifications.filter((n) => new Date(n.createdAt).toDateString() === yesterday);
-  const olderNotifs = notifications.filter((n) => {
-    const d = new Date(n.createdAt).toDateString();
-    return d !== today && d !== yesterday;
-  });
-
-  const renderSection = (title: string, items: Notification[]) => {
-    if (items.length === 0) return null;
-    return (
-      <div className="mb-6">
-        <h3 className="text-sm font-medium text-text-muted mb-2">{title}</h3>
-        <div className="space-y-2">
-          {items.map((notif) => (
-            <button
-              key={notif.id}
-              onClick={() => markAsRead(notif)}
-              className={`card w-full text-left flex items-center gap-3 transition-colors ${
-                !notif.isRead ? 'border-primary/30' : ''
-              } hover:bg-card-hover`}
-            >
-              <span className="text-xl">{TYPE_ICONS[notif.type] || '🔔'}</span>
-              <div className="flex-1">
-                <p className={`text-sm ${!notif.isRead ? 'text-text-primary font-medium' : 'text-text-secondary'}`}>
-                  {notif.content}
-                </p>
-                <p className="text-[10px] text-text-muted mt-0.5">
-                  {new Date(notif.createdAt).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
-                </p>
-              </div>
-              {!notif.isRead && <span className="w-2 h-2 bg-primary rounded-full" />}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
+  const markAllRead = async () => {
+    await api.patch('/notifications/read-all');
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    refresh();
   };
+
+  const hasUnread = notifications.some((n) => !n.isRead);
 
   if (loading) {
     return (
@@ -104,6 +126,7 @@ export default function NotificationsPage() {
     <div className="px-4 py-4">
       <h2 className="text-2xl font-display font-bold mb-4">{t.notifications.title}</h2>
 
+      {/* Notification list */}
       {notifications.length === 0 ? (
         <div className="text-center py-12 text-text-muted">
           <p className="text-3xl mb-2">🔔</p>

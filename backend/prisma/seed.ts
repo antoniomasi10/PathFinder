@@ -1,6 +1,11 @@
 import { PrismaClient, GpaRange, EnglishLevel, WillingnessToRelocate, OpportunityType, CourseType } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
+if (process.env.NODE_ENV === 'production') {
+  console.error('Seed non può essere eseguito in produzione!');
+  process.exit(1);
+}
+
 const prisma = new PrismaClient();
 
 async function main() {
@@ -195,13 +200,14 @@ async function main() {
   }
 
   // ============ DEMO USERS ============
-  const passwordHash = await bcrypt.hash('password123', 10);
+  const passwordHash = await bcrypt.hash('Password123', 10);
 
   const user1 = await prisma.user.create({
     data: {
       name: 'Marco Rossi',
       email: 'marco@example.com',
       passwordHash,
+      emailVerified: true,
       universityId: polimi.id,
       courseOfStudy: 'Ingegneria Informatica',
       yearOfStudy: 3,
@@ -218,6 +224,7 @@ async function main() {
       name: 'Giulia Bianchi',
       email: 'giulia@example.com',
       passwordHash,
+      emailVerified: true,
       universityId: bologna.id,
       courseOfStudy: 'Economia e Commercio',
       yearOfStudy: 2,
@@ -234,6 +241,7 @@ async function main() {
       name: 'Luca Verdi',
       email: 'luca@example.com',
       passwordHash,
+      emailVerified: true,
       universityId: sapienza.id,
       courseOfStudy: 'Ingegneria Aerospaziale',
       yearOfStudy: 4,
@@ -250,6 +258,7 @@ async function main() {
       name: 'Sara Ferrari',
       email: 'sara@example.com',
       passwordHash,
+      emailVerified: true,
       universityId: firenze.id,
       courseOfStudy: 'Architettura',
       yearOfStudy: 3,
@@ -266,6 +275,7 @@ async function main() {
       name: 'Alessandro Conti',
       email: 'alessandro@example.com',
       passwordHash,
+      emailVerified: true,
       universityId: caFoscari.id,
       courseOfStudy: 'Economia e Management',
       yearOfStudy: 1,
@@ -422,7 +432,7 @@ async function main() {
   console.log(`- ${universities.length} universities`);
   console.log(`- ${coursesData.length} courses`);
   console.log(`- ${createdOpps.length} opportunities`);
-  console.log(`- 5 demo users (password: password123)`);
+  console.log(`- 5 demo users (password: Password123)`);
 }
 
 main()

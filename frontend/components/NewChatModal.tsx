@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/language';
+import { isValidImageUrl } from '@/lib/urlValidation';
 
 interface User {
   id: string;
@@ -146,7 +147,7 @@ export default function NewChatModal({ isOpen, onClose, onUserSelected }: NewCha
                 >
                   {/* Avatar */}
                   <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0 overflow-hidden">
-                    {u.avatar ? (
+                    {u.avatar && isValidImageUrl(u.avatar) ? (
                       <img src={u.avatar} alt={u.name} className="w-10 h-10 rounded-full object-cover" />
                     ) : (
                       u.name[0]

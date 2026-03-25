@@ -30,15 +30,25 @@ import AdmissionSimulator from '@/components/AdmissionSimulator';
 import CourseComparison from '@/components/CourseComparison';
 import LivingMap from '@/components/LivingMap';
 import { useBadges } from '@/components/BadgeProvider';
+import { isValidExternalUrl } from '@/lib/urlValidation';
 
 export default function CourseDetailPage() {
   const params = useParams();
   const router = useRouter();
   const course = MOCK_COURSES.find((c) => c.id === Number(params.id));
+  const [backendCourse, setBackendCourse] = useState<any>(null);
   const { savedIds, toggleSave } = useSavedCourses();
   const { track } = useBadges();
 
-  const bookmarked = course ? savedIds.has(course.id) : false;
+  // Also fetch from backend API for real data sync
+  useEffect(() => {
+    if (params.id) {
+      api.get(`/courses/${params.id}`).then((res) => setBackendCourse(res.data)).catch(() => {});
+    }
+  }, [params.id]);
+
+  const courseId = String(params.id);
+  const bookmarked = savedIds.has(courseId);
   const [checklist, setChecklist] = useState<Record<number, boolean>>({});
   const [calendarAdded, setCalendarAdded] = useState<Set<number>>(new Set());
   const [showSimulator, setShowSimulator] = useState(false);
@@ -61,7 +71,9 @@ export default function CourseDetailPage() {
   }
 
   useEffect(() => {
-    api.get('/profile/me').then((res) => setUserProfile(res.data)).catch(() => {});
+    api.get('/profile/me').then((res) => setUserProfile(res.data)).catch((err) => {
+      console.error('Failed to fetch user profile:', err);
+    });
   }, []);
 
   // Track course view for badges
@@ -74,7 +86,14 @@ export default function CourseDetailPage() {
     const storageKey = `checklist-${params.id}`;
     const stored = localStorage.getItem(storageKey);
     if (stored) {
-      setChecklist(JSON.parse(stored));
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          setChecklist(parsed);
+        }
+      } catch {
+        localStorage.removeItem(storageKey);
+      }
       setChecklistInitialized(true);
       return;
     }
@@ -92,7 +111,14 @@ export default function CourseDetailPage() {
   useEffect(() => {
     const stored = localStorage.getItem(`calendar-added-${params.id}`);
     if (stored) {
-      setCalendarAdded(new Set(JSON.parse(stored)));
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setCalendarAdded(new Set(parsed));
+        }
+      } catch {
+        localStorage.removeItem(`calendar-added-${params.id}`);
+      }
     }
   }, [params.id]);
 
@@ -161,10 +187,128 @@ export default function CourseDetailPage() {
     localStorage.setItem(`calendar-added-${params.id}`, JSON.stringify([...newSet]));
   };
 
+  // If no mock course but backend data exists, show a backend-powered detail view
+  if (!course && backendCourse) {
+    return (
+      <div className="min-h-screen bg-[#0A0E1A]">
+        {/* Header */}
+        <div className="sticky top-0 z-20 px-4 pt-4 pb-3 flex items-center justify-between" style={{ backgroundColor: 'rgba(10,14,26,0.95)', backdropFilter: 'blur(12px)' }}>
+          <button onClick={() => router.back()} className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(28,47,67,0.8)' }}>
+            <ArrowLeft className="w-5 h-5 text-white" />
+          </button>
+          <button
+            onClick={() => {
+              toggleSave({ id: courseId, name: backendCourse.name, university: backendCourse.university });
+            }}
+            className="w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(28,47,67,0.8)' }}
+          >
+            <Bookmark className={`w-5 h-5 ${bookmarked ? 'text-[#4A9EFF] fill-[#4A9EFF]' : 'text-white'}`} />
+          </button>
+        </div>
+
+        <div className="px-4 pb-32 space-y-6">
+          {/* Title */}
+          <div>
+            <h1 className="text-2xl font-bold text-white mb-2">{backendCourse.name}</h1>
+            <p className="text-[#4A9EFF] font-medium">{backendCourse.university?.name}</p>
+            {backendCourse.university?.city && (
+              <p className="text-[#64748B] text-sm mt-1">{backendCourse.university.city}</p>
+            )}
+          </div>
+
+          {/* Info pills */}
+          <div className="flex flex-wrap gap-2">
+            {backendCourse.type && (
+              <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-[#1E293B] text-[#94A3B8]">
+                {backendCourse.type === 'TRIENNALE' ? 'Triennale' : backendCourse.type === 'MAGISTRALE' ? 'Magistrale' : 'Ciclo Unico'}
+              </span>
+            )}
+            {backendCourse.languageOfInstruction && (
+              <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-[#1E293B] text-[#94A3B8]">
+                {backendCourse.languageOfInstruction}
+              </span>
+            )}
+            {backendCourse.programDuration && (
+              <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-[#1E293B] text-[#94A3B8]">
+                {backendCourse.programDuration}
+              </span>
+            )}
+            {backendCourse.internationalOpportunities && (
+              <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-[#4F46E5]/20 text-[#4F46E5]">
+                Opportunità internazionali
+              </span>
+            )}
+          </div>
+
+          {/* Stats */}
+          {(backendCourse.employmentRate || backendCourse.avgSalaryAfterGraduation) && (
+            <div className="grid grid-cols-2 gap-3">
+              {backendCourse.employmentRate && (
+                <div className="bg-[#161B22] rounded-2xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#4A9EFF]">{Math.round(backendCourse.employmentRate * 100)}%</p>
+                  <p className="text-xs text-[#64748B] mt-1">Tasso occupazione</p>
+                </div>
+              )}
+              {backendCourse.avgSalaryAfterGraduation && (
+                <div className="bg-[#161B22] rounded-2xl p-4 text-center">
+                  <p className="text-2xl font-bold text-[#22C55E]">{backendCourse.avgSalaryAfterGraduation.toLocaleString('it-IT')}€</p>
+                  <p className="text-xs text-[#64748B] mt-1">Stipendio medio</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tags */}
+          {backendCourse.tags?.length > 0 && (
+            <div>
+              <h3 className="text-white font-semibold mb-3">Aree tematiche</h3>
+              <div className="flex flex-wrap gap-2">
+                {backendCourse.tags.map((tag: string) => (
+                  <span key={tag} className="px-3 py-1.5 rounded-full text-xs font-medium bg-[#1E293B] text-[#94A3B8]">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {backendCourse.field && (
+            <div className="bg-[#161B22] rounded-2xl p-4">
+              <h3 className="text-white font-semibold mb-2">Campo di studio</h3>
+              <p className="text-[#94A3B8] text-sm">{backendCourse.field}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom bar */}
+        <div className="fixed bottom-0 left-0 right-0 p-4 z-30" style={{ backgroundColor: '#0D1117', borderTop: '1px solid #2A3F54' }}>
+          <div className="flex gap-3 max-w-md mx-auto">
+            <button
+              onClick={() => {
+                if (!bookmarked) track('courses_saved');
+                toggleSave({ id: courseId, name: backendCourse.name, university: backendCourse.university });
+              }}
+              className="flex-1 py-3 rounded-xl font-semibold shadow-md transition-colors"
+              style={{
+                backgroundColor: bookmarked ? '#2A3F54' : '#4A9EFF',
+                color: bookmarked ? '#4A9EFF' : 'white',
+                border: bookmarked ? '1px solid #4A9EFF' : 'none',
+              }}
+            >
+              {bookmarked ? '✓ Salvato' : '+ Salva corso'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Neither mock nor backend course found yet — show loading
   if (!course) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p style={{ color: '#8B8FA8', fontSize: '16px' }}>Corso non trovato</p>
+        <div className="animate-pulse text-[#8B8FA8] text-base">Caricamento corso...</div>
       </div>
     );
   }
@@ -229,7 +373,11 @@ export default function CourseDetailPage() {
             <ArrowLeft className="w-5 h-5 text-white" />
           </button>
           <button
-            onClick={() => toggleSave({ id: course.id, title: course.title, university: course.university, city: course.city })}
+            onClick={() => {
+              const name = backendCourse?.name || course?.title || '';
+              const uni = backendCourse?.university || (course ? { name: course.university, city: course.city } : undefined);
+              toggleSave({ id: courseId, name, university: uni });
+            }}
             className="w-10 h-10 rounded-full flex items-center justify-center"
             style={{ backgroundColor: 'rgba(28,47,67,0.8)', backdropFilter: 'blur(8px)' }}
           >
@@ -248,16 +396,18 @@ export default function CourseDetailPage() {
         <p style={{ fontSize: '14px', color: '#8B8FA8' }} className="mb-3">
           {course.university} — {course.city}
         </p>
-        <a
-          href={course.officialUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-sm"
-          style={{ color: '#4A9EFF' }}
-        >
-          <ExternalLink className="w-3.5 h-3.5" />
-          Sito ufficiale del corso
-        </a>
+        {course.officialUrl && isValidExternalUrl(course.officialUrl) && (
+          <a
+            href={course.officialUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm"
+            style={{ color: '#4A9EFF' }}
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            Sito ufficiale del corso
+          </a>
+        )}
       </div>
 
       {/* Description */}
@@ -421,7 +571,7 @@ export default function CourseDetailPage() {
           </div>
 
           <button
-            onClick={() => { track('requirements_viewed'); window.open(course.requirementsUrl || course.officialUrl, '_blank', 'noopener,noreferrer'); }}
+            onClick={() => { const url = course.requirementsUrl || course.officialUrl; track('requirements_viewed'); if (isValidExternalUrl(url)) window.open(url, '_blank', 'noopener,noreferrer'); }}
             className="w-full py-2.5 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
             style={{ border: '1px solid #2A3F54', color: '#D0D4DC' }}
           >
@@ -513,14 +663,18 @@ export default function CourseDetailPage() {
         <p className="text-center" style={{ fontSize: '12px', color: '#8B8FA8', lineHeight: '1.5' }}>
           Informazioni aggiornate a Marzo 2026 da siti ufficiali delle università e AlmaLaurea.
           Per dettagli sempre aggiornati, visita il{' '}
-          <a
-            href={course.officialUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: '#4A9EFF', textDecoration: 'underline' }}
-          >
-            sito ufficiale del corso
-          </a>.
+          {isValidExternalUrl(course.officialUrl) ? (
+            <a
+              href={course.officialUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#4A9EFF', textDecoration: 'underline' }}
+            >
+              sito ufficiale del corso
+            </a>
+          ) : (
+            <span style={{ color: '#4A9EFF' }}>sito ufficiale del corso</span>
+          )}.
         </p>
       </div>
 
@@ -534,7 +688,12 @@ export default function CourseDetailPage() {
       >
         <div className="flex gap-3 max-w-md mx-auto">
           <button
-            onClick={() => { if (!bookmarked) track('courses_saved'); toggleSave({ id: course.id, title: course.title, university: course.university, city: course.city }); }}
+            onClick={() => {
+              if (!bookmarked) track('courses_saved');
+              const name = backendCourse?.name || course?.title || '';
+              const uni = backendCourse?.university || (course ? { name: course.university, city: course.city } : undefined);
+              toggleSave({ id: courseId, name, university: uni });
+            }}
             className="flex-1 py-3 rounded-xl font-semibold shadow-md transition-colors"
             style={{
               backgroundColor: bookmarked ? '#2A3F54' : '#4A9EFF',
@@ -553,7 +712,7 @@ export default function CourseDetailPage() {
           </button>
         </div>
         <button
-          onClick={() => { track('applications_clicked'); window.open(course.officialUrl, '_blank', 'noopener,noreferrer'); }}
+          onClick={() => { track('applications_clicked'); if (isValidExternalUrl(course.officialUrl)) window.open(course.officialUrl, '_blank', 'noopener,noreferrer'); }}
           className="w-full py-2.5 rounded-xl font-medium transition-colors mt-2 max-w-md mx-auto flex items-center justify-center gap-2"
           style={{ border: '1px solid #2A3F54', color: '#D0D4DC' }}
         >

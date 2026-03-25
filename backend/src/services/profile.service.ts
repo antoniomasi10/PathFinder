@@ -23,6 +23,8 @@ interface ProfileData {
     englishLevel: string;
     mobility: string;
   };
+  avatarId?: string;
+  avatarBgColor?: string;
 }
 
 function mapGpa(gpa: string): GpaRange {
@@ -96,6 +98,8 @@ export async function saveQuestionnaire(userId: string, input: ProfileData) {
         englishLevel: mapEnglishLevel(answers.englishLevel),
         willingToRelocate: mapWillingToRelocate(answers.willingToRelocate),
         profileCompleted: true,
+        ...(input.avatarId && { avatar: input.avatarId }),
+        ...(input.avatarBgColor && { avatarBgColor: input.avatarBgColor }),
       },
     });
 
@@ -111,6 +115,10 @@ export async function getProfile(userId: string) {
       university: true,
     },
   });
+  if (user) {
+    const { passwordHash, ...safeUser } = user;
+    return safeUser;
+  }
   return user;
 }
 

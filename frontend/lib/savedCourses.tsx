@@ -1,16 +1,17 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import api from '@/lib/api';
 
 export interface SavedCourse {
-  id: number;
-  title: string;
-  university: string;
-  city: string;
+  id: string;
+  name: string;
+  university?: { name: string; city: string };
+  type?: string;
 }
 
 interface SavedCoursesContextType {
-  savedIds: Set<number>;
+  savedIds: Set<string>;
   savedCourses: SavedCourse[];
   toggleSave: (course: SavedCourse) => void;
 }
@@ -21,37 +22,49 @@ const SavedCoursesContext = createContext<SavedCoursesContextType>({
   toggleSave: () => {},
 });
 
-const STORAGE_KEY = 'pathfinder-saved-courses';
-
 export function SavedCoursesProvider({ children }: { children: ReactNode }) {
   const [savedCourses, setSavedCourses] = useState<SavedCourse[]>([]);
-  const [savedIds, setSavedIds] = useState<Set<number>>(new Set());
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const courses: SavedCourse[] = JSON.parse(stored);
+    api.get('/courses/saved/list')
+      .then((res) => {
+        const courses: SavedCourse[] = (res.data || []).map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          university: c.university,
+          type: c.type,
+        }));
         setSavedCourses(courses);
         setSavedIds(new Set(courses.map((c) => c.id)));
-      }
-    } catch {}
+      })
+      .catch((err) => {
+        console.error('Failed to load saved courses:', err.response?.status, err.response?.data || err.message);
+      });
   }, []);
 
-  function toggleSave(course: SavedCourse) {
+  const toggleSave = useCallback((course: SavedCourse) => {
     const isSaved = savedIds.has(course.id);
 
-    let next: SavedCourse[];
+    // Optimistic update
+    const previousCourses = savedCourses;
+    const previousIds = savedIds;
+
     if (isSaved) {
-      next = savedCourses.filter((c) => c.id !== course.id);
+      setSavedCourses((prev) => prev.filter((c) => c.id !== course.id));
+      setSavedIds((prev) => { const next = new Set(prev); next.delete(course.id); return next; });
     } else {
-      next = [...savedCourses, course];
+      setSavedCourses((prev) => [...prev, course]);
+      setSavedIds((prev) => new Set(prev).add(course.id));
     }
 
-    setSavedCourses(next);
-    setSavedIds(new Set(next.map((c) => c.id)));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  }
+    api.post(`/courses/${course.id}/save`).catch((err) => {
+      console.error('Failed to save course:', err.response?.status, err.response?.data || err.message);
+      // Revert on error
+      setSavedCourses(previousCourses);
+      setSavedIds(previousIds);
+    });
+  }, [savedCourses, savedIds]);
 
   return (
     <SavedCoursesContext.Provider value={{ savedIds, savedCourses, toggleSave }}>

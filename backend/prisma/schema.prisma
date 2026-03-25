@@ -46,7 +46,26 @@ enum NotificationType {
   FRIEND_ACCEPTED
   NEW_MESSAGE
   NEW_OPPORTUNITY
+  OPPORTUNITY_DEADLINE
+  COURSE_DEADLINE
+  COURSE_RECOMMENDED
+  BADGE_UNLOCKED
+  POST_LIKE
+  POST_COMMENT
+  COMMENT_REPLY
+  GROUP_UPDATE
+  SYSTEM
   GENERAL
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
+enum VerificationCodeType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
 }
 
 enum FriendRequestStatus {
@@ -61,18 +80,25 @@ enum GroupMemberRole {
 }
 
 model User {
-  id             String    @id @default(uuid())
-  email          String    @unique
-  passwordHash   String
-  name           String
-  avatar         String?
-  bio            String?
-  universityId   String?
-  university     University? @relation(fields: [universityId], references: [id])
-  courseOfStudy   String?
-  yearOfStudy    Int?
-  gpa            GpaRange?
-  englishLevel   EnglishLevel?
+  id                String                 @id @default(uuid())
+  email             String                 @unique
+  passwordHash      String?
+  name              String
+  surname           String                 @default("")
+  username          String?                @unique
+  phone             String?
+  googleId          String?                @unique
+  provider          AuthProvider           @default(LOCAL)
+  emailVerified     Boolean                @default(false)
+  avatar            String?
+  avatarBgColor     String?
+  bio               String?
+  universityId      String?
+  university        University?            @relation(fields: [universityId], references: [id])
+  courseOfStudy     String?
+  yearOfStudy       Int?
+  gpa               GpaRange?
+  englishLevel      EnglishLevel?
   willingToRelocate WillingnessToRelocate?
   profileCompleted    Boolean   @default(false)
   publicProfile       Boolean   @default(true)
@@ -85,28 +111,36 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  profile        UserProfile?
-  sentMessages   PathMatesMessage[] @relation("SentMessages")
-  receivedMessages PathMatesMessage[] @relation("ReceivedMessages")
-  createdGroups  PathMatesGroup[] @relation("GroupCreator")
-  groupMemberships GroupMember[]
-  notifications  Notification[]
-  sentFriendRequests     FriendRequest[] @relation("FriendRequestFrom")
-  receivedFriendRequests FriendRequest[] @relation("FriendRequestTo")
-  posts          Post[]
-  postLikes      PostLike[]
-  postComments   PostComment[]
-  savedOpportunities Opportunity[] @relation("SavedOpportunities")
-  savedCourses       Course[]     @relation("SavedCourses")
+  profile                UserProfile?
+  sentMessages           PathMatesMessage[] @relation("SentMessages")
+  receivedMessages       PathMatesMessage[] @relation("ReceivedMessages")
+  createdGroups          PathMatesGroup[]   @relation("GroupCreator")
+  groupMemberships       GroupMember[]
+  notifications          Notification[]
+  sentFriendRequests     FriendRequest[]    @relation("FriendRequestFrom")
+  receivedFriendRequests FriendRequest[]    @relation("FriendRequestTo")
+  posts                  Post[]
+  postLikes              PostLike[]
+  postComments           PostComment[]
+  savedOpportunities     Opportunity[]      @relation("SavedOpportunities")
+  savedCourses           Course[]           @relation("SavedCourses")
+  notificationPreference NotificationPreference?
+  pushSubscriptions      PushSubscription[]
+  badges                 UserBadge[]
+  tracking               UserTracking[]
+  verificationCodes      VerificationCode[]
+
+  @@index([universityId])
+  @@index([googleId])
 }
 
 model UserProfile {
-  id                String   @id @default(uuid())
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  primaryInterest   String?
-  naturalActivity   String?
-  freeTimeActivity  String?
+  id                  String    @id @default(uuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  primaryInterest     String?
+  naturalActivity     String?
+  freeTimeActivity    String?
   problemSolvingStyle String?
   riskTolerance     String?
   careerVision      String?
@@ -118,23 +152,33 @@ model UserProfile {
 }
 
 model Opportunity {
-  id                  String          @id @default(uuid())
-  title               String
-  description         String
-  type                OpportunityType
-  universityId        String?
-  university          University?     @relation(fields: [universityId], references: [id])
-  company             String?
-  location            String?
-  isRemote            Boolean         @default(false)
-  isAbroad            Boolean         @default(false)
+  id                   String          @id @default(uuid())
+  title                String
+  description          String
+  about                String?
+  url                  String?
+  type                 OpportunityType
+  universityId         String?
+  university           University?     @relation(fields: [universityId], references: [id])
+  company              String?
+  location             String?
+  isRemote             Boolean         @default(false)
+  isAbroad             Boolean         @default(false)
   requiredEnglishLevel EnglishLevel?
-  minGpa              GpaRange?
-  tags                String[]
-  deadline            DateTime?
-  postedAt            DateTime        @default(now())
-  expiresAt           DateTime?
-  savedBy             User[]          @relation("SavedOpportunities")
+  minGpa               GpaRange?
+  tags                 String[]
+  deadline             DateTime?
+  postedAt             DateTime        @default(now())
+  expiresAt            DateTime?
+  savedBy              User[]          @relation("SavedOpportunities")
+  sourceId             String?         // e.g. "eures-12345" — null = manual/seed
+  lastSyncedAt         DateTime?       // last time this record was refreshed by import
+
+  @@index([universityId])
+  @@index([type])
+  @@index([deadline])
+  @@index([sourceId])
+  @@index([lastSyncedAt])
 }
 
 model University {
@@ -148,52 +192,67 @@ model University {
   websiteUrl    String?
   alumniCount   Int           @default(0)
   avgRating     Float         @default(0)
+  isActive      Boolean       @default(true)
+  sourceId      String?       // e.g. "mur-00001" — null = manual/seed
+  lastSyncedAt  DateTime?
   users         User[]
   courses       Course[]
   opportunities Opportunity[]
+
+  @@index([sourceId])
 }
 
 model Course {
-  id                        String     @id @default(uuid())
-  universityId              String
-  university                University @relation(fields: [universityId], references: [id], onDelete: Cascade)
-  name                      String
-  type                      CourseType
-  field                     String?
-  employmentRate            Float?
-  avgSalaryAfterGraduation  Int?
-  internshipsAvailable      Int?
-  internationalOpportunities Boolean   @default(false)
-  programDuration           String?
-  languageOfInstruction     String?
-  tags                      String[]   @default([])
-  savedBy                   User[]     @relation("SavedCourses")
+  id                         String     @id @default(uuid())
+  universityId               String
+  university                 University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  name                       String
+  type                       CourseType
+  field                      String?
+  employmentRate             Float?
+  avgSalaryAfterGraduation   Int?
+  internshipsAvailable       Int?
+  internationalOpportunities Boolean    @default(false)
+  programDuration            String?
+  languageOfInstruction      String?
+  tags                       String[]   @default([])
+  savedBy                    User[]     @relation("SavedCourses")
+  isActive                   Boolean    @default(true)
+  sourceId                   String?
+  lastSyncedAt               DateTime?
+
+  @@index([sourceId])
 }
 
 model PathMatesMessage {
-  id         String   @id @default(uuid())
+  id         String          @id @default(uuid())
   senderId   String
-  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  sender     User            @relation("SentMessages", fields: [senderId], references: [id])
   receiverId String?
-  receiver   User?    @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  receiver   User?           @relation("ReceivedMessages", fields: [receiverId], references: [id])
   groupId    String?
   group      PathMatesGroup? @relation(fields: [groupId], references: [id])
   content    String
-  images     String[] @default([])
-  sentAt     DateTime @default(now())
+  images     String[]        @default([])
+  sentAt     DateTime        @default(now())
   readAt     DateTime?
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([groupId])
+  @@index([senderId, receiverId])
 }
 
 model PathMatesGroup {
-  id          String   @id @default(uuid())
+  id          String             @id @default(uuid())
   name        String
   description String?
   image       String?
   createdById String
-  createdBy   User     @relation("GroupCreator", fields: [createdById], references: [id])
+  createdBy   User               @relation("GroupCreator", fields: [createdById], references: [id])
   members     GroupMember[]
   messages    PathMatesMessage[]
-  createdAt   DateTime @default(now())
+  createdAt   DateTime           @default(now())
 }
 
 model GroupMember {
@@ -206,6 +265,7 @@ model GroupMember {
   joinedAt DateTime        @default(now())
 
   @@unique([groupId, userId])
+  @@index([userId])
 }
 
 model Notification {
@@ -216,7 +276,11 @@ model Notification {
   content   String
   isRead    Boolean          @default(false)
   linkTo    String?
+  icon      String?
+  data      Json?
   createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
 }
 
 model FriendRequest {
@@ -229,6 +293,9 @@ model FriendRequest {
   createdAt  DateTime            @default(now())
 
   @@unique([fromUserId, toUserId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([status])
 }
 
 model Post {
@@ -240,6 +307,9 @@ model Post {
   createdAt DateTime      @default(now())
   likes     PostLike[]
   comments  PostComment[]
+
+  @@index([authorId])
+  @@index([createdAt])
 }
 
 model PostLike {
@@ -251,6 +321,7 @@ model PostLike {
   createdAt DateTime @default(now())
 
   @@unique([postId, userId])
+  @@index([postId])
 }
 
 model PostComment {
@@ -261,4 +332,87 @@ model PostComment {
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   content   String
   createdAt DateTime @default(now())
+
+  @@index([postId])
+}
+
+model NotificationPreference {
+  id             String  @id @default(uuid())
+  userId         String  @unique
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pushEnabled    Boolean @default(true)
+  networking     Boolean @default(true)
+  opportunities  Boolean @default(true)
+  universities   Boolean @default(true)
+  social         Boolean @default(true)
+  postLikes      Boolean @default(false)
+  chat           Boolean @default(true)
+  achievements   Boolean @default(true)
+  system         Boolean @default(true)
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+}
+
+model UserBadge {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId    String
+  progress   Int      @default(0)
+  unlockedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+}
+
+model UserTracking {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key       String
+  value     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, key])
+  @@index([userId])
+}
+
+model ImportLog {
+  id        String   @id @default(uuid())
+  source    String   // mur, eures, almalaurea, istat
+  type      String   // universities, courses, opportunities, stats
+  status    String   // success, partial, failed
+  count     Int      @default(0)
+  error     String?
+  startedAt DateTime @default(now())
+  finishedAt DateTime?
+  metadata  Json?
+
+  @@index([source, type])
+  @@index([startedAt])
+}
+
+model VerificationCode {
+  id        String               @id @default(uuid())
+  userId    String
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String
+  type      VerificationCodeType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime             @default(now())
+
+  @@index([userId, type])
+  @@index([code, type])
 }

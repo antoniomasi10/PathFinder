@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { authMiddleware } from '../middleware/auth';
+import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { getComparison } from '../services/courseComparison.service';
 
@@ -13,6 +13,24 @@ router.get('/', async (_req: Request, res: Response) => {
       orderBy: { name: 'asc' },
     });
     res.json(courses);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /courses/saved/list — get user's saved courses (authenticated)
+// MUST be before /:id to avoid matching "saved" as an id
+router.get('/saved/list', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user!.userId },
+      include: {
+        savedCourses: {
+          include: { university: { select: { id: true, name: true, city: true } } },
+        },
+      },
+    });
+    res.json(user?.savedCourses || []);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -70,23 +88,6 @@ router.post('/:id/save', authMiddleware, async (req: Request, res: Response) => 
       });
       res.json({ saved: true });
     }
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /courses/saved/list — get user's saved courses (authenticated)
-router.get('/saved/list', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user!.userId },
-      include: {
-        savedCourses: {
-          include: { university: { select: { id: true, name: true, city: true } } },
-        },
-      },
-    });
-    res.json(user?.savedCourses || []);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

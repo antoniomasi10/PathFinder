@@ -5,9 +5,14 @@ import { createContext, useContext } from 'react';
 export interface AuthUser {
   id: string;
   name: string;
+  surname: string;
+  username: string;
+  phone?: string;
   email: string;
   avatar?: string | null;
   profileCompleted: boolean;
+  emailVerified: boolean;
+  provider: 'LOCAL' | 'GOOGLE';
   university?: { id: string; name: string } | null;
 }
 

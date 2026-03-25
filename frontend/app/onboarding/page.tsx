@@ -2,44 +2,55 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AnimatePresence, motion } from 'framer-motion';
 import OnboardingFlow from '@/components/onboarding';
+import AvatarReveal from '@/components/onboarding/AvatarReveal';
 import type { ProfileData } from '@/components/onboarding';
-import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
 export default function OnboardingPage() {
-  const { user, setUser } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
-  const [error, setError] = useState('');
-  const [saving, setSaving] = useState(false);
+
+  const [revealData, setRevealData] = useState<{
+    profileData: ProfileData;
+    avatarId: string;
+  } | null>(null);
 
   if (user?.profileCompleted) {
     router.replace('/home');
     return null;
   }
 
-  const handleComplete = async (profileData: ProfileData) => {
-    if (saving) return;
-    setError('');
-    setSaving(true);
-    try {
-      await api.post('/profile/questionnaire', profileData);
-      if (user) setUser({ ...user, profileCompleted: true });
-      router.push('/home');
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Errore durante il salvataggio. Riprova.');
-      setSaving(false);
-    }
+  const handleAvatarSelected = (profileData: ProfileData, avatarId: string) => {
+    setRevealData({ profileData, avatarId });
   };
 
   return (
-    <>
-      <OnboardingFlow onComplete={handleComplete} />
-      {error && (
-        <div className="fixed bottom-4 left-4 right-4 bg-red-900/90 text-white px-4 py-3 rounded-xl text-sm text-center z-50">
-          {error}
-        </div>
+    <AnimatePresence mode="wait">
+      {revealData ? (
+        <motion.div
+          key="reveal"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] as const, delay: 0.2 }}
+          className="fixed inset-0 z-50"
+        >
+          <AvatarReveal
+            avatarId={revealData.avatarId}
+            profileData={revealData.profileData}
+          />
+        </motion.div>
+      ) : (
+        <motion.div
+          key="flow"
+          exit={{ opacity: 0, scale: 0.98 }}
+          transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] as const }}
+          className="min-h-screen"
+        >
+          <OnboardingFlow onAvatarSelected={handleAvatarSelected} />
+        </motion.div>
       )}
-    </>
+    </AnimatePresence>
   );
 }

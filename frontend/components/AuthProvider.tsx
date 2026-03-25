@@ -6,7 +6,7 @@ import { AuthContext, AuthUser } from '@/lib/auth';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/language';
 
-const publicPaths = ['/login', '/register'];
+const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const { t } = useLanguage();
@@ -30,18 +30,28 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         setUser({
           id: data.id,
           name: data.name,
+          surname: data.surname ?? '',
+          username: data.username ?? '',
+          phone: data.phone,
           email: data.email,
           avatar: data.avatar,
           profileCompleted: data.profileCompleted,
+          emailVerified: data.emailVerified ?? true,
+          provider: data.provider ?? 'LOCAL',
           university: data.university,
         });
-        if (!data.profileCompleted && pathname !== '/onboarding') {
+
+        // Redirect based on verification and profile state
+        if (!data.emailVerified && pathname !== '/verify-email') {
+          router.replace('/verify-email');
+        } else if (data.emailVerified && !data.profileCompleted && pathname !== '/onboarding') {
           router.replace('/onboarding');
-        } else if (data.profileCompleted && pathname === '/onboarding') {
+        } else if (data.emailVerified && data.profileCompleted && ['/onboarding', '/verify-email'].includes(pathname)) {
           router.replace('/home');
         }
       })
       .catch(() => {
+        // Token invalid or expired — clean up and redirect
         localStorage.removeItem('accessToken');
         if (!publicPaths.includes(pathname)) {
           router.replace('/login');
@@ -51,6 +61,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = () => {
+    api.post('/auth/logout').catch(() => {});
     localStorage.removeItem('accessToken');
     setUser(null);
     router.replace('/login');
