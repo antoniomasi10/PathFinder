@@ -1,14 +1,18 @@
 import prisma from '../lib/prisma';
 
+// V2 action weights (outcome-focused)
 const ACTION_WEIGHTS: Record<string, number> = {
-  view: 1,
-  click: 2,
+  view: 0.5,
+  click: 1,
   like: 2,
   comment: 3,
-  save: 3,
+  save: 4,
   apply: 5,
+  apply_clicked: 8,
+  application_submitted: 15,
   friend_request: 2,
-  unsave: -2,
+  unsave: -4,
+  ignored_repeatedly: -2,
 };
 
 export async function trackInteraction(

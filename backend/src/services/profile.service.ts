@@ -68,6 +68,79 @@ function derivePrimaryInterest(cluster: ProfileData['cluster']): string {
   }
 }
 
+function mapNumericGpa(gpa: string): number {
+  switch (gpa) {
+    case '18-21': return 19.5;
+    case '21-24': return 22.5;
+    case '24-27': return 25.5;
+    case '27-30+': return 28.5;
+    default: return 24;
+  }
+}
+
+function mapCEFRLevel(level: string): string {
+  if (level.startsWith('A2')) return 'A2';
+  if (level.startsWith('B1')) return 'B2'; // B1/B2 maps to B2 for CEFR
+  if (level.startsWith('C1')) return 'C1';
+  if (level.startsWith('C2')) return 'C2';
+  return 'B1';
+}
+
+function deriveCareerGoals(cluster: ProfileData['cluster'], careerPreference: string, professionalIdentity: string): string[] {
+  const goals: string[] = [];
+
+  // From career preference
+  switch (careerPreference) {
+    case 'Costruire qualcosa di tuo':
+      goals.push('entrepreneur', 'startup founder');
+      break;
+    case 'Percorso competitivo':
+      goals.push('management consultant', 'strategy consultant');
+      break;
+    case 'Percorso stabile':
+      goals.push('corporate career', 'project manager');
+      break;
+    case 'Fare ricerca e innovazione':
+      goals.push('researcher', 'research scientist', 'innovation manager');
+      break;
+  }
+
+  // From professional identity
+  switch (professionalIdentity) {
+    case 'Imprenditore/fondatore':
+      goals.push('entrepreneur', 'business owner');
+      break;
+    case 'Specialista':
+      goals.push('specialist', 'expert');
+      break;
+    case 'Manager/leader':
+      goals.push('manager', 'team leader');
+      break;
+    case 'Ricercatore/accademico':
+      goals.push('researcher', 'academic', 'professor');
+      break;
+  }
+
+  // From cluster
+  switch (cluster) {
+    case 'INNOVATOR':
+      goals.push('tech lead', 'product manager');
+      break;
+    case 'ANALYST':
+      goals.push('data analyst', 'software engineer');
+      break;
+    case 'LEADER':
+      goals.push('ceo', 'director');
+      break;
+    case 'HELPER':
+      goals.push('social worker', 'educator');
+      break;
+  }
+
+  // Deduplicate
+  return [...new Set(goals)];
+}
+
 export async function saveQuestionnaire(userId: string, input: ProfileData) {
   const { answers, cluster } = input;
   const primaryInterest = derivePrimaryInterest(cluster);
@@ -82,6 +155,11 @@ export async function saveQuestionnaire(userId: string, input: ProfileData) {
     professionalGoal: answers.professionalIdentity,
     passions: (input.languages || []).map((l) => JSON.stringify(l)),
     clusterTag: cluster,
+    // V2 fields
+    gpa: mapNumericGpa(answers.gpa),
+    gpaScale: 'out_of_30',
+    languageLevel: mapCEFRLevel(answers.englishLevel),
+    careerGoals: deriveCareerGoals(cluster, answers.careerPreference, answers.professionalIdentity),
   };
 
   return prisma.$transaction(async (tx) => {

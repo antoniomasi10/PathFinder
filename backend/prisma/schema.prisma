@@ -143,6 +143,15 @@ model UserProfile {
   passions            String[]
   clusterTag          String?
   completedAt         DateTime?
+
+  // V2 algorithm fields
+  gpa               Float?     // Numeric GPA (e.g. 27.5 out of 30)
+  gpaScale          String?    // 'out_of_30', 'out_of_4', 'out_of_110', 'percentage'
+  languageLevel     String?    // CEFR level: A1, A2, B1, B2, C1, C2
+  careerGoals       String[]   @default([])
+  experiences       Json[]     @default([]) // [{ type, duration, description }]
+  skills            String[]   @default([])
+  achievements      String[]   @default([])
 }
 
 model Opportunity {
@@ -168,6 +177,11 @@ model Opportunity {
   sourceId             String?         // e.g. "eures-12345" — null = manual/seed
   lastSyncedAt         DateTime?       // last time this record was refreshed by import
   embedding            Unsupported("vector(384)")?
+
+  // V2 algorithm fields
+  requirements    Json?      // { minGPA, languageLevel, experienceRequired, experienceType, testScore, portfolio, letters }
+  careerOutcomes  String[]   @default([])
+  tier            String?    // 'top', 'mid', 'accessible'
 
   @@index([universityId])
   @@index([type])

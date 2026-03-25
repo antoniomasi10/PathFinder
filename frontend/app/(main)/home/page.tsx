@@ -6,6 +6,17 @@ import { useSavedOpportunities } from '@/lib/savedOpportunities';
 import { isValidExternalUrl } from '@/lib/urlValidation';
 import api from '@/lib/api';
 
+interface MatchBadge {
+  text: string;
+  color: string;
+}
+
+interface MatchBreakdown {
+  requirements: number;
+  profileFit: number;
+  similarStudents: number;
+}
+
 interface Opportunity {
   id: string;
   title: string;
@@ -13,6 +24,10 @@ interface Opportunity {
   badge: string;
   description: string;
   matchScore: number;
+  interestMatch: number;
+  realisticMatch: number;
+  matchBadge: MatchBadge | null;
+  matchBreakdown: MatchBreakdown | null;
   location: string;
   about: string;
   url?: string;
@@ -21,12 +36,14 @@ interface Opportunity {
   skills: string[];
   matchReason: string;
   deadline: string;
+  algorithmVersion: string;
 }
 
 function getScoreColor(score: number): string {
-  if (score >= 75) return '#22C55E';
-  if (score >= 50) return '#F59E0B';
-  return '#EF4444';
+  if (score >= 70) return '#3DD68C';
+  if (score >= 50) return '#6C63FF';
+  if (score >= 30) return '#FF8C42';
+  return '#FF4444';
 }
 
 function CircularProgress({ score }: { score: number }) {
@@ -52,6 +69,22 @@ function CircularProgress({ score }: { score: number }) {
       <span className="absolute inset-0 flex items-center justify-center text-xs font-bold" style={{ color }}>
         {score}%
       </span>
+    </div>
+  );
+}
+
+function MatchBar({ label, value }: { label: string; value: number }) {
+  const color = getScoreColor(value);
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-gray-400 text-xs w-28 flex-shrink-0">{label}</span>
+      <div className="flex-1 h-1.5 bg-[#1E293B] rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${value}%`, backgroundColor: color }}
+        />
+      </div>
+      <span className="text-xs font-medium w-8 text-right" style={{ color }}>{value}%</span>
     </div>
   );
 }
@@ -219,9 +252,14 @@ function FullWidthCard({
       const t = setTimeout(() => {
         ref.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }, 50);
+      // Track view when card is expanded
+      api.post(`/opportunities/${opp.id}/view`).catch(() => {});
       return () => clearTimeout(t);
     }
-  }, [isExpanded]);
+  }, [isExpanded, opp.id]);
+
+  // Show realistic match for V2, overall matchScore for V1
+  const displayScore = opp.algorithmVersion === 'v2' ? opp.realisticMatch : opp.matchScore;
 
   return (
     <div ref={ref} className="bg-[#161B22] rounded-2xl overflow-hidden" style={{ scrollMarginTop: 80 }}>
@@ -244,7 +282,7 @@ function FullWidthCard({
               // Score and chevron share the same 56×56 box and crossfade between states
               <div className="relative" style={{ width: 56, height: 56 }}>
                 <div className={`absolute inset-0 transition-opacity duration-300 ${isExpanded ? 'opacity-0' : 'opacity-100'}`}>
-                  <CircularProgress score={opp.matchScore} />
+                  <CircularProgress score={displayScore} />
                 </div>
                 <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
                   <ChevronDown rotated={isExpanded} />
@@ -258,10 +296,18 @@ function FullWidthCard({
           </div>
         </div>
 
-        <div className="mb-3">
+        <div className="mb-3 flex flex-wrap gap-2">
           <span className="inline-block bg-[#1E293B] text-gray-400 text-[11px] font-semibold tracking-wider px-3 py-1.5 rounded-lg">
             {opp.badge}
           </span>
+          {opp.matchBadge && (
+            <span
+              className="inline-block text-[11px] font-semibold tracking-wider px-3 py-1.5 rounded-lg"
+              style={{ backgroundColor: opp.matchBadge.color + '20', color: opp.matchBadge.color }}
+            >
+              {opp.matchBadge.text}
+            </span>
+          )}
         </div>
 
         {/* Description: teaser when collapsed, full when expanded */}
@@ -300,10 +346,40 @@ function FullWidthCard({
             <p className="text-gray-400 text-sm leading-relaxed">{opp.about}</p>
           </div>
 
+          {/* V2 Match Breakdown */}
+          {opp.matchBreakdown && opp.algorithmVersion === 'v2' && (
+            <>
+              <div className="h-px bg-[#1E293B]" />
+              <div>
+                <p className="text-white font-semibold text-sm mb-3">Compatibilità</p>
+                <div className="space-y-2.5">
+                  <MatchBar label="Requisiti" value={opp.matchBreakdown.requirements} />
+                  <MatchBar label="Profilo" value={opp.matchBreakdown.profileFit} />
+                  <MatchBar label="Studenti simili" value={opp.matchBreakdown.similarStudents} />
+                </div>
+                <div className="flex gap-4 mt-3">
+                  <div className="flex-1 bg-[#0D1117] rounded-xl px-3 py-2 text-center">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Interesse</p>
+                    <p className="text-white font-bold text-sm">{opp.interestMatch}%</p>
+                  </div>
+                  <div className="flex-1 bg-[#0D1117] rounded-xl px-3 py-2 text-center">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Realismo</p>
+                    <p className="font-bold text-sm" style={{ color: getScoreColor(opp.realisticMatch) }}>{opp.realisticMatch}%</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
           {/* CTA */}
           <div className="flex gap-3">
             <button
-              onClick={() => opp.url && isValidExternalUrl(opp.url) && window.open(opp.url, '_blank', 'noopener,noreferrer')}
+              onClick={() => {
+                if (opp.url && isValidExternalUrl(opp.url)) {
+                  api.post(`/opportunities/${opp.id}/apply-click`).catch(() => {});
+                  window.open(opp.url, '_blank', 'noopener,noreferrer');
+                }
+              }}
               disabled={!opp.url || !isValidExternalUrl(opp.url)}
               className={`flex-1 py-3.5 rounded-2xl font-semibold text-[15px] transition-opacity ${
                 opp.url && isValidExternalUrl(opp.url)
@@ -698,6 +774,10 @@ export default function HomePage() {
           badge: `${opp.type}${opp.isRemote ? ' \u2022 REMOTE' : ''}`,
           description: opp.description || '',
           matchScore: opp.matchScore || 0,
+          interestMatch: opp.interestMatch || opp.matchScore || 0,
+          realisticMatch: opp.realisticMatch || opp.matchScore || 0,
+          matchBadge: opp.matchBadge || null,
+          matchBreakdown: opp.matchBreakdown || null,
           location: opp.location || opp.university?.city || '',
           about: opp.about || '',
           url: opp.url || '',
@@ -706,6 +786,7 @@ export default function HomePage() {
           skills: opp.tags || [],
           matchReason: opp.matchReason || '',
           deadline: opp.deadline || '',
+          algorithmVersion: opp.algorithmVersion || 'v1',
         }));
         setOpportunities(mapped);
       })

@@ -15,7 +15,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
     const { matched } = req.query;
     if (matched === 'true') {
-      // Use hybrid two-stage scoring (pgvector candidates + weighted re-ranking + feedback)
+      // Use hybrid two-stage scoring (V1 or V2 based on A/B test)
       const result = await getHybridMatchedOpportunities(req.user!.userId, limit, skip);
       res.json({
         data: result.data,
@@ -65,6 +65,26 @@ router.post('/:id/save', authMiddleware, async (req: Request, res: Response) => 
       trackInteraction(req.user!.userId, 'opportunity', req.params.id, 'save').catch(() => {});
       res.json({ saved: true });
     }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Track apply click (user clicked "Vai all'opportunità")
+router.post('/:id/apply-click', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    trackInteraction(req.user!.userId, 'opportunity', req.params.id, 'apply_clicked').catch(() => {});
+    res.json({ tracked: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Track opportunity view (user expanded card)
+router.post('/:id/view', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    trackInteraction(req.user!.userId, 'opportunity', req.params.id, 'view').catch(() => {});
+    res.json({ tracked: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
