@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { getComparison } from '../services/courseComparison.service';
+import { trackInteraction } from '../services/interaction.service';
 
 const router = Router();
 
@@ -57,6 +58,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.get('/:id/compare', authMiddleware, async (req: Request, res: Response) => {
   try {
     const result = await getComparison(req.params.id, req.user!.userId);
+    trackInteraction(req.user!.userId, 'course', req.params.id, 'view').catch(() => {});
     res.json(result);
   } catch (err: any) {
     if (err.message === 'Corso non trovato') {
@@ -80,12 +82,14 @@ router.post('/:id/save', authMiddleware, async (req: Request, res: Response) => 
         where: { id: req.user!.userId },
         data: { savedCourses: { disconnect: { id: req.params.id } } },
       });
+      trackInteraction(req.user!.userId, 'course', req.params.id, 'unsave').catch(() => {});
       res.json({ saved: false });
     } else {
       await prisma.user.update({
         where: { id: req.user!.userId },
         data: { savedCourses: { connect: { id: req.params.id } } },
       });
+      trackInteraction(req.user!.userId, 'course', req.params.id, 'save').catch(() => {});
       res.json({ saved: true });
     }
   } catch (err: any) {

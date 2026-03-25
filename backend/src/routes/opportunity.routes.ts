@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import prisma from '../lib/prisma';
-import { scoreOpportunity } from '../services/matchingEngine';
+import { getHybridMatchedOpportunities } from '../services/matchingEngine';
+import { trackInteraction } from '../services/interaction.service';
 
 const router = Router();
 
@@ -14,29 +15,15 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
     const { matched } = req.query;
     if (matched === 'true') {
-      const user = await prisma.user.findUnique({
-        where: { id: req.user!.userId },
-        include: { profile: true },
+      // Use hybrid two-stage scoring (pgvector candidates + weighted re-ranking + feedback)
+      const result = await getHybridMatchedOpportunities(req.user!.userId, limit, skip);
+      res.json({
+        data: result.data,
+        total: result.total,
+        page,
+        totalPages: Math.ceil(result.total / limit),
       });
-
-      if (user?.profile) {
-        // For matched results, we need all opportunities to score and sort them
-        const allOpportunities = await prisma.opportunity.findMany({
-          include: { university: true },
-          orderBy: { postedAt: 'desc' },
-        });
-
-        const scored = allOpportunities.map((opp) => ({
-          ...opp,
-          matchScore: scoreOpportunity(user.profile!, user, opp),
-          matchReason: getMatchReason(user.profile!, user, opp),
-        }));
-        scored.sort((a, b) => b.matchScore - a.matchScore);
-
-        const paginated = scored.slice(skip, skip + limit);
-        res.json({ data: paginated, total: scored.length, page, totalPages: Math.ceil(scored.length / limit) });
-        return;
-      }
+      return;
     }
 
     const [opportunities, total] = await Promise.all([
@@ -68,12 +55,14 @@ router.post('/:id/save', authMiddleware, async (req: Request, res: Response) => 
         where: { id: req.user!.userId },
         data: { savedOpportunities: { disconnect: { id: req.params.id } } },
       });
+      trackInteraction(req.user!.userId, 'opportunity', req.params.id, 'unsave').catch(() => {});
       res.json({ saved: false });
     } else {
       await prisma.user.update({
         where: { id: req.user!.userId },
         data: { savedOpportunities: { connect: { id: req.params.id } } },
       });
+      trackInteraction(req.user!.userId, 'opportunity', req.params.id, 'save').catch(() => {});
       res.json({ saved: true });
     }
   } catch (err: any) {
@@ -93,23 +82,5 @@ router.get('/saved', authMiddleware, async (req: Request, res: Response) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-function getMatchReason(profile: any, user: any, opp: any): string {
-  const reasons: string[] = [];
-  if (profile.primaryInterest === 'tech' && (opp.type === 'INTERNSHIP' || opp.type === 'STAGE')) {
-    reasons.push('In linea con i tuoi interessi tech');
-  }
-  if (profile.primaryInterest === 'business' && opp.type === 'FELLOWSHIP') {
-    reasons.push('Perfetto per il tuo percorso imprenditoriale');
-  }
-  if (profile.clusterTag === 'Creativo' && opp.type === 'EXTRACURRICULAR') {
-    reasons.push('Adatto al tuo profilo creativo');
-  }
-  if (opp.isRemote && user.willingToRelocate === 'NO') {
-    reasons.push('Disponibile in remoto');
-  }
-  if (reasons.length === 0) reasons.push('Opportunità consigliata per te');
-  return reasons.join(' · ');
-}
 
 export default router;
