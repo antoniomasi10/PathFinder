@@ -9,6 +9,8 @@ import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
+import Redis from 'ioredis';
 import authRoutes from './routes/auth.routes';
 import profileRoutes from './routes/profile.routes';
 import opportunityRoutes from './routes/opportunity.routes';
@@ -110,7 +112,21 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Socket.IO
+// Socket.IO — attach Redis adapter for horizontal scaling (multi-instance)
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+const pubClient = new Redis(REDIS_URL);
+const subClient = pubClient.duplicate();
+
+Promise.all([
+  new Promise<void>((resolve) => pubClient.on('ready', resolve)),
+  new Promise<void>((resolve) => subClient.on('ready', resolve)),
+]).then(() => {
+  io.adapter(createAdapter(pubClient, subClient));
+  logger.info('Socket.IO Redis adapter connected');
+}).catch((err) => {
+  logger.warn('Redis adapter unavailable, falling back to in-memory adapter', { error: String(err) });
+});
+
 setIO(io);
 setupChatSocket(io);
 setupNotificationSocket(io);

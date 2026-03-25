@@ -5,6 +5,7 @@ import { createPostSchema, createCommentSchema } from '../schemas';
 import * as postService from '../services/post.service';
 import { createNotification } from '../services/notification.service';
 import { validateImages } from '../utils/imageValidation';
+import { uploadImages } from '../utils/imageUpload';
 import prisma from '../lib/prisma';
 import { trackInteraction } from '../services/interaction.service';
 
@@ -25,7 +26,8 @@ router.post('/', authMiddleware, validate(createPostSchema), async (req: Request
   try {
     const { content, images } = req.body;
     const validImages = validateImages(images);
-    const post = await postService.createPost(req.user!.userId, content, validImages);
+    const imageUrls = await uploadImages(validImages, 'posts');
+    const post = await postService.createPost(req.user!.userId, content, imageUrls);
     res.status(201).json(post);
   } catch (err: any) {
     res.status(400).json({ error: err.message });

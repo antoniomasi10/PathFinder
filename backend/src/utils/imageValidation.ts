@@ -23,6 +23,11 @@ export function validateDataUri(dataUri: string): boolean {
 export function validateImages(images: unknown): string[] {
   if (!Array.isArray(images)) return [];
   return images
-    .filter((img): img is string => typeof img === 'string' && validateDataUri(img))
+    .filter((img): img is string => {
+      if (typeof img !== 'string') return false;
+      // Passthrough already-uploaded HTTPS URLs
+      if (img.startsWith('https://')) return true;
+      return validateDataUri(img);
+    })
     .slice(0, 5);
 }

@@ -271,16 +271,96 @@ export default function NetworkingPage() {
     }
   }, [tab, loadConversations]);
 
+  // Global socket listener — keeps the conversation list up-to-date and
+  // delivers messages even when no specific chat is open.
+  useEffect(() => {
+    if (tab !== 'messaggi') return;
+    const socket = getSocket();
+
+    const handleNewMessage = (msg: Message & { receiverId?: string }) => {
+      // Update the open chat if applicable
+      setSelectedUser((current) => {
+        if (current && msg.senderId === current.id) {
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === msg.id)) return prev;
+            return [...prev, msg];
+          });
+        }
+        return current;
+      });
+
+      // Update conversation list preview / unread count
+      setUnifiedConversations((prev) => {
+        const convId = `direct-${msg.senderId}`;
+        const idx = prev.findIndex((c) => c.id === convId);
+        if (idx === -1) {
+          // New conversation from someone not yet in the list — reload
+          loadConversations();
+          return prev;
+        }
+        const updated = [...prev];
+        const conv = { ...updated[idx] };
+        conv.lastMessage = msg.content || (msg.images?.length ? '📷 Foto' : '');
+        conv.lastMessageAt = msg.sentAt;
+        conv.unread += 1;
+        updated.splice(idx, 1);
+        // Re-insert respecting pinned order
+        const insertIdx = updated.findIndex((c) => !c.pinned);
+        if (conv.pinned || insertIdx === -1) {
+          updated.unshift(conv);
+        } else {
+          updated.splice(insertIdx, 0, conv);
+        }
+        return updated;
+      });
+    };
+
+    const handleNewGroupMessage = (msg: Message & { groupId?: string }) => {
+      // Update the open group chat if applicable
+      setSelectedGroup((current) => {
+        if (current && msg.groupId === current.id) {
+          setGroupMessages((prev) => {
+            if (prev.some((m) => m.id === msg.id)) return prev;
+            return [...prev, msg];
+          });
+        }
+        return current;
+      });
+
+      // Update conversation list preview
+      if (msg.groupId) {
+        setUnifiedConversations((prev) => {
+          const convId = `group-${msg.groupId}`;
+          const idx = prev.findIndex((c) => c.id === convId);
+          if (idx === -1) return prev;
+          const updated = [...prev];
+          const conv = { ...updated[idx] };
+          conv.lastMessage = `${msg.sender?.name || ''}: ${msg.content || (msg.images?.length ? '📷 Foto' : '')}`;
+          conv.lastMessageAt = msg.sentAt;
+          updated.splice(idx, 1);
+          const insertIdx = updated.findIndex((c) => !c.pinned);
+          if (conv.pinned || insertIdx === -1) {
+            updated.unshift(conv);
+          } else {
+            updated.splice(insertIdx, 0, conv);
+          }
+          return updated;
+        });
+      }
+    };
+
+    socket.on('new_message', handleNewMessage);
+    socket.on('new_group_message', handleNewGroupMessage);
+
+    return () => {
+      socket.off('new_message', handleNewMessage);
+      socket.off('new_group_message', handleNewGroupMessage);
+    };
+  }, [tab, loadConversations]);
+
   useEffect(() => {
     if (selectedUser) {
       loadMessages(selectedUser.id);
-      const socket = getSocket();
-      socket.on('new_message', (msg: Message) => {
-        if (msg.senderId === selectedUser.id) {
-          setMessages((prev) => [...prev, msg]);
-        }
-      });
-      return () => { socket.off('new_message'); };
     }
   }, [selectedUser]);
 
@@ -410,13 +490,6 @@ export default function NetworkingPage() {
   useEffect(() => {
     if (selectedGroup) {
       loadGroupMessages(selectedGroup.id);
-      const socket = getSocket();
-      socket.on('new_group_message', (msg: Message & { groupId?: string }) => {
-        if (msg.groupId === selectedGroup.id) {
-          setGroupMessages((prev) => [...prev, msg]);
-        }
-      });
-      return () => { socket.off('new_group_message'); };
     }
   }, [selectedGroup]);
 

@@ -1,5 +1,6 @@
 import prisma from '../lib/prisma';
 import { GpaRange, EnglishLevel, WillingnessToRelocate } from '@prisma/client';
+import { uploadImage } from '../utils/imageUpload';
 
 interface ProfileData {
   answers: {
@@ -124,6 +125,11 @@ export async function getProfile(userId: string) {
 
 export async function updateProfile(userId: string, data: { name?: string; bio?: string; avatar?: string; courseOfStudy?: string; passions?: string[] }) {
   const { passions, ...userFields } = data;
+
+  // Upload avatar to Cloudinary if it's a data URI
+  if (userFields.avatar && userFields.avatar.startsWith('data:image/')) {
+    userFields.avatar = await uploadImage(userFields.avatar, 'avatars');
+  }
 
   if (passions !== undefined) {
     await prisma.userProfile.update({
