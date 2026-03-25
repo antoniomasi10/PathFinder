@@ -75,8 +75,7 @@ export default function ProfilePage() {
   const [editSkills, setEditSkills] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [friendSearch, setFriendSearch] = useState('');
-  const [showPrivacySheet, setShowPrivacySheet] = useState(false);
-  const [showSecuritySheet, setShowSecuritySheet] = useState(false);
+  const [showSecurityPrivacySheet, setShowSecurityPrivacySheet] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showHelpSheet, setShowHelpSheet] = useState(false);
   const [showInfoSheet, setShowInfoSheet] = useState(false);
@@ -85,12 +84,13 @@ export default function ProfilePage() {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   // Privacy settings from global context (persisted to localStorage)
   const {
-    publicProfile, setPublicProfile,
+    publicProfile,
     privacySkills, setPrivacySkills,
     privacyUniversity, setPrivacyUniversity,
     privacySavedOpps, setPrivacySavedOpps,
     privacyPathmates, setPrivacyPathmates,
     messagePrivacy, setMessagePrivacy,
+    togglePrivateProfile,
   } = usePrivacy();
   const [savedTab, setSavedTab] = useState<'opportunities' | 'universities'>('opportunities');
   const [suggestedUsers, setSuggestedUsers] = useState<Friend[]>([]);
@@ -286,7 +286,17 @@ export default function ProfilePage() {
     setDeletingAccount(true);
     try {
       await api.delete('/profile/me');
-    } catch {}
+    } catch {
+      // Even if the API call fails, proceed with local cleanup and logout
+    }
+    // Clear all user-specific data from localStorage
+    [
+      'pathfinder_privacy',
+      'pathfinder_saved_opps',
+      'pathfinder-saved-courses',
+      'openChatWith',
+      'pinnedConversations',
+    ].forEach((k) => localStorage.removeItem(k));
     logout();
   };
 
@@ -650,8 +660,7 @@ export default function ProfilePage() {
               {/* Security & Info */}
               <div className="bg-[#1E293B] rounded-2xl overflow-hidden">
                 {[
-                  { label: t.profile.security, icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z', onPress: () => setShowSecuritySheet(true) },
-                  { label: t.profile.privacy, icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', onPress: () => setShowPrivacySheet(true) },
+                  { label: t.profile.securityPrivacy, icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', onPress: () => setShowSecurityPrivacySheet(true) },
                   { label: t.profile.helpSupport, icon: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', onPress: () => setShowHelpSheet(true) },
                   { label: t.profile.info, icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', onPress: () => setShowInfoSheet(true) },
                 ].map((item, i, arr) => (
@@ -1053,18 +1062,18 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* ── Privacy Sheet ─────────────────────────────────────────── */}
+      {/* ── Sicurezza e Privacy Sheet ─────────────────────────────── */}
       {/* Backdrop */}
       <div
         className={`fixed inset-0 z-[60] bg-black/60 transition-opacity duration-300 ${
-          showPrivacySheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          showSecurityPrivacySheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
-        onClick={() => setShowPrivacySheet(false)}
+        onClick={() => setShowSecurityPrivacySheet(false)}
       />
       {/* Sheet */}
       <div
         className={`fixed bottom-0 left-0 right-0 z-[60] max-w-lg mx-auto bg-[#161B22] rounded-t-3xl transition-transform duration-300 ease-out ${
-          showPrivacySheet ? 'translate-y-0' : 'translate-y-full'
+          showSecurityPrivacySheet ? 'translate-y-0' : 'translate-y-full'
         }`}
       >
         {/* Drag handle */}
@@ -1074,9 +1083,9 @@ export default function ProfilePage() {
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-3 pb-4 border-b border-[#1E293B]">
-          <h2 className="text-white font-bold text-lg">{t.privacy.title}</h2>
+          <h2 className="text-white font-bold text-lg">{t.profile.securityPrivacy}</h2>
           <button
-            onClick={() => setShowPrivacySheet(false)}
+            onClick={() => setShowSecurityPrivacySheet(false)}
             className="p-1 rounded-full hover:bg-[#334155] transition-colors"
           >
             <svg className="w-5 h-5 text-[#94A3B8]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1087,6 +1096,24 @@ export default function ProfilePage() {
 
         {/* Content — scrollable */}
         <div className="px-5 pb-8 pt-4 space-y-4 max-h-[75vh] overflow-y-auto no-scrollbar">
+
+          {/* Sicurezza */}
+          <div className="bg-[#1E293B] rounded-2xl p-4">
+            <h4 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3">{t.security.title}</h4>
+            <button onClick={() => { setShowSecurityPrivacySheet(false); setShowChangePassword(true); }} className="w-full flex items-center justify-between py-2">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                  </svg>
+                </div>
+                <span className="text-sm text-white">{t.security.changePassword}</span>
+              </div>
+              <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
 
           {/* Visibilità profilo */}
           <div className="bg-[#1E293B] rounded-2xl p-4">
@@ -1100,111 +1127,73 @@ export default function ProfilePage() {
                   </svg>
                 </div>
                 <div>
-                  <span className="text-sm text-white block">Profilo pubblico</span>
-                  <span className="text-xs text-[#64748B]">{publicProfile ? 'Visibile a tutti' : 'Solo Pathmates'}</span>
+                  <span className="text-sm text-white block">Profilo privato</span>
                 </div>
               </div>
-              <PrivacyToggle value={publicProfile} onChange={setPublicProfile} />
+              <PrivacyToggle value={!publicProfile} onChange={togglePrivateProfile} />
             </div>
-          </div>
-
-          {/* Impostazioni dettagliate — disabilitate quando il profilo è privato */}
-          <div className={`space-y-4 transition-opacity duration-200 ${!publicProfile ? 'opacity-40 pointer-events-none select-none' : ''}`}>
-            {/* Visibilità contenuti */}
-            <div className="bg-[#1E293B] rounded-2xl p-4">
-              <div>
-                {/* Chi può vedere le tue competenze */}
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                      </svg>
-                    </div>
-                    <span className="text-sm text-white">{t.privacy.whoCanSeeSkills}</span>
-                  </div>
-                  <PrivacyDropdown value={privacySkills} onChange={setPrivacySkills} />
-                </div>
-                <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
-                {/* Chi può vedere la tua università */}
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-                      </svg>
-                    </div>
-                    <span className="text-sm text-white">{t.privacy.whoCanSeeUniversity}</span>
-                  </div>
-                  <PrivacyDropdown value={privacyUniversity} onChange={setPrivacyUniversity} />
-                </div>
-              </div>
-            </div>
-
-            {/* Attività */}
-            <div className="bg-[#1E293B] rounded-2xl p-4">
-              <h4 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3">{t.privacy.activity}</h4>
-              <div>
-                {/* Opportunità salvate */}
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                      </svg>
-                    </div>
-                    <span className="text-sm text-white">{t.privacy.whoCanSeeSavedOpps}</span>
-                  </div>
-                  <PrivacyDropdown value={privacySavedOpps} onChange={setPrivacySavedOpps} />
-                </div>
-                <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
-                {/* Pathmates */}
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                    </div>
-                    <span className="text-sm text-white">{t.privacy.whoCanSeePathmates}</span>
-                  </div>
-                  <PrivacyDropdown value={privacyPathmates} onChange={setPrivacyPathmates} />
-                </div>
-                <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
-                {/* Messaggi */}
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                      </svg>
-                    </div>
-                    <span className="text-sm text-white">{t.privacy.whoCanMessage}</span>
-                  </div>
-                  <PrivacyDropdown value={messagePrivacy} onChange={setMessagePrivacy} />
-                </div>
-              </div>
-            </div>
-          </div>
-
-
-          {/* Account */}
-          <div className="bg-[#1E293B] rounded-2xl overflow-hidden">
-            <button onClick={handleDownloadData} className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-[#334155]/50 transition-colors">
+            <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
+            {/* Chi può vedere le tue competenze */}
+            <div className="flex items-center justify-between py-2">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
                   <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                   </svg>
                 </div>
-                <span className="text-sm text-white">{t.privacy.downloadData}</span>
+                <span className="text-sm text-white">{t.privacy.whoCanSeeSkills}</span>
               </div>
-              <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-            <div className="ml-[60px] mr-2 h-px bg-[#334155]/50" />
-            <button onClick={() => setShowDeleteModal(true)} className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-[#EF4444]/5 transition-colors">
+              <PrivacyDropdown value={privacySkills} onChange={setPrivacySkills} allowedOptions={!publicProfile ? ['Pathmates'] : ['Tutti', 'Pathmates']} />
+            </div>
+          </div>
+
+          {/* Attività */}
+          <div className="bg-[#1E293B] rounded-2xl p-4">
+            <h4 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3">{t.privacy.activity}</h4>
+            {/* Opportunità salvate */}
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                  </svg>
+                </div>
+                <span className="text-sm text-white">{t.privacy.whoCanSeeSavedOpps}</span>
+              </div>
+              <PrivacyDropdown value={privacySavedOpps} onChange={setPrivacySavedOpps} allowedOptions={!publicProfile ? ['Pathmates', 'Nessuno'] : undefined} />
+            </div>
+            <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
+            {/* Pathmates */}
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <span className="text-sm text-white">{t.privacy.whoCanSeePathmates}</span>
+              </div>
+              <PrivacyDropdown value={privacyPathmates} onChange={setPrivacyPathmates} allowedOptions={!publicProfile ? ['Pathmates', 'Nessuno'] : undefined} />
+            </div>
+            <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
+            {/* Messaggi */}
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </div>
+                <span className="text-sm text-white">{t.privacy.whoCanMessage}</span>
+              </div>
+              <PrivacyDropdown value={messagePrivacy} onChange={setMessagePrivacy} allowedOptions={!publicProfile ? ['Pathmates', 'Nessuno'] : undefined} />
+            </div>
+          </div>
+
+          {/* Account */}
+          <div className="bg-[#1E293B] rounded-2xl overflow-hidden">
+            <h4 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider px-4 pt-4 pb-2">Account</h4>
+            <button onClick={() => { setShowSecurityPrivacySheet(false); setShowDeleteModal(true); }} className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-[#EF4444]/5 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-[22%] bg-[#EF4444]/10 flex items-center justify-center flex-shrink-0">
                   <svg className="w-5 h-5 text-[#EF4444]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1219,97 +1208,6 @@ export default function ProfilePage() {
             </button>
           </div>
 
-        </div>
-      </div>
-
-      {/* ── Sicurezza Sheet ────────────────────────────────────────── */}
-      <div
-        className={`fixed inset-0 z-[60] bg-black/60 transition-opacity duration-300 ${
-          showSecuritySheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-        onClick={() => setShowSecuritySheet(false)}
-      />
-      <div
-        className={`fixed bottom-0 left-0 right-0 z-[60] max-w-lg mx-auto bg-[#161B22] rounded-t-3xl transition-transform duration-300 ease-out ${
-          showSecuritySheet ? 'translate-y-0' : 'translate-y-full'
-        }`}
-      >
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full bg-[#334155]" />
-        </div>
-        <div className="flex items-center justify-between px-5 pt-3 pb-4 border-b border-[#1E293B]">
-          <h2 className="text-white font-bold text-lg">{t.security.title}</h2>
-          <button onClick={() => setShowSecuritySheet(false)} className="p-1 rounded-full hover:bg-[#334155] transition-colors">
-            <svg className="w-5 h-5 text-[#94A3B8]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <div className="px-5 pb-8 pt-4 space-y-4 max-h-[75vh] overflow-y-auto no-scrollbar">
-          <div className="bg-[#1E293B] rounded-2xl p-4">
-            <div>
-              {/* Cambia password */}
-              <button onClick={() => setShowChangePassword(true)} className="w-full flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                    </svg>
-                  </div>
-                  <span className="text-sm text-white">{t.security.changePassword}</span>
-                </div>
-                <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-              <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
-              {/* 2FA */}
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
-                    </svg>
-                  </div>
-                  <span className="text-sm text-white">{t.security.twoFactor}</span>
-                </div>
-                <PrivacyToggle value={twoFactorEnabled} onChange={setTwoFactorEnabled} />
-              </div>
-              <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
-              {/* Sessioni attive */}
-              <button className="w-full flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <span className="text-sm text-white block">{t.security.activeSessions}</span>
-                    <span className="text-xs text-[#64748B]">{t.security.manageDevices}</span>
-                  </div>
-                </div>
-                <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-              <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
-              {/* Disconnetti tutti */}
-              <button className="w-full flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-[22%] bg-[#EF4444]/10 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-[#EF4444]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                  </div>
-                  <span className="text-sm text-[#EF4444]">{t.security.disconnectAll}</span>
-                </div>
-                <svg className="w-4 h-4 text-[#EF4444]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -1475,21 +1373,6 @@ export default function ProfilePage() {
                     <span className="text-sm text-white block">{t.info.whatsNew}</span>
                     <span className="text-xs text-[#64748B]">{t.info.discoverFeatures}</span>
                   </div>
-                </div>
-                <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-              <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
-              {/* Licenze open source */}
-              <button className="w-full flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-                    </svg>
-                  </div>
-                  <span className="text-sm text-white">{t.info.openSourceLicenses}</span>
                 </div>
                 <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -1867,18 +1750,23 @@ function BadgesSection() {
 function PrivacyDropdown({
   value,
   onChange,
+  allowedOptions,
 }: {
   value: PrivacyOption;
   onChange: (v: PrivacyOption) => void;
+  allowedOptions?: PrivacyOption[];
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
-  const options: { key: PrivacyOption; label: string }[] = [
+  const allOptions: { key: PrivacyOption; label: string }[] = [
     { key: 'Tutti', label: t.privacy.everyone },
     { key: 'Pathmates', label: 'Pathmates' },
     { key: 'Nessuno', label: t.privacy.nobody },
   ];
+  const options = allowedOptions
+    ? allOptions.filter((o) => allowedOptions.includes(o.key))
+    : allOptions;
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {

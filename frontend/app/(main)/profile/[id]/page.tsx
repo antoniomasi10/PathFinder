@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
+import { useLanguage, getSkillLabel } from '@/lib/language';
 import { getMockUserById, type MockUser } from '@/lib/mock-users';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -17,6 +18,8 @@ interface PublicProfile {
   yearOfStudy?: number | null;
   university?: { name: string } | null;
   publicProfile: boolean;
+  privacySavedOpps?: string;
+  privacyPathmates?: string;
   profile?: { clusterTag?: string | null; passions: string[] } | null;
   savedOpportunities?: Array<{
     id: string;
@@ -35,6 +38,8 @@ interface PublicProfile {
   pathmatesCount: number;
   friendStatus: string | null;
   isPathmate: boolean;
+  messagePrivacy: string;
+  canSeeSkills: boolean;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -113,10 +118,13 @@ export default function UserProfilePage() {
   const { user } = useAuth();
   const router = useRouter();
 
+  const { t } = useLanguage();
+
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [sendingRequest, setSendingRequest] = useState(false);
+  const [removingPathmate, setRemovingPathmate] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -161,6 +169,19 @@ export default function UserProfilePage() {
     }
   };
 
+  const handleRemovePathmate = async () => {
+    if (!profile || removingPathmate) return;
+    setRemovingPathmate(true);
+    try {
+      await api.delete(`/friends/${profile.id}`);
+    } catch {
+      // proceed with optimistic update even if API fails
+    } finally {
+      setRemovingPathmate(false);
+    }
+    setProfile((p) => (p ? { ...p, isPathmate: false, friendStatus: null } : p));
+  };
+
   const handleMessage = () => {
     if (!profile) return;
     localStorage.setItem(
@@ -177,10 +198,16 @@ export default function UserProfilePage() {
   if (notFound) {
     return (
       <div className="px-4 py-12 text-center">
-        <p className="text-[#64748B]">Profilo non trovato</p>
+        <div className="w-20 h-20 rounded-full bg-[#1E293B] flex items-center justify-center mx-auto mb-4">
+          <svg className="w-10 h-10 text-[#475569]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </div>
+        <p className="text-white font-semibold text-lg mb-1">Utente eliminato</p>
+        <p className="text-[#64748B] text-sm mb-4">Questo account è stato eliminato</p>
         <button
           onClick={() => router.back()}
-          className="mt-4 text-sm text-[#4F46E5]"
+          className="text-sm text-[#4F46E5]"
         >
           Torna indietro
         </button>
@@ -194,17 +221,34 @@ export default function UserProfilePage() {
 
   const isPrivateAndNotConnected = !profile.publicProfile && !profile.isPathmate;
 
+  // Visibility of saved opportunities based on owner's privacy settings
+  const privacySavedOpps = profile.privacySavedOpps ?? 'Tutti';
+  const canSeeSavedOpps = !profile.publicProfile
+    ? profile.isPathmate
+    : privacySavedOpps === 'Tutti' ||
+      (privacySavedOpps === 'Pathmates' && profile.isPathmate);
+
+  const privacyPathmates = profile.privacyPathmates ?? 'Tutti';
+  const canSeePathmates = !profile.publicProfile
+    ? profile.isPathmate
+    : privacyPathmates === 'Tutti' ||
+      (privacyPathmates === 'Pathmates' && profile.isPathmate);
+
+  const canMessage =
+    profile.messagePrivacy === 'Tutti' ||
+    (profile.messagePrivacy === 'Pathmates' && profile.isPathmate);
+
   const tags: { label: string; color: string }[] = [];
-  if (profile.profile?.clusterTag) {
-    tags.push({
-      label: profile.profile.clusterTag,
-      color:
-        CLUSTER_COLORS[profile.profile.clusterTag] || 'bg-[#334155] text-[#94A3B8]',
-    });
-  }
-  if (!isPrivateAndNotConnected) {
+  if (profile.canSeeSkills) {
+    if (profile.profile?.clusterTag) {
+      tags.push({
+        label: profile.profile.clusterTag,
+        color:
+          CLUSTER_COLORS[profile.profile.clusterTag] || 'bg-[#334155] text-[#94A3B8]',
+      });
+    }
     profile.profile?.passions?.forEach((p) =>
-      tags.push({ label: p, color: 'bg-[#334155] text-[#94A3B8]' })
+      tags.push({ label: getSkillLabel(p, t), color: 'bg-[#334155] text-[#94A3B8]' })
     );
   }
 
@@ -271,7 +315,7 @@ export default function UserProfilePage() {
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 flex-wrap justify-center">
-          <button
+          {canMessage && <button
             onClick={handleMessage}
             className="flex items-center gap-1.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors"
           >
@@ -289,9 +333,30 @@ export default function UserProfilePage() {
               />
             </svg>
             Invia messaggio
-          </button>
+          </button>}
 
-          {!profile.isPathmate && (
+          {profile.isPathmate ? (
+            <button
+              onClick={handleRemovePathmate}
+              disabled={removingPathmate}
+              className="flex items-center gap-1 text-xs text-[#EF4444]/70 border border-[#EF4444]/20 px-3 py-2 rounded-xl hover:bg-[#EF4444]/10 hover:text-[#EF4444] transition-colors disabled:opacity-40"
+            >
+              <svg
+                className="w-3.5 h-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6"
+                />
+              </svg>
+              Rimuovi
+            </button>
+          ) : (
             profile.friendStatus === 'PENDING' ? (
               <span className="text-xs text-[#64748B] border border-[#334155] px-4 py-2 rounded-xl">
                 Richiesta inviata
@@ -364,8 +429,8 @@ export default function UserProfilePage() {
         </div>
       )}
 
-      {/* Saved opportunities (only visible if profile is public or user is pathmate) */}
-      {!isPrivateAndNotConnected &&
+      {/* Saved opportunities — visibility controlled by owner's privacy settings */}
+      {canSeeSavedOpps &&
         profile.savedOpportunities &&
         profile.savedOpportunities.length > 0 && (
           <div className="bg-[#161B22] border border-[#1E293B] rounded-2xl p-4">
@@ -412,7 +477,7 @@ export default function UserProfilePage() {
         )}
 
       {/* Pathmates list */}
-      {!isPrivateAndNotConnected && profile.pathmatesCount > 0 && (
+      {canSeePathmates && profile.pathmatesCount > 0 && (
         <div className="bg-[#161B22] border border-[#1E293B] rounded-2xl p-4">
           <div className="flex items-center gap-2 mb-3">
             <svg

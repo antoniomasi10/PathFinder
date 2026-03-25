@@ -632,11 +632,15 @@ export default function NetworkingPage() {
                     : handleConversationClick(conv)}
                 >
                   <div
-                    className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center cursor-pointer"
-                    style={{ boxShadow: '0 0 20px rgba(99, 102, 241, 0.3)' }}
+                    className={`w-14 h-14 rounded-full flex items-center justify-center cursor-pointer ${conv.name ? 'bg-gradient-to-br from-indigo-500 to-purple-600' : 'bg-[#1E293B]'}`}
+                    style={conv.name ? { boxShadow: '0 0 20px rgba(99, 102, 241, 0.3)' } : undefined}
                   >
                     {conv.avatar ? (
                       <img src={conv.avatar} alt={conv.name} className="w-14 h-14 rounded-full object-cover" />
+                    ) : !conv.name ? (
+                      <svg className="w-7 h-7 text-[#475569]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
                     ) : (
                       <span className="text-white text-lg font-medium">{conv.name[0]}</span>
                     )}
@@ -658,7 +662,7 @@ export default function NetworkingPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-0.5">
                     <div className="flex items-center min-w-0">
-                      <span className="text-white font-medium truncate">{conv.name}</span>
+                      <span className={`font-medium truncate ${conv.name ? 'text-white' : 'text-[#64748B] italic'}`}>{conv.name || 'Utente eliminato'}</span>
                       {conv.type === 'group' && (
                         <span className="ml-2 text-xs text-indigo-400">{t.networking.group}</span>
                       )}
@@ -693,7 +697,11 @@ export default function NetworkingPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
                 </div>
-                <p className="text-gray-400 text-sm">Inizia una conversazione con <span className="text-white font-medium">{selectedUser.name}</span></p>
+                <p className="text-gray-400 text-sm">
+                  {selectedUser.name
+                    ? <>Inizia una conversazione con <span className="text-white font-medium">{selectedUser.name}</span></>
+                    : 'Questo account è stato eliminato'}
+                </p>
               </div>
             )}
             {messages.map((msg) => (
@@ -745,9 +753,9 @@ export default function NetworkingPage() {
                 ))}
               </div>
             )}
-            {selectedUser?.canMessage === false ? (
+            {selectedUser?.canMessage === false || !selectedUser?.name ? (
               <div className="flex items-center justify-center py-3 text-sm text-gray-500 italic">
-                Questo utente non accetta messaggi
+                {!selectedUser?.name ? 'Questo account è stato eliminato' : 'Questo utente non accetta messaggi'}
               </div>
             ) : (
             <div className="flex gap-2">
@@ -808,7 +816,7 @@ export default function NetworkingPage() {
               >
                 <div className={`max-w-[75%]`}>
                   {msg.senderId !== user?.id && (
-                    <p className="text-[10px] text-indigo-400 mb-0.5 ml-1">{msg.sender.name}</p>
+                    <p className="text-[10px] text-indigo-400 mb-0.5 ml-1">{msg.sender?.name || 'Utente eliminato'}</p>
                   )}
                   <div className={`${
                     msg.senderId === user?.id
@@ -972,15 +980,20 @@ export default function NetworkingPage() {
                 <div className="flex items-center justify-between mb-3">
                   <button
                     className="flex items-center gap-3 text-left"
-                    onClick={() => post.author.id !== user?.id && router.push(`/profile/${post.author.id}`)}
+                    onClick={() => post.author?.id && post.author.id !== user?.id && router.push(`/profile/${post.author.id}`)}
                   >
                     {(() => {
-                      const avatar = post.author.id === user?.id
+                      const isDeleted = !post.author?.name;
+                      const avatar = isDeleted ? null : (post.author.id === user?.id
                         ? (user?.avatar ?? post.author.avatar)
-                        : post.author.avatar;
+                        : post.author.avatar);
                       return (
-                        <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center text-sm font-bold text-primary overflow-hidden shrink-0">
-                          {avatar ? (
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold overflow-hidden shrink-0 ${isDeleted ? 'bg-[#1E293B]' : 'bg-primary/20 text-primary'}`}>
+                          {isDeleted ? (
+                            <svg className="w-5 h-5 text-[#475569]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          ) : avatar ? (
                             <img src={avatar} alt={post.author.name} className="w-full h-full object-cover" />
                           ) : (
                             post.author.name[0]
@@ -989,13 +1002,17 @@ export default function NetworkingPage() {
                       );
                     })()}
                     <div>
-                      <p className={`font-medium text-sm text-text-primary ${post.author.id !== user?.id ? 'hover:underline' : ''}`}>{post.author.name}</p>
-                      <p className="text-[10px] text-text-muted">
-                        {post.author.university?.name} {post.author.courseOfStudy && `· ${post.author.courseOfStudy}`}
+                      <p className={`font-medium text-sm ${post.author?.id && post.author.id !== user?.id ? 'hover:underline text-text-primary' : 'text-text-primary'} ${!post.author?.name ? 'text-[#64748B] italic' : ''}`}>
+                        {post.author?.name || 'Utente eliminato'}
                       </p>
+                      {post.author?.name && (
+                        <p className="text-[10px] text-text-muted">
+                          {post.author.university?.name} {post.author.courseOfStudy && `· ${post.author.courseOfStudy}`}
+                        </p>
+                      )}
                     </div>
                   </button>
-                  {post.author.id !== user?.id && (() => {
+                  {post.author?.id && post.author.id !== user?.id && (() => {
                     const cs = connectionStatuses[post.author.id];
                     const status = cs?.status || null;
 
@@ -1199,10 +1216,14 @@ export default function NetworkingPage() {
                 comments.map((c) => (
                   <div key={c.id} className="flex gap-3">
                     <button
-                      onClick={() => c.author.id !== user?.id && router.push(`/profile/${c.author.id}`)}
-                      className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 overflow-hidden"
+                      onClick={() => c.author?.id && c.author.id !== user?.id && router.push(`/profile/${c.author.id}`)}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden ${c.author?.name ? 'bg-primary/20' : 'bg-[#1E293B]'}`}
                     >
-                      {c.author.avatar ? (
+                      {!c.author?.name ? (
+                        <svg className="w-4 h-4 text-[#475569]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      ) : c.author.avatar ? (
                         <img src={c.author.avatar} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-xs font-bold text-primary">{c.author.name.charAt(0)}</span>
@@ -1211,10 +1232,10 @@ export default function NetworkingPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline gap-2">
                         <button
-                          onClick={() => c.author.id !== user?.id && router.push(`/profile/${c.author.id}`)}
-                          className="text-white text-sm font-semibold hover:underline"
+                          onClick={() => c.author?.id && c.author.id !== user?.id && router.push(`/profile/${c.author.id}`)}
+                          className={`text-sm font-semibold ${c.author?.name ? 'text-white hover:underline' : 'text-[#64748B] italic'}`}
                         >
-                          {c.author.name}
+                          {c.author?.name || 'Utente eliminato'}
                         </button>
                         <span className="text-gray-500 text-xs">
                           {new Date(c.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}

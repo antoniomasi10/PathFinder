@@ -10,6 +10,10 @@ export interface MockUser {
   yearOfStudy?: number | null;
   university?: { name: string } | null;
   publicProfile: boolean;
+  privacySavedOpps: string;
+  privacyPathmates: string;
+  messagePrivacy: string;
+  canSeeSkills: boolean;
   profile?: { clusterTag?: string | null; passions: string[] } | null;
   savedOpportunities: Array<{
     id: string;
@@ -40,6 +44,10 @@ export const MOCK_USERS: MockUser[] = [
     yearOfStudy: 3,
     university: { name: 'Politecnico di Milano' },
     publicProfile: true,
+    privacySavedOpps: 'Tutti',
+    privacyPathmates: 'Tutti',
+    messagePrivacy: 'Tutti',
+    canSeeSkills: true,
     profile: { clusterTag: 'Analista', passions: ['Programmazione', 'Intelligenza Artificiale', 'Startup'] },
     savedOpportunities: [
       { id: 's1', title: 'Software Engineer Intern', company: 'TechNova Solutions', type: 'INTERNSHIP' },
@@ -62,6 +70,10 @@ export const MOCK_USERS: MockUser[] = [
     yearOfStudy: 2,
     university: { name: 'Università di Bologna' },
     publicProfile: true,
+    privacySavedOpps: 'Pathmates',
+    privacyPathmates: 'Pathmates',
+    messagePrivacy: 'Pathmates',
+    canSeeSkills: true,
     profile: { clusterTag: 'Leader', passions: ['Sostenibilità', 'Economia Circolare', 'Leadership'] },
     savedOpportunities: [
       { id: 's3', title: 'Business Analyst Stage', company: 'Accenture', type: 'STAGE' },
@@ -83,6 +95,10 @@ export const MOCK_USERS: MockUser[] = [
     yearOfStudy: 4,
     university: { name: 'Sapienza Università di Roma' },
     publicProfile: true,
+    privacySavedOpps: 'Tutti',
+    privacyPathmates: 'Tutti',
+    messagePrivacy: 'Tutti',
+    canSeeSkills: true,
     profile: { clusterTag: 'Analista', passions: ['Fisica', 'Spazio', 'Ricerca Scientifica'] },
     savedOpportunities: [
       { id: 's4', title: 'ESA Young Graduate Trainee', company: 'European Space Agency', type: 'FELLOWSHIP' },
@@ -104,6 +120,10 @@ export const MOCK_USERS: MockUser[] = [
     yearOfStudy: 3,
     university: { name: 'Università di Firenze' },
     publicProfile: true,
+    privacySavedOpps: 'Nessuno',
+    privacyPathmates: 'Nessuno',
+    messagePrivacy: 'Pathmates',
+    canSeeSkills: true,
     profile: { clusterTag: 'Creativo', passions: ['Design', 'Sostenibilità', 'Arte Contemporanea'] },
     savedOpportunities: [
       { id: 's6', title: 'Urban Design Internship', company: 'Studio Zaha Hadid', type: 'INTERNSHIP' },
@@ -124,6 +144,10 @@ export const MOCK_USERS: MockUser[] = [
     yearOfStudy: 1,
     university: { name: 'Università Ca\' Foscari' },
     publicProfile: false,
+    privacySavedOpps: 'Pathmates',
+    privacyPathmates: 'Pathmates',
+    messagePrivacy: 'Pathmates',
+    canSeeSkills: false,
     profile: { clusterTag: 'Imprenditore', passions: ['Startup', 'Business', 'Finanza'] },
     savedOpportunities: [],
     pathmates: [],
@@ -140,6 +164,10 @@ export const MOCK_USERS: MockUser[] = [
     yearOfStudy: 2,
     university: { name: 'LUISS Guido Carli' },
     publicProfile: true,
+    privacySavedOpps: 'Tutti',
+    privacyPathmates: 'Tutti',
+    messagePrivacy: 'Tutti',
+    canSeeSkills: true,
     profile: { clusterTag: 'Sociale', passions: ['Marketing', 'Comunicazione', 'Social Media'] },
     savedOpportunities: [
       { id: 's7', title: 'Digital Marketing Intern', company: 'Publicis Italia', type: 'INTERNSHIP' },

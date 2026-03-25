@@ -14,6 +14,8 @@ export interface PrivacySettings {
   messagePrivacy: PrivacyOption;
 }
 
+type SubSettings = Pick<PrivacySettings, 'privacySkills' | 'privacyUniversity' | 'privacySavedOpps' | 'privacyPathmates' | 'messagePrivacy'>;
+
 interface PrivacyContextType extends PrivacySettings {
   setPublicProfile: (v: boolean) => void;
   setPrivacySkills: (v: PrivacyOption) => void;
@@ -21,6 +23,7 @@ interface PrivacyContextType extends PrivacySettings {
   setPrivacySavedOpps: (v: PrivacyOption) => void;
   setPrivacyPathmates: (v: PrivacyOption) => void;
   setMessagePrivacy: (v: PrivacyOption) => void;
+  togglePrivateProfile: (isPrivate: boolean) => void;
 }
 
 const defaults: PrivacySettings = {
@@ -40,12 +43,14 @@ const PrivacyContext = createContext<PrivacyContextType>({
   setPrivacySavedOpps: () => {},
   setPrivacyPathmates: () => {},
   setMessagePrivacy: () => {},
+  togglePrivateProfile: () => {},
 });
 
 const STORAGE_KEY = 'pathfinder_privacy';
 
 export function PrivacyProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<PrivacySettings>(defaults);
+  const [savedBeforePrivate, setSavedBeforePrivate] = useState<SubSettings | null>(null);
 
   useEffect(() => {
     try {
@@ -54,13 +59,15 @@ export function PrivacyProvider({ children }: { children: ReactNode }) {
     } catch {}
     // Sync backend-stored privacy fields
     api.get('/profile/me').then((res) => {
-      const { publicProfile, privacySavedOpps, messagePrivacy } = res.data ?? {};
+      const { publicProfile, privacySavedOpps, privacyPathmates, messagePrivacy, privacySkills } = res.data ?? {};
       setSettings((prev) => {
         const next = {
           ...prev,
           ...(typeof publicProfile === 'boolean' ? { publicProfile } : {}),
           ...(privacySavedOpps ? { privacySavedOpps: privacySavedOpps as PrivacyOption } : {}),
+          ...(privacyPathmates ? { privacyPathmates: privacyPathmates as PrivacyOption } : {}),
           ...(messagePrivacy ? { messagePrivacy: messagePrivacy as PrivacyOption } : {}),
+          ...(privacySkills ? { privacySkills: privacySkills as PrivacyOption } : {}),
         };
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
         return next;
@@ -75,8 +82,55 @@ export function PrivacyProvider({ children }: { children: ReactNode }) {
       return next;
     });
     // Persist backend-synced privacy fields
-    if (key === 'publicProfile' || key === 'privacySavedOpps' || key === 'messagePrivacy') {
+    if (key === 'publicProfile' || key === 'privacySavedOpps' || key === 'privacyPathmates' || key === 'messagePrivacy' || key === 'privacySkills') {
       api.patch('/profile/me', { [key]: value }).catch(() => {});
+    }
+  }
+
+  function togglePrivateProfile(isPrivate: boolean) {
+    if (isPrivate) {
+      setSavedBeforePrivate({
+        privacySkills: settings.privacySkills,
+        privacyUniversity: settings.privacyUniversity,
+        privacySavedOpps: settings.privacySavedOpps,
+        privacyPathmates: settings.privacyPathmates,
+        messagePrivacy: settings.messagePrivacy,
+      });
+      setSettings((prev) => {
+        const clamp = (v: PrivacyOption): PrivacyOption => v === 'Tutti' ? 'Pathmates' : v;
+        const next: PrivacySettings = {
+          ...prev,
+          publicProfile: false,
+          privacySkills: clamp(prev.privacySkills),
+          privacyUniversity: clamp(prev.privacyUniversity),
+          privacySavedOpps: clamp(prev.privacySavedOpps),
+          privacyPathmates: clamp(prev.privacyPathmates),
+          messagePrivacy: clamp(prev.messagePrivacy),
+        };
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
+        return next;
+      });
+      api.patch('/profile/me', {
+        publicProfile: false,
+        ...(settings.privacySavedOpps === 'Tutti' ? { privacySavedOpps: 'Pathmates' } : {}),
+        ...(settings.messagePrivacy === 'Tutti' ? { messagePrivacy: 'Pathmates' } : {}),
+      }).catch(() => {});
+    } else {
+      setSettings((prev) => {
+        const next: PrivacySettings = {
+          ...prev,
+          publicProfile: true,
+          ...(savedBeforePrivate ?? {}),
+        };
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
+        return next;
+      });
+      api.patch('/profile/me', {
+        publicProfile: true,
+        privacySavedOpps: savedBeforePrivate?.privacySavedOpps ?? 'Pathmates',
+        messagePrivacy: savedBeforePrivate?.messagePrivacy ?? 'Pathmates',
+      }).catch(() => {});
+      setSavedBeforePrivate(null);
     }
   }
 
@@ -89,6 +143,7 @@ export function PrivacyProvider({ children }: { children: ReactNode }) {
       setPrivacySavedOpps: (v) => update('privacySavedOpps', v),
       setPrivacyPathmates: (v) => update('privacyPathmates', v),
       setMessagePrivacy: (v) => update('messagePrivacy', v),
+      togglePrivateProfile,
     }}>
       {children}
     </PrivacyContext.Provider>

@@ -160,10 +160,25 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
   const isPublic = (user as any).publicProfile !== false;
   const canSeeProfile = isPublic || isPathmate;
   const savedOppsVisibility = (user as any).privacySavedOpps as string | undefined;
-  const canSeeSavedOpps =
-    savedOppsVisibility === 'Tutti' ||
-    (savedOppsVisibility === 'Pathmates' && isPathmate) ||
-    savedOppsVisibility === undefined;
+  const canSeeSavedOpps = !isPublic
+    ? isPathmate
+    : (savedOppsVisibility === 'Tutti' ||
+       (savedOppsVisibility === 'Pathmates' && isPathmate) ||
+       savedOppsVisibility === undefined);
+  let privacyPathmates = 'Tutti';
+  try {
+    const rawPrivacy = await prisma.$queryRawUnsafe<{ privacyPathmates: string }[]>(
+      `SELECT "privacyPathmates" FROM "User" WHERE id = $1 LIMIT 1`,
+      ownerId
+    );
+    privacyPathmates = rawPrivacy[0]?.privacyPathmates ?? 'Tutti';
+  } catch {}
+  const messagePrivacy = ((user as any).messagePrivacy as string | undefined) ?? 'Pathmates';
+  const privacySkills = ((user as any).privacySkills as string | undefined) ?? 'Tutti';
+  const canSeeSkills =
+    isPublic
+      ? privacySkills === 'Tutti' || (privacySkills === 'Pathmates' && isPathmate)
+      : isPathmate;
 
   if (!canSeeProfile) {
     return {
@@ -181,6 +196,8 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
       pathmatesCount: pathmates.length,
       friendStatus,
       isPathmate,
+      messagePrivacy,
+      canSeeSkills: false,
     };
   }
 
@@ -192,8 +209,10 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
     courseOfStudy: user.courseOfStudy ?? null,
     yearOfStudy: user.yearOfStudy ?? null,
     university: user.university ? { name: user.university.name } : null,
-    publicProfile: true,
-    profile: user.profile
+    publicProfile: isPublic,
+    privacySavedOpps: savedOppsVisibility ?? 'Pathmates',
+    privacyPathmates,
+    profile: canSeeSkills && user.profile
       ? { clusterTag: user.profile.clusterTag, passions: user.profile.passions }
       : null,
     savedOpportunities: canSeeSavedOpps ? user.savedOpportunities : null,
@@ -201,10 +220,12 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
     pathmatesCount: pathmates.length,
     friendStatus,
     isPathmate,
+    messagePrivacy,
+    canSeeSkills,
   };
 }
 
-export async function updateProfile(userId: string, data: { name?: string; bio?: string; avatar?: string; courseOfStudy?: string; passions?: string[] }) {
+export async function updateProfile(userId: string, data: Record<string, any>) {
   const { passions, ...userFields } = data;
 
   if (passions !== undefined) {
@@ -217,7 +238,7 @@ export async function updateProfile(userId: string, data: { name?: string; bio?:
   if (Object.keys(userFields).length > 0) {
     return prisma.user.update({
       where: { id: userId },
-      data: userFields,
+      data: userFields as any,
       include: { profile: true, university: true },
     });
   }
@@ -229,5 +250,36 @@ export async function updateProfile(userId: string, data: { name?: string; bio?:
 }
 
 export async function deleteAccount(userId: string) {
+  // 1. Delete friend requests (no cascade on User)
+  await prisma.friendRequest.deleteMany({
+    where: { OR: [{ fromUserId: userId }, { toUserId: userId }] },
+  });
+
+  // 2. Handle groups created by this user (no cascade on User)
+  const createdGroups = await prisma.pathMatesGroup.findMany({
+    where: { createdById: userId },
+    include: { members: { where: { userId: { not: userId } }, take: 1 } },
+  });
+  for (const group of createdGroups) {
+    if (group.members.length > 0) {
+      // Reassign creator to another member so group survives
+      await prisma.pathMatesGroup.update({
+        where: { id: group.id },
+        data: { createdById: group.members[0].userId },
+      });
+    } else {
+      // Solo creator — delete group messages then group
+      await prisma.pathMatesMessage.deleteMany({ where: { groupId: group.id } });
+      await prisma.pathMatesGroup.delete({ where: { id: group.id } });
+    }
+  }
+
+  // 3. Delete all messages sent or received by this user (no cascade on User)
+  await prisma.pathMatesMessage.deleteMany({
+    where: { OR: [{ senderId: userId }, { receiverId: userId }] },
+  });
+
+  // 4. Delete the user — remaining relations have onDelete: Cascade
+  //    (UserProfile, GroupMember, Notification, Post, PostLike, PostComment)
   await prisma.user.delete({ where: { id: userId } });
 }
