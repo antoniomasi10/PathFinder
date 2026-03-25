@@ -4,6 +4,8 @@ import { validate } from '../middleware/validate';
 import { friendRequestSchema, batchStatusSchema } from '../schemas';
 import prisma from '../lib/prisma';
 import { createNotification } from '../services/notification.service';
+import { trackInteraction } from '../services/interaction.service';
+import { getSmartFriendSuggestions } from '../services/similarity.service';
 
 const router = Router();
 
@@ -97,6 +99,8 @@ router.post('/request', authMiddleware, validate(friendRequestSchema), async (re
       data: { fromUserId: req.user!.userId, toUserId, status: 'PENDING' },
     });
 
+    trackInteraction(req.user!.userId, 'user', toUserId, 'friend_request').catch(() => {});
+
     await createNotification(
       toUserId,
       'FRIEND_REQUEST',
@@ -147,42 +151,10 @@ router.patch('/request/:id', authMiddleware, async (req: Request, res: Response)
   }
 });
 
-// Get suggested pathmates (users who are not friends and have no pending request)
+// Get suggested pathmates (smart scoring: profile similarity, university, mutual friends, shared saves)
 router.get('/suggestions', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const existingRelations = await prisma.friendRequest.findMany({
-      where: {
-        OR: [
-          { fromUserId: req.user!.userId },
-          { toUserId: req.user!.userId },
-        ],
-        status: { in: ['PENDING', 'ACCEPTED'] },
-      },
-      select: { fromUserId: true, toUserId: true },
-    });
-
-    const excludeIds = new Set<string>([req.user!.userId]);
-    existingRelations.forEach((r) => {
-      excludeIds.add(r.fromUserId);
-      excludeIds.add(r.toUserId);
-    });
-
-    const suggestions = await prisma.user.findMany({
-      where: {
-        id: { notIn: Array.from(excludeIds) },
-        profileCompleted: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        avatar: true,
-        avatarBgColor: true,
-        courseOfStudy: true,
-        university: { select: { name: true } },
-      },
-      take: 10,
-    });
-
+    const suggestions = await getSmartFriendSuggestions(req.user!.userId, 10);
     res.json(suggestions);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

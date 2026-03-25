@@ -122,6 +122,8 @@ model User {
   badges                 UserBadge[]
   tracking               UserTracking[]
   verificationCodes      VerificationCode[]
+  interactions           UserInteraction[]
+  embedding              Unsupported("vector(384)")?
 
   @@index([universityId])
   @@index([googleId])
@@ -165,6 +167,7 @@ model Opportunity {
   savedBy              User[]          @relation("SavedOpportunities")
   sourceId             String?         // e.g. "eures-12345" — null = manual/seed
   lastSyncedAt         DateTime?       // last time this record was refreshed by import
+  embedding            Unsupported("vector(384)")?
 
   @@index([universityId])
   @@index([type])
@@ -212,6 +215,7 @@ model Course {
   isActive                   Boolean    @default(true)
   sourceId                   String?
   lastSyncedAt               DateTime?
+  embedding                  Unsupported("vector(384)")?
 
   @@index([sourceId])
 }
@@ -407,4 +411,19 @@ model VerificationCode {
 
   @@index([userId, type])
   @@index([code, type])
+}
+
+model UserInteraction {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetType String   // "opportunity" | "course" | "post" | "user"
+  targetId   String
+  action     String   // "view" | "click" | "save" | "unsave" | "apply" | "like" | "comment" | "friend_request"
+  weight     Float    @default(1.0)
+  createdAt  DateTime @default(now())
+
+  @@index([userId, targetType])
+  @@index([targetId, targetType])
+  @@index([userId, targetType, action])
 }
