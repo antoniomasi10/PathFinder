@@ -13,7 +13,18 @@ export function getSocket(): Socket {
     const token = localStorage.getItem('accessToken');
     socket = io(`${API_URL}/chat`, {
       auth: { token },
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: Infinity,
+    });
+
+    // Refresh token on each reconnect attempt so we never use an expired JWT
+    socket.on('reconnect_attempt', () => {
+      if (socket) {
+        socket.auth = { token: localStorage.getItem('accessToken') };
+      }
     });
   }
   return socket;
@@ -24,7 +35,17 @@ export function getNotificationSocket(): Socket {
     const token = localStorage.getItem('accessToken');
     notificationSocket = io(`${API_URL}/notifications`, {
       auth: { token },
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: Infinity,
+    });
+
+    notificationSocket.on('reconnect_attempt', () => {
+      if (notificationSocket) {
+        notificationSocket.auth = { token: localStorage.getItem('accessToken') };
+      }
     });
   }
   return notificationSocket;

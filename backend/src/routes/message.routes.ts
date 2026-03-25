@@ -4,6 +4,7 @@ import { validate } from '../middleware/validate';
 import { sendMessageSchema } from '../schemas';
 import prisma from '../lib/prisma';
 import { validateImages } from '../utils/imageValidation';
+import { uploadImages } from '../utils/imageUpload';
 
 const router = Router();
 
@@ -150,12 +151,13 @@ router.post('/group/:groupId', authMiddleware, async (req: Request, res: Respons
     }
 
     const validImages = validateImages(images);
+    const imageUrls = await uploadImages(validImages, 'messages');
     const message = await prisma.pathMatesMessage.create({
       data: {
         senderId: userId,
         groupId,
         content,
-        images: validImages,
+        images: imageUrls,
       },
       include: {
         sender: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
@@ -204,12 +206,13 @@ router.post('/', authMiddleware, validate(sendMessageSchema), async (req: Reques
     }
 
     const validImages = validateImages(images);
+    const imageUrls = await uploadImages(validImages, 'messages');
     const message = await prisma.pathMatesMessage.create({
       data: {
         senderId,
         receiverId,
         content,
-        images: validImages,
+        images: imageUrls,
       },
       include: {
         sender: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },

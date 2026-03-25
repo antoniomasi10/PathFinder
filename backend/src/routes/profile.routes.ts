@@ -3,12 +3,15 @@ import { authMiddleware, verifiedMiddleware } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { updateProfileSchema } from '../schemas';
 import { saveQuestionnaire, getProfile, getProfileForViewer, updateProfile, deleteAccount } from '../services/profile.service';
+import { updateUserEmbedding } from '../services/embedding.service';
 
 const router = Router();
 
 router.post('/questionnaire', verifiedMiddleware, async (req: Request, res: Response) => {
   try {
     const profile = await saveQuestionnaire(req.user!.userId, req.body);
+    // Generate embedding for the new profile in background
+    updateUserEmbedding(req.user!.userId).catch(() => {});
     res.json(profile);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -44,6 +47,8 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
 router.patch('/me', verifiedMiddleware, validate(updateProfileSchema), async (req: Request, res: Response) => {
   try {
     const updated = await updateProfile(req.user!.userId, req.body);
+    // Re-generate embedding after profile update
+    updateUserEmbedding(req.user!.userId).catch(() => {});
     res.json(updated);
   } catch (err: any) {
     res.status(400).json({ error: err.message });

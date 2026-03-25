@@ -13,7 +13,7 @@ export interface JwtPayload {
 }
 
 export function generateAccessToken(payload: JwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' });
 }
 
 export function generateRefreshToken(payload: JwtPayload): string {

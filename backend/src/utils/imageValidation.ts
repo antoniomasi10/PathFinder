@@ -23,6 +23,14 @@ export function validateDataUri(dataUri: string): boolean {
 export function validateImages(images: unknown): string[] {
   if (!Array.isArray(images)) return [];
   return images
-    .filter((img): img is string => typeof img === 'string' && validateDataUri(img))
+    .filter((img): img is string => {
+      if (typeof img !== 'string') return false;
+      // Passthrough already-uploaded Cloudinary / Google URLs
+      if (
+        img.startsWith('https://res.cloudinary.com/') ||
+        img.startsWith('https://lh3.googleusercontent.com/')
+      ) return true;
+      return validateDataUri(img);
+    })
     .slice(0, 5);
 }

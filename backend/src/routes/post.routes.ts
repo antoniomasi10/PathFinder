@@ -5,14 +5,17 @@ import { createPostSchema, createCommentSchema } from '../schemas';
 import * as postService from '../services/post.service';
 import { createNotification } from '../services/notification.service';
 import { validateImages } from '../utils/imageValidation';
+import { uploadImages } from '../utils/imageUpload';
 import prisma from '../lib/prisma';
+import { trackInteraction } from '../services/interaction.service';
 
 const router = Router();
 
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    const posts = await postService.getPosts(page, 20, req.user!.userId);
+    // Use personalized feed (falls back to chronological if no profile)
+    const posts = await postService.getPersonalizedPosts(page, 20, req.user!.userId);
     res.json(posts);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -23,7 +26,8 @@ router.post('/', authMiddleware, validate(createPostSchema), async (req: Request
   try {
     const { content, images } = req.body;
     const validImages = validateImages(images);
-    const post = await postService.createPost(req.user!.userId, content, validImages);
+    const imageUrls = await uploadImages(validImages, 'posts');
+    const post = await postService.createPost(req.user!.userId, content, imageUrls);
     res.status(201).json(post);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -33,6 +37,7 @@ router.post('/', authMiddleware, validate(createPostSchema), async (req: Request
 router.post('/:id/like', authMiddleware, async (req: Request, res: Response) => {
   try {
     await postService.likePost(req.params.id, req.user!.userId);
+    trackInteraction(req.user!.userId, 'post', req.params.id, 'like').catch(() => {});
     const post = await postService.getPostById(req.params.id);
     if (post && post.authorId !== req.user!.userId) {
       const liker = await prisma.user.findUnique({
@@ -75,6 +80,7 @@ router.get('/:id/comments', authMiddleware, async (req: Request, res: Response) 
 router.post('/:id/comments', authMiddleware, validate(createCommentSchema), async (req: Request, res: Response) => {
   try {
     const comment = await postService.createComment(req.params.id, req.user!.userId, req.body.content);
+    trackInteraction(req.user!.userId, 'post', req.params.id, 'comment').catch(() => {});
     const post = await postService.getPostById(req.params.id);
     if (post && post.authorId !== req.user!.userId) {
       const commenter = await prisma.user.findUnique({

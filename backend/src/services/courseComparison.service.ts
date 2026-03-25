@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { profileSimilarityScore } from './similarity.service';
 
 interface CourseStats {
   employmentRate: number | null;
@@ -48,44 +49,6 @@ function extractStats(course: any): CourseStats {
     programDuration: course.programDuration,
     languageOfInstruction: course.languageOfInstruction,
   };
-}
-
-/**
- * Scores how similar two user profiles are (0-100).
- * Uses shared interests, cluster tag, career vision, and academic fields.
- */
-function profileSimilarityScore(
-  profileA: { primaryInterest?: string | null; clusterTag?: string | null; careerVision?: string | null; passions?: string[] },
-  profileB: { primaryInterest?: string | null; clusterTag?: string | null; careerVision?: string | null; passions?: string[] },
-): number {
-  let score = 0;
-
-  // Same primary interest (35 pts)
-  if (profileA.primaryInterest && profileA.primaryInterest === profileB.primaryInterest) {
-    score += 35;
-  }
-
-  // Same cluster tag (30 pts)
-  if (profileA.clusterTag && profileA.clusterTag === profileB.clusterTag) {
-    score += 30;
-  }
-
-  // Same career vision (20 pts)
-  if (profileA.careerVision && profileA.careerVision === profileB.careerVision) {
-    score += 20;
-  }
-
-  // Shared passions (15 pts max)
-  if (profileA.passions?.length && profileB.passions?.length) {
-    const setA = new Set(profileA.passions);
-    const shared = profileB.passions.filter((p) => setA.has(p)).length;
-    const total = Math.max(profileA.passions.length, profileB.passions.length);
-    if (total > 0) {
-      score += Math.round((shared / total) * 15);
-    }
-  }
-
-  return Math.min(score, 100);
 }
 
 /**
@@ -151,18 +114,44 @@ export async function getComparison(courseId: string, userId: string): Promise<C
     include: { profile: true },
   });
 
-  // 3. Find candidate courses (exclude the target, limit to top 100)
-  const allCourses = await prisma.course.findMany({
-    where: { id: { not: courseId } },
-    include: {
-      university: true,
-      savedBy: { select: { id: true } },
-    },
-    take: 100,
-  });
+  // 3. Find candidate courses — two-stage: vector retrieval then re-ranking
+  // Check if target course has embedding for vector candidate retrieval
+  const hasEmbedding = await prisma.$queryRawUnsafe<{ count: bigint }[]>(
+    `SELECT COUNT(*) as count FROM "Course" WHERE id = $1 AND embedding IS NOT NULL`,
+    courseId,
+  );
+  const courseHasEmbedding = hasEmbedding[0]?.count > 0n;
 
-  // 4. Score and rank candidates
-  const scoredCandidates = allCourses.map((c) => ({
+  let candidateCourses: any[];
+
+  if (courseHasEmbedding) {
+    // Stage 1: Vector candidate retrieval (top 20 similar courses)
+    const vectorCandidateIds = await prisma.$queryRawUnsafe<{ id: string }[]>(
+      `SELECT c2.id
+       FROM "Course" c1, "Course" c2
+       WHERE c1.id = $1 AND c2.id != $1 AND c2.embedding IS NOT NULL
+       ORDER BY c2.embedding <=> c1.embedding
+       LIMIT 20`,
+      courseId,
+    );
+    const ids = vectorCandidateIds.map((c) => c.id);
+    candidateCourses = ids.length > 0
+      ? await prisma.course.findMany({
+          where: { id: { in: ids } },
+          include: { university: true, savedBy: { select: { id: true } } },
+        })
+      : [];
+  } else {
+    // Fallback: get all courses (original behavior)
+    candidateCourses = await prisma.course.findMany({
+      where: { id: { not: courseId } },
+      include: { university: true, savedBy: { select: { id: true } } },
+      take: 100,
+    });
+  }
+
+  // Stage 2: Re-rank with detailed scoring
+  const scoredCandidates = candidateCourses.map((c) => ({
     course: c,
     score: courseMatchScore(targetCourse, c),
   }));
@@ -174,10 +163,10 @@ export async function getComparison(courseId: string, userId: string): Promise<C
     .slice(0, 4)
     .map((c) => c.course);
 
-  // If not enough results from scoring, pad with same-type courses
+  // If not enough results from scoring, pad with remaining candidates
   if (topCandidates.length < 3) {
     const existingIds = new Set([courseId, ...topCandidates.map((c) => c.id)]);
-    const fallbacks = allCourses.filter((c) => !existingIds.has(c.id));
+    const fallbacks = candidateCourses.filter((c) => !existingIds.has(c.id));
     for (const fb of fallbacks) {
       if (topCandidates.length >= 4) break;
       topCandidates.push(fb);

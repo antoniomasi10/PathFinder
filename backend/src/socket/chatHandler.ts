@@ -1,27 +1,25 @@
 import { Server, Socket } from 'socket.io';
 import { verifyAccessToken } from '../utils/jwt';
 import prisma from '../lib/prisma';
+import redis from '../lib/redis';
 import { validateImages } from '../utils/imageValidation';
+import { uploadImages } from '../utils/imageUpload';
 import { logger } from '../utils/logger';
 
-const messageRateLimits = new Map<string, { count: number; resetAt: number }>();
 const MAX_MESSAGES_PER_MINUTE = 30;
 
-function checkRateLimit(userId: string): boolean {
-  const now = Date.now();
-  const userLimit = messageRateLimits.get(userId);
-
-  if (!userLimit || now > userLimit.resetAt) {
-    messageRateLimits.set(userId, { count: 1, resetAt: now + 60000 });
+async function checkRateLimit(userId: string): Promise<boolean> {
+  try {
+    const key = `ratelimit:chat:${userId}`;
+    const count = await redis.incr(key);
+    if (count === 1) {
+      await redis.expire(key, 60);
+    }
+    return count <= MAX_MESSAGES_PER_MINUTE;
+  } catch {
+    // Fail-open: if Redis is unreachable, allow the message
     return true;
   }
-
-  if (userLimit.count >= MAX_MESSAGES_PER_MINUTE) {
-    return false;
-  }
-
-  userLimit.count++;
-  return true;
 }
 
 export function setupChatSocket(io: Server) {
@@ -58,7 +56,7 @@ export function setupChatSocket(io: Server) {
     } catch (err) { logger.error('Failed to join group rooms', { error: String(err) }); }
 
     socket.on('send_group_message', async (data: { groupId: string; content: string; images?: string[] }) => {
-      if (!checkRateLimit(userId)) {
+      if (!(await checkRateLimit(userId))) {
         socket.emit('error', { message: 'Troppi messaggi, riprova tra poco' });
         return;
       }
@@ -73,12 +71,13 @@ export function setupChatSocket(io: Server) {
         }
 
         const validImages = validateImages(data.images);
+        const imageUrls = await uploadImages(validImages, 'messages');
         const message = await prisma.pathMatesMessage.create({
           data: {
             senderId: userId,
             groupId: data.groupId,
             content: data.content,
-            images: validImages,
+            images: imageUrls,
           },
           include: {
             sender: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
@@ -95,7 +94,7 @@ export function setupChatSocket(io: Server) {
     });
 
     socket.on('send_message', async (data: { receiverId: string; content: string; images?: string[] }) => {
-      if (!checkRateLimit(userId)) {
+      if (!(await checkRateLimit(userId))) {
         socket.emit('error', { message: 'Troppi messaggi, riprova tra poco' });
         return;
       }
@@ -130,12 +129,13 @@ export function setupChatSocket(io: Server) {
         }
 
         const validImages = validateImages(data.images);
+        const imageUrls = await uploadImages(validImages, 'messages');
         const message = await prisma.pathMatesMessage.create({
           data: {
             senderId: userId,
             receiverId: data.receiverId,
             content: data.content,
-            images: validImages,
+            images: imageUrls,
           },
           include: {
             sender: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },

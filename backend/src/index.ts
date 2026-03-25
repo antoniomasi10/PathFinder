@@ -9,6 +9,8 @@ import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { createPubSubPair } from './lib/redis';
 import authRoutes from './routes/auth.routes';
 import profileRoutes from './routes/profile.routes';
 import opportunityRoutes from './routes/opportunity.routes';
@@ -28,6 +30,7 @@ import { setupNotificationSocket } from './socket/notificationHandler';
 import { setIO } from './socketManager';
 import { startDeadlineChecker } from './services/deadlineChecker';
 import { startImportScheduler } from './services/import/scheduler';
+import { bulkGenerateEmbeddings } from './services/embedding.service';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
 if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
@@ -109,7 +112,27 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Socket.IO
+// Socket.IO — attach Redis adapter for horizontal scaling (multi-instance)
+const { pub: pubClient, sub: subClient } = createPubSubPair();
+const REDIS_ADAPTER_TIMEOUT = 5000;
+
+Promise.race([
+  Promise.all([
+    new Promise<void>((resolve) => pubClient.on('ready', resolve)),
+    new Promise<void>((resolve) => subClient.on('ready', resolve)),
+  ]),
+  new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('Redis connection timeout')), REDIS_ADAPTER_TIMEOUT),
+  ),
+]).then(() => {
+  io.adapter(createAdapter(pubClient, subClient));
+  logger.info('Socket.IO Redis adapter connected');
+}).catch((err) => {
+  logger.warn('Redis adapter unavailable, falling back to in-memory adapter', { error: String(err) });
+  pubClient.disconnect();
+  subClient.disconnect();
+});
+
 setIO(io);
 setupChatSocket(io);
 setupNotificationSocket(io);
@@ -119,6 +142,10 @@ httpServer.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
   startDeadlineChecker();
   startImportScheduler();
+  // Backfill embeddings for records that don't have one yet (runs in background)
+  bulkGenerateEmbeddings().catch((err) => {
+    logger.error('Embedding backfill failed:', err);
+  });
 });
 
 export { io };

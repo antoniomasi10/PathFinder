@@ -6,6 +6,8 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
+import SearchableSelect from '@/components/SearchableSelect';
+import { italianCourses } from '@/data/italianCourses';
 
 interface University {
   id: string;
@@ -72,6 +74,16 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!universityId) {
+      setError('Seleziona la tua università');
+      return;
+    }
+
+    if (!courseOfStudy.trim()) {
+      setError('Inserisci il tuo corso di studi');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -82,8 +94,8 @@ export default function RegisterPage() {
         email,
         password,
         phone: phone || undefined,
-        universityId: universityId || undefined,
-        courseOfStudy: courseOfStudy || undefined,
+        universityId,
+        courseOfStudy,
       });
       localStorage.setItem('accessToken', data.accessToken);
       setUser(data.user);
@@ -236,31 +248,29 @@ export default function RegisterPage() {
             {/* Università */}
             <div>
               <label className="block text-sm text-text-secondary mb-1.5">
-                Università <span className="text-text-secondary/50">(opzionale)</span>
+                Università
               </label>
-              <select
+              <SearchableSelect
+                options={universities.map((uni) => ({ value: uni.id, label: uni.name }))}
                 value={universityId}
-                onChange={(e) => setUniversityId(e.target.value)}
-                className="input-field"
-              >
-                <option value="">Seleziona università</option>
-                {universities.map((uni) => (
-                  <option key={uni.id} value={uni.id}>{uni.name}</option>
-                ))}
-              </select>
+                onChange={setUniversityId}
+                placeholder="Cerca la tua università..."
+                required
+              />
             </div>
 
             {/* Corso di studi */}
             <div>
               <label className="block text-sm text-text-secondary mb-1.5">
-                Corso di studi <span className="text-text-secondary/50">(opzionale)</span>
+                Corso di studi
               </label>
-              <input
-                type="text"
+              <SearchableSelect
+                options={italianCourses.map((c) => ({ value: c, label: c }))}
                 value={courseOfStudy}
-                onChange={(e) => setCourseOfStudy(e.target.value)}
-                className="input-field"
-                placeholder="es. Informatica"
+                onChange={setCourseOfStudy}
+                placeholder="Cerca il tuo corso..."
+                required
+                allowCustom
               />
             </div>
 
