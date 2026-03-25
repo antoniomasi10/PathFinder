@@ -145,7 +145,7 @@ export default function SearchableSelect({
       {isOpen && filtered.length > 0 && (
         <ul
           ref={listRef}
-          className="absolute z-50 mt-1 w-full max-h-48 overflow-auto rounded-xl bg-card-bg border border-white/10 shadow-lg"
+          className="absolute z-50 mt-1 w-full max-h-48 overflow-auto rounded-xl bg-card border border-border shadow-xl shadow-black/40"
         >
           {filtered.slice(0, 100).map((option, i) => (
             <li
@@ -170,7 +170,7 @@ export default function SearchableSelect({
       )}
 
       {isOpen && search && filtered.length === 0 && (
-        <div className="absolute z-50 mt-1 w-full rounded-xl bg-card-bg border border-white/10 shadow-lg px-3 py-2 text-sm text-text-secondary">
+        <div className="absolute z-50 mt-1 w-full rounded-xl bg-card border border-border shadow-xl shadow-black/40 px-3 py-2 text-sm text-text-secondary">
           Nessun risultato
         </div>
       )}

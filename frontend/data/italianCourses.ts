@@ -43,6 +43,8 @@ export const italianCourses: string[] = [
   'Economia dei Mercati e degli Intermediari Finanziari',
   'Scienze Economiche',
   'Management',
+  'Management e Marketing',
+  'Marketing',
   'Marketing e Comunicazione d\'Impresa',
   'Economia delle Imprese e dei Mercati',
   'Economia dello Sviluppo e della Cooperazione Internazionale',
