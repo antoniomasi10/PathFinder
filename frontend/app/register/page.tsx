@@ -82,8 +82,8 @@ export default function RegisterPage() {
         email,
         password,
         phone: phone || undefined,
-        universityId: universityId || undefined,
-        courseOfStudy: courseOfStudy || undefined,
+        universityId,
+        courseOfStudy,
       });
       localStorage.setItem('accessToken', data.accessToken);
       setUser(data.user);
@@ -236,12 +236,13 @@ export default function RegisterPage() {
             {/* Università */}
             <div>
               <label className="block text-sm text-text-secondary mb-1.5">
-                Università <span className="text-text-secondary/50">(opzionale)</span>
+                Università
               </label>
               <select
                 value={universityId}
                 onChange={(e) => setUniversityId(e.target.value)}
                 className="input-field"
+                required
               >
                 <option value="">Seleziona università</option>
                 {universities.map((uni) => (
@@ -253,7 +254,7 @@ export default function RegisterPage() {
             {/* Corso di studi */}
             <div>
               <label className="block text-sm text-text-secondary mb-1.5">
-                Corso di studi <span className="text-text-secondary/50">(opzionale)</span>
+                Corso di studi
               </label>
               <input
                 type="text"
@@ -261,6 +262,7 @@ export default function RegisterPage() {
                 onChange={(e) => setCourseOfStudy(e.target.value)}
                 className="input-field"
                 placeholder="es. Informatica"
+                required
               />
             </div>
 
