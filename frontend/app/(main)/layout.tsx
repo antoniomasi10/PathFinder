@@ -10,6 +10,7 @@ import BadgeProvider from '@/components/BadgeProvider';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { NotificationProvider } from '@/lib/notificationContext';
 import { isPushSupported, subscribeToPush } from '@/lib/pushManager';
+import { Bell } from '@/components/icons';
 
 function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
   const message = error instanceof Error ? error.message : 'Errore sconosciuto';
@@ -61,9 +62,7 @@ function PushPromptModal() {
       <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
         <div className="bg-[#161B22] rounded-2xl p-6 max-w-sm w-full pointer-events-auto shadow-xl">
           <div className="w-14 h-14 rounded-2xl bg-[#4F46E5]/20 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-7 h-7 text-[#4F46E5]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
+            <Bell size={28} strokeWidth={2} className="text-[#4F46E5]" />
           </div>
           <h3 className="text-white font-bold text-lg text-center mb-2">Resta aggiornato</h3>
           <p className="text-[#94A3B8] text-sm text-center mb-6">

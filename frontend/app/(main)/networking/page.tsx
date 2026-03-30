@@ -13,6 +13,7 @@ import ActionMenu from '@/components/ActionMenu';
 import NewChatModal from '@/components/NewChatModal';
 import ImageLightbox from '@/components/ImageLightbox';
 import { isValidImageUrl } from '@/lib/urlValidation';
+import { Plus, UserIcon, ChatDots, CloseSm, CloseMd, ImageIcon, PaperPlane, Check, Heart, Chat, Send } from '@/components/icons';
 
 interface Conversation {
   user: { id: string; name: string; avatar?: string };
@@ -738,9 +739,7 @@ export default function NetworkingPage() {
               style={{ boxShadow: '0 4px 20px rgba(99,102,241,0.5)' }}
               title={t.networking.createGroup}
             >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-              </svg>
+              <Plus size={24} strokeWidth={2.5} />
             </button>
           </div>
 
@@ -815,9 +814,7 @@ export default function NetworkingPage() {
                     {conv.avatar && isValidImageUrl(conv.avatar) ? (
                       <img src={conv.avatar} alt={conv.name} className="w-14 h-14 rounded-full object-cover" />
                     ) : !conv.name ? (
-                      <svg className="w-7 h-7 text-[#475569]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
+                      <UserIcon size={28} className="text-[#475569]" />
                     ) : (
                       <span className="text-white text-lg font-medium">{conv.name[0]}</span>
                     )}
@@ -879,9 +876,7 @@ export default function NetworkingPage() {
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full text-center gap-2 py-12">
                 <div className="w-14 h-14 rounded-full bg-indigo-500/10 flex items-center justify-center mb-1">
-                  <svg className="w-7 h-7 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
+                  <ChatDots size={28} className="text-indigo-400" />
                 </div>
                 <p className="text-gray-400 text-sm">
                   {selectedUser.name
@@ -931,9 +926,7 @@ export default function NetworkingPage() {
                       onClick={() => removeChatImage(i)}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white"
                     >
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                      <CloseSm size={12} strokeWidth={3} />
                     </button>
                   </div>
                 ))}
@@ -950,9 +943,7 @@ export default function NetworkingPage() {
                 disabled={chatImages.length >= 5}
                 className="w-12 h-12 bg-[#1a1b2e] border border-indigo-900/30 rounded-full flex items-center justify-center text-gray-400 hover:text-indigo-400 shrink-0 disabled:opacity-40 transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+                <ImageIcon size={20} strokeWidth={2} />
               </button>
               <input
                 ref={chatFileInputRef}
@@ -975,9 +966,7 @@ export default function NetworkingPage() {
                 className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white shrink-0 hover:scale-105 transition-transform disabled:opacity-40"
                 style={{ boxShadow: '0 4px 20px rgba(99,102,241,0.5)' }}
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
+                <Send size={20} strokeWidth={2} />
               </button>
             </div>
             )}
@@ -1041,9 +1030,7 @@ export default function NetworkingPage() {
                       onClick={() => removeChatImage(i)}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white"
                     >
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                      <CloseSm size={12} strokeWidth={3} />
                     </button>
                   </div>
                 ))}
@@ -1055,9 +1042,7 @@ export default function NetworkingPage() {
                 disabled={chatImages.length >= 5}
                 className="w-12 h-12 bg-[#1a1b2e] border border-indigo-900/30 rounded-full flex items-center justify-center text-gray-400 hover:text-indigo-400 shrink-0 disabled:opacity-40 transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+                <ImageIcon size={20} />
               </button>
               <input
                 ref={chatFileInputRef}
@@ -1080,9 +1065,7 @@ export default function NetworkingPage() {
                 className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white shrink-0 hover:scale-105 transition-transform disabled:opacity-40"
                 style={{ boxShadow: '0 4px 20px rgba(99,102,241,0.5)' }}
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
+                <Send size={20} />
               </button>
             </div>
           </div>
@@ -1112,9 +1095,7 @@ export default function NetworkingPage() {
                       onClick={() => removePostImage(i)}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white"
                     >
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                      <CloseSm size={12} strokeWidth={3} />
                     </button>
                   </div>
                 ))}
@@ -1127,9 +1108,7 @@ export default function NetworkingPage() {
                 disabled={postImages.length >= 5}
                 className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+                <ImageIcon size={20} />
                 {t.networking.addPhoto} ({postImages.length}/5)
               </button>
               <input
@@ -1176,9 +1155,7 @@ export default function NetworkingPage() {
                       return (
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold overflow-hidden shrink-0 ${isDeleted ? 'bg-[#1E293B]' : 'bg-primary/20 text-primary'}`}>
                           {isDeleted ? (
-                            <svg className="w-5 h-5 text-[#475569]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
+                            <UserIcon size={20} color="#475569" strokeWidth={1.5} />
                           ) : avatar ? (
                             <img src={avatar} alt={post.author.name} className="w-full h-full object-cover" />
                           ) : (
@@ -1205,9 +1182,7 @@ export default function NetworkingPage() {
                     if (status === 'ACCEPTED') {
                       return (
                         <span className="text-xs text-green-400 border border-green-400/30 px-3 py-1 rounded-full flex items-center gap-1">
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                          </svg>
+                          <Check size={12} strokeWidth={2.5} />
                           {t.userProfile.connected}
                         </span>
                       );
@@ -1291,18 +1266,14 @@ export default function NetworkingPage() {
                     onClick={() => toggleLike(post.id, !!post.liked)}
                     className={`flex items-center gap-1.5 transition-colors ${post.liked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
                   >
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill={post.liked ? 'currentColor' : 'none'}>
-                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                    </svg>
+                    <Heart size={20} filled={!!post.liked} />
                     <span className="text-sm">{post._count.likes}</span>
                   </button>
                   <button
                     onClick={() => openComments(post)}
                     className="flex items-center gap-1.5 text-gray-400 hover:text-indigo-400 transition-colors"
                   >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
+                    <Chat size={20} />
                     <span className="text-sm">{post._count.comments}</span>
                   </button>
                   <span className="text-[10px] ml-auto">
@@ -1387,9 +1358,7 @@ export default function NetworkingPage() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
               <h3 className="text-white font-semibold text-lg">Commenti ({comments.length})</h3>
               <button onClick={() => { setCommentPost(null); setNewComment(''); }} className="text-gray-400 hover:text-white p-1">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <CloseMd size={24} />
               </button>
             </div>
 
@@ -1401,9 +1370,7 @@ export default function NetworkingPage() {
                 </div>
               ) : comments.length === 0 ? (
                 <div className="text-center py-12">
-                  <svg className="w-12 h-12 mx-auto text-gray-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
+                  <div className="flex justify-center mb-3"><Chat size={48} color="#4B5563" strokeWidth={1.5} /></div>
                   <p className="text-gray-500 text-sm">{t.networking.noComments}</p>
                   <p className="text-gray-600 text-xs mt-1">Sii il primo a commentare!</p>
                 </div>
@@ -1415,9 +1382,7 @@ export default function NetworkingPage() {
                       className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden ${c.author?.name ? 'bg-primary/20' : 'bg-[#1E293B]'}`}
                     >
                       {!c.author?.name ? (
-                        <svg className="w-4 h-4 text-[#475569]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
+                        <UserIcon size={16} color="#475569" strokeWidth={1.5} />
                       ) : c.author.avatar ? (
                         <img src={c.author.avatar} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -1463,9 +1428,7 @@ export default function NetworkingPage() {
                 {commentSending ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-                  </svg>
+                  <Send size={16} color="white" />
                 )}
               </button>
             </div>

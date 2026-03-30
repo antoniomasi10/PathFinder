@@ -11,6 +11,7 @@ import OptionButton from './OptionButton';
 import NextButton from './NextButton';
 import BackButton from './BackButton';
 import AvatarSelection from './AvatarSelection';
+import { Check } from '@/components/icons';
 
 interface OnboardingFlowProps {
   onAvatarSelected: (profileData: ProfileData, avatarId: string) => void;
@@ -167,9 +168,7 @@ export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps
                         transition={{ duration: 0.3 }}
                       >
                         {isOtherSelected && (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="20 6 9 17 4 12" />
-                          </svg>
+                          <Check size={14} color="white" strokeWidth={3} />
                         )}
                       </motion.div>
                     ) : (

@@ -6,6 +6,11 @@ import { useSavedOpportunities } from '@/lib/savedOpportunities';
 import { useLanguage } from '@/lib/language';
 import { isValidExternalUrl } from '@/lib/urlValidation';
 import api from '@/lib/api';
+import {
+  GridSmall, Bulb, BookOpen, TrendingUp,
+  ChevronDown as ChevronDownIcon,
+  Bookmark, MapPin, CalendarIcon, Search, Filter, Bell,
+} from '@/components/icons';
 
 interface Opportunity {
   id: string;
@@ -116,36 +121,15 @@ const BASE_OPPORTUNITIES: BaseOpportunity[] = [
 function OpportunityIcon({ type }: { type: string }) {
   const t = type.toLowerCase();
   if (t.includes('full-time') || t.includes('intern')) {
-    return (
-      <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <rect x="3" y="3" width="7" height="7" rx="1" />
-        <rect x="14" y="3" width="7" height="7" rx="1" />
-        <rect x="3" y="14" width="7" height="7" rx="1" />
-        <rect x="14" y="14" width="7" height="7" rx="1" />
-      </svg>
-    );
+    return <GridSmall size={24} className="text-gray-400" />;
   }
   if (t.includes('workshop')) {
-    return (
-      <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17l-5.1-5.1a3.12 3.12 0 114.41-4.41l.67.67.67-.67a3.12 3.12 0 114.41 4.41l-5.06 5.1z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2" />
-      </svg>
-    );
+    return <Bulb size={24} className="text-gray-400" />;
   }
   if (t.includes('education') || t.includes('master')) {
-    return (
-      <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-      </svg>
-    );
+    return <BookOpen size={24} className="text-gray-400" />;
   }
-  // Default icon
-  return (
-    <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h4v11H3zM10 3h4v18h-4zM17 7h4v14h-4z" />
-    </svg>
-  );
+  return <TrendingUp size={24} className="text-gray-400" />;
 }
 
 function getOpportunities(t: ReturnType<typeof useLanguage>['t']): Opportunity[] {
@@ -214,12 +198,11 @@ function getFilterCategories(t: ReturnType<typeof useLanguage>['t']) {
 
 function ChevronDown({ rotated }: { rotated: boolean }) {
   return (
-    <svg
-      className={`w-4 h-4 text-gray-500 flex-shrink-0 transition-transform duration-300 ${rotated ? 'rotate-180' : ''}`}
-      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-    </svg>
+    <ChevronDownIcon
+      size={16}
+      strokeWidth={2}
+      className={`text-gray-500 flex-shrink-0 transition-transform duration-300 ${rotated ? 'rotate-180' : ''}`}
+    />
   );
 }
 
@@ -244,21 +227,7 @@ function Accordion({ open, children }: { open: boolean; children: React.ReactNod
 /* ── BookmarkIcon ────────────────────────────────────────────────── */
 
 function BookmarkIcon({ filled, className }: { filled: boolean; className?: string }) {
-  return (
-    <svg
-      className={className}
-      fill={filled ? 'currentColor' : 'none'}
-      viewBox="0 0 24 24"
-      stroke={filled ? 'none' : 'currentColor'}
-      strokeWidth={1.8}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z"
-      />
-    </svg>
-  );
+  return <Bookmark filled={filled} strokeWidth={1.8} className={className} />;
 }
 
 /* ── FullWidthCard ───────────────────────────────────────────────── */
@@ -345,16 +314,11 @@ function FullWidthCard({
           {/* Location + date chips */}
           <div className="flex flex-wrap gap-2">
             <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-3 py-2">
-              <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-              </svg>
+              <MapPin size={14} strokeWidth={1.8} className="text-gray-400 flex-shrink-0" />
               <span className="text-gray-300 text-xs">{opp.location}</span>
             </div>
             <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-3 py-2">
-              <svg className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-              </svg>
+              <CalendarIcon size={14} strokeWidth={1.8} className="text-gray-400 flex-shrink-0" />
               <span className="text-gray-300 text-xs">{t.home.publishedDaysAgo}</span>
             </div>
           </div>
@@ -456,10 +420,7 @@ function HalfWidthCard({
 
           {/* Location chip */}
           <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-2.5 py-1.5 self-start w-fit">
-            <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-            </svg>
+            <MapPin size={12} strokeWidth={1.8} className="text-gray-400 flex-shrink-0" />
             <span className="text-gray-300 text-[11px]">{opp.location}</span>
           </div>
 
@@ -882,9 +843,7 @@ export default function HomePage() {
           </div>
           <div className="absolute right-0">
             <Link href="/notifications" className="p-1 block">
-              <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-              </svg>
+              <Bell size={24} strokeWidth={1.8} className="text-gray-400" />
             </Link>
           </div>
         </div>
@@ -894,12 +853,7 @@ export default function HomePage() {
           <div className="mt-4">
             <div className="relative">
               {/* Magnifying glass icon — left side */}
-              <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none"
-                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
-              </svg>
+              <Search size={16} strokeWidth={2} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
               <input
                 type="text"
                 placeholder={t.home.searchPlaceholder}
@@ -913,12 +867,11 @@ export default function HomePage() {
                 className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
                 style={{ color: hasActiveFilters ? '#4F46E5' : undefined }}
               >
-                <svg
-                  className={`w-5 h-5 transition-colors ${hasActiveFilters ? 'text-primary' : 'text-gray-400'}`}
-                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M7 12h10M10 18h4" />
-                </svg>
+                <Filter
+                  size={20}
+                  strokeWidth={2}
+                  className={`transition-colors ${hasActiveFilters ? 'text-primary' : 'text-gray-400'}`}
+                />
                 {/* Active indicator dot */}
                 {hasActiveFilters && (
                   <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary pointer-events-none" />
@@ -964,9 +917,7 @@ export default function HomePage() {
           </div>
         ) : esploraFiltered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-500">
-            <svg className="w-10 h-10 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
-            </svg>
+            <Search size={40} strokeWidth={1.5} className="mb-3" />
             <p className="text-sm font-medium">{t.home.noOpportunities}</p>
           </div>
         ) : (
