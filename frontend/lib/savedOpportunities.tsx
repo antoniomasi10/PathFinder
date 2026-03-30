@@ -93,10 +93,6 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
   ) {
     const isSaved = savedIdsRef.current.has(oppId);
 
-    // Save previous state for rollback
-    const previousIds = new Set(savedIdsRef.current);
-    const previousOpps = [...savedOpps];
-
     // Optimistic update
     if (isSaved) {
       setSavedIds((prev) => {
@@ -136,11 +132,9 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
       }
     }
 
-    // Persist to server with rollback on error
+    // Persist to server — localStorage is the source of truth, no rollback on failure
     api.post(`/opportunities/${oppId}/save`).catch((err) => {
-      console.error('Failed to save opportunity:', err);
-      setSavedIds(previousIds);
-      setSavedOpps(previousOpps);
+      console.error('Failed to sync save with server:', err);
     });
   }
 
