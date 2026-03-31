@@ -39,20 +39,16 @@ const SavedCoursesContext = createContext<SavedCoursesContextType>({
 });
 
 export function SavedCoursesProvider({ children }: { children: ReactNode }) {
-  const [savedCourses, setSavedCourses] = useState<SavedCourse[]>([]);
-  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  // Lazy init: read localStorage synchronously so UI is correct on first render
+  const [savedCourses, setSavedCourses] = useState<SavedCourse[]>(loadFromStorage);
+  const [savedIds, setSavedIds] = useState<Set<string>>(
+    () => new Set(loadFromStorage().map((c) => c.id))
+  );
   const savedIdsRef = useRef<Set<string>>(savedIds);
   savedIdsRef.current = savedIds;
 
   useEffect(() => {
-    // Show cached data immediately, then sync from server
-    const cached = loadFromStorage();
-    if (cached.length > 0) {
-      setSavedCourses(cached);
-      setSavedIds(new Set(cached.map((c) => c.id)));
-    }
-
-    // Always fetch from server to stay in sync
+    // Sync from DB — server is the source of truth for persistence across devices
     api
       .get('/courses/saved/list')
       .then((res) => {
@@ -62,19 +58,22 @@ export function SavedCoursesProvider({ children }: { children: ReactNode }) {
           university: c.university,
           type: c.type,
         }));
-        setSavedCourses(courses);
-        setSavedIds(new Set(courses.map((c) => c.id)));
-        persistToStorage(courses);
+        const serverIds = new Set(courses.map((c) => c.id));
+        const localOnly = loadFromStorage().filter((c) => !serverIds.has(c.id));
+        const merged = [...courses, ...localOnly];
+        setSavedCourses(merged);
+        setSavedIds(new Set(merged.map((c) => c.id)));
+        persistToStorage(merged);
       })
-      .catch((err) => {
-        console.error('Failed to load saved courses:', err.response?.status, err.response?.data || err.message);
+      .catch(() => {
+        // Server unreachable — keep localStorage data already loaded above
       });
   }, []);
 
   function toggleSave(course: SavedCourse) {
     const isSaved = savedIdsRef.current.has(course.id);
 
-    // Optimistic update + localStorage persist
+    // Optimistic update + immediate localStorage persist
     if (isSaved) {
       setSavedIds((prev) => { const next = new Set(prev); next.delete(course.id); return next; });
       setSavedCourses((prev) => { const next = prev.filter((c) => c.id !== course.id); persistToStorage(next); return next; });
@@ -83,9 +82,9 @@ export function SavedCoursesProvider({ children }: { children: ReactNode }) {
       setSavedCourses((prev) => { const next = [...prev, course]; persistToStorage(next); return next; });
     }
 
-    // Background server sync — localStorage is the source of truth, no rollback on failure
+    // Persist to DB — if this fails, localStorage still has the correct state
     api.post(`/courses/${course.id}/save`).catch((err) => {
-      console.error('Failed to sync course save with server:', err.response?.status, err.response?.data || err.message);
+      console.error('Failed to sync course save with server:', err);
     });
   }
 
