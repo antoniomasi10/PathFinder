@@ -47,24 +47,18 @@ const SavedOpportunitiesContext = createContext<SavedOpportunitiesContextType>({
 });
 
 export function SavedOpportunitiesProvider({ children }: { children: ReactNode }) {
-  const [savedOpps, setSavedOpps] = useState<SavedOpportunity[]>([]);
-  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [savedOpps, setSavedOpps] = useState<SavedOpportunity[]>(loadFromStorage);
+  const [savedIds, setSavedIds] = useState<Set<string>>(
+    () => new Set(loadFromStorage().map((o) => o.id))
+  );
   const savedIdsRef = useRef<Set<string>>(savedIds);
   savedIdsRef.current = savedIds;
 
   useEffect(() => {
-    // Show cached data immediately, then sync from server
-    const cached = loadFromStorage();
-    if (cached.length > 0) {
-      setSavedOpps(cached);
-      setSavedIds(new Set(cached.map((o) => o.id)));
-    }
-
-    // Always fetch from server to stay in sync across devices
     api
       .get('/opportunities/saved')
       .then((res) => {
-        const opps: SavedOpportunity[] = (res.data || []).map((o: any) => ({
+        const serverOpps: SavedOpportunity[] = (res.data || []).map((o: any) => ({
           id: o.id,
           title: o.title,
           description: o.description,
@@ -78,22 +72,25 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
           tags: o.tags,
           university: o.university,
         }));
-        setSavedOpps(opps);
-        setSavedIds(new Set(opps.map((o) => o.id)));
-        persistToStorage(opps);
+
+        // Merge: server items take precedence; local-only items (e.g. mock data
+        // whose POST /save failed) are kept so they survive the sync.
+        const serverIds = new Set(serverOpps.map((o) => o.id));
+        const localOnly = loadFromStorage().filter((o) => !serverIds.has(o.id));
+        const merged = [...serverOpps, ...localOnly];
+
+        setSavedOpps(merged);
+        setSavedIds(new Set(merged.map((o) => o.id)));
+        persistToStorage(merged);
       })
-      .catch((err) => {
-        console.error('Failed to load saved opportunities:', err);
+      .catch(() => {
+        // Server unreachable — localStorage data already loaded above, keep it.
       });
   }, []);
 
-  function toggleSave(
-    oppId: string,
-    data?: Partial<SavedOpportunity>,
-  ) {
+  function toggleSave(oppId: string, data?: Partial<SavedOpportunity>) {
     const isSaved = savedIdsRef.current.has(oppId);
 
-    // Optimistic update
     if (isSaved) {
       setSavedIds((prev) => {
         const next = new Set(prev);
@@ -132,7 +129,6 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
       }
     }
 
-    // Persist to server — localStorage is the source of truth, no rollback on failure
     api.post(`/opportunities/${oppId}/save`).catch((err) => {
       console.error('Failed to sync save with server:', err);
     });
