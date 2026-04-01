@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BadgeDefinition, RARITY_COLORS, RARITY_LABELS } from '@/lib/badges';
+import { CloseLg } from '@/components/icons';
 
 interface BadgeUnlockModalProps {
   badge: BadgeDefinition;
@@ -87,9 +88,7 @@ export default function BadgeUnlockModal({ badge, onDismiss }: BadgeUnlockModalP
             padding: '4px',
           }}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <path d="M18 6L6 18M6 6l12 12" stroke="#8B8FA8" strokeWidth="2" strokeLinecap="round" />
-          </svg>
+          <CloseLg size={22} strokeWidth={2} color="#8B8FA8" />
         </button>
 
         {/* Celebration emojis */}
@@ -131,14 +130,13 @@ export default function BadgeUnlockModal({ badge, onDismiss }: BadgeUnlockModalP
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: '56px',
             margin: '0 auto 20px',
             transition: 'transform 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.25s, opacity 0.3s ease 0.25s',
             transform: phase === 'visible' ? 'scale(1)' : 'scale(0)',
             opacity: phase === 'visible' ? 1 : 0,
           }}
         >
-          {badge.icon}
+          <span style={{ transform: 'scale(2.5)', display: 'flex' }}>{badge.icon}</span>
         </div>
 
         {/* Badge name */}

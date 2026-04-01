@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/language';
 import { isValidImageUrl } from '@/lib/urlValidation';
+import { CloseLg, Search } from '@/components/icons';
 
 interface User {
   id: string;
@@ -99,18 +100,14 @@ export default function NewChatModal({ isOpen, onClose, onUserSelected }: NewCha
       <div className="flex items-center justify-between px-4 py-4 border-b border-border">
         <h2 className="text-lg font-display font-bold text-text-primary">{t.group.newChat}</h2>
         <button onClick={() => handleClose()} className="text-text-muted hover:text-text-primary transition-colors">
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <CloseLg size={24} strokeWidth={2} />
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {/* Search */}
         <div className="relative">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+          <Search size={16} strokeWidth={2} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

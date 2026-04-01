@@ -11,18 +11,18 @@ import {
   ChevronDown,
   Download,
   ArrowLeft,
-  Clock,
+  ClockIcon as Clock,
   Users,
   BookOpen,
   ExternalLink,
-  Calendar,
+  CalendarIcon as Calendar,
   Check,
   GraduationCap,
   TrendingUp,
   Target,
   FileText,
   Send,
-} from 'lucide-react';
+} from '@/components/icons';
 import { MOCK_COURSES, CourseDeadline, CourseRequirement } from '@/lib/mockCourses';
 import { useSavedCourses } from '@/lib/savedCourses';
 import api from '@/lib/api';
@@ -194,7 +194,7 @@ export default function CourseDetailPage() {
         {/* Header */}
         <div className="sticky top-0 z-20 px-4 pt-4 pb-3 flex items-center justify-between" style={{ backgroundColor: 'rgba(10,14,26,0.95)', backdropFilter: 'blur(12px)' }}>
           <button onClick={() => router.back()} className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(28,47,67,0.8)' }}>
-            <ArrowLeft className="w-5 h-5 text-white" />
+            <ArrowLeft size={20} className="text-white" />
           </button>
           <button
             onClick={() => {
@@ -203,7 +203,7 @@ export default function CourseDetailPage() {
             className="w-10 h-10 rounded-full flex items-center justify-center"
             style={{ backgroundColor: 'rgba(28,47,67,0.8)' }}
           >
-            <Bookmark className={`w-5 h-5 ${bookmarked ? 'text-[#4A9EFF] fill-[#4A9EFF]' : 'text-white'}`} />
+            <Bookmark size={20} filled={bookmarked} className={bookmarked ? 'text-[#4A9EFF]' : 'text-white'} />
           </button>
         </div>
 
@@ -370,7 +370,7 @@ export default function CourseDetailPage() {
             className="w-10 h-10 rounded-full flex items-center justify-center"
             style={{ backgroundColor: 'rgba(28,47,67,0.8)', backdropFilter: 'blur(8px)' }}
           >
-            <ArrowLeft className="w-5 h-5 text-white" />
+            <ArrowLeft size={20} className="text-white" />
           </button>
           <button
             onClick={() => {
@@ -404,7 +404,7 @@ export default function CourseDetailPage() {
             className="inline-flex items-center gap-1.5 text-sm"
             style={{ color: '#4A9EFF' }}
           >
-            <ExternalLink className="w-3.5 h-3.5" />
+            <ExternalLink size={14} />
             Sito ufficiale del corso
           </a>
         )}
@@ -421,17 +421,17 @@ export default function CourseDetailPage() {
       <div className="px-5 pb-6">
         <div className="grid grid-cols-3 gap-3">
           <StatCard
-            icon={<Briefcase className="w-6 h-6" style={{ color: '#4A9EFF' }} />}
+            icon={<Briefcase size={24} color="#4A9EFF" />}
             value={course.employmentRate}
             label="Tasso occupazione"
           />
           <StatCard
-            icon={<Award className="w-6 h-6" style={{ color: '#4A9EFF' }} />}
+            icon={<Award size={24} color="#4A9EFF" />}
             value={course.ranking}
             label="Classifica"
           />
           <StatCard
-            icon={<Star className="w-6 h-6" style={{ color: '#4A9EFF' }} />}
+            icon={<Star size={24} color="#4A9EFF" />}
             value={course.satisfaction}
             label="Soddisfazione"
           />
@@ -449,10 +449,10 @@ export default function CourseDetailPage() {
         >
           <h2 className="text-lg font-bold text-white mb-4">Info corso</h2>
           <div className="grid grid-cols-2 gap-3">
-            <InfoRow icon={<Clock className="w-4 h-4" style={{ color: '#4A9EFF' }} />} label="Durata" value={course.duration} />
-            <InfoRow icon={<Users className="w-4 h-4" style={{ color: '#4A9EFF' }} />} label="Posti" value={course.spots ? String(course.spots) : 'Su requisiti'} />
-            <InfoRow icon={<BookOpen className="w-4 h-4" style={{ color: '#4A9EFF' }} />} label="Lingua" value={course.language} />
-            <InfoRow icon={<MapPin className="w-4 h-4" style={{ color: '#4A9EFF' }} />} label="Modalità" value={course.mode} />
+            <InfoRow icon={<Clock size={16} color="#4A9EFF" />} label="Durata" value={course.duration} />
+            <InfoRow icon={<Users size={16} color="#4A9EFF" />} label="Posti" value={course.spots ? String(course.spots) : 'Su requisiti'} />
+            <InfoRow icon={<BookOpen size={16} color="#4A9EFF" />} label="Lingua" value={course.language} />
+            <InfoRow icon={<MapPin size={16} color="#4A9EFF" />} label="Modalità" value={course.mode} />
           </div>
           <div className="mt-3 pt-3" style={{ borderTop: '1px solid #2A3F54' }}>
             <InfoRow icon={<span style={{ color: '#4A9EFF', fontSize: '14px', fontWeight: 'bold' }}>€</span>} label="Costo" value={course.cost} />
@@ -483,7 +483,7 @@ export default function CourseDetailPage() {
           <div className="space-y-2">
             {course.careerOutlets.map((career) => (
               <div key={career} className="flex items-center gap-3">
-                <Briefcase className="w-4 h-4" style={{ color: '#4A9EFF' }} />
+                <Briefcase size={16} color="#4A9EFF" />
                 <span style={{ fontSize: '14px', color: '#D0D4DC' }}>{career}</span>
               </div>
             ))}
@@ -506,7 +506,7 @@ export default function CourseDetailPage() {
               className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: 'linear-gradient(135deg, #4A9EFF, #7C3AED)' }}
             >
-              <GraduationCap className="w-6 h-6 text-white" />
+              <GraduationCap size={24} className="text-white" />
             </div>
             <div className="flex-1">
               <h2 className="text-base font-bold text-white mb-0.5">Simula la tua ammissione</h2>
@@ -514,7 +514,7 @@ export default function CourseDetailPage() {
                 Calcola la tua probabilità in 4 semplici step
               </p>
             </div>
-            <ChevronDown className="w-5 h-5 -rotate-90" style={{ color: '#4A9EFF' }} />
+            <ChevronDown size={20} color="#4A9EFF" className="-rotate-90" />
           </div>
         </button>
       </div>
@@ -575,7 +575,7 @@ export default function CourseDetailPage() {
             className="w-full py-2.5 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
             style={{ border: '1px solid #2A3F54', color: '#D0D4DC' }}
           >
-            <Download className="w-4 h-4" />
+            <Download size={16} />
             Scarica requisiti ufficiali
           </button>
         </div>
@@ -637,12 +637,12 @@ export default function CourseDetailPage() {
                 >
                   {isAdded ? (
                     <>
-                      <Check className="w-3.5 h-3.5" />
+                      <Check size={14} />
                       <span className="text-[11px] font-medium">Aggiunta</span>
                     </>
                   ) : (
                     <>
-                      <Calendar className="w-3.5 h-3.5" />
+                      <Calendar size={14} />
                       <span className="text-[11px] font-medium">Aggiungi</span>
                     </>
                   )}
@@ -717,7 +717,7 @@ export default function CourseDetailPage() {
           style={{ border: '1px solid #2A3F54', color: '#D0D4DC' }}
         >
           Candidati ora
-          <ExternalLink className="w-4 h-4" />
+          <ExternalLink size={16} />
         </button>
       </div>
     </div>
@@ -788,17 +788,7 @@ function ChecklistItem({
         }}
       >
         {checked && (
-          <svg
-            className="w-4 h-4 text-white"
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2.5"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path d="M5 13l4 4L19 7" />
-          </svg>
+          <Check size={16} color="white" strokeWidth={2.5} />
         )}
       </div>
       <input type="checkbox" checked={checked} onChange={onChange} className="sr-only" />
@@ -847,11 +837,9 @@ function AccordionSection({
           )}
         </div>
         <ChevronDown
-          className="w-5 h-5 transition-transform duration-300"
-          style={{
-            color: '#8B8FA8',
-            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-          }}
+          size={20}
+          color="#8B8FA8"
+          className={`transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
         />
       </button>
       <div
@@ -871,10 +859,10 @@ function AccordionSection({
 
 function SocialProofCarousel({ socialProof }: { socialProof: { savedCount: number; simulatorRate: number; requirementsRate: number; appliedLastMonth: number } }) {
   const slides = [
-    { icon: <Users className="w-6 h-6" style={{ color: '#6C63FF' }} />, value: String(socialProof.savedCount), label: "studenti hanno salvato\nquesto corso" },
-    { icon: <Target className="w-6 h-6" style={{ color: '#3DD68C' }} />, value: `${socialProof.simulatorRate}%`, label: "ha provato il simulatore\nammissione" },
-    { icon: <FileText className="w-6 h-6" style={{ color: '#F59E0B' }} />, value: `${socialProof.requirementsRate}%`, label: "ha consultato\ni requisiti ufficiali" },
-    { icon: <Send className="w-6 h-6" style={{ color: '#4A9EFF' }} />, value: String(socialProof.appliedLastMonth), label: "candidature\nnell'ultimo mese" },
+    { icon: <Users size={24} color="#6C63FF" />, value: String(socialProof.savedCount), label: "studenti hanno salvato\nquesto corso" },
+    { icon: <Target size={24} color="#3DD68C" />, value: `${socialProof.simulatorRate}%`, label: "ha provato il simulatore\nammissione" },
+    { icon: <FileText size={24} color="#F59E0B" />, value: `${socialProof.requirementsRate}%`, label: "ha consultato\ni requisiti ufficiali" },
+    { icon: <Send size={24} color="#4A9EFF" />, value: String(socialProof.appliedLastMonth), label: "candidature\nnell'ultimo mese" },
   ];
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -939,7 +927,7 @@ function SocialProofCarousel({ socialProof }: { socialProof: { savedCount: numbe
   return (
     <div className="pb-6">
       <div className="flex items-center gap-2 mb-4 px-5">
-        <TrendingUp className="w-5 h-5" style={{ color: '#4A9EFF' }} />
+        <TrendingUp size={20} color="#4A9EFF" />
         <h2 className="text-lg font-bold text-white">Interesse per questo corso</h2>
       </div>
 

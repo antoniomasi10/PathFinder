@@ -2,6 +2,17 @@ import prisma from '../lib/prisma';
 import { GpaRange, EnglishLevel, WillingnessToRelocate } from '@prisma/client';
 import { uploadImage } from '../utils/imageUpload';
 
+/** Select all User scalar fields except `embedding` (Unsupported vector type) and `passwordHash`. */
+const safeUserSelect = {
+  id: true, email: true, name: true, surname: true, username: true, phone: true,
+  googleId: true, provider: true, emailVerified: true, avatar: true, avatarBgColor: true,
+  bio: true, universityId: true, courseOfStudy: true, yearOfStudy: true, gpa: true,
+  englishLevel: true, willingToRelocate: true, profileCompleted: true, publicProfile: true,
+  privacySavedOpps: true, privacyPathmates: true, messagePrivacy: true, privacySkills: true,
+  privacyUniversity: true, passwordResetToken: true, passwordResetExpiry: true,
+  createdAt: true, updatedAt: true,
+} as const;
+
 interface ProfileData {
   answers: {
     yearOfStudy: string;
@@ -109,24 +120,17 @@ export async function saveQuestionnaire(userId: string, input: ProfileData) {
 }
 
 export async function getProfile(userId: string) {
-  const user = await prisma.user.findUnique({
+  return prisma.user.findUnique({
     where: { id: userId },
-    include: {
-      profile: true,
-      university: true,
-    },
+    select: { ...safeUserSelect, profile: true, university: true },
   });
-  if (user) {
-    const { passwordHash, ...safeUser } = user;
-    return safeUser;
-  }
-  return user;
 }
 
 export async function getProfileForViewer(ownerId: string, viewerId: string) {
   const user = await prisma.user.findUnique({
     where: { id: ownerId },
-    include: {
+    select: {
+      ...safeUserSelect,
       profile: true,
       university: true,
       savedOpportunities: {
@@ -292,13 +296,13 @@ export async function updateProfile(userId: string, data: UpdateProfileData) {
     return prisma.user.update({
       where: { id: userId },
       data: userFields,
-      include: { profile: true, university: true },
+      select: { ...safeUserSelect, profile: true, university: true },
     });
   }
 
   return prisma.user.findUnique({
     where: { id: userId },
-    include: { profile: true, university: true },
+    select: { ...safeUserSelect, profile: true, university: true },
   });
 }
 

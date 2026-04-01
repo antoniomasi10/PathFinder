@@ -8,6 +8,7 @@ import { getAvatar } from './avatarData';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { ProfileData } from './onboarding-data';
+import { CloseLg, ArrowRight } from '@/components/icons';
 
 interface Props {
   avatarId: string;
@@ -126,11 +127,7 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mb-2">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="15" y1="9" x2="9" y2="15" />
-              <line x1="9" y1="9" x2="15" y2="15" />
-            </svg>
+            <CloseLg size={40} color="#FF4444" strokeWidth={2} />
           </div>
           <p className="text-white text-lg font-semibold">Qualcosa è andato storto</p>
           <p className="text-white/60 text-sm">{errorMsg}</p>
@@ -325,9 +322,7 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
           ) : (
             <>
               Inizia l&apos;esplorazione
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
+              <ArrowRight size={18} strokeWidth={2.5} />
             </>
           )}
         </motion.button>
