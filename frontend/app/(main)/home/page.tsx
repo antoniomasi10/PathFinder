@@ -851,11 +851,6 @@ export default function HomePage() {
               {t.home.explore}
             </button>
           </div>
-          <div className="absolute right-0">
-            <Link href="/notifications" className="p-1 block">
-              <Bell size={24} strokeWidth={1.8} className="text-gray-400" />
-            </Link>
-          </div>
         </div>
 
         {/* Search bar + filter button — Esplora only */}
