@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { getAvatar } from './avatarData';
@@ -155,27 +155,25 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
       transition={{ duration: exiting ? 0.6 : 0.8, ease: [0.25, 0.1, 0.25, 1] as const }}
       aria-label="Avatar reveal animation"
     >
-      {/* Ambient blobs — matching onboarding questionnaire */}
+      {/* Ambient blobs — CSS-only for better performance */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          className="absolute w-[400px] h-[400px] rounded-full opacity-20 blur-[120px]"
+        <div
+          className="absolute w-[400px] h-[400px] rounded-full opacity-20 blur-[60px] animate-blob-1"
           style={{
             background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)',
             top: '-15%',
             left: '-15%',
+            willChange: 'transform',
           }}
-          animate={{ x: [0, 50, 0], y: [0, 30, 0] }}
-          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
         />
-        <motion.div
-          className="absolute w-[350px] h-[350px] rounded-full opacity-15 blur-[120px]"
+        <div
+          className="absolute w-[350px] h-[350px] rounded-full opacity-15 blur-[60px] animate-blob-2"
           style={{
             background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)',
             bottom: '-10%',
             right: '-15%',
+            willChange: 'transform',
           }}
-          animate={{ x: [0, -40, 0], y: [0, -50, 0] }}
-          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
         />
       </div>
 
@@ -219,20 +217,18 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
           }}
           aria-label="Il tuo avatar personalizzato"
         >
-          {/* Pulsing glow */}
-          <motion.div
-            className="absolute inset-0 rounded-full"
+          {/* Pulsing glow — CSS-only */}
+          <div
+            className="absolute inset-0 rounded-full animate-glow-pulse"
             style={{
               background: 'radial-gradient(circle, rgba(108,99,255,0.25) 0%, transparent 70%)',
               transform: 'scale(1.3)',
             }}
-            animate={{ opacity: [0.15, 0.25, 0.15] }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           />
 
-          {/* Decorative floating dots */}
-          <motion.div
-            className="absolute rounded-full"
+          {/* Decorative floating dots — CSS-only */}
+          <div
+            className="absolute rounded-full animate-float-dot-1"
             style={{
               width: 10,
               height: 10,
@@ -240,12 +236,11 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
               opacity: 0.5,
               top: '10%',
               right: '-8%',
+              willChange: 'transform',
             }}
-            animate={{ y: [0, -8, 0], x: [0, 4, 0] }}
-            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
           />
-          <motion.div
-            className="absolute rounded-full"
+          <div
+            className="absolute rounded-full animate-float-dot-2"
             style={{
               width: 6,
               height: 6,
@@ -253,9 +248,8 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
               opacity: 0.4,
               bottom: '15%',
               left: '-5%',
+              willChange: 'transform',
             }}
-            animate={{ y: [0, 6, 0], x: [0, -3, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
           />
 
           {/* Avatar container */}
@@ -272,6 +266,7 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
                 ref={videoRef}
                 src={avatar.video}
                 className="w-full h-full object-cover"
+                preload="auto"
                 autoPlay
                 muted
                 playsInline

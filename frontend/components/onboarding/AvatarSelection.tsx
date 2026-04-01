@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { AVATARS, DEFAULT_AVATAR_ID, getAvatar } from './avatarData';
@@ -25,6 +25,19 @@ export default function AvatarSelection({ onContinue }: Props) {
     if (navigator.vibrate) navigator.vibrate([10, 50, 20]);
     onContinue(selectedAvatar);
   }, [selectedAvatar, onContinue]);
+
+  // Prefetch the video for the selected avatar so it's ready for the reveal
+  useEffect(() => {
+    const av = getAvatar(selectedAvatar);
+    const link = document.createElement('link');
+    link.rel = 'prefetch';
+    link.as = 'video';
+    link.href = av.video;
+    document.head.appendChild(link);
+    return () => {
+      document.head.removeChild(link);
+    };
+  }, [selectedAvatar]);
 
   return (
     <motion.div
@@ -182,6 +195,8 @@ export default function AvatarSelection({ onContinue }: Props) {
                     fill
                     className="object-cover"
                     sizes="70px"
+                    loading="lazy"
+                    quality={60}
                   />
                 </motion.button>
               );
