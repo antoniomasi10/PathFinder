@@ -775,7 +775,17 @@ export default function HomePage() {
   }
 
   function handleSave(opp: Opportunity) {
-    toggleSave(opp.id, { title: opp.title, company: opp.company });
+    toggleSave(opp.id, {
+      title: opp.title,
+      company: opp.company,
+      type: opp.type,
+      description: opp.description,
+      about: opp.about,
+      location: opp.location,
+      isRemote: opp.remote,
+      url: opp.url,
+      deadline: opp.deadline,
+    });
   }
 
   function openFilterSheet() {

@@ -42,6 +42,19 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
+// Get saved opportunities — must be defined before /:id routes
+router.get('/saved', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user!.userId },
+      include: { savedOpportunities: { include: { university: true } } },
+    });
+    res.json(user?.savedOpportunities || []);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Save/unsave opportunity
 router.post('/:id/save', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -65,19 +78,6 @@ router.post('/:id/save', authMiddleware, async (req: Request, res: Response) => 
       trackInteraction(req.user!.userId, 'opportunity', req.params.id, 'save').catch(() => {});
       res.json({ saved: true });
     }
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Get saved opportunities
-router.get('/saved', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user!.userId },
-      include: { savedOpportunities: { include: { university: true } } },
-    });
-    res.json(user?.savedOpportunities || []);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
