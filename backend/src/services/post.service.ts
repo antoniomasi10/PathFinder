@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { sanitizeText } from '../utils/sanitize';
 
 const AUTHOR_SELECT = {
   id: true, name: true, avatar: true, avatarBgColor: true,
@@ -132,13 +133,31 @@ export async function getPersonalizedPosts(
 
 export async function createPost(authorId: string, content: string, images: string[] = []) {
   const post = await prisma.post.create({
-    data: { authorId, content, images },
+    data: { authorId, content: sanitizeText(content), images },
     include: {
       author: { select: AUTHOR_SELECT },
       _count: { select: { likes: true, comments: true } },
     },
   });
   return { ...post, liked: false };
+}
+
+export async function updatePost(postId: string, authorId: string, content: string, images?: string[]) {
+  const post = await prisma.post.findUnique({ where: { id: postId }, select: { authorId: true } });
+  if (!post) throw new Error('Post non trovato');
+  if (post.authorId !== authorId) throw new Error('Non puoi modificare il post di un altro utente');
+
+  const data: any = { content: sanitizeText(content) };
+  if (images !== undefined) data.images = images;
+
+  return prisma.post.update({
+    where: { id: postId },
+    data,
+    include: {
+      author: { select: AUTHOR_SELECT },
+      _count: { select: { likes: true, comments: true } },
+    },
+  });
 }
 
 export async function likePost(postId: string, userId: string) {
@@ -180,7 +199,7 @@ export async function getPostById(postId: string) {
 
 export async function createComment(postId: string, authorId: string, content: string) {
   return prisma.postComment.create({
-    data: { postId, authorId, content },
+    data: { postId, authorId, content: sanitizeText(content) },
     include: {
       author: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
     },

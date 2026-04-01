@@ -10,6 +10,7 @@ const JWT_REFRESH_SECRET: string = process.env.JWT_REFRESH_SECRET;
 export interface JwtPayload {
   userId: string;
   email: string;
+  role: string;
 }
 
 export function generateAccessToken(payload: JwtPayload): string {

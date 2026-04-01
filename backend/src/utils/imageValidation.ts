@@ -5,10 +5,10 @@ export function validateDataUri(dataUri: string): boolean {
   if (typeof dataUri !== 'string') return false;
 
   // Must start with data:image/
-  const match = dataUri.match(/^data:(image\/[a-zA-Z+]+);base64,/);
+  const match = dataUri.match(/^data:(image\/[a-zA-Z]+);base64,/);
   if (!match) return false;
 
-  // Check MIME type
+  // Check MIME type FIRST — block SVG and any other non-allowlisted type
   const mimeType = match[1];
   if (!ALLOWED_MIME_TYPES.includes(mimeType)) return false;
 

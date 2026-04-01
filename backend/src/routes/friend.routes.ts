@@ -60,43 +60,50 @@ router.post('/request', authMiddleware, validate(friendRequestSchema), async (re
       return;
     }
 
-    // Delete old rejected requests so a new one can be sent
-    await prisma.friendRequest.deleteMany({
-      where: {
-        OR: [
-          { fromUserId: req.user!.userId, toUserId },
-          { fromUserId: toUserId, toUserId: req.user!.userId },
-        ],
-        status: 'REJECTED',
-      },
-    });
-
-    const existing = await prisma.friendRequest.findFirst({
-      where: {
-        OR: [
-          { fromUserId: req.user!.userId, toUserId },
-          { fromUserId: toUserId, toUserId: req.user!.userId },
-        ],
-        status: { in: ['PENDING', 'ACCEPTED'] },
-      },
-    });
-
-    if (existing) {
-      res.status(400).json({
-        error: existing.status === 'ACCEPTED'
-          ? 'Siete già connessi'
-          : 'Richiesta già inviata',
+    // Use transaction to prevent race conditions (check-then-create atomicity)
+    const result = await prisma.$transaction(async (tx) => {
+      // Delete old rejected requests so a new one can be sent
+      await tx.friendRequest.deleteMany({
+        where: {
+          OR: [
+            { fromUserId: req.user!.userId, toUserId },
+            { fromUserId: toUserId, toUserId: req.user!.userId },
+          ],
+          status: 'REJECTED',
+        },
       });
+
+      const existing = await tx.friendRequest.findFirst({
+        where: {
+          OR: [
+            { fromUserId: req.user!.userId, toUserId },
+            { fromUserId: toUserId, toUserId: req.user!.userId },
+          ],
+          status: { in: ['PENDING', 'ACCEPTED'] },
+        },
+      });
+
+      if (existing) {
+        return { error: existing.status === 'ACCEPTED' ? 'Siete già connessi' : 'Richiesta già inviata' };
+      }
+
+      const request = await tx.friendRequest.create({
+        data: { fromUserId: req.user!.userId, toUserId, status: 'PENDING' },
+      });
+
+      return { request };
+    });
+
+    if ('error' in result) {
+      res.status(400).json({ error: result.error });
       return;
     }
+
+    const { request } = result;
 
     const fromUser = await prisma.user.findUnique({
       where: { id: req.user!.userId },
       select: { name: true },
-    });
-
-    const request = await prisma.friendRequest.create({
-      data: { fromUserId: req.user!.userId, toUserId, status: 'PENDING' },
     });
 
     trackInteraction(req.user!.userId, 'user', toUserId, 'friend_request').catch(() => {});
@@ -196,7 +203,12 @@ router.get('/status/:userId', authMiddleware, async (req: Request, res: Response
         ],
       },
     });
-    res.json({ status: request?.status || null, requestId: request?.id || null, fromUserId: request?.fromUserId || null });
+    // Only expose direction relative to the current user (not raw fromUserId)
+    let direction: 'sent' | 'received' | null = null;
+    if (request) {
+      direction = request.fromUserId === req.user!.userId ? 'sent' : 'received';
+    }
+    res.json({ status: request?.status || null, requestId: request?.id || null, direction });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -216,10 +228,11 @@ router.post('/status/batch', authMiddleware, validate(batchStatusSchema), async 
       },
     });
 
-    const statusMap: Record<string, { status: string; requestId: string; fromUserId: string }> = {};
+    const statusMap: Record<string, { status: string; requestId: string; direction: 'sent' | 'received' }> = {};
     for (const r of requests) {
       const otherUserId = r.fromUserId === req.user!.userId ? r.toUserId : r.fromUserId;
-      statusMap[otherUserId] = { status: r.status, requestId: r.id, fromUserId: r.fromUserId };
+      const direction = r.fromUserId === req.user!.userId ? 'sent' : 'received';
+      statusMap[otherUserId] = { status: r.status, requestId: r.id, direction };
     }
 
     res.json(statusMap);

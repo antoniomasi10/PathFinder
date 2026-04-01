@@ -79,6 +79,12 @@ enum GroupMemberRole {
   MEMBER
 }
 
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
 model User {
   id                String                 @id @default(uuid())
   email             String                 @unique
@@ -89,6 +95,7 @@ model User {
   phone             String?
   googleId          String?                @unique
   provider          AuthProvider           @default(LOCAL)
+  role              Role                   @default(USER)
   emailVerified     Boolean                @default(false)
   avatar            String?
   avatarBgColor     String?

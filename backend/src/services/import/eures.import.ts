@@ -9,6 +9,7 @@
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { OpportunityType } from '@prisma/client';
+import { validateOpportunity } from './validation';
 
 const EURES_SEARCH = 'https://europa.eu/eures/eures-searchengine/page/jv-search/search';
 
@@ -45,17 +46,22 @@ async function searchJobs(keyword: string, country: string, offset = 0, limit = 
   return { items, total };
 }
 
-async function logImport(fn: () => Promise<number>): Promise<number> {
+async function logImport(fn: () => Promise<{ imported: number; skipped: number }>): Promise<{ imported: number; skipped: number }> {
   const log = await prisma.importLog.create({
     data: { source: 'eures', type: 'opportunities', status: 'running', startedAt: new Date() },
   });
   try {
-    const count = await fn();
+    const result = await fn();
     await prisma.importLog.update({
       where: { id: log.id },
-      data: { status: 'success', count, finishedAt: new Date() },
+      data: {
+        status: 'success',
+        count: result.imported,
+        finishedAt: new Date(),
+        metadata: { skipped: result.skipped },
+      },
     });
-    return count;
+    return result;
   } catch (err: any) {
     await prisma.importLog.update({
       where: { id: log.id },
@@ -69,20 +75,27 @@ export async function importOpportunities(options?: {
   keywords?: string[];
   countries?: string[];
   maxPages?: number;
-}): Promise<{ imported: number; source: string }> {
+}): Promise<{ imported: number; skipped: number; source: string }> {
   logger.info('[EURES] Starting opportunity import...');
   const now = new Date();
 
   const keywords = options?.keywords || [
-    'internship', 'stage', 'tirocinio', 'junior developer',
-    'data analyst junior', 'marketing intern', 'research assistant',
+    // English terms
+    'internship', 'stage', 'research assistant', 'junior developer',
+    'data analyst junior', 'marketing intern', 'graduate programme',
+    // Italian terms
+    'tirocinio', 'tirocinio curriculare', 'neolaureato',
+    'primo impiego', 'apprendistato',
+    // Specific fields popular with Italian students
+    'ingegneria', 'economia', 'design junior', 'comunicazione',
   ];
   const countries = options?.countries || ['IT'];
   const maxPages = options?.maxPages || 3;
 
   try {
-    const count = await logImport(async () => {
+    const result = await logImport(async () => {
       let imported = 0;
+      let skipped = 0;
 
       for (const kw of keywords) {
         for (let page = 0; page < maxPages; page++) {
@@ -92,7 +105,7 @@ export async function importOpportunities(options?: {
 
             for (const job of items) {
               const title = job.general?.title?.trim() || job.title?.trim();
-              if (!title) continue;
+              if (!title) { skipped++; continue; }
 
               const desc = (job.general?.description || job.description || '').slice(0, 5000);
               const company = job.general?.organizationName || job.company || '';
@@ -102,28 +115,41 @@ export async function importOpportunities(options?: {
               const url = job.related?.urls?.[0]?.url || job.url || null;
               const expires = job.expirationDate ? new Date(job.expirationDate) : null;
 
+              // Validate before upsert
+              const validated = validateOpportunity({
+                title, description: desc, company, url,
+                location: [city, countryCode].filter(Boolean).join(', '),
+                isAbroad: countryCode !== 'IT',
+                isRemote: title.toLowerCase().includes('remote'),
+                expiresAt: expires,
+              }, 'eures');
+
+              if (!validated) { skipped++; continue; }
+
               const sid = `eures-${handle}`;
 
               await prisma.opportunity.upsert({
                 where: { id: sid },
                 update: {
-                  title, description: desc, company, url,
-                  location: [city, countryCode].filter(Boolean).join(', '),
-                  isAbroad: countryCode !== 'IT',
-                  isRemote: title.toLowerCase().includes('remote'),
+                  title: validated.title, description: validated.description,
+                  company: validated.company, url: validated.url,
+                  location: validated.location,
+                  isAbroad: validated.isAbroad,
+                  isRemote: validated.isRemote,
                   type: mapType(title, desc),
-                  expiresAt: expires,
+                  expiresAt: validated.expiresAt,
                   tags: [kw],
                   sourceId: sid,
                   lastSyncedAt: now,
                 },
                 create: {
-                  id: sid, title, description: desc, company, url,
-                  location: [city, countryCode].filter(Boolean).join(', '),
-                  isAbroad: countryCode !== 'IT',
-                  isRemote: title.toLowerCase().includes('remote'),
+                  id: sid, title: validated.title, description: validated.description,
+                  company: validated.company, url: validated.url,
+                  location: validated.location,
+                  isAbroad: validated.isAbroad,
+                  isRemote: validated.isRemote,
                   type: mapType(title, desc),
-                  expiresAt: expires,
+                  expiresAt: validated.expiresAt,
                   tags: [kw],
                   sourceId: sid,
                   lastSyncedAt: now,
@@ -140,18 +166,18 @@ export async function importOpportunities(options?: {
           }
         }
       }
-      return imported;
+      return { imported, skipped };
     });
 
-    logger.info(`[EURES] Imported ${count} opportunities`);
-    return { imported: count, source: 'eures-api' };
+    logger.info(`[EURES] Imported ${result.imported}, skipped ${result.skipped}`);
+    return { ...result, source: 'eures-api' };
   } catch (err) {
     const existing = await prisma.opportunity.count({ where: { sourceId: { startsWith: 'eures-' } } });
     if (existing > 0) {
       logger.warn(`[EURES] API failed but DB has ${existing} cached opportunities`);
-      return { imported: 0, source: 'db-cache' };
+      return { imported: 0, skipped: 0, source: 'db-cache' };
     }
     logger.error(`[EURES] Import failed: ${err}`);
-    return { imported: 0, source: 'none' };
+    return { imported: 0, skipped: 0, source: 'none' };
   }
 }

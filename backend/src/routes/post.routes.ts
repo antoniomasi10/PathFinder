@@ -34,6 +34,27 @@ router.post('/', authMiddleware, validate(createPostSchema), async (req: Request
   }
 });
 
+// Edit post (author only)
+router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { content, images } = req.body;
+    if (!content || typeof content !== 'string' || content.length === 0 || content.length > 10000) {
+      res.status(400).json({ error: 'Contenuto non valido' });
+      return;
+    }
+    let imageUrls: string[] | undefined;
+    if (images !== undefined) {
+      const validImages = validateImages(images);
+      imageUrls = await uploadImages(validImages, 'posts');
+    }
+    const post = await postService.updatePost(req.params.id, req.user!.userId, content, imageUrls);
+    res.json(post);
+  } catch (err: any) {
+    const status = err.message.includes('non trovato') ? 404 : err.message.includes('non puoi') ? 403 : 400;
+    res.status(status).json({ error: err.message });
+  }
+});
+
 router.post('/:id/like', authMiddleware, async (req: Request, res: Response) => {
   try {
     await postService.likePost(req.params.id, req.user!.userId);
@@ -117,7 +138,9 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
       return;
     }
 
-    if (post.authorId !== req.user!.userId) {
+    // Allow author, moderators, and admins to delete posts
+    const userRole = req.user!.role;
+    if (post.authorId !== req.user!.userId && !['ADMIN', 'MODERATOR'].includes(userRole)) {
       res.status(403).json({ error: 'Non puoi eliminare il post di un altro utente' });
       return;
     }

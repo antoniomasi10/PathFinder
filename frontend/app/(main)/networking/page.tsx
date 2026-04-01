@@ -111,7 +111,7 @@ export default function NetworkingPage() {
   const postFileInputRef = useRef<HTMLInputElement>(null);
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
   const [connectionStatuses, setConnectionStatuses] = useState<
-    Record<string, { status: string | null; requestId: string | null; fromUserId: string | null }>
+    Record<string, { status: string | null; requestId: string | null; direction: 'sent' | 'received' | null }>
   >({});
   const [chatImages, setChatImages] = useState<string[]>([]);
   const chatFileInputRef = useRef<HTMLInputElement>(null);
@@ -641,7 +641,7 @@ export default function NetworkingPage() {
       await api.post('/friends/request', { toUserId });
       setConnectionStatuses(prev => ({
         ...prev,
-        [toUserId]: { status: 'PENDING', requestId: null, fromUserId: user!.id },
+        [toUserId]: { status: 'PENDING', requestId: null, direction: 'sent' },
       }));
     } catch (err) {
       console.error('Failed to send friend request:', err);

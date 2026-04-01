@@ -33,6 +33,7 @@ function userResponse(user: any) {
     username: user.username,
     phone: user.phone,
     email: user.email,
+    role: user.role,
     profileCompleted: user.profileCompleted,
     emailVerified: user.emailVerified,
     provider: user.provider,
@@ -84,7 +85,7 @@ export async function registerUser(input: RegisterInput) {
     },
   });
 
-  const payload: JwtPayload = { userId: user.id, email: user.email };
+  const payload: JwtPayload = { userId: user.id, email: user.email, role: user.role };
   return {
     user: userResponse(user),
     accessToken: generateAccessToken(payload),
@@ -119,7 +120,7 @@ export async function loginUser(input: LoginInput) {
     throw new Error('Credenziali non valide');
   }
 
-  const payload: JwtPayload = { userId: user.id, email: user.email };
+  const payload: JwtPayload = { userId: user.id, email: user.email, role: user.role };
   return {
     user: userResponse(user),
     accessToken: generateAccessToken(payload),
@@ -320,7 +321,7 @@ export async function googleAuth(idToken: string) {
     logger.info('New user created via Google OAuth', { userId: user.id });
   }
 
-  const payload: JwtPayload = { userId: user.id, email: user.email };
+  const payload: JwtPayload = { userId: user.id, email: user.email, role: user.role };
   return {
     user: userResponse(user),
     accessToken: generateAccessToken(payload),
