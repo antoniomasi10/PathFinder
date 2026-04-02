@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { AVATARS, DEFAULT_AVATAR_ID, getAvatar } from './avatarData';
+import { Star, Check, ArrowRight } from '@/components/icons';
 
 interface Props {
   onContinue: (avatarId: string) => void;
@@ -49,27 +50,14 @@ export default function AvatarSelection({ onContinue }: Props) {
       {/* Header */}
       <div className="mb-8">
         {/* Sparkle icon */}
-        <motion.svg
-          width="28"
-          height="28"
-          viewBox="0 0 24 24"
-          fill="none"
+        <motion.div
           className="mb-4"
           initial={{ rotate: -20, opacity: 0 }}
           animate={{ rotate: 0, opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.4 }}
         >
-          <path
-            d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z"
-            fill="url(#sparkleGrad)"
-          />
-          <defs>
-            <linearGradient id="sparkleGrad" x1="3" y1="2" x2="21" y2="22" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#6366f1" />
-              <stop offset="1" stopColor="#8b5cf6" />
-            </linearGradient>
-          </defs>
-        </motion.svg>
+          <Star size={28} color="#6366f1" filled />
+        </motion.div>
 
         <motion.h1
           className="text-3xl font-bold text-white font-display leading-tight"
@@ -155,9 +143,7 @@ export default function AvatarSelection({ onContinue }: Props) {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring' as const, stiffness: 400, damping: 15, delay: 0.1 }}
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 6L9 17l-5-5" />
-              </svg>
+              <Check size={22} color="white" strokeWidth={3} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -235,9 +221,7 @@ export default function AvatarSelection({ onContinue }: Props) {
         aria-label="Continua alla rivelazione dell'avatar"
       >
         Continua
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M5 12h14M12 5l7 7-7 7" />
-        </svg>
+        <ArrowRight size={18} strokeWidth={2.5} />
       </motion.button>
     </motion.div>
   );

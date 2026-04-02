@@ -115,6 +115,11 @@ export async function getDataFreshnessStats() {
     totalCourses,
     activeCourses,
     lastImports,
+    recentErrors,
+    euresCount,
+    euYouthCount,
+    eurodesCount,
+    murOppCount,
   ] = await Promise.all([
     prisma.opportunity.count(),
     prisma.opportunity.count({ where: { sourceId: { not: null } } }),
@@ -130,7 +135,48 @@ export async function getDataFreshnessStats() {
       take: 10,
       select: { source: true, type: true, count: true, startedAt: true },
     }),
+    prisma.importLog.findMany({
+      where: { status: 'failed' },
+      orderBy: { startedAt: 'desc' },
+      take: 5,
+      select: { source: true, type: true, error: true, startedAt: true },
+    }),
+    prisma.opportunity.count({ where: { sourceId: { startsWith: 'eures-' } } }),
+    prisma.opportunity.count({ where: { sourceId: { startsWith: 'eu-youth-' } } }),
+    prisma.opportunity.count({ where: { sourceId: { startsWith: 'eurodesk-' } } }),
+    prisma.opportunity.count({ where: { sourceId: { startsWith: 'mur-' } } }),
   ]);
+
+  // Per-source health: last successful import per source
+  const sources = ['eures', 'eu-youth', 'eurodesk', 'mur', 'almalaurea'];
+  const sourceHealth: Record<string, { lastSuccess: Date | null; lastError: string | null; recordCount: number }> = {};
+
+  for (const source of sources) {
+    const lastSuccess = await prisma.importLog.findFirst({
+      where: { source, status: 'success' },
+      orderBy: { startedAt: 'desc' },
+      select: { startedAt: true },
+    });
+    const lastFail = await prisma.importLog.findFirst({
+      where: { source, status: 'failed' },
+      orderBy: { startedAt: 'desc' },
+      select: { error: true },
+    });
+
+    const countMap: Record<string, number> = {
+      eures: euresCount,
+      'eu-youth': euYouthCount,
+      eurodesk: eurodesCount,
+      mur: murOppCount,
+      almalaurea: 0, // stats, not records
+    };
+
+    sourceHealth[source] = {
+      lastSuccess: lastSuccess?.startedAt || null,
+      lastError: lastFail?.error || null,
+      recordCount: countMap[source] || 0,
+    };
+  }
 
   return {
     opportunities: {
@@ -138,9 +184,12 @@ export async function getDataFreshnessStats() {
       imported: importedOpportunities,
       fresh: freshOpportunities,
       stale: staleOpportunities,
+      bySource: { eures: euresCount, euYouth: euYouthCount, eurodesk: eurodesCount },
     },
     universities: { total: totalUniversities, active: activeUniversities },
     courses: { total: totalCourses, active: activeCourses },
     lastImports,
+    recentErrors,
+    sourceHealth,
   };
 }

@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/language';
 import { useNotifications } from '@/lib/notificationContext';
+import {
+  UsersGroup, Handshake, Briefcase, Alarm, BookOpen, Star,
+  Trophy, Heart, ChatDots, Reply, Gear, Bell,
+} from '@/components/icons';
 
 interface Notification {
   id: string;
@@ -16,20 +20,20 @@ interface Notification {
   createdAt: string;
 }
 
-const TYPE_ICONS: Record<string, string> = {
-  FRIEND_REQUEST: '\u{1F465}',
-  FRIEND_ACCEPTED: '\u{1F91D}',
-  NEW_OPPORTUNITY: '\u{1F4BC}',
-  OPPORTUNITY_DEADLINE: '\u{23F0}',
-  COURSE_DEADLINE: '\u{1F4DA}',
-  COURSE_RECOMMENDED: '\u{2B50}',
-  BADGE_UNLOCKED: '\u{1F3C6}',
-  POST_LIKE: '\u{2764}\u{FE0F}',
-  POST_COMMENT: '\u{1F4AC}',
-  COMMENT_REPLY: '\u{21A9}\u{FE0F}',
-  GROUP_UPDATE: '\u{1F465}',
-  SYSTEM: '\u{2699}\u{FE0F}',
-  GENERAL: '\u{1F514}',
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  FRIEND_REQUEST: <UsersGroup size={22} color="#4A9EFF" />,
+  FRIEND_ACCEPTED: <Handshake size={22} color="#22C55E" />,
+  NEW_OPPORTUNITY: <Briefcase size={22} color="#F59E0B" />,
+  OPPORTUNITY_DEADLINE: <Alarm size={22} color="#EF4444" />,
+  COURSE_DEADLINE: <BookOpen size={22} color="#EF4444" />,
+  COURSE_RECOMMENDED: <Star size={22} color="#F59E0B" filled />,
+  BADGE_UNLOCKED: <Trophy size={22} color="#FFD700" />,
+  POST_LIKE: <Heart size={22} color="#EF4444" filled />,
+  POST_COMMENT: <ChatDots size={22} color="#4A9EFF" />,
+  COMMENT_REPLY: <Reply size={22} color="#8B8FA8" />,
+  GROUP_UPDATE: <UsersGroup size={22} color="#4A9EFF" />,
+  SYSTEM: <Gear size={22} color="#8B8FA8" />,
+  GENERAL: <Bell size={22} color="#8B8FA8" />,
 };
 
 function formatTimeAgo(dateStr: string): string {
@@ -131,8 +135,8 @@ export default function NotificationsPage() {
               onClick={() => markAsRead(notif)}
               className={`w-full text-left card flex items-start gap-3 transition-opacity active:opacity-75 ${notif.isRead ? 'opacity-60' : ''}`}
             >
-              <span className="text-2xl flex-shrink-0 mt-0.5">
-                {notif.icon || TYPE_ICONS[notif.type] || TYPE_ICONS.GENERAL}
+              <span className="flex-shrink-0 mt-0.5 w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(74,158,255,0.1)' }}>
+                {TYPE_ICONS[notif.type] || TYPE_ICONS.GENERAL}
               </span>
               <div className="flex-1 min-w-0">
                 <p className={`text-sm leading-snug ${notif.isRead ? 'text-text-muted' : 'text-white font-medium'}`}>
@@ -181,7 +185,7 @@ export default function NotificationsPage() {
       {/* Notification list */}
       {notifications.length === 0 ? (
         <div className="text-center py-12 text-text-muted">
-          <p className="text-3xl mb-2">🔔</p>
+          <div className="flex justify-center mb-2"><Bell size={32} color="#8B8FA8" /></div>
           <p>{t.notifications.empty}</p>
         </div>
       ) : (

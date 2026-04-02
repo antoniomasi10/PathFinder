@@ -5,6 +5,7 @@ import api from '@/lib/api';
 import { isValidImageUrl } from '@/lib/urlValidation';
 import ConfirmDialog from './ConfirmDialog';
 import { useLanguage } from '@/lib/language';
+import { CloseLg } from '@/components/icons';
 
 interface Member {
   id: string;
@@ -69,9 +70,7 @@ export default function MemberListModal({
       <div className="flex items-center justify-between px-4 py-4 border-b border-indigo-900/20">
         <h2 className="text-lg font-medium text-white">{t.group.viewMembers} ({members.length})</h2>
         <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <CloseLg size={24} strokeWidth={2} />
         </button>
       </div>
 

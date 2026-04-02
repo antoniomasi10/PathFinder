@@ -9,6 +9,7 @@
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { CourseType } from '@prisma/client';
+import { validateUniversity, validateCourse } from './validation';
 
 const CKAN_BASE = 'https://dati-ustat.mur.gov.it/api/3/action';
 
@@ -112,11 +113,14 @@ export async function importUniversities(): Promise<{ imported: number; source: 
         const code = String(r.COD_ATENEO || r.cod_ateneo || '').padStart(5, '0');
         if (!name || code === '00000') continue;
 
+        const validated = validateUniversity({ name: name.trim(), city: city.trim(), websiteUrl: r.URL_SITO || null });
+        if (!validated) continue;
+
         const sid = `mur-${code}`;
         await prisma.university.upsert({
           where: { id: sid },
-          update: { name: name.trim(), city: city.trim(), websiteUrl: r.URL_SITO || null, isActive: true, sourceId: sid, lastSyncedAt: now },
-          create: { id: sid, name: name.trim(), city: city.trim(), country: 'Italia', websiteUrl: r.URL_SITO || null, sourceId: sid, lastSyncedAt: now },
+          update: { name: validated.name, city: validated.city, websiteUrl: validated.websiteUrl, isActive: true, sourceId: sid, lastSyncedAt: now },
+          create: { id: sid, name: validated.name, city: validated.city, country: 'Italia', websiteUrl: validated.websiteUrl, sourceId: sid, lastSyncedAt: now },
         });
         imported++;
       }
@@ -172,18 +176,25 @@ export async function importCourses(): Promise<{ imported: number; source: strin
           universities.find(u => u.name.toLowerCase().includes(uniName.trim().toLowerCase().slice(0, 20)));
         if (!uni) continue;
 
+        const validated = validateCourse({
+          name: courseName.trim(),
+          field: r.AREA_SCIENTIFICA || null,
+          languageOfInstruction: r.LINGUA || 'Italiano',
+        });
+        if (!validated) continue;
+
         const sid = `mur-c-${r._id || imported}`;
         await prisma.course.upsert({
           where: { id: sid },
           update: {
-            name: courseName.trim(), type: mapCourseType(r.TIPO_CORSO || ''),
-            field: r.AREA_SCIENTIFICA || null, languageOfInstruction: r.LINGUA || 'Italiano',
+            name: validated.name, type: mapCourseType(r.TIPO_CORSO || ''),
+            field: validated.field, languageOfInstruction: validated.languageOfInstruction,
             isActive: true, sourceId: sid, lastSyncedAt: now,
           },
           create: {
-            id: sid, universityId: uni.id, name: courseName.trim(),
-            type: mapCourseType(r.TIPO_CORSO || ''), field: r.AREA_SCIENTIFICA || null,
-            languageOfInstruction: r.LINGUA || 'Italiano', sourceId: sid, lastSyncedAt: now,
+            id: sid, universityId: uni.id, name: validated.name,
+            type: mapCourseType(r.TIPO_CORSO || ''), field: validated.field,
+            languageOfInstruction: validated.languageOfInstruction, sourceId: sid, lastSyncedAt: now,
           },
         });
         imported++;

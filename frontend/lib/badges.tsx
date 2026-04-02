@@ -1,10 +1,17 @@
+import React from 'react';
+import {
+  MapWorld, Globe, Rocket, Star, Briefcase, Target,
+  Dice, Brain, BookOpen, CalendarIcon, Award, Muscle,
+  Heart, Flame, Trophy,
+} from '@/components/icons';
+
 export type BadgeRarity = 'comune' | 'non_comune' | 'rara' | 'epica' | 'leggendaria';
 export type BadgeCategory = 'esplorazione' | 'decisione' | 'preparazione' | 'azione' | 'engagement';
 
 export interface BadgeDefinition {
   id: string;
   name: string;
-  icon: string;
+  icon: React.ReactNode;
   description: string;
   rarity: BadgeRarity;
   category: BadgeCategory;
@@ -37,29 +44,29 @@ export const RARITY_LABELS: Record<BadgeRarity, string> = {
 
 export const BADGES: BadgeDefinition[] = [
   // --- ESPLORAZIONE ---
-  { id: 'esploratore', name: 'Esploratore', icon: '\u{1F5FA}\uFE0F', description: 'Hai visitato 5 corsi universitari', rarity: 'comune', category: 'esplorazione', target: 5, trackingKey: 'courses_viewed' },
-  { id: 'viaggiatore', name: 'Viaggiatore', icon: '\u{1F30D}', description: 'Hai esplorato 20 corsi diversi', rarity: 'rara', category: 'esplorazione', target: 20, trackingKey: 'courses_viewed' },
-  { id: 'scopritore', name: 'Scopritore', icon: '\u{1F680}', description: 'Hai visitato corsi in 5 citta diverse', rarity: 'epica', category: 'esplorazione', target: 5, trackingKey: 'cities_viewed' },
+  { id: 'esploratore', name: 'Esploratore', icon: <MapWorld size={20} color="#4A9EFF" />, description: 'Hai visitato 5 corsi universitari', rarity: 'comune', category: 'esplorazione', target: 5, trackingKey: 'courses_viewed' },
+  { id: 'viaggiatore', name: 'Viaggiatore', icon: <Globe size={20} color="#4A9EFF" />, description: 'Hai esplorato 20 corsi diversi', rarity: 'rara', category: 'esplorazione', target: 20, trackingKey: 'courses_viewed' },
+  { id: 'scopritore', name: 'Scopritore', icon: <Rocket size={20} color="#FFD700" />, description: 'Hai visitato corsi in 5 citta diverse', rarity: 'epica', category: 'esplorazione', target: 5, trackingKey: 'cities_viewed' },
 
   // --- DECISIONE ---
-  { id: 'preferito', name: 'Preferito', icon: '\u2B50', description: 'Hai salvato il tuo primo corso', rarity: 'comune', category: 'decisione', target: 1, trackingKey: 'courses_saved' },
-  { id: 'selettore', name: 'Selettore', icon: '\u{1F4BC}', description: 'Hai salvato 5 corsi nei preferiti', rarity: 'non_comune', category: 'decisione', target: 5, trackingKey: 'courses_saved' },
-  { id: 'decisore', name: 'Decisore', icon: '\u{1F3AF}', description: 'Hai confrontato 3 corsi diversi', rarity: 'rara', category: 'decisione', target: 3, trackingKey: 'courses_compared' },
+  { id: 'preferito', name: 'Preferito', icon: <Star size={20} color="#F59E0B" filled />, description: 'Hai salvato il tuo primo corso', rarity: 'comune', category: 'decisione', target: 1, trackingKey: 'courses_saved' },
+  { id: 'selettore', name: 'Selettore', icon: <Briefcase size={20} color="#9C5AFF" />, description: 'Hai salvato 5 corsi nei preferiti', rarity: 'non_comune', category: 'decisione', target: 5, trackingKey: 'courses_saved' },
+  { id: 'decisore', name: 'Decisore', icon: <Target size={20} color="#FF8C3A" />, description: 'Hai confrontato 3 corsi diversi', rarity: 'rara', category: 'decisione', target: 3, trackingKey: 'courses_compared' },
 
   // --- PREPARAZIONE ---
-  { id: 'simulatore', name: 'Simulatore', icon: '\u{1F3B2}', description: 'Hai completato la prima simulazione', rarity: 'comune', category: 'preparazione', target: 1, trackingKey: 'simulations_done' },
-  { id: 'stratega', name: 'Stratega', icon: '\u{1F9E0}', description: 'Hai completato 5 simulazioni', rarity: 'non_comune', category: 'preparazione', target: 5, trackingKey: 'simulations_done' },
-  { id: 'researcher', name: 'Researcher', icon: '\u{1F4DA}', description: 'Hai consultato i requisiti di 5 corsi', rarity: 'non_comune', category: 'preparazione', target: 5, trackingKey: 'requirements_viewed' },
+  { id: 'simulatore', name: 'Simulatore', icon: <Dice size={20} color="#4A9EFF" />, description: 'Hai completato la prima simulazione', rarity: 'comune', category: 'preparazione', target: 1, trackingKey: 'simulations_done' },
+  { id: 'stratega', name: 'Stratega', icon: <Brain size={20} color="#9C5AFF" />, description: 'Hai completato 5 simulazioni', rarity: 'non_comune', category: 'preparazione', target: 5, trackingKey: 'simulations_done' },
+  { id: 'researcher', name: 'Researcher', icon: <BookOpen size={20} color="#9C5AFF" />, description: 'Hai consultato i requisiti di 5 corsi', rarity: 'non_comune', category: 'preparazione', target: 5, trackingKey: 'requirements_viewed' },
 
   // --- AZIONE ---
-  { id: 'pianificatore', name: 'Pianificatore', icon: '\u{1F4C5}', description: 'Hai aggiunto 3 scadenze al calendario', rarity: 'comune', category: 'azione', target: 3, trackingKey: 'deadlines_added' },
-  { id: 'candidato', name: 'Candidato', icon: '\u{1F680}', description: 'Hai cliccato Candidati ora per la prima volta', rarity: 'rara', category: 'azione', target: 1, trackingKey: 'applications_clicked' },
-  { id: 'ambizioso', name: 'Ambizioso', icon: '\u{1F4AA}', description: 'Hai avviato candidature per 3 corsi diversi', rarity: 'epica', category: 'azione', target: 3, trackingKey: 'applications_clicked' },
+  { id: 'pianificatore', name: 'Pianificatore', icon: <CalendarIcon size={20} color="#4A9EFF" />, description: 'Hai aggiunto 3 scadenze al calendario', rarity: 'comune', category: 'azione', target: 3, trackingKey: 'deadlines_added' },
+  { id: 'candidato', name: 'Candidato', icon: <Rocket size={20} color="#FF8C3A" />, description: 'Hai cliccato Candidati ora per la prima volta', rarity: 'rara', category: 'azione', target: 1, trackingKey: 'applications_clicked' },
+  { id: 'ambizioso', name: 'Ambizioso', icon: <Muscle size={20} color="#FFD700" />, description: 'Hai avviato candidature per 3 corsi diversi', rarity: 'epica', category: 'azione', target: 3, trackingKey: 'applications_clicked' },
 
   // --- ENGAGEMENT ---
-  { id: 'fedele', name: 'Fedele', icon: '\u{1F49A}', description: 'Hai usato PathFinder per 5 giorni consecutivi', rarity: 'non_comune', category: 'engagement', target: 5, trackingKey: 'login_streak' },
-  { id: 'dedicato', name: 'Dedicato', icon: '\u{1F525}', description: 'Hai usato PathFinder per 15 giorni consecutivi', rarity: 'rara', category: 'engagement', target: 15, trackingKey: 'login_streak' },
-  { id: 'completista', name: 'Completista', icon: '\u{1F3C6}', description: 'Hai sbloccato tutti gli altri 14 badge!', rarity: 'leggendaria', category: 'engagement', target: 14, trackingKey: 'total_badges' },
+  { id: 'fedele', name: 'Fedele', icon: <Heart size={20} color="#22C55E" filled />, description: 'Hai usato PathFinder per 5 giorni consecutivi', rarity: 'non_comune', category: 'engagement', target: 5, trackingKey: 'login_streak' },
+  { id: 'dedicato', name: 'Dedicato', icon: <Flame size={20} color="#FF8C3A" />, description: 'Hai usato PathFinder per 15 giorni consecutivi', rarity: 'rara', category: 'engagement', target: 15, trackingKey: 'login_streak' },
+  { id: 'completista', name: 'Completista', icon: <Trophy size={20} color="#FFD700" />, description: 'Hai sbloccato tutti gli altri 14 badge!', rarity: 'leggendaria', category: 'engagement', target: 14, trackingKey: 'total_badges' },
 ];
 
 // --- Progress helpers (localStorage) ---

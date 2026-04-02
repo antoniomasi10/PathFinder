@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { reauthenticateSockets } from './socket';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 if (typeof window !== 'undefined' && !process.env.NEXT_PUBLIC_API_URL && window.location.hostname !== 'localhost') {
@@ -38,6 +39,8 @@ api.interceptors.response.use(
         const { data } = await axios.post(`${API_URL}/api/auth/refresh`, {}, { withCredentials: true });
         localStorage.setItem('accessToken', data.accessToken);
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+        // Re-authenticate active socket connections with new token
+        reauthenticateSockets();
         return api(originalRequest);
       } catch {
         localStorage.removeItem('accessToken');

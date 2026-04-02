@@ -8,6 +8,21 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PUBLIC_API_URL && window.
 let socket: Socket | null = null;
 let notificationSocket: Socket | null = null;
 
+/**
+ * Re-authenticate all active sockets with a fresh token.
+ * Call this after a token refresh (e.g., from the Axios 401 interceptor).
+ */
+export function reauthenticateSockets() {
+  const token = localStorage.getItem('accessToken');
+  if (!token) return;
+  if (socket?.connected) {
+    socket.emit('socket_reauthenticate', { token });
+  }
+  if (notificationSocket?.connected) {
+    notificationSocket.emit('socket_reauthenticate', { token });
+  }
+}
+
 export function getSocket(): Socket {
   if (!socket) {
     const token = localStorage.getItem('accessToken');
