@@ -24,6 +24,7 @@ interface ProfileData {
     englishLevel: string;
     mobility: string;
   };
+  interests?: Array<{ id: string; name: string; selectedAt: string }>;
   avatarId?: string;
   avatarBgColor?: string;
 }
@@ -91,6 +92,28 @@ export async function saveQuestionnaire(userId: string, input: ProfileData) {
       create: { userId, ...profileFields, completedAt: new Date() },
     });
 
+    // Build skills JSON with onboarding interests if provided
+    const skillsUpdate: Record<string, unknown> = {};
+    if (input.interests && input.interests.length > 0) {
+      const existing = await tx.user.findUnique({
+        where: { id: userId },
+        select: { skills: true },
+      });
+      const currentSkills = (existing?.skills as Record<string, unknown>) || {};
+      Object.assign(skillsUpdate, {
+        skills: {
+          ...currentSkills,
+          core: currentSkills.core ?? null,
+          side: currentSkills.side ?? [],
+          promptShownAt: currentSkills.promptShownAt ?? null,
+          promptDismissedAt: currentSkills.promptDismissedAt ?? null,
+          definedAt: currentSkills.definedAt ?? null,
+          lastUpdatedAt: currentSkills.lastUpdatedAt ?? null,
+          interests: input.interests,
+        },
+      });
+    }
+
     await tx.user.update({
       where: { id: userId },
       data: {
@@ -101,6 +124,7 @@ export async function saveQuestionnaire(userId: string, input: ProfileData) {
         profileCompleted: true,
         ...(input.avatarId && { avatar: input.avatarId }),
         ...(input.avatarBgColor && { avatarBgColor: input.avatarBgColor }),
+        ...skillsUpdate,
       },
     });
 
@@ -251,6 +275,7 @@ interface UpdateProfileData {
   avatar?: string;
   courseOfStudy?: string;
   passions?: string[];
+  interests?: Array<{ id: string; name: string; selectedAt: string }>;
   publicProfile?: boolean;
   privacySkills?: string;
   privacyUniversity?: string;
@@ -266,7 +291,7 @@ const ALLOWED_USER_FIELDS = [
 ] as const;
 
 export async function updateProfile(userId: string, data: UpdateProfileData) {
-  const { passions, ...rawFields } = data;
+  const { passions, interests, ...rawFields } = data;
 
   // Whitelist only allowed fields to prevent mass assignment
   const userFields: Record<string, unknown> = {};
@@ -286,6 +311,16 @@ export async function updateProfile(userId: string, data: UpdateProfileData) {
       where: { userId },
       data: { passions },
     });
+  }
+
+  // Store interests in user's skills JSON
+  if (interests !== undefined) {
+    const existing = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { skills: true },
+    });
+    const currentSkills = (existing?.skills as Record<string, unknown>) || {};
+    userFields.skills = { ...currentSkills, interests };
   }
 
   if (Object.keys(userFields).length > 0) {

@@ -100,6 +100,11 @@ export const updateProfileSchema = z.object({
   avatar: z.string().optional(),
   courseOfStudy: z.string().max(200).optional(),
   passions: z.array(z.string().max(50)).max(20).optional(),
+  interests: z.array(z.object({
+    id: z.string().min(1).max(100),
+    name: z.string().min(1).max(100),
+    selectedAt: z.string(),
+  })).max(3).optional(),
   publicProfile: z.boolean().optional(),
   privacySkills: privacyOption.optional(),
   privacyUniversity: privacyOption.optional(),
