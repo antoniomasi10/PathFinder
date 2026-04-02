@@ -107,6 +107,7 @@ model User {
   messagePrivacy      String    @default("Pathmates")
   privacySkills       String    @default("Tutti")
   privacyUniversity   String    @default("Tutti")
+  skills              Json      @default("{\"core\":null,\"side\":[],\"promptShownAt\":null,\"promptDismissedAt\":null,\"definedAt\":null,\"lastUpdatedAt\":null}")
   passwordResetToken  String?
   passwordResetExpiry DateTime?
   createdAt      DateTime  @default(now())
@@ -169,6 +170,8 @@ model Opportunity {
   isAbroad             Boolean         @default(false)
   requiredEnglishLevel EnglishLevel?
   minGpa               GpaRange?
+  requiredSkills       String?
+  recommendedSkills    String?
   tags                 String[]
   deadline             DateTime?
   postedAt             DateTime        @default(now())
