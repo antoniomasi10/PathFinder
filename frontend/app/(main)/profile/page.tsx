@@ -13,6 +13,7 @@ import { usePrivacy } from '@/lib/privacy';
 import ChangePasswordModal from '@/components/ChangePasswordModal';
 import { isValidImageUrl, isValidExternalUrl } from '@/lib/urlValidation';
 import { isPushSupported, subscribeToPush, unsubscribeFromPush, getPushPermissionState } from '@/lib/pushManager';
+import { parseDeadlineDate } from '@/lib/dateUtils';
 
 interface FullProfile {
   id: string;
@@ -60,14 +61,16 @@ const TYPE_ICONS: Record<string, string> = {
 function getDaysLeft(deadline: string): number {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const d = new Date(deadline);
+  const d = parseDeadlineDate(deadline);
+  if (!d) return Infinity;
   d.setHours(0, 0, 0, 0);
   return Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 function DeadlineBadge({ deadline }: { deadline: string }) {
   const daysLeft = getDaysLeft(deadline);
-  const dateStr = new Date(deadline).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+  const parsed = parseDeadlineDate(deadline);
+  const dateStr = parsed ? parsed.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) : deadline;
   const label = daysLeft <= 0 ? 'Scaduta' : daysLeft === 1 ? 'Scade domani' : dateStr;
   const colors =
     daysLeft <= 2
@@ -556,7 +559,7 @@ export default function ProfilePage() {
                     if (!a.deadline && !b.deadline) return 0;
                     if (!a.deadline) return 1;
                     if (!b.deadline) return -1;
-                    return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+                    return (parseDeadlineDate(a.deadline)?.getTime() ?? Infinity) - (parseDeadlineDate(b.deadline)?.getTime() ?? Infinity);
                   }).map((opp) => {
                     const isExpanded = expandedOppId === opp.id;
                     return (
@@ -615,7 +618,7 @@ export default function ProfilePage() {
                                       <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
                                       </svg>
-                                      <span className="text-gray-400 text-[11px]">{new Date(opp.deadline).toLocaleDateString('it-IT')}</span>
+                                      <span className="text-gray-400 text-[11px]">{parseDeadlineDate(opp.deadline)?.toLocaleDateString('it-IT') ?? opp.deadline}</span>
                                     </div>
                                   )}
                                 </div>

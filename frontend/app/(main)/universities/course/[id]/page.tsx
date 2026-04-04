@@ -32,6 +32,7 @@ import CourseComparison from '@/components/CourseComparison';
 import LivingMap from '@/components/LivingMap';
 import { useBadges } from '@/components/BadgeProvider';
 import { isValidExternalUrl } from '@/lib/urlValidation';
+import { toISODeadline } from '@/lib/dateUtils';
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -41,28 +42,6 @@ export default function CourseDetailPage() {
   const { savedIds, toggleSave } = useSavedCourses();
   const { savedIds: savedOppIds, toggleSave: toggleSaveOpp } = useSavedOpportunities();
   const { track } = useBadges();
-
-  function parseItalianDateToISO(dateStr: string): string | undefined {
-    const monthMap: Record<string, string> = {
-      'Gen': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
-      'Mag': '05', 'Giu': '06', 'Lug': '07', 'Ago': '08',
-      'Set': '09', 'Ott': '10', 'Nov': '11', 'Dic': '12',
-    };
-    const fullMatch = dateStr.match(/(\d{1,2})\s+(\w{3})\s+(\d{4})/);
-    if (fullMatch) {
-      return `${fullMatch[3]}-${monthMap[fullMatch[2]] || '01'}-${fullMatch[1].padStart(2, '0')}`;
-    }
-    const monthYearMatch = dateStr.match(/^(\w{3})\s+(\d{4})$/);
-    if (monthYearMatch) {
-      return `${monthYearMatch[2]}-${monthMap[monthYearMatch[1]] || '01'}-01`;
-    }
-    const rangeMatch = dateStr.match(/(\d{1,2})\s+(\w{3})/);
-    const yearMatch = dateStr.match(/(\d{4})/);
-    if (rangeMatch && yearMatch) {
-      return `${yearMatch[1]}-${monthMap[rangeMatch[2]] || '01'}-${rangeMatch[1].padStart(2, '0')}`;
-    }
-    return undefined;
-  }
 
   // Also fetch from backend API for real data sync
   useEffect(() => {
@@ -678,7 +657,7 @@ export default function CourseDetailPage() {
                     onClick={() => toggleSaveOpp(deadlineOppId, {
                       title: `${deadline.label} — ${course!.title}`,
                       type: 'CORSO',
-                      deadline: parseItalianDateToISO(deadline.date),
+                      deadline: toISODeadline(deadline.date),
                       company: course!.university,
                     })}
                     className="transition-colors"

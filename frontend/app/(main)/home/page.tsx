@@ -6,6 +6,7 @@ import { useSavedOpportunities } from '@/lib/savedOpportunities';
 import { useLanguage } from '@/lib/language';
 import { isValidExternalUrl } from '@/lib/urlValidation';
 import api from '@/lib/api';
+import { parseDeadlineDate } from '@/lib/dateUtils';
 
 interface Opportunity {
   id: string;
@@ -266,7 +267,8 @@ function BookmarkIcon({ filled, className }: { filled: boolean; className?: stri
 function getDaysLeft(deadline: string): number {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const d = new Date(deadline);
+  const d = parseDeadlineDate(deadline);
+  if (!d) return Infinity;
   d.setHours(0, 0, 0, 0);
   return Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
@@ -280,7 +282,8 @@ function deadlineUrgency(daysLeft: number): 'green' | 'yellow' | 'red' {
 function DeadlineLabel({ deadline, size = 'sm' }: { deadline: string; size?: 'sm' | 'xs' }) {
   const daysLeft = getDaysLeft(deadline);
   const urgency = deadlineUrgency(daysLeft);
-  const dateStr = new Date(deadline).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+  const parsed = parseDeadlineDate(deadline);
+  const dateStr = parsed ? parsed.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) : deadline;
   const colors = {
     green: 'bg-green-500/20 text-green-400',
     yellow: 'bg-amber-500/20 text-amber-400',

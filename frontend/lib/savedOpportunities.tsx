@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import api from '@/lib/api';
+import { parseDeadlineDate } from '@/lib/dateUtils';
 
 export interface SavedOpportunity {
   id: string;
@@ -26,6 +27,17 @@ interface SavedOpportunitiesContextType {
 
 const STORAGE_KEY = 'pathfinder_saved_opps';
 
+function isExpiredOver1Day(opp: SavedOpportunity): boolean {
+  if (!opp.deadline) return false;
+  const d = parseDeadlineDate(opp.deadline);
+  if (!d) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  // daysLeft < -1 means expired 2+ days ago ("più di 1 giorno fa")
+  return (d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24) < -1;
+}
+
 function loadFromStorage(): SavedOpportunity[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -47,9 +59,11 @@ const SavedOpportunitiesContext = createContext<SavedOpportunitiesContextType>({
 });
 
 export function SavedOpportunitiesProvider({ children }: { children: ReactNode }) {
-  const [savedOpps, setSavedOpps] = useState<SavedOpportunity[]>(loadFromStorage);
+  const [savedOpps, setSavedOpps] = useState<SavedOpportunity[]>(
+    () => loadFromStorage().filter((o) => !isExpiredOver1Day(o))
+  );
   const [savedIds, setSavedIds] = useState<Set<string>>(
-    () => new Set(loadFromStorage().map((o) => o.id))
+    () => new Set(loadFromStorage().filter((o) => !isExpiredOver1Day(o)).map((o) => o.id))
   );
   const savedIdsRef = useRef<Set<string>>(savedIds);
   savedIdsRef.current = savedIds;
@@ -79,9 +93,15 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
         const localOnly = loadFromStorage().filter((o) => !serverIds.has(o.id));
         const merged = [...serverOpps, ...localOnly];
 
-        setSavedOpps(merged);
-        setSavedIds(new Set(merged.map((o) => o.id)));
-        persistToStorage(merged);
+        // Auto-remove opportunities expired more than 1 day ago.
+        const expired = merged.filter(isExpiredOver1Day);
+        const active = merged.filter((o) => !isExpiredOver1Day(o));
+
+        expired.forEach((o) => api.post(`/opportunities/${o.id}/save`).catch(() => {}));
+
+        setSavedOpps(active);
+        setSavedIds(new Set(active.map((o) => o.id)));
+        persistToStorage(active);
       })
       .catch(() => {
         // Server unreachable — localStorage data already loaded above, keep it.

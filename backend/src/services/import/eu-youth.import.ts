@@ -11,6 +11,7 @@
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { OpportunityType } from '@prisma/client';
+import { translateOpportunity } from '../translation.service';
 
 // RSS/Atom feeds from EU portals
 const FEEDS = [
@@ -71,6 +72,30 @@ function mapType(title: string, description: string): OpportunityType {
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
+}
+
+/**
+ * Tries to extract a deadline date from free-form description text.
+ * Looks for patterns like "Deadline: 30 March 2026", "Scadenza: 30/03/2026", etc.
+ * Returns null if nothing recognisable is found.
+ */
+function extractDeadlineFromText(text: string): Date | null {
+  // Label-prefixed patterns: "deadline:", "scadenza:", "closing date:", "apply by:", etc.
+  const labelPattern = /(?:deadline|scadenza|closing\s+date|apply\s+by|application\s+deadline)[:\s]+([^\n<]{5,40})/i;
+  const labelMatch = text.match(labelPattern);
+  if (labelMatch) {
+    const candidate = labelMatch[1].trim();
+    // Try ISO
+    const isoMatch = candidate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) return new Date(+isoMatch[1], +isoMatch[2] - 1, +isoMatch[3]);
+    // Try dd/mm/yyyy or dd.mm.yyyy
+    const euMatch = candidate.match(/^(\d{1,2})[\/\.](\d{1,2})[\/\.](\d{4})/);
+    if (euMatch) return new Date(+euMatch[3], +euMatch[2] - 1, +euMatch[1]);
+    // Try "30 March 2026" — use native Date.parse as a best-effort
+    const d = new Date(candidate);
+    if (!isNaN(d.getTime())) return d;
+  }
+  return null;
 }
 
 async function logImport(source: string, fn: () => Promise<number>): Promise<number> {
@@ -145,34 +170,40 @@ export async function importEUOpportunities(): Promise<{ imported: number; sourc
             : Buffer.from(title).toString('base64url').slice(0, 40);
 
           const sid = `${feed.source}-${handle}`;
+          const exists = await prisma.opportunity.findUnique({ where: { id: sid }, select: { id: true } });
 
-          await prisma.opportunity.upsert({
-            where: { id: sid },
-            update: {
-              title: title.slice(0, 200),
-              description: description.slice(0, 5000) || title,
-              url: link || null,
-              isAbroad: true,
-              type: mapType(title, description),
-              tags: [feed.source, 'eu-programme'],
-              sourceId: sid,
-              lastSyncedAt: now,
-            },
-            create: {
-              id: sid,
-              title: title.slice(0, 200),
-              description: description.slice(0, 5000) || title,
-              url: link || null,
-              location: 'Europa',
-              isAbroad: true,
-              isRemote: false,
-              type: mapType(title, description),
-              tags: [feed.source, 'eu-programme'],
-              postedAt: pubDate ? new Date(pubDate) : now,
-              sourceId: sid,
-              lastSyncedAt: now,
-            },
-          });
+          if (exists) {
+            // Already translated — only refresh sync timestamp
+            await prisma.opportunity.update({
+              where: { id: sid },
+              data: { lastSyncedAt: now },
+            });
+          } else {
+            // New opportunity: translate title + description before saving
+            const rawDesc = description.slice(0, 5000) || title;
+            const translated = await translateOpportunity(title, rawDesc);
+            // EU Youth RSS feeds don't expose a structured deadline field.
+            // Try to extract one from the description text; leave null if not found
+            // (displayed as "Non indicata" in the UI rather than showing a fake date).
+            const expiresAt = extractDeadlineFromText(description) ?? null;
+            await prisma.opportunity.create({
+              data: {
+                id: sid,
+                title: translated.title.slice(0, 200),
+                description: translated.description.slice(0, 5000),
+                url: link || null,
+                location: 'Europa',
+                isAbroad: true,
+                isRemote: false,
+                type: mapType(title, description),
+                tags: [feed.source, 'eu-programme'],
+                postedAt: pubDate ? new Date(pubDate) : now,
+                expiresAt,
+                sourceId: sid,
+                lastSyncedAt: now,
+              },
+            });
+          }
           imported++;
         }
 
