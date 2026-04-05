@@ -4,7 +4,7 @@ import { uploadImage } from '../utils/imageUpload';
 
 /** Select all User scalar fields except `embedding` (Unsupported vector type) and `passwordHash`. */
 const safeUserSelect = {
-  id: true, email: true, name: true, surname: true, username: true, phone: true,
+  id: true, email: true, name: true, surname: true, phone: true,
   googleId: true, provider: true, emailVerified: true, avatar: true, avatarBgColor: true,
   bio: true, universityId: true, courseOfStudy: true, yearOfStudy: true, gpa: true,
   englishLevel: true, willingToRelocate: true, profileCompleted: true, publicProfile: true,
