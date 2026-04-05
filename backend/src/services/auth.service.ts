@@ -12,7 +12,6 @@ const googleClient = process.env.GOOGLE_CLIENT_ID
 interface RegisterInput {
   name: string;
   surname: string;
-  username: string;
   email: string;
   password: string;
   phone?: string;
@@ -30,7 +29,6 @@ function userResponse(user: any) {
     id: user.id,
     name: user.name,
     surname: user.surname,
-    username: user.username,
     phone: user.phone,
     email: user.email,
     role: user.role,
@@ -47,11 +45,6 @@ export async function registerUser(input: RegisterInput) {
     throw new Error('Email già registrata');
   }
 
-  const existingUsername = await prisma.user.findUnique({ where: { username: input.username } });
-  if (existingUsername) {
-    throw new Error('Username già in uso');
-  }
-
   const passwordHash = await hashPassword(input.password);
 
   // Generate OTP before creating user
@@ -64,7 +57,6 @@ export async function registerUser(input: RegisterInput) {
     data: {
       name: input.name,
       surname: input.surname,
-      username: input.username,
       phone: input.phone || null,
       email: input.email,
       passwordHash,

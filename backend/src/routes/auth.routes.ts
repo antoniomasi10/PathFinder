@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import prisma from '../lib/prisma';
 import {
   register,
   login,
@@ -45,17 +44,6 @@ router.post('/resend-otp', authMiddleware, resendOTPHandler);
 // Password reset (public)
 router.post('/forgot-password', validate(forgotPasswordSchema), forgotPasswordHandler);
 router.post('/reset-password', validate(resetPasswordSchema), resetPasswordHandler);
-
-// Username availability check (public)
-router.get('/check-username', async (req: Request, res: Response) => {
-  const username = req.query.username as string;
-  if (!username || username.length < 3) {
-    res.json({ available: false });
-    return;
-  }
-  const existing = await prisma.user.findUnique({ where: { username } });
-  res.json({ available: !existing });
-});
 
 // Google OAuth
 router.post('/google', googleAuthHandler);

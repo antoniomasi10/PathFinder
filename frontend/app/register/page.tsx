@@ -17,7 +17,6 @@ interface University {
 export default function RegisterPage() {
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
-  const [username, setUsername] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,7 +25,6 @@ export default function RegisterPage() {
   const [universities, setUniversities] = useState<University[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
   const router = useRouter();
   const { setUser } = useAuth();
 
@@ -37,24 +35,6 @@ export default function RegisterPage() {
       console.error('Failed to fetch universities:', err);
     });
   }, []);
-
-  // Check username availability with debounce
-  useEffect(() => {
-    if (username.length < 3) {
-      setUsernameStatus('idle');
-      return;
-    }
-    setUsernameStatus('checking');
-    const timeout = setTimeout(async () => {
-      try {
-        const { data } = await api.get(`/auth/check-username?username=${encodeURIComponent(username)}`);
-        setUsernameStatus(data.available ? 'available' : 'taken');
-      } catch {
-        setUsernameStatus('idle');
-      }
-    }, 500);
-    return () => clearTimeout(timeout);
-  }, [username]);
 
   const passwordChecks = {
     length: password.length >= 8,
@@ -90,7 +70,6 @@ export default function RegisterPage() {
       const { data } = await api.post('/auth/register', {
         name,
         surname,
-        username,
         email,
         password,
         phone: phone || undefined,
@@ -159,35 +138,6 @@ export default function RegisterPage() {
                   required
                 />
               </div>
-            </div>
-
-            {/* Username */}
-            <div>
-              <label className="block text-sm text-text-secondary mb-1.5">Username</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ''))}
-                  className="input-field pr-10"
-                  placeholder="mario.rossi"
-                  minLength={3}
-                  maxLength={30}
-                  required
-                />
-                {usernameStatus === 'checking' && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary text-xs">...</span>
-                )}
-                {usernameStatus === 'available' && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 text-sm">&#10003;</span>
-                )}
-                {usernameStatus === 'taken' && (
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-error text-sm">&#10007;</span>
-                )}
-              </div>
-              {usernameStatus === 'taken' && (
-                <p className="text-error text-xs mt-1">Username già in uso</p>
-              )}
             </div>
 
             {/* Email */}
@@ -276,7 +226,7 @@ export default function RegisterPage() {
 
             <button
               type="submit"
-              disabled={loading || !passwordValid || usernameStatus === 'taken'}
+              disabled={loading || !passwordValid}
               className="btn-primary w-full disabled:opacity-50"
             >
               {loading ? 'Registrazione...' : 'Registrati'}

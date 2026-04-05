@@ -21,8 +21,8 @@ router.get('/users', ...adminAuth, async (req: Request, res: Response) => {
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
+        { surname: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
-        { username: { contains: search, mode: 'insensitive' } },
       ];
     }
     if (role && ['USER', 'MODERATOR', 'ADMIN'].includes(role)) {
@@ -37,7 +37,6 @@ router.get('/users', ...adminAuth, async (req: Request, res: Response) => {
           name: true,
           surname: true,
           email: true,
-          username: true,
           role: true,
           emailVerified: true,
           provider: true,
