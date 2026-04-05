@@ -10,6 +10,7 @@ const safeUserSelect = {
   englishLevel: true, willingToRelocate: true, profileCompleted: true, publicProfile: true,
   privacySavedOpps: true, privacyPathmates: true, messagePrivacy: true, privacySkills: true,
   privacyUniversity: true, passwordResetToken: true, passwordResetExpiry: true,
+  skills: true,
   createdAt: true, updatedAt: true,
 } as const;
 

@@ -18,10 +18,13 @@ export interface SavedOpportunity {
   university?: { name: string };
 }
 
+type SaveListener = () => void;
+
 interface SavedOpportunitiesContextType {
   savedIds: Set<string>;
   savedOpps: SavedOpportunity[];
   toggleSave: (oppId: string, data?: Partial<SavedOpportunity>) => void;
+  onSave: (listener: SaveListener) => () => void;
 }
 
 const STORAGE_KEY = 'pathfinder_saved_opps';
@@ -44,6 +47,7 @@ const SavedOpportunitiesContext = createContext<SavedOpportunitiesContextType>({
   savedIds: new Set(),
   savedOpps: [],
   toggleSave: () => {},
+  onSave: () => () => {},
 });
 
 export function SavedOpportunitiesProvider({ children }: { children: ReactNode }) {
@@ -51,6 +55,12 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const savedIdsRef = useRef<Set<string>>(savedIds);
   savedIdsRef.current = savedIds;
+  const saveListeners = useRef<Set<SaveListener>>(new Set());
+
+  function onSave(listener: SaveListener) {
+    saveListeners.current.add(listener);
+    return () => { saveListeners.current.delete(listener); };
+  }
 
   useEffect(() => {
     // Show cached data immediately, then sync from server
@@ -132,6 +142,11 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
       }
     }
 
+    // Notify listeners on save (not unsave)
+    if (!isSaved) {
+      saveListeners.current.forEach((fn) => fn());
+    }
+
     // Persist to server — localStorage is the source of truth, no rollback on failure
     api.post(`/opportunities/${oppId}/save`).catch((err) => {
       console.error('Failed to sync save with server:', err);
@@ -139,7 +154,7 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
   }
 
   return (
-    <SavedOpportunitiesContext.Provider value={{ savedIds, savedOpps, toggleSave }}>
+    <SavedOpportunitiesContext.Provider value={{ savedIds, savedOpps, toggleSave, onSave }}>
       {children}
     </SavedOpportunitiesContext.Provider>
   );
