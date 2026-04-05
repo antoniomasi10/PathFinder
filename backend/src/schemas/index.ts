@@ -72,12 +72,39 @@ export const batchStatusSchema = z.object({
 
 const privacyOption = z.enum(['Tutti', 'Pathmates', 'Nessuno']);
 
+// ─── Skills Schemas ─────────────────────────────────────────────────
+
+const skillIdPattern = /^[a-z][a-z0-9_]*$/;
+
+const skillEntry = z.object({
+  id: z.string().min(1).max(100).regex(skillIdPattern, 'L\'id deve essere in snake_case'),
+  name: z.string().min(1).max(100),
+});
+
+export const coreSkillsSchema = z.object({
+  coreSkills: z.array(skillEntry).length(3, 'Le core skills devono essere esattamente 3'),
+});
+
+export const sideSkillSchema = z.object({
+  skillId: z.string().min(1).max(100).regex(skillIdPattern, 'L\'id deve essere in snake_case'),
+  name: z.string().min(1).max(100),
+});
+
+export const promptActionSchema = z.object({
+  action: z.enum(['shown', 'dismissed']),
+});
+
 export const updateProfileSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   bio: z.string().max(500).optional(),
   avatar: z.string().optional(),
   courseOfStudy: z.string().max(200).optional(),
   passions: z.array(z.string().max(50)).max(20).optional(),
+  interests: z.array(z.object({
+    id: z.string().min(1).max(100),
+    name: z.string().min(1).max(100),
+    selectedAt: z.string(),
+  })).max(3).optional(),
   publicProfile: z.boolean().optional(),
   privacySkills: privacyOption.optional(),
   privacyUniversity: privacyOption.optional(),

@@ -36,6 +36,7 @@ interface PublicProfile {
   publicProfile: boolean;
   privacySavedOpps?: string;
   privacyPathmates?: string;
+  skills?: { interests?: { id: string; name: string; selectedAt: string }[]; [key: string]: unknown } | null;
   profile?: { clusterTag?: string | null; passions: string[] } | null;
   savedOpportunities?: Array<{
     id: string;
@@ -61,15 +62,6 @@ interface PublicProfile {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const CLUSTER_COLORS: Record<string, string> = {
-  Analista: 'bg-[#4F46E5]/20 text-[#4F46E5]',
-  Creativo: 'bg-[#EC4899]/20 text-[#EC4899]',
-  Leader: 'bg-[#F59E0B]/20 text-[#F59E0B]',
-  Imprenditore: 'bg-[#22C55E]/20 text-[#22C55E]',
-  Sociale: 'bg-[#06B6D4]/20 text-[#06B6D4]',
-  Explorer: 'bg-[#EF4444]/20 text-[#EF4444]',
-};
 
 const OPP_TYPE_ICON: Record<string, React.ReactNode> = {
   STAGE: <Briefcase size={16} color="#4A9EFF" />,
@@ -263,19 +255,12 @@ export default function UserProfilePage() {
     profile.messagePrivacy === 'Tutti' ||
     (profile.messagePrivacy === 'Pathmates' && profile.isPathmate);
 
-  const tags: { label: string; color: string }[] = [];
-  if (profile.canSeeSkills) {
-    if (profile.profile?.clusterTag) {
-      tags.push({
-        label: profile.profile.clusterTag,
-        color:
-          CLUSTER_COLORS[profile.profile.clusterTag] || 'bg-[#334155] text-[#94A3B8]',
-      });
-    }
-    profile.profile?.passions?.forEach((p) =>
-      tags.push({ label: getSkillLabel(p, t), color: 'bg-[#334155] text-[#94A3B8]' })
-    );
-  }
+  const skillsData = profile.canSeeSkills ? (profile.skills as any) : undefined;
+  const coreSkills = skillsData?.core as { id: string; name: string }[] | null | undefined;
+  const sideSkills = skillsData?.side as { id: string; name: string }[] | null | undefined;
+  const interests = skillsData?.interests as { id: string; name: string; selectedAt: string }[] | undefined;
+  const profilePills: { id: string; name: string }[] | undefined =
+    coreSkills && coreSkills.length > 0 ? coreSkills : interests;
 
   // ── Main render ──
 
@@ -387,22 +372,34 @@ export default function UserProfilePage() {
         </div>
       )}
 
-      {/* Skills / Tags */}
-      {tags.length > 0 && (
+      {/* Skill / Interest pills */}
+      {(profilePills && profilePills.length > 0) && (
         <div className="bg-[#161B22] border border-[#1E293B] rounded-2xl p-4">
           <h2 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3">
-            Competenze
+            {coreSkills && coreSkills.length > 0 ? 'Competenze' : 'Interessi'}
           </h2>
-          <div className="flex flex-wrap gap-2">
-            {tags.map((tag) => (
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+            {profilePills.map((pill) => (
               <span
-                key={tag.label}
-                className={`px-3 py-1 rounded-full text-xs font-medium ${tag.color}`}
+                key={pill.id}
+                className="px-3 py-1 rounded-full text-xs font-medium bg-[#4F46E5]/20 text-[#4F46E5] whitespace-nowrap flex-shrink-0"
               >
-                {tag.label}
+                {pill.name}
               </span>
             ))}
           </div>
+          {sideSkills && sideSkills.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide mt-2">
+              {sideSkills.map((pill) => (
+                <span
+                  key={pill.id}
+                  className="px-2.5 py-0.5 rounded-full text-[11px] font-normal text-white border border-[#4F46E5]/50 whitespace-nowrap flex-shrink-0"
+                >
+                  {pill.name}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

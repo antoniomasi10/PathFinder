@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 import TopBar from '@/components/TopBar';
 import { SavedOpportunitiesProvider } from '@/lib/savedOpportunities';
@@ -10,6 +11,7 @@ import BadgeProvider from '@/components/BadgeProvider';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { NotificationProvider } from '@/lib/notificationContext';
 import { isPushSupported, subscribeToPush } from '@/lib/pushManager';
+import SkillsPromptProvider from '@/components/SkillsPromptSheet';
 import { Bell } from '@/components/icons';
 
 function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
@@ -86,21 +88,28 @@ function PushPromptModal() {
   );
 }
 
+const FULLSCREEN_ROUTES = ['/profile/skills'];
+
 export default function MainLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isFullscreen = FULLSCREEN_ROUTES.includes(pathname);
+
   return (
     <ToastProvider>
       <NotificationProvider>
       <BadgeProvider>
       <SavedOpportunitiesProvider>
         <SavedCoursesProvider>
+        <SkillsPromptProvider>
         <div className="min-h-screen" style={{ backgroundColor: '#0D1117' }}>
-          <TopBar />
-          <main className="pb-20 max-w-lg mx-auto">
+          {!isFullscreen && <TopBar />}
+          <main className={`${isFullscreen ? '' : 'pb-20'} max-w-lg mx-auto`}>
             <ErrorBoundary FallbackComponent={ErrorFallback}>{children}</ErrorBoundary>
           </main>
-          <BottomNav />
-          <PushPromptModal />
+          {!isFullscreen && <BottomNav />}
+          {!isFullscreen && <PushPromptModal />}
         </div>
+        </SkillsPromptProvider>
         </SavedCoursesProvider>
       </SavedOpportunitiesProvider>
       </BadgeProvider>
