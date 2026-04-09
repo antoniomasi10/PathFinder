@@ -26,13 +26,21 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       return;
     }
 
+    // Use raw query to avoid Prisma failing on the Unsupported vector column
     const [opportunities, total] = await Promise.all([
-      prisma.opportunity.findMany({
-        include: { university: true },
-        orderBy: { postedAt: 'desc' },
-        take: limit,
-        skip,
-      }),
+      prisma.$queryRawUnsafe<any[]>(
+        `SELECT o."id", o."title", o."description", o."about", o."url", o."type",
+                o."universityId", o."company", o."location", o."isRemote", o."isAbroad",
+                o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
+                o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
+                u."name" as "universityName", u."city" as "universityCity",
+                u."id" as "uniId", u."logoUrl" as "universityLogoUrl"
+         FROM "Opportunity" o
+         LEFT JOIN "University" u ON o."universityId" = u."id"
+         ORDER BY o."postedAt" DESC
+         LIMIT $1 OFFSET $2`,
+        limit, skip,
+      ),
       prisma.opportunity.count(),
     ]);
 

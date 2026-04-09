@@ -181,6 +181,7 @@ model Opportunity {
   postedAt             DateTime        @default(now())
   expiresAt            DateTime?
   savedBy              User[]          @relation("SavedOpportunities")
+  source               String?         // e.g. "EURES", "Stage4eu" — CC BY 4.0 attribution
   sourceId             String?         // e.g. "eures-12345" — null = manual/seed
   lastSyncedAt         DateTime?       // last time this record was refreshed by import
   embedding            Unsupported("vector(384)")?

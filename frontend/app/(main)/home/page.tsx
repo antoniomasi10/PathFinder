@@ -27,6 +27,7 @@ interface Opportunity {
   skills: string[];
   matchReason: string;
   deadline: string;
+  source?: string;
 }
 
 function getScoreColor(score: number): string {
@@ -311,7 +312,7 @@ function FullWidthCard({
         <div className="px-5 pb-5 space-y-4">
           <div className="h-px bg-[#1E293B]" />
 
-          {/* Location + date chips */}
+          {/* Location + date + source chips */}
           <div className="flex flex-wrap gap-2">
             <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-3 py-2">
               <MapPin size={14} strokeWidth={1.8} className="text-gray-400 flex-shrink-0" />
@@ -321,6 +322,11 @@ function FullWidthCard({
               <CalendarIcon size={14} strokeWidth={1.8} className="text-gray-400 flex-shrink-0" />
               <span className="text-gray-300 text-xs">{t.home.publishedDaysAgo}</span>
             </div>
+            {opp.source && (
+              <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-3 py-2">
+                <span className="text-primary text-xs font-medium">{opp.source}</span>
+              </div>
+            )}
           </div>
 
           <div className="h-px bg-[#1E293B]" />
@@ -330,6 +336,13 @@ function FullWidthCard({
             <p className="text-white font-semibold text-sm mb-2">{opp.company}</p>
             <p className="text-gray-400 text-sm leading-relaxed">{opp.about}</p>
           </div>
+
+          {/* CC BY 4.0 attribution */}
+          {opp.source && (
+            <p className="text-gray-500 text-[10px]">
+              Dati forniti da {opp.source} — licenza CC BY 4.0
+            </p>
+          )}
 
           {/* CTA */}
           <div className="flex gap-3">
@@ -418,10 +431,17 @@ function HalfWidthCard({
           {/* Full description */}
           <p className="text-gray-400 text-[12px] leading-relaxed">{opp.description}</p>
 
-          {/* Location chip */}
-          <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-2.5 py-1.5 self-start w-fit">
-            <MapPin size={12} strokeWidth={1.8} className="text-gray-400 flex-shrink-0" />
-            <span className="text-gray-300 text-[11px]">{opp.location}</span>
+          {/* Location + source chips */}
+          <div className="flex flex-wrap gap-1.5">
+            <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-2.5 py-1.5">
+              <MapPin size={12} strokeWidth={1.8} className="text-gray-400 flex-shrink-0" />
+              <span className="text-gray-300 text-[11px]">{opp.location}</span>
+            </div>
+            {opp.source && (
+              <div className="flex items-center bg-[#0D1117] rounded-xl px-2.5 py-1.5">
+                <span className="text-primary text-[11px] font-medium">{opp.source}</span>
+              </div>
+            )}
           </div>
 
           <div className="h-px bg-[#1E293B]" />
@@ -431,6 +451,13 @@ function HalfWidthCard({
             <p className="text-white font-semibold text-[12px] mb-1.5">{opp.company}</p>
             <p className="text-gray-400 text-[11px] leading-relaxed">{opp.about}</p>
           </div>
+
+          {/* CC BY 4.0 attribution */}
+          {opp.source && (
+            <p className="text-gray-500 text-[9px]">
+              Dati forniti da {opp.source} — licenza CC BY 4.0
+            </p>
+          )}
 
           {/* CTA — scaled down to fit the narrow column */}
           <div className="flex gap-2 pt-1">
@@ -724,29 +751,39 @@ export default function HomePage() {
   const allOpportunities = getOpportunities(t);
   const filterCategories = getFilterCategories(t);
 
+  // "Per te" — matched opportunities
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loadingOpps, setLoadingOpps] = useState(true);
+
+  // "Esplora" — all opportunities by date, with pagination
+  const [exploreOpps, setExploreOpps] = useState<Opportunity[]>([]);
+  const [explorePage, setExplorePage] = useState(1);
+  const [exploreHasMore, setExploreHasMore] = useState(true);
+  const [loadingExplore, setLoadingExplore] = useState(false);
+
+  const mapOpp = (opp: any): Opportunity => ({
+    id: opp.id,
+    title: opp.title,
+    company: opp.company || opp.universityName || opp.university?.name || '',
+    badge: `${opp.type}${opp.isRemote ? ' \u2022 REMOTE' : ''}`,
+    description: opp.description || '',
+    matchScore: opp.matchScore || 0,
+    location: opp.location || opp.universityCity || opp.university?.city || '',
+    about: opp.about || '',
+    url: opp.url || '',
+    type: opp.type || '',
+    remote: opp.isRemote || false,
+    skills: opp.tags || [],
+    matchReason: opp.matchReason || '',
+    deadline: opp.deadline || '',
+    source: opp.source || '',
+  });
 
   useEffect(() => {
     api.get('/opportunities?matched=true&limit=20')
       .then(({ data }) => {
         const items = data.data || data;
-        const mapped = (Array.isArray(items) ? items : []).map((opp: any) => ({
-          id: opp.id,
-          title: opp.title,
-          company: opp.company || opp.university?.name || '',
-          badge: `${opp.type}${opp.isRemote ? ' \u2022 REMOTE' : ''}`,
-          description: opp.description || '',
-          matchScore: opp.matchScore || 0,
-          location: opp.location || opp.university?.city || '',
-          about: opp.about || '',
-          url: opp.url || '',
-          type: opp.type || '',
-          remote: opp.isRemote || false,
-          skills: opp.tags || [],
-          matchReason: opp.matchReason || '',
-          deadline: opp.deadline || '',
-        }));
+        const mapped = (Array.isArray(items) ? items : []).map(mapOpp);
         setOpportunities(mapped.length > 0 ? mapped : [...allOpportunities].sort((a, b) => b.matchScore - a.matchScore));
       })
       .catch(() => {
@@ -755,6 +792,24 @@ export default function HomePage() {
       .finally(() => setLoadingOpps(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Load explore page
+  const loadExplorePage = (page: number) => {
+    setLoadingExplore(true);
+    api.get(`/opportunities?page=${page}&limit=20`)
+      .then(({ data }) => {
+        const items = (data.data || data) as any[];
+        const mapped = (Array.isArray(items) ? items : []).map(mapOpp);
+        setExploreOpps(prev => page === 1 ? mapped : [...prev, ...mapped]);
+        setExploreHasMore(page < (data.totalPages || 1));
+        setExplorePage(page);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingExplore(false));
+  };
+
+  // Load first explore page on mount
+  useEffect(() => { loadExplorePage(1); }, []);
 
   // Filter sheet state
   const [filterOpen, setFilterOpen] = useState(false);
@@ -818,12 +873,12 @@ export default function HomePage() {
   const q = searchQuery.trim().toLowerCase();
 
   // Filtered list for the Esplora tab (search + active filters combined)
-  const esploraFiltered = opportunities.filter(
+  const esploraFiltered = exploreOpps.filter(
     (opp) => matchesSearch(opp, q) && matchesBadgeFilters(opp, appliedFilters)
   );
 
   // Count shown live in the filter sheet button (draft filters + current search)
-  const draftMatchCount = opportunities.filter(
+  const draftMatchCount = exploreOpps.filter(
     (opp) => matchesSearch(opp, q) && matchesBadgeFilters(opp, draftFilters)
   ).length;
 
@@ -926,16 +981,27 @@ export default function HomePage() {
             <p className="text-sm font-medium">{t.home.noOpportunities}</p>
           </div>
         ) : (
-          <EsploraGrid
-            items={esploraFiltered}
-            expandedId={expandedId}
-            onToggle={handleToggle}
-            savedIds={savedIds}
-            onSave={(id) => {
-              const opp = opportunities.find((o) => o.id === id);
-              if (opp) handleSave(opp);
-            }}
-          />
+          <>
+            <EsploraGrid
+              items={esploraFiltered}
+              expandedId={expandedId}
+              onToggle={handleToggle}
+              savedIds={savedIds}
+              onSave={(id) => {
+                const opp = exploreOpps.find((o) => o.id === id);
+                if (opp) handleSave(opp);
+              }}
+            />
+            {exploreHasMore && !q && !hasActiveFilters && (
+              <button
+                onClick={() => loadExplorePage(explorePage + 1)}
+                disabled={loadingExplore}
+                className="w-full mt-4 py-3 rounded-2xl bg-[#161B22] text-gray-400 text-sm font-medium active:opacity-75 transition-opacity disabled:opacity-50"
+              >
+                {loadingExplore ? 'Caricamento...' : 'Carica altre opportunità'}
+              </button>
+            )}
+          </>
         )}
       </div>
 

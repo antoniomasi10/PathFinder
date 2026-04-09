@@ -207,13 +207,21 @@ export async function getHybridMatchedOpportunities(
 
   if (!user?.profile) {
     // Fallback: return opportunities by date if no profile
+    // Use raw query to avoid Prisma failing on the Unsupported vector column
     const [opps, total] = await Promise.all([
-      prisma.opportunity.findMany({
-        include: { university: true },
-        orderBy: { postedAt: 'desc' },
-        take: limit,
-        skip: offset,
-      }),
+      prisma.$queryRawUnsafe<any[]>(
+        `SELECT o."id", o."title", o."description", o."about", o."url", o."type",
+                o."universityId", o."company", o."location", o."isRemote", o."isAbroad",
+                o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
+                o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
+                u."name" as "universityName", u."city" as "universityCity",
+                u."id" as "uniId", u."logoUrl" as "universityLogoUrl"
+         FROM "Opportunity" o
+         LEFT JOIN "University" u ON o."universityId" = u."id"
+         ORDER BY o."postedAt" DESC
+         LIMIT $1 OFFSET $2`,
+        limit, offset,
+      ),
       prisma.opportunity.count(),
     ]);
     return { data: opps, total };
@@ -230,8 +238,13 @@ export async function getHybridMatchedOpportunities(
 
   if (userHasEmbedding) {
     // Stage 1: Candidate retrieval via pgvector (top 50)
+    // Explicitly list columns to avoid selecting the Unsupported vector column
     candidates = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT o.*, u."name" as "universityName", u."city" as "universityCity",
+      `SELECT o."id", o."title", o."description", o."about", o."url", o."type",
+              o."universityId", o."company", o."location", o."isRemote", o."isAbroad",
+              o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
+              o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
+              u."name" as "universityName", u."city" as "universityCity",
               u."id" as "uniId", u."logoUrl" as "universityLogoUrl",
               1 - (o.embedding <=> usr.embedding) AS "vectorSimilarity"
        FROM "Opportunity" o
@@ -244,10 +257,18 @@ export async function getHybridMatchedOpportunities(
     );
   } else {
     // Fallback: get all opportunities (Phase 1 behavior)
-    candidates = await prisma.opportunity.findMany({
-      include: { university: true },
-      orderBy: { postedAt: 'desc' },
-    });
+    // Use raw query to avoid Prisma failing on the Unsupported vector column
+    candidates = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT o."id", o."title", o."description", o."about", o."url", o."type",
+              o."universityId", o."company", o."location", o."isRemote", o."isAbroad",
+              o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
+              o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
+              u."name" as "universityName", u."city" as "universityCity",
+              u."id" as "uniId", u."logoUrl" as "universityLogoUrl"
+       FROM "Opportunity" o
+       LEFT JOIN "University" u ON o."universityId" = u."id"
+       ORDER BY o."postedAt" DESC`,
+    );
   }
 
   // Get user interactions for feedback scoring (last 90 days)
@@ -302,6 +323,7 @@ export async function getHybridMatchedOpportunities(
       deadline: opp.deadline,
       postedAt: opp.postedAt,
       expiresAt: opp.expiresAt,
+      source: opp.source,
       sourceId: opp.sourceId,
       matchScore: Math.max(0, Math.min(100, Math.round(hybridScore))),
       matchReason: getMatchReason(user.profile!, user, opp),

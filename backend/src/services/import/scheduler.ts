@@ -13,6 +13,7 @@ import cron from 'node-cron';
 import { importUniversities, importCourses } from './mur.import';
 import { importOpportunities } from './eures.import';
 import { importEUOpportunities } from './eu-youth.import';
+import { importStage4euOpportunities } from './stage4eu.import';
 import { importAlmaLaureaStats } from './almalaurea.import';
 import { runCleanup } from './cleanup.service';
 import { alertImportFailure } from './alerting';
@@ -39,6 +40,11 @@ export function startImportScheduler() {
     runWithAlert('EU Youth', 'eu-youth', 'opportunities', importEUOpportunities);
   });
 
+  // Weekly Wednesday: Stage4eu (03:30)
+  cron.schedule('30 3 * * 3', () => {
+    runWithAlert('Stage4eu', 'stage4eu', 'opportunities', importStage4euOpportunities);
+  });
+
   // Monthly 1st: MUR universities (02:00) + courses (02:30)
   cron.schedule('0 2 1 * *', () => {
     runWithAlert('MUR Universities', 'mur', 'universities', importUniversities);
@@ -63,7 +69,7 @@ export function startImportScheduler() {
   });
 
   logger.info('[Scheduler] Import scheduler started:');
-  logger.info('  EURES: daily 03:00 | EU Youth: weekly Mon 03:30');
+  logger.info('  EURES: daily 03:00 | EU Youth: weekly Mon 03:30 | Stage4eu: weekly Wed 03:30');
   logger.info('  MUR: monthly 1st 02:00/02:30 | AlmaLaurea: quarterly');
   logger.info('  Cleanup: weekly Sun 05:00');
 }

@@ -10,7 +10,10 @@
     "seed": "npx prisma db seed",
     "test": "vitest run",
     "test:watch": "vitest",
-    "admin:create": "ts-node scripts/admin-create.ts"
+    "admin:create": "ts-node scripts/admin-create.ts",
+    "scrape:eures": "ts-node scripts/scrape-eures.ts",
+    "scrape:stage4eu": "ts-node scripts/scrape-stage4eu.ts",
+    "scrape:eu-youth": "ts-node scripts/scrape-eu-youth.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -33,6 +36,7 @@
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.3",
+    "playwright": "^1.59.1",
     "sanitize-html": "^2.17.2",
     "socket.io": "^4.7.5",
     "web-push": "^3.6.7",

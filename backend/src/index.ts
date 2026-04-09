@@ -89,9 +89,9 @@ app.use(correlationIdMiddleware);
 // Auth rate limiter: applies to login, register, refresh, resend-otp
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 15,
+  max: 50,
   message: { error: 'Troppi tentativi, riprova più tardi' },
-  skip: (req) => ['/logout', '/verify-email'].includes(req.path),
+  skip: (req) => ['/logout', '/verify-email', '/refresh'].includes(req.path),
 });
 app.use('/api/auth', authLimiter);
 
