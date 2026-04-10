@@ -24,6 +24,7 @@ import userRoutes from './routes/user.routes';
 import courseRoutes from './routes/course.routes';
 import badgeRoutes from './routes/badge.routes';
 import importRoutes from './routes/import.routes';
+import skillRoutes from './routes/skills.routes';
 import adminRoutes from './routes/admin.routes';
 import { setupChatSocket } from './socket/chatHandler';
 import { logger } from './utils/logger';
@@ -117,6 +118,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/badges', badgeRoutes);
 app.use('/api/import', importRoutes);
+app.use('/api/v1/users', skillRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health check

@@ -30,6 +30,10 @@ interface FullProfile {
   courseOfStudy?: string;
   yearOfStudy?: number;
   university?: { name: string };
+  skills?: {
+    interests?: { id: string; name: string; selectedAt: string }[];
+    [key: string]: unknown;
+  };
   profile?: {
     clusterTag?: string;
     passions: string[];
@@ -45,15 +49,6 @@ interface Friend {
   university?: { name: string };
   requestSent?: boolean;
 }
-
-const CLUSTER_COLORS: Record<string, string> = {
-  Analista: 'bg-[#4F46E5]/20 text-[#4F46E5]',
-  Creativo: 'bg-[#EC4899]/20 text-[#EC4899]',
-  Leader: 'bg-[#F59E0B]/20 text-[#F59E0B]',
-  Imprenditore: 'bg-[#22C55E]/20 text-[#22C55E]',
-  Sociale: 'bg-[#06B6D4]/20 text-[#06B6D4]',
-  Explorer: 'bg-[#EF4444]/20 text-[#EF4444]',
-};
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
   INTERNSHIP: <Briefcase size={16} color="#4A9EFF" />,
@@ -344,13 +339,15 @@ export default function ProfilePage() {
     .toUpperCase()
     .slice(0, 2);
 
+  const skillsData = profile.skills as any;
+  const coreSkills = skillsData?.core as { id: string; name: string }[] | null | undefined;
+  const sideSkills = skillsData?.side as { id: string; name: string }[] | null | undefined;
+  const interests = skillsData?.interests as { id: string; name: string; selectedAt: string }[] | undefined;
+  // Show core skills if defined, otherwise fall back to interests
+  const profilePills: { id: string; name: string }[] | undefined =
+    coreSkills && coreSkills.length > 0 ? coreSkills : interests;
+
   const tags: { label: string; color: string }[] = [];
-  if (profile.profile?.clusterTag) {
-    tags.push({
-      label: profile.profile.clusterTag,
-      color: CLUSTER_COLORS[profile.profile.clusterTag] || 'bg-[#334155] text-[#94A3B8]',
-    });
-  }
   if (profile.profile?.passions) {
     profile.profile.passions.forEach((p) => {
       tags.push({ label: getSkillLabel(p, t), color: 'bg-[#334155] text-[#94A3B8]' });
@@ -426,24 +423,58 @@ export default function ProfilePage() {
             <p className="text-sm text-[#94A3B8] max-w-xs leading-relaxed">{profile.bio}</p>
           )}
 
-          {/* Tags with + button */}
+          {/* Skill / Interest pills */}
           {privacySkills !== 'Nessuno' ? (
-            <div className="flex flex-wrap justify-center gap-2 pt-1">
-              {tags.map((tag) => (
-                <span
-                  key={tag.label}
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${tag.color}`}
+            <>
+              {profilePills && profilePills.length > 0 && (
+                <div className="flex justify-center gap-2 pt-1 overflow-x-auto max-w-full scrollbar-hide">
+                  {profilePills.map((pill) => (
+                    <span
+                      key={pill.id}
+                      className="px-3 py-1 rounded-full text-xs font-medium bg-[#4F46E5]/20 text-[#4F46E5] whitespace-nowrap flex-shrink-0"
+                    >
+                      {pill.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {/* Side skills rows */}
+              {sideSkills && sideSkills.length > 0 ? (
+                <div className="flex flex-col items-center gap-1.5">
+                  {/* Row 1: up to 3 pills */}
+                  <div className="flex justify-center gap-2">
+                    {sideSkills.slice(0, 3).map((pill) => (
+                      <span
+                        key={pill.id}
+                        className="px-2.5 py-0.5 rounded-full text-[11px] font-normal text-white border border-[#4F46E5]/50 whitespace-nowrap"
+                      >
+                        {pill.name}
+                      </span>
+                    ))}
+                  </div>
+                  {/* Row 2: remaining pills (up to 2), only if > 3 */}
+                  {sideSkills.length > 3 && (
+                    <div className="flex justify-center gap-2">
+                      {sideSkills.slice(3, 5).map((pill) => (
+                        <span
+                          key={pill.id}
+                          className="px-2.5 py-0.5 rounded-full text-[11px] font-normal text-white border border-[#4F46E5]/50 whitespace-nowrap"
+                        >
+                          {pill.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : coreSkills && coreSkills.length > 0 ? (
+                <button
+                  onClick={() => router.push('/profile/skills')}
+                  className="text-[11px] text-[#4F46E5]/70 hover:text-[#4F46E5] transition-colors"
                 >
-                  {tag.label}
-                </span>
-              ))}
-              <button
-                onClick={() => setShowSkillsModal(true)}
-                className="w-7 h-7 rounded-full bg-[#334155] flex items-center justify-center hover:bg-[#475569] transition-colors"
-              >
-                <Plus size={14} color="#94A3B8" strokeWidth={2.5} />
-              </button>
-            </div>
+                  + Aggiungi competenze secondarie
+                </button>
+              ) : null}
+            </>
           ) : (
             <p className="text-xs text-[#475569] italic pt-1">Competenze nascoste</p>
           )}
@@ -934,7 +965,7 @@ export default function ProfilePage() {
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setShowEditDialog(false)}
           />
-          <div className="relative w-full max-w-lg bg-[#1E293B] rounded-t-3xl sm:rounded-3xl p-6 space-y-5 animate-slide-up max-h-[90vh] overflow-y-auto no-scrollbar">
+          <div className="relative w-full max-w-lg bg-[#1E293B] rounded-t-3xl sm:rounded-3xl p-6 pb-[calc(1.5rem+5rem)] sm:pb-6 space-y-5 animate-slide-up max-h-[100vh] sm:max-h-[90vh] overflow-y-auto no-scrollbar">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-white">{t.profile.editProfile}</h3>
               <button
@@ -1024,35 +1055,19 @@ export default function ProfilePage() {
                 />
               </div>
 
-              {/* Skills in Edit */}
+              {/* Core Skills link */}
               <div>
                 <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.profile.skills}</label>
-                <div className="flex flex-wrap gap-2">
-                  {editSkills.map((skill) => (
-                    <span
-                      key={skill}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#334155] text-[#94A3B8]"
-                    >
-                      {getSkillLabel(skill, t)}
-                      <button
-                        onClick={() => toggleEditSkill(skill)}
-                        className="hover:text-white transition-colors"
-                      >
-                        <CloseSm size={12} strokeWidth={2.5} />
-                      </button>
-                    </span>
-                  ))}
-                  <button
-                    onClick={() => {
-                      setShowEditDialog(false);
-                      setShowSkillsModal(true);
-                    }}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-[#4F46E5]/20 text-[#4F46E5] hover:bg-[#4F46E5]/30 transition-colors"
-                  >
-                    <Plus size={12} strokeWidth={2.5} />
-                    {t.profile.add}
-                  </button>
-                </div>
+                <button
+                  onClick={() => {
+                    setShowEditDialog(false);
+                    router.push('/profile/skills');
+                  }}
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-[#4F46E5]/20 text-[#4F46E5] hover:bg-[#4F46E5]/30 transition-colors"
+                >
+                  <Plus size={12} strokeWidth={2.5} />
+                  {t.profile.add}
+                </button>
               </div>
             </div>
 

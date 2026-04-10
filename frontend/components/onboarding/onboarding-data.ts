@@ -14,6 +14,12 @@ export interface LanguageEntry {
   valoreLibero?: string;
 }
 
+export interface InterestEntry {
+  id: string;
+  name: string;
+  selectedAt: string;
+}
+
 export interface ProfileData {
   answers: {
     yearOfStudy: string;
@@ -28,6 +34,7 @@ export interface ProfileData {
     careerPreference: string;
     professionalIdentity: string;
   };
+  interests: InterestEntry[];
   cluster: 'INNOVATOR' | 'ANALYST' | 'LEADER' | 'HELPER';
   languages: LanguageEntry[];
   filters: {
@@ -288,6 +295,7 @@ export function buildProfileData(
   answers: Record<number, string>,
   multiAnswers: Record<number, string[]>,
   otherTexts: Record<number, string>,
+  interests: InterestEntry[] = [],
 ): ProfileData {
   const cluster = computeCluster(answers, multiAnswers, otherTexts);
   const rawLanguages = multiAnswers[4] || [];
@@ -307,6 +315,7 @@ export function buildProfileData(
       careerPreference: answers[10] ?? '',
       professionalIdentity: answers[11] ?? '',
     },
+    interests,
     cluster,
     languages: languageEntries,
     filters: {

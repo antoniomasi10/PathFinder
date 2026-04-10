@@ -1,5 +1,19 @@
 import { UserProfile, User, Opportunity, GpaRange, EnglishLevel, UserInteraction } from '@prisma/client';
 import prisma from '../lib/prisma';
+import type { UserSkills, SkillEntry } from './skills.service';
+
+function parseUserSkills(raw: unknown): UserSkills | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const obj = raw as Record<string, unknown>;
+  return {
+    core: Array.isArray(obj.core) ? obj.core : null,
+    side: Array.isArray(obj.side) ? obj.side : [],
+    promptShownAt: (obj.promptShownAt as string) || null,
+    promptDismissedAt: (obj.promptDismissedAt as string) || null,
+    definedAt: (obj.definedAt as string) || null,
+    lastUpdatedAt: (obj.lastUpdatedAt as string) || null,
+  };
+}
 
 const GPA_ORDER: Record<GpaRange, number> = {
   GPA_18_20: 1,
@@ -35,35 +49,77 @@ const CLUSTER_TYPE_MAP: Record<string, string[]> = {
 };
 
 /**
+ * Compute skill match score (max 20 pts).
+ * Core skill in requiredSkills → +6, in recommendedSkills → +3.
+ * Side skill in requiredSkills → +2, in recommendedSkills → +1.
+ */
+function computeSkillMatchScore(
+  skills: UserSkills | null,
+  opportunity: { requiredSkills?: string | null; recommendedSkills?: string | null },
+): number {
+  if (!skills?.core) return 0;
+
+  const normalize = (str: string) => str.toLowerCase().trim();
+
+  const reqSkills = (opportunity.requiredSkills || '')
+    .split(',')
+    .map(normalize)
+    .filter(Boolean);
+
+  const recSkills = (opportunity.recommendedSkills || '')
+    .split(',')
+    .map(normalize)
+    .filter(Boolean);
+
+  let score = 0;
+
+  for (const skill of skills.core) {
+    const s = normalize(skill.name);
+    if (reqSkills.includes(s)) score += 6;
+    else if (recSkills.includes(s)) score += 3;
+  }
+
+  for (const skill of skills.side) {
+    const s = normalize(skill.name);
+    if (reqSkills.includes(s)) score += 2;
+    else if (recSkills.includes(s)) score += 1;
+  }
+
+  return Math.min(score, 20);
+}
+
+/**
  * Original static scoring function (preserved for backward compatibility).
+ * Total max is 110 when skills are present, 90 when not.
  */
 export function scoreOpportunity(
   profile: UserProfile,
   user: Pick<User, 'gpa' | 'englishLevel' | 'willingToRelocate' | 'yearOfStudy'>,
-  opportunity: Opportunity
+  opportunity: Opportunity,
+  skills?: UserSkills | null,
 ): number {
   let score = 0;
 
-  // 1. Primary interest → opportunity type (30 pts)
+  // 1. Primary interest → opportunity type (25 pts)
   const interest = profile.primaryInterest || 'general';
   const preferredTypes = INTEREST_TYPE_MAP[interest] || INTEREST_TYPE_MAP.general;
   if (preferredTypes[0] === opportunity.type) {
-    score += 30;
+    score += 25;
   } else if (preferredTypes.includes(opportunity.type)) {
-    score += 20;
+    score += 17;
   } else {
-    score += 5;
+    score += 4;
   }
 
-  // 2. Cluster tag → opportunity type (25 pts)
+  // 2. Cluster tag → opportunity type (20 pts)
   const cluster = profile.clusterTag || 'Explorer';
   const clusterTypes = CLUSTER_TYPE_MAP[cluster] || CLUSTER_TYPE_MAP.Explorer;
   if (clusterTypes[0] === opportunity.type) {
-    score += 25;
+    score += 20;
   } else if (clusterTypes.includes(opportunity.type)) {
-    score += 15;
+    score += 12;
   } else {
-    score += 5;
+    score += 4;
   }
 
   // 3. GPA sufficient (15 pts)
@@ -102,7 +158,10 @@ export function scoreOpportunity(
     score += 2;
   }
 
-  return Math.min(score, 100);
+  // 7. Skill match (20 pts)
+  score += computeSkillMatchScore(skills || null, opportunity);
+
+  return Math.min(score, 110);
 }
 
 // ─── Feedback-Aware Scoring ─────────────────────────────────────────
@@ -175,17 +234,18 @@ function computeFeedbackBoost(
 
 /**
  * Enhanced scoring that incorporates user behavior feedback.
- * Base score (0-100) + feedback adjustment (-10 to +15), clamped to 0-100.
+ * Base score (0-110) + feedback adjustment (-10 to +15), clamped to 0-110.
  */
 export function scoreOpportunityWithFeedback(
   profile: UserProfile,
   user: Pick<User, 'gpa' | 'englishLevel' | 'willingToRelocate' | 'yearOfStudy'>,
   opportunity: Opportunity,
   interactions: UserInteraction[],
+  skills?: UserSkills | null,
 ): number {
-  const baseScore = scoreOpportunity(profile, user, opportunity);
+  const baseScore = scoreOpportunity(profile, user, opportunity, skills);
   const feedbackBoost = computeFeedbackBoost(interactions, opportunity);
-  return Math.max(0, Math.min(100, baseScore + feedbackBoost));
+  return Math.max(0, Math.min(110, baseScore + feedbackBoost));
 }
 
 // ─── Hybrid Scoring (Phase 2: pgvector) ─────────────────────────────
@@ -260,9 +320,12 @@ export async function getHybridMatchedOpportunities(
     },
   });
 
+  // Parse user skills from JSON field
+  const userSkills = parseUserSkills(user.skills);
+
   // Stage 2: Re-rank with hybrid scoring
   const scored = candidates.map((opp) => {
-    const baseScore = scoreOpportunity(user.profile!, user, opp);
+    const baseScore = scoreOpportunity(user.profile!, user, opp, userSkills);
     const feedbackBoost = computeFeedbackBoost(interactions, opp);
     const vectorSim = opp.vectorSimilarity ?? 0;
 
@@ -304,7 +367,7 @@ export async function getHybridMatchedOpportunities(
       expiresAt: opp.expiresAt,
       sourceId: opp.sourceId,
       matchScore: Math.max(0, Math.min(100, Math.round(hybridScore))),
-      matchReason: getMatchReason(user.profile!, user, opp),
+      matchReason: getMatchReason(user.profile!, user, opp, userSkills),
     };
   });
 
@@ -316,20 +379,56 @@ export async function getHybridMatchedOpportunities(
   };
 }
 
-function getMatchReason(profile: any, user: any, opp: any): string {
-  const reasons: string[] = [];
+function getMatchReason(profile: any, user: any, opp: any, skills?: UserSkills | null): string {
+  const reasons: { priority: number; text: string }[] = [];
+
+  // Skill-based reasons (highest priority)
+  if (skills?.core) {
+    const matchedCore = skills.core.filter((skill: SkillEntry) =>
+      opp.requiredSkills?.toLowerCase().includes(skill.name.toLowerCase()),
+    );
+
+    const matchedSide = skills.side.filter((skill: SkillEntry) =>
+      opp.requiredSkills?.toLowerCase().includes(skill.name.toLowerCase()),
+    );
+
+    if (matchedCore.length >= 2) {
+      reasons.push({
+        priority: 1,
+        text: `Le tue skills ${matchedCore.slice(0, 2).map((s: SkillEntry) => s.name).join(' e ')} sono richieste`,
+      });
+    } else if (matchedCore.length === 1) {
+      reasons.push({
+        priority: 1,
+        text: `La tua skill ${matchedCore[0].name} è richiesta`,
+      });
+    } else if (matchedSide.length >= 1) {
+      reasons.push({
+        priority: 2,
+        text: `La tua skill ${matchedSide[0].name} è un plus`,
+      });
+    }
+  }
+
+  // Existing reasons (lower priority)
   if (profile.primaryInterest === 'tech' && (opp.type === 'INTERNSHIP' || opp.type === 'STAGE')) {
-    reasons.push('In linea con i tuoi interessi tech');
+    reasons.push({ priority: 3, text: 'In linea con i tuoi interessi tech' });
   }
   if (profile.primaryInterest === 'business' && opp.type === 'FELLOWSHIP') {
-    reasons.push('Perfetto per il tuo percorso imprenditoriale');
+    reasons.push({ priority: 3, text: 'Perfetto per il tuo percorso imprenditoriale' });
   }
   if (profile.clusterTag === 'Creativo' && opp.type === 'EXTRACURRICULAR') {
-    reasons.push('Adatto al tuo profilo creativo');
+    reasons.push({ priority: 4, text: 'Adatto al tuo profilo creativo' });
   }
   if (opp.isRemote && user.willingToRelocate === 'NO') {
-    reasons.push('Disponibile in remoto');
+    reasons.push({ priority: 5, text: 'Disponibile in remoto' });
   }
-  if (reasons.length === 0) reasons.push('Opportunità consigliata per te');
-  return reasons.join(' · ');
+
+  if (reasons.length === 0) return 'Opportunità consigliata per te';
+
+  return reasons
+    .sort((a, b) => a.priority - b.priority)
+    .slice(0, 2)
+    .map((r) => r.text)
+    .join(' · ');
 }
