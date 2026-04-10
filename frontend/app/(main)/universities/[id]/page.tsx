@@ -6,6 +6,7 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/language';
 import { isValidExternalUrl } from '@/lib/urlValidation';
+import { GraduationCap, Users, Star, Briefcase, BookOpen } from '@/components/icons';
 
 interface Course {
   id: string;
@@ -71,7 +72,7 @@ export default function UniversityDetailPage() {
     <div className="px-4 py-4">
       {/* Hero */}
       <div className="h-48 bg-gradient-to-br from-primary/30 to-secondary/30 rounded-2xl mb-4 flex items-center justify-center">
-        <span className="text-6xl">🎓</span>
+        <GraduationCap size={20} color="white" />
       </div>
 
       {/* Name & City */}
@@ -94,13 +95,13 @@ export default function UniversityDetailPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         {[
-          { label: t.uni.statAlumni, value: university.alumniCount.toLocaleString(), icon: '👥' },
-          { label: t.uni.statRating, value: `${university.avgRating.toFixed(1)}/5`, icon: '⭐' },
-          { label: t.uni.statOpportunities, value: university._count.opportunities.toString(), icon: '💼' },
-          { label: t.uni.statActiveStudents, value: university._count.users.toString(), icon: '📚' },
+          { label: t.uni.statAlumni, value: university.alumniCount.toLocaleString(), icon: <Users size={16} color="#4A9EFF" /> },
+          { label: t.uni.statRating, value: `${university.avgRating.toFixed(1)}/5`, icon: <Star size={16} color="#F59E0B" filled /> },
+          { label: t.uni.statOpportunities, value: university._count.opportunities.toString(), icon: <Briefcase size={16} color="#22C55E" /> },
+          { label: t.uni.statActiveStudents, value: university._count.users.toString(), icon: <BookOpen size={16} color="#9C5AFF" /> },
         ].map((stat) => (
           <div key={stat.label} className="card text-center">
-            <span className="text-2xl mb-1 block">{stat.icon}</span>
+            <span className="mb-1 flex justify-center">{stat.icon}</span>
             <div className="text-lg font-bold text-text-primary">{stat.value}</div>
             <div className="text-xs text-text-muted">{stat.label}</div>
           </div>

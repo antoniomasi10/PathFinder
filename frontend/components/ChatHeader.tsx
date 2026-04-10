@@ -1,6 +1,7 @@
 'use client';
 
 import { isValidImageUrl } from '@/lib/urlValidation';
+import { ChevronLeft } from '@/components/icons';
 
 type IndividualProps = {
   type: 'individual';
@@ -34,9 +35,7 @@ export default function ChatHeader(props: ChatHeaderProps) {
         onClick={onBack}
         className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors"
       >
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-        </svg>
+        <ChevronLeft size={20} strokeWidth={2} />
       </button>
 
       {/* Clickable avatar + text */}

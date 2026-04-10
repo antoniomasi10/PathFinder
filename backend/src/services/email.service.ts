@@ -1,15 +1,19 @@
 import nodemailer from 'nodemailer';
 import { logger } from '../utils/logger';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587', 10),
-  secure: process.env.SMTP_SECURE === 'true', // true for 465, false for 587
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER);
+
+const transporter = smtpConfigured
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || '587', 10),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    })
+  : null;
 
 const FROM_NAME = process.env.EMAIL_FROM_NAME || 'PathFinder';
 const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'noreply@pathfinder.it';
@@ -60,6 +64,11 @@ export async function sendVerificationEmail(to: string, name: string, code: stri
     <p class="warning">Il codice scade tra 10 minuti. Se non hai richiesto questa verifica, ignora questa email.</p>
   `);
 
+  if (!transporter) {
+    logger.warn(`[DEV] SMTP not configured — verification code for ${to}: ${code}`);
+    return;
+  }
+
   try {
     await transporter.sendMail({
       from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
@@ -83,6 +92,11 @@ export async function sendPasswordResetEmail(to: string, name: string, code: str
     </div>
     <p class="warning">Il codice scade tra 10 minuti. Se non hai richiesto il reset, ignora questa email e la tua password rimarrà invariata.</p>
   `);
+
+  if (!transporter) {
+    logger.warn(`[DEV] SMTP not configured — password reset code for ${to}: ${code}`);
+    return;
+  }
 
   try {
     await transporter.sendMail({

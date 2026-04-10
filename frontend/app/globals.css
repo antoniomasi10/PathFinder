@@ -84,6 +84,44 @@
   }
 }
 
+/* Avatar reveal — CSS-only animations (replaces Framer Motion for better perf) */
+@keyframes blob-drift-1 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(50px, 30px); }
+}
+@keyframes blob-drift-2 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-40px, -50px); }
+}
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.25; }
+}
+@keyframes float-dot-1 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(4px, -8px); }
+}
+@keyframes float-dot-2 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-3px, 6px); }
+}
+
+.animate-blob-1 {
+  animation: blob-drift-1 8s ease-in-out infinite;
+}
+.animate-blob-2 {
+  animation: blob-drift-2 10s ease-in-out infinite;
+}
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+.animate-float-dot-1 {
+  animation: float-dot-1 3s ease-in-out infinite;
+}
+.animate-float-dot-2 {
+  animation: float-dot-2 4s ease-in-out infinite 1s;
+}
+
 @layer components {
   .btn-primary {
     @apply bg-primary hover:bg-primary/90 text-white font-medium py-2.5 px-5 rounded-2xl transition-all duration-200;

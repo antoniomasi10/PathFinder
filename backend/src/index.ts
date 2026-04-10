@@ -24,9 +24,12 @@ import userRoutes from './routes/user.routes';
 import courseRoutes from './routes/course.routes';
 import badgeRoutes from './routes/badge.routes';
 import importRoutes from './routes/import.routes';
+import skillRoutes from './routes/skills.routes';
+import adminRoutes from './routes/admin.routes';
 import { setupChatSocket } from './socket/chatHandler';
 import { logger } from './utils/logger';
 import { setupNotificationSocket } from './socket/notificationHandler';
+import { correlationIdMiddleware } from './middleware/correlationId';
 import { setIO } from './socketManager';
 import { startDeadlineChecker } from './services/deadlineChecker';
 import { startImportScheduler } from './services/import/scheduler';
@@ -41,7 +44,7 @@ if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
 const ALLOWED_ORIGINS = [
   FRONTEND_URL,
   ...(process.env.EXTRA_ORIGINS ? process.env.EXTRA_ORIGINS.split(',') : []),
-  'http://localhost:3000',
+  ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3000'] : []),
 ].filter(Boolean);
 
 function corsOrigin(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
@@ -82,15 +85,24 @@ app.use(limiter);
 
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
+app.use(correlationIdMiddleware);
 
-// Auth rate limiter: login/register only (not refresh/logout)
+// Auth rate limiter: applies to login, register, refresh, resend-otp
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 15,
   message: { error: 'Troppi tentativi, riprova più tardi' },
-  skip: (req) => ['/refresh', '/logout', '/verify-email', '/resend-otp'].includes(req.path),
+  skip: (req) => ['/logout', '/verify-email'].includes(req.path),
 });
 app.use('/api/auth', authLimiter);
+
+// Stricter rate limiter for OTP resend (max 3 per 15 min)
+const otpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: { error: 'Troppi tentativi di invio OTP, riprova più tardi' },
+});
+app.use('/api/auth/resend-otp', otpLimiter);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -106,6 +118,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/badges', badgeRoutes);
 app.use('/api/import', importRoutes);
+app.use('/api/v1/users', skillRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
