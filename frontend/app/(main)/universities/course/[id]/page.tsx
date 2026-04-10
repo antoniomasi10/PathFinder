@@ -663,7 +663,7 @@ export default function CourseDetailPage() {
                     className="transition-colors"
                     style={{ color: isSavedAsOpp ? '#4F46E5' : '#D0D4DC' }}
                   >
-                    <Bookmark className="w-3.5 h-3.5" fill={isSavedAsOpp ? '#4F46E5' : 'none'} />
+                    <Bookmark className="w-3.5 h-3.5" filled={isSavedAsOpp} />
                   </button>
                 </div>
               </div>
