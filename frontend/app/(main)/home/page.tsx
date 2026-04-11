@@ -6,6 +6,7 @@ import { useSavedOpportunities } from '@/lib/savedOpportunities';
 import { useLanguage } from '@/lib/language';
 import { isValidExternalUrl } from '@/lib/urlValidation';
 import api from '@/lib/api';
+import { parseDeadlineDate } from '@/lib/dateUtils';
 import {
   GridSmall, Bulb, BookOpen, TrendingUp,
   ChevronDown as ChevronDownIcon,
@@ -76,7 +77,7 @@ const BASE_OPPORTUNITIES: BaseOpportunity[] = [
     remote: true,
     skills: [],
     matchReason: '',
-    deadline: '',
+    deadline: '2026-04-02',
   },
   {
     id: '2',
@@ -89,7 +90,7 @@ const BASE_OPPORTUNITIES: BaseOpportunity[] = [
     remote: false,
     skills: [],
     matchReason: '',
-    deadline: '',
+    deadline: '2026-04-05',
   },
   {
     id: '3',
@@ -101,7 +102,7 @@ const BASE_OPPORTUNITIES: BaseOpportunity[] = [
     remote: false,
     skills: [],
     matchReason: '',
-    deadline: '',
+    deadline: '2026-04-20',
   },
   {
     id: '4',
@@ -114,7 +115,7 @@ const BASE_OPPORTUNITIES: BaseOpportunity[] = [
     remote: false,
     skills: [],
     matchReason: '',
-    deadline: '',
+    deadline: '2026-05-10',
   },
 ];
 
@@ -228,6 +229,44 @@ function Accordion({ open, children }: { open: boolean; children: React.ReactNod
 
 function BookmarkIcon({ filled, className }: { filled: boolean; className?: string }) {
   return <Bookmark filled={filled} strokeWidth={1.8} className={className} />;
+}
+
+/* ── Deadline helpers ───────────────────────────────────────────── */
+
+function getDaysLeft(deadline: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = parseDeadlineDate(deadline);
+  if (!d) return Infinity;
+  d.setHours(0, 0, 0, 0);
+  return Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function deadlineUrgency(daysLeft: number): 'green' | 'yellow' | 'red' {
+  if (daysLeft <= 2) return 'red';
+  if (daysLeft <= 14) return 'yellow';
+  return 'green';
+}
+
+function DeadlineLabel({ deadline, size = 'sm' }: { deadline: string; size?: 'sm' | 'xs' }) {
+  const daysLeft = getDaysLeft(deadline);
+  const urgency = deadlineUrgency(daysLeft);
+  const parsed = parseDeadlineDate(deadline);
+  const dateStr = parsed ? parsed.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) : deadline;
+  const colors = {
+    green: 'bg-green-500/20 text-green-400',
+    yellow: 'bg-amber-500/20 text-amber-400',
+    red: 'bg-red-500/20 text-red-400',
+  };
+  const label = daysLeft <= 0 ? 'Scaduta' : daysLeft === 1 ? 'Scade domani' : dateStr;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-medium ${colors[urgency]} ${size === 'xs' ? 'text-[10px]' : 'text-xs'}`}>
+      <svg className={size === 'xs' ? 'w-2.5 h-2.5 flex-shrink-0' : 'w-3 h-3 flex-shrink-0'} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+      </svg>
+      {label}
+    </span>
+  );
 }
 
 /* ── FullWidthCard ───────────────────────────────────────────────── */
@@ -719,7 +758,7 @@ export default function HomePage() {
   const [tab, setTab] = useState<'per-te' | 'esplora'>('per-te');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const { savedIds, toggleSave } = useSavedOpportunities();
+  const { savedIds, savedOpps, toggleSave } = useSavedOpportunities();
   const { t } = useLanguage();
   const allOpportunities = getOpportunities(t);
   const filterCategories = getFilterCategories(t);
@@ -886,6 +925,34 @@ export default function HomePage() {
           </div>
         )}
       </div>
+
+      {/* ── Alert scadenze ────────────────────────────────────────── */}
+      {(() => {
+        const expiring = savedOpps.filter((o) => {
+          if (!o.deadline) return false;
+          const days = getDaysLeft(o.deadline);
+          return days >= 0 && days <= 7;
+        });
+        if (expiring.length === 0) return null;
+        const nearest = expiring.reduce((a, b) =>
+          getDaysLeft(a.deadline!) <= getDaysLeft(b.deadline!) ? a : b
+        );
+        const nearestDays = getDaysLeft(nearest.deadline!);
+        const isRed = nearestDays <= 2;
+        const color = isRed ? '#FCA5A5' : '#FCD34D';
+        const count = expiring.length;
+        const verb = count === 1 ? 'scade' : 'scadono';
+        const timeLabel = nearestDays <= 0 ? 'oggi' : nearestDays === 1 ? 'domani' : `tra ${nearestDays} giorni`;
+        const label = `${count} opportunità ${verb} ${timeLabel}`;
+        return (
+          <div className="px-4 mb-3 flex items-center gap-1.5">
+            <svg className="w-3.5 h-3.5 flex-shrink-0" style={{ color }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <p className="text-xs font-medium" style={{ color }}>{label}</p>
+          </div>
+        );
+      })()}
 
       {/* ── Cards ─────────────────────────────────────────────────── */}
       <div className="px-4 pb-4">

@@ -44,7 +44,7 @@ if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
 const ALLOWED_ORIGINS = [
   FRONTEND_URL,
   ...(process.env.EXTRA_ORIGINS ? process.env.EXTRA_ORIGINS.split(',') : []),
-  ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3000'] : []),
+  ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3000', 'http://localhost:3001'] : []),
 ].filter(Boolean);
 
 function corsOrigin(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
