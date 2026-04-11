@@ -6,6 +6,7 @@
  * - EU Youth/Eurodesk: weekly Monday 03:30
  * - MUR universities: 1st of each month at 02:00
  * - MUR courses: 1st of each month at 02:30
+ * - Greenhouse internships: weekly Thursday 03:30
  * - AlmaLaurea stats: quarterly (1st Jan, Apr, Jul, Oct at 04:00)
  * - Cleanup stale data: weekly Sunday at 05:00
  */
@@ -14,6 +15,11 @@ import { importUniversities, importCourses } from './mur.import';
 import { importOpportunities } from './eures.import';
 import { importEUOpportunities } from './eu-youth.import';
 import { importStage4euOpportunities } from './stage4eu.import';
+import { importGreenhouseOpportunities } from './greenhouse.import';
+import { importLeverOpportunities } from './lever.import';
+import { importAshbyOpportunities } from './ashby.import';
+import { importWorkableOpportunities } from './workable.import';
+import { importPersonioOpportunities } from './personio.import';
 import { importAlmaLaureaStats } from './almalaurea.import';
 import { runCleanup } from './cleanup.service';
 import { alertImportFailure } from './alerting';
@@ -45,6 +51,31 @@ export function startImportScheduler() {
     runWithAlert('Stage4eu', 'stage4eu', 'opportunities', importStage4euOpportunities);
   });
 
+  // Weekly Thursday: Greenhouse internships (03:30)
+  cron.schedule('30 3 * * 4', () => {
+    runWithAlert('Greenhouse', 'greenhouse', 'opportunities', importGreenhouseOpportunities);
+  });
+
+  // Weekly Friday: Lever internships (03:30)
+  cron.schedule('30 3 * * 5', () => {
+    runWithAlert('Lever', 'lever', 'opportunities', importLeverOpportunities);
+  });
+
+  // Weekly Saturday: Ashby internships (03:30)
+  cron.schedule('30 3 * * 6', () => {
+    runWithAlert('Ashby', 'ashby', 'opportunities', importAshbyOpportunities);
+  });
+
+  // Weekly Saturday: Workable internships (04:00)
+  cron.schedule('0 4 * * 6', () => {
+    runWithAlert('Workable', 'workable', 'opportunities', importWorkableOpportunities);
+  });
+
+  // Weekly Sunday: Personio internships (03:30)
+  cron.schedule('30 3 * * 0', () => {
+    runWithAlert('Personio', 'personio', 'opportunities', importPersonioOpportunities);
+  });
+
   // Monthly 1st: MUR universities (02:00) + courses (02:30)
   cron.schedule('0 2 1 * *', () => {
     runWithAlert('MUR Universities', 'mur', 'universities', importUniversities);
@@ -70,6 +101,8 @@ export function startImportScheduler() {
 
   logger.info('[Scheduler] Import scheduler started:');
   logger.info('  EURES: daily 03:00 | EU Youth: weekly Mon 03:30 | Stage4eu: weekly Wed 03:30');
+  logger.info('  Greenhouse: weekly Thu 03:30 | Lever: weekly Fri 03:30 | Ashby: weekly Sat 03:30');
+  logger.info('  Workable: weekly Sat 04:00 | Personio: weekly Sun 03:30');
   logger.info('  MUR: monthly 1st 02:00/02:30 | AlmaLaurea: quarterly');
   logger.info('  Cleanup: weekly Sun 05:00');
 }

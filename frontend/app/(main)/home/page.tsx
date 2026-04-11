@@ -30,6 +30,17 @@ interface Opportunity {
   source?: string;
 }
 
+const CC_BY_SOURCES = new Set([
+  'EURES',
+  'Portale Europeo Giovani',
+  'MUR',
+  'AlmaLaurea',
+]);
+
+function isCCBYSource(source?: string): boolean {
+  return !!source && CC_BY_SOURCES.has(source);
+}
+
 function getScoreColor(score: number): string {
   if (score >= 75) return '#22C55E';
   if (score >= 50) return '#F59E0B';
@@ -337,10 +348,12 @@ function FullWidthCard({
             <p className="text-gray-400 text-sm leading-relaxed">{opp.about}</p>
           </div>
 
-          {/* CC BY 4.0 attribution */}
+          {/* Source attribution */}
           {opp.source && (
             <p className="text-gray-500 text-[10px]">
-              Dati forniti da {opp.source} — licenza CC BY 4.0
+              {isCCBYSource(opp.source)
+                ? `Dati forniti da ${opp.source} — licenza CC BY 4.0`
+                : `Fonte: ${opp.source}`}
             </p>
           )}
 
@@ -452,10 +465,12 @@ function HalfWidthCard({
             <p className="text-gray-400 text-[11px] leading-relaxed">{opp.about}</p>
           </div>
 
-          {/* CC BY 4.0 attribution */}
+          {/* Source attribution */}
           {opp.source && (
             <p className="text-gray-500 text-[9px]">
-              Dati forniti da {opp.source} — licenza CC BY 4.0
+              {isCCBYSource(opp.source)
+                ? `Dati forniti da ${opp.source} — licenza CC BY 4.0`
+                : `Fonte: ${opp.source}`}
             </p>
           )}
 
@@ -633,6 +648,84 @@ function EsploraGrid({
   );
 }
 
+/* ── Pagination ─────────────────────────────────────────────────── */
+
+function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+  disabled,
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  disabled?: boolean;
+}) {
+  // Build page numbers: show at most 5 pages around current
+  const pages: (number | '...')[] = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (currentPage > 3) pages.push('...');
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (currentPage < totalPages - 2) pages.push('...');
+    pages.push(totalPages);
+  }
+
+  const btnBase = 'w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all active:opacity-75';
+
+  return (
+    <div className="flex items-center justify-center gap-1.5 mt-6 mb-2">
+      {/* Prev arrow */}
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={disabled || currentPage === 1}
+        className={`${btnBase} ${currentPage === 1 ? 'text-gray-600 cursor-not-allowed' : 'bg-[#161B22] text-gray-300'}`}
+        aria-label="Pagina precedente"
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10 12L6 8L10 4" />
+        </svg>
+      </button>
+
+      {/* Page numbers */}
+      {pages.map((p, i) =>
+        p === '...' ? (
+          <span key={`dots-${i}`} className="w-8 text-center text-gray-500 text-sm">...</span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onPageChange(p)}
+            disabled={disabled || p === currentPage}
+            className={`${btnBase} ${
+              p === currentPage
+                ? 'bg-primary text-white'
+                : 'bg-[#161B22] text-gray-400 hover:text-white'
+            }`}
+          >
+            {p}
+          </button>
+        )
+      )}
+
+      {/* Next arrow */}
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={disabled || currentPage === totalPages}
+        className={`${btnBase} ${currentPage === totalPages ? 'text-gray-600 cursor-not-allowed' : 'bg-[#161B22] text-gray-300'}`}
+        aria-label="Pagina successiva"
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 4L10 8L6 12" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
 /* ── FilterSheet ─────────────────────────────────────────────────── */
 
 function FilterSheet({
@@ -751,15 +844,19 @@ export default function HomePage() {
   const allOpportunities = getOpportunities(t);
   const filterCategories = getFilterCategories(t);
 
-  // "Per te" — matched opportunities
+  // "Per te" — matched opportunities with pagination
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loadingOpps, setLoadingOpps] = useState(true);
+  const [perTePage, setPerTePage] = useState(1);
+  const [perTeTotalPages, setPerTeTotalPages] = useState(1);
+  const perTeTopRef = useRef<HTMLDivElement>(null);
 
   // "Esplora" — all opportunities by date, with pagination
   const [exploreOpps, setExploreOpps] = useState<Opportunity[]>([]);
   const [explorePage, setExplorePage] = useState(1);
-  const [exploreHasMore, setExploreHasMore] = useState(true);
+  const [exploreTotalPages, setExploreTotalPages] = useState(1);
   const [loadingExplore, setLoadingExplore] = useState(false);
+  const exploreTopRef = useRef<HTMLDivElement>(null);
 
   const mapOpp = (opp: any): Opportunity => ({
     id: opp.id,
@@ -779,30 +876,45 @@ export default function HomePage() {
     source: opp.source || '',
   });
 
-  useEffect(() => {
-    api.get('/opportunities?matched=true&limit=20')
+  const loadPerTePage = (page: number, scrollToTop = false) => {
+    setLoadingOpps(true);
+    api.get(`/opportunities?matched=true&page=${page}&limit=20`)
       .then(({ data }) => {
         const items = data.data || data;
         const mapped = (Array.isArray(items) ? items : []).map(mapOpp);
         setOpportunities(mapped.length > 0 ? mapped : [...allOpportunities].sort((a, b) => b.matchScore - a.matchScore));
+        setPerTeTotalPages(data.totalPages || 1);
+        setPerTePage(page);
+        if (scrollToTop) {
+          setTimeout(() => {
+            perTeTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 50);
+        }
       })
       .catch(() => {
         setOpportunities([...allOpportunities].sort((a, b) => b.matchScore - a.matchScore));
       })
       .finally(() => setLoadingOpps(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  };
+
+  useEffect(() => { loadPerTePage(1); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load explore page
-  const loadExplorePage = (page: number) => {
+  // Load explore page (replaces current results)
+  const loadExplorePage = (page: number, scrollToTop = false) => {
     setLoadingExplore(true);
     api.get(`/opportunities?page=${page}&limit=20`)
       .then(({ data }) => {
         const items = (data.data || data) as any[];
         const mapped = (Array.isArray(items) ? items : []).map(mapOpp);
-        setExploreOpps(prev => page === 1 ? mapped : [...prev, ...mapped]);
-        setExploreHasMore(page < (data.totalPages || 1));
+        setExploreOpps(mapped);
+        setExploreTotalPages(data.totalPages || 1);
         setExplorePage(page);
+        if (scrollToTop) {
+          setTimeout(() => {
+            exploreTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 50);
+        }
       })
       .catch(() => {})
       .finally(() => setLoadingExplore(false));
@@ -962,19 +1074,30 @@ export default function HomePage() {
             ))}
           </div>
         ) : tab === 'per-te' ? (
-          <div className="space-y-4">
-            {opportunities.map((opp) => (
-              <FullWidthCard
-                key={opp.id}
-                opp={opp}
-                showScore
-                isExpanded={expandedId === opp.id}
-                onToggle={() => handleToggle(opp.id)}
-                isSaved={savedIds.has(opp.id)}
-                onSave={() => handleSave(opp)}
+          <>
+            <div ref={perTeTopRef} style={{ scrollMarginTop: 120 }} />
+            <div className="space-y-4">
+              {opportunities.map((opp) => (
+                <FullWidthCard
+                  key={opp.id}
+                  opp={opp}
+                  showScore
+                  isExpanded={expandedId === opp.id}
+                  onToggle={() => handleToggle(opp.id)}
+                  isSaved={savedIds.has(opp.id)}
+                  onSave={() => handleSave(opp)}
+                />
+              ))}
+            </div>
+            {perTeTotalPages > 1 && (
+              <Pagination
+                currentPage={perTePage}
+                totalPages={perTeTotalPages}
+                onPageChange={(p) => loadPerTePage(p, true)}
+                disabled={loadingOpps}
               />
-            ))}
-          </div>
+            )}
+          </>
         ) : esploraFiltered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-500">
             <Search size={40} strokeWidth={1.5} className="mb-3" />
@@ -982,6 +1105,7 @@ export default function HomePage() {
           </div>
         ) : (
           <>
+            <div ref={exploreTopRef} style={{ scrollMarginTop: 120 }} />
             <EsploraGrid
               items={esploraFiltered}
               expandedId={expandedId}
@@ -992,14 +1116,13 @@ export default function HomePage() {
                 if (opp) handleSave(opp);
               }}
             />
-            {exploreHasMore && !q && !hasActiveFilters && (
-              <button
-                onClick={() => loadExplorePage(explorePage + 1)}
+            {exploreTotalPages > 1 && !q && !hasActiveFilters && (
+              <Pagination
+                currentPage={explorePage}
+                totalPages={exploreTotalPages}
+                onPageChange={(p) => loadExplorePage(p, true)}
                 disabled={loadingExplore}
-                className="w-full mt-4 py-3 rounded-2xl bg-[#161B22] text-gray-400 text-sm font-medium active:opacity-75 transition-opacity disabled:opacity-50"
-              >
-                {loadingExplore ? 'Caricamento...' : 'Carica altre opportunità'}
-              </button>
+              />
             )}
           </>
         )}

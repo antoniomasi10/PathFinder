@@ -237,7 +237,7 @@ export async function getHybridMatchedOpportunities(
   let candidates: any[];
 
   if (userHasEmbedding) {
-    // Stage 1: Candidate retrieval via pgvector (top 50)
+    // Stage 1: Candidate retrieval — all opportunities with vector similarity
     // Explicitly list columns to avoid selecting the Unsupported vector column
     candidates = await prisma.$queryRawUnsafe<any[]>(
       `SELECT o."id", o."title", o."description", o."about", o."url", o."type",
@@ -246,13 +246,12 @@ export async function getHybridMatchedOpportunities(
               o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
               u."name" as "universityName", u."city" as "universityCity",
               u."id" as "uniId", u."logoUrl" as "universityLogoUrl",
-              1 - (o.embedding <=> usr.embedding) AS "vectorSimilarity"
+              CASE WHEN o.embedding IS NOT NULL THEN 1 - (o.embedding <=> usr.embedding) ELSE 0 END AS "vectorSimilarity"
        FROM "Opportunity" o
        LEFT JOIN "University" u ON o."universityId" = u."id"
        CROSS JOIN "User" usr
-       WHERE usr.id = $1 AND o.embedding IS NOT NULL
-       ORDER BY o.embedding <=> usr.embedding
-       LIMIT 50`,
+       WHERE usr.id = $1
+       ORDER BY o."postedAt" DESC`,
       userId,
     );
   } else {

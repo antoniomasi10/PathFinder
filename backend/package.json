@@ -13,7 +13,12 @@
     "admin:create": "ts-node scripts/admin-create.ts",
     "scrape:eures": "ts-node scripts/scrape-eures.ts",
     "scrape:stage4eu": "ts-node scripts/scrape-stage4eu.ts",
-    "scrape:eu-youth": "ts-node scripts/scrape-eu-youth.ts"
+    "scrape:eu-youth": "ts-node scripts/scrape-eu-youth.ts",
+    "scrape:greenhouse": "ts-node scripts/scrape-greenhouse.ts",
+    "scrape:lever": "ts-node scripts/scrape-lever.ts",
+    "scrape:ashby": "ts-node scripts/scrape-ashby.ts",
+    "scrape:workable": "ts-node scripts/scrape-workable.ts",
+    "scrape:personio": "ts-node scripts/scrape-personio.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

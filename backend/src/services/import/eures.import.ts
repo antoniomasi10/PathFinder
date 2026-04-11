@@ -41,7 +41,14 @@ const SEARCH_QUERIES = [
 const MAX_PAGES_PER_QUERY = 3;
 const RESULTS_PER_PAGE = 10;
 /** Delay between page loads to be respectful (ms) */
-const PAGE_DELAY_MS = 2000;
+const PAGE_DELAY_MS = 5000;
+
+/**
+ * Identifiable User-Agent so EURES operators can contact us if needed.
+ * Contact email must be configurable via env (EURES_CONTACT_EMAIL).
+ */
+const CONTACT_EMAIL = process.env.EURES_CONTACT_EMAIL || 'contact@pathfinder.example';
+const USER_AGENT = `PathFinderBot/1.0 (+https://pathfinder.example; ${CONTACT_EMAIL}) Chrome/120.0.0.0`;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -198,7 +205,7 @@ export async function importOpportunities(options?: {
     const result = await logImport(async () => {
       browser = await chromium.launch({ headless: true });
       const context = await browser.newContext({
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        userAgent: USER_AGENT,
       });
       const page = await context.newPage();
 
