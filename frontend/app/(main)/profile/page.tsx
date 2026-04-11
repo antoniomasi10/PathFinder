@@ -19,7 +19,7 @@ import {
   Gear, UsersGroup, Bell, Moon, Globe, ShieldCheck, CircleHelp, Info, Search,
   ChatDots, UserAdd, CloseLg, CloseSm, Camera, Check, Key, UserIcon, Award,
   Trash, TriangleWarning, CircleWarning, Mail, FileText, Star, Lock, Trophy,
-  Heart, Briefcase, GraduationCap, Plane, Rocket, Target, TrendingUp, CloseMd,
+  Heart, Briefcase, GraduationCap, Plane, Rocket, Target, TrendingUp, CloseMd, BookOpen,
 } from '@/components/icons';
 
 interface FullProfile {
@@ -60,14 +60,18 @@ const CLUSTER_COLORS: Record<string, string> = {
   Explorer: 'bg-[#EF4444]/20 text-[#EF4444]',
 };
 
-const TYPE_ICONS: Record<string, string> = {
-  INTERNSHIP: '💼',
-  SCHOLARSHIP: '🎓',
-  ERASMUS: '✈️',
-  PROJECT: '🚀',
-  EVENT: '📅',
-  CORSO: '📚',
-};
+function TypeIcon({ type, className = 'w-5 h-5' }: { type: string; className?: string }) {
+  const props = { className };
+  switch (type) {
+    case 'INTERNSHIP':   return <Briefcase {...props} />;
+    case 'SCHOLARSHIP':  return <GraduationCap {...props} />;
+    case 'ERASMUS':      return <Plane {...props} />;
+    case 'PROJECT':      return <Rocket {...props} />;
+    case 'EVENT':        return <CalendarIcon {...props} />;
+    case 'CORSO':        return <BookOpen {...props} />;
+    default:             return <Bookmark {...props} />;
+  }
+}
 
 function getDaysLeft(deadline: string): number {
   const today = new Date();
@@ -619,7 +623,7 @@ export default function ProfilePage() {
                           style={{ height: '150px' }}
                         >
                           <div className="w-9 h-9 rounded-lg bg-[#1E293B] flex items-center justify-center mb-2">
-                            <span className="text-base">{TYPE_ICONS[opp.type] || '📌'}</span>
+                            <TypeIcon type={opp.type} />
                           </div>
                           <h4 className="text-[13px] font-semibold text-white line-clamp-2 leading-snug mb-1">{opp.title}</h4>
                           <p className="text-[11px] text-[#64748B] truncate mb-2">{opp.company || opp.university?.name || ''}</p>
@@ -728,7 +732,7 @@ export default function ProfilePage() {
                       style={{ height: '150px' }}
                     >
                       <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-2" style={{ backgroundColor: '#4F46E5' }}>
-                        <span className="text-base">🎓</span>
+                        <GraduationCap className="w-5 h-5" />
                       </div>
                       <h4 className="text-[13px] font-semibold text-white line-clamp-2 leading-snug mb-1">{c.name}</h4>
                       <p className="text-[11px] text-[#64748B] truncate">{c.university?.name}</p>
