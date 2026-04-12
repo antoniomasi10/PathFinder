@@ -57,7 +57,7 @@ export const createCommentSchema = z.object({
 
 export const reportSchema = z.object({
   reason: z.enum(['Spam', 'Contenuto inappropriato', 'Molestie o bullismo', 'Disinformazione', 'Altro'], {
-    errorMap: () => ({ message: 'Motivo non valido' }),
+    error: 'Motivo non valido',
   }),
 });
 
