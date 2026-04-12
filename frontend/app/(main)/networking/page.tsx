@@ -13,7 +13,8 @@ import ActionMenu from '@/components/ActionMenu';
 import NewChatModal from '@/components/NewChatModal';
 import ImageLightbox from '@/components/ImageLightbox';
 import { isValidImageUrl } from '@/lib/urlValidation';
-import { Plus, UserIcon, ChatDots, CloseSm, CloseMd, ImageIcon, PaperPlane, Check, Heart, Chat, Send } from '@/components/icons';
+import { checkWarn } from '@/lib/moderation';
+import { Plus, UserIcon, ChatDots, CloseSm, CloseMd, ImageIcon, PaperPlane, Check, Heart, Chat, Send, Flag, MoreHorizontal, Trash } from '@/components/icons';
 
 interface Conversation {
   user: { id: string; name: string; avatar?: string };
@@ -127,6 +128,15 @@ export default function NetworkingPage() {
   const [postPage, setPostPage] = useState(1);
   const [hasMorePosts, setHasMorePosts] = useState(true);
   const [loadingMorePosts, setLoadingMorePosts] = useState(false);
+  const [openPostMenu, setOpenPostMenu] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'post'; postId: string } | { type: 'comment'; postId: string; commentId: string } | null>(null);
+  const [reportModal, setReportModal] = useState<{ type: 'post' | 'comment'; id: string; postId?: string } | null>(null);
+  const [reportReason, setReportReason] = useState('');
+  const [reportedItems, setReportedItems] = useState<Set<string>>(new Set());
+  const [reportSending, setReportSending] = useState(false);
+  const [reportSuccess, setReportSuccess] = useState(false);
+  const [warnPending, setWarnPending] = useState<'post' | 'comment' | null>(null);
+  const [blockedToast, setBlockedToast] = useState(false);
 
   function compressImage(file: File, maxSize = 800): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -577,15 +587,24 @@ export default function NetworkingPage() {
     }
   };
 
-  const submitPost = async () => {
+  const submitPost = async (force = false) => {
     if (!newPost.trim() && postImages.length === 0) return;
+    if (!force && checkWarn(newPost)) {
+      setWarnPending('post');
+      return;
+    }
     try {
       const { data } = await api.post('/posts', { content: newPost, images: postImages });
       setPosts((prev) => [data, ...prev]);
       setNewPost('');
       setPostImages([]);
-    } catch (err) {
-      console.error('Failed to submit post:', err);
+    } catch (err: any) {
+      if (err.response?.data?.code === 'CONTENT_BLOCKED') {
+        setBlockedToast(true);
+        setTimeout(() => setBlockedToast(false), 4000);
+      } else {
+        console.error('Failed to submit post:', err);
+      }
     }
   };
 
@@ -618,8 +637,12 @@ export default function NetworkingPage() {
     }
   };
 
-  const submitComment = async () => {
+  const submitComment = async (force = false) => {
     if (!newComment.trim() || !commentPost || commentSending) return;
+    if (!force && checkWarn(newComment)) {
+      setWarnPending('comment');
+      return;
+    }
     setCommentSending(true);
     try {
       const { data } = await api.post(`/posts/${commentPost.id}/comments`, { content: newComment });
@@ -629,8 +652,13 @@ export default function NetworkingPage() {
         p.id === commentPost.id ? { ...p, _count: { ...p._count, comments: p._count.comments + 1 } } : p
       ));
       setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-    } catch (err) {
-      console.error('Failed to submit comment:', err);
+    } catch (err: any) {
+      if (err.response?.data?.code === 'CONTENT_BLOCKED') {
+        setBlockedToast(true);
+        setTimeout(() => setBlockedToast(false), 4000);
+      } else {
+        console.error('Failed to submit comment:', err);
+      }
     } finally {
       setCommentSending(false);
     }
@@ -645,6 +673,52 @@ export default function NetworkingPage() {
       }));
     } catch (err) {
       console.error('Failed to send friend request:', err);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
+    try {
+      if (deleteConfirm.type === 'post') {
+        await api.delete(`/posts/${deleteConfirm.postId}`);
+        setPosts((prev) => prev.filter((p) => p.id !== deleteConfirm.postId));
+        if (commentPost?.id === deleteConfirm.postId) setCommentPost(null);
+      } else {
+        await api.delete(`/posts/${deleteConfirm.postId}/comments/${deleteConfirm.commentId}`);
+        setComments((prev) => prev.filter((c) => c.id !== deleteConfirm.commentId));
+        setPosts((prev) => prev.map((p) =>
+          p.id === deleteConfirm.postId ? { ...p, _count: { ...p._count, comments: p._count.comments - 1 } } : p
+        ));
+      }
+    } catch (err) {
+      console.error('Failed to delete:', err);
+    } finally {
+      setDeleteConfirm(null);
+    }
+  };
+
+  const submitReport = async () => {
+    if (!reportReason || !reportModal || reportSending) return;
+    setReportSending(true);
+    try {
+      if (reportModal.type === 'post') {
+        await api.post(`/posts/${reportModal.id}/report`, { reason: reportReason });
+      } else {
+        await api.post(`/posts/${reportModal.postId}/comments/${reportModal.id}/report`, { reason: reportReason });
+      }
+      setReportedItems(prev => new Set([...prev, reportModal.id]));
+      setReportSuccess(true);
+      setTimeout(() => {
+        setReportModal(null);
+        setReportReason('');
+        setReportSuccess(false);
+      }, 2000);
+    } catch (err: any) {
+      console.error('Failed to report:', err);
+      setReportModal(null);
+      setReportReason('');
+    } finally {
+      setReportSending(false);
     }
   };
 
@@ -1120,7 +1194,7 @@ export default function NetworkingPage() {
                 className="hidden"
               />
               <button
-                onClick={submitPost}
+                onClick={() => submitPost()}
                 disabled={!newPost.trim() && postImages.length === 0}
                 className="btn-primary text-sm disabled:opacity-50"
               >
@@ -1141,7 +1215,7 @@ export default function NetworkingPage() {
             ))
           ) : (
             posts.map((post) => (
-              <div key={post.id} className="card">
+              <div key={post.id} className={`card${post.author?.id === user?.id ? ' border-l-2 border-l-primary/60' : ''}`}>
                 <div className="flex items-center justify-between mb-3">
                   <button
                     className="flex items-center gap-3 text-left"
@@ -1165,9 +1239,14 @@ export default function NetworkingPage() {
                       );
                     })()}
                     <div>
-                      <p className={`font-medium text-sm ${post.author?.id && post.author.id !== user?.id ? 'hover:underline text-text-primary' : 'text-text-primary'} ${!post.author?.name ? 'text-[#64748B] italic' : ''}`}>
-                        {post.author?.name || 'Utente eliminato'}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <p className={`font-medium text-sm ${post.author?.id && post.author.id !== user?.id ? 'hover:underline text-text-primary' : 'text-text-primary'} ${!post.author?.name ? 'text-[#64748B] italic' : ''}`}>
+                          {post.author?.name || 'Utente eliminato'}
+                        </p>
+                        {post.author?.id === user?.id && (
+                          <span className="text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full font-medium leading-none">Tu</span>
+                        )}
+                      </div>
                       {post.author?.name && (
                         <p className="text-[10px] text-text-muted">
                           {post.author.university?.name} {post.author.courseOfStudy && `· ${post.author.courseOfStudy}`}
@@ -1175,30 +1254,66 @@ export default function NetworkingPage() {
                       )}
                     </div>
                   </button>
-                  {post.author?.id && post.author.id !== user?.id && (() => {
-                    const cs = connectionStatuses[post.author.id];
-                    const status = cs?.status || null;
+                  <div className="flex items-center gap-2">
+                    {post.author?.id && post.author.id !== user?.id && (() => {
+                      const cs = connectionStatuses[post.author.id];
+                      const status = cs?.status || null;
 
-                    if (status === 'ACCEPTED') {
+                      if (status === 'ACCEPTED') {
+                        return (
+                          <span className="text-xs text-green-400 border border-green-400/30 px-3 py-1 rounded-full flex items-center gap-1">
+                            <Check size={12} strokeWidth={2.5} />
+                            {t.userProfile.connected}
+                          </span>
+                        );
+                      }
+                      if (status === 'PENDING') {
+                        return null;
+                      }
                       return (
-                        <span className="text-xs text-green-400 border border-green-400/30 px-3 py-1 rounded-full flex items-center gap-1">
-                          <Check size={12} strokeWidth={2.5} />
-                          {t.userProfile.connected}
-                        </span>
+                        <button
+                          onClick={() => sendFriendRequest(post.author.id)}
+                          className="text-xs text-primary border border-primary/30 px-3 py-1 rounded-full hover:bg-primary/10 transition-colors"
+                        >
+                          {t.userProfile.connect}
+                        </button>
                       );
-                    }
-                    if (status === 'PENDING') {
-                      return null;
-                    }
-                    return (
-                      <button
-                        onClick={() => sendFriendRequest(post.author.id)}
-                        className="text-xs text-primary border border-primary/30 px-3 py-1 rounded-full hover:bg-primary/10 transition-colors"
-                      >
-                        {t.userProfile.connect}
-                      </button>
-                    );
-                  })()}
+                    })()}
+                    {post.author?.id && (post.author.id === user?.id || !reportedItems.has(post.id)) && (
+                      <div className="relative">
+                        <button
+                          onClick={() => setOpenPostMenu(openPostMenu === post.id ? null : post.id)}
+                          className="p-1 text-gray-500 hover:text-gray-300 transition-colors rounded-lg hover:bg-white/5"
+                        >
+                          <MoreHorizontal size={16} />
+                        </button>
+                        {openPostMenu === post.id && (
+                          <div className="absolute right-0 top-full mt-1 bg-card border border-white/10 rounded-xl shadow-lg py-1 z-10 min-w-[140px]">
+                            {post.author.id === user?.id ? (
+                              <button
+                                onClick={() => { setDeleteConfirm({ type: 'post', postId: post.id }); setOpenPostMenu(null); }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-white/5 transition-colors"
+                              >
+                                <Trash size={14} color="currentColor" />
+                                Elimina post
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => { setReportModal({ type: 'post', id: post.id }); setOpenPostMenu(null); }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-white/5 transition-colors"
+                              >
+                                <Flag size={14} color="currentColor" />
+                                Segnala post
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {post.author?.id && post.author.id !== user?.id && reportedItems.has(post.id) && (
+                      <span className="text-[10px] text-gray-500 italic">Segnalato</span>
+                    )}
+                  </div>
                 </div>
 
                 {post.content && <p className="text-sm text-text-primary mb-3 whitespace-pre-wrap">{post.content}</p>}
@@ -1376,7 +1491,7 @@ export default function NetworkingPage() {
                 </div>
               ) : (
                 comments.map((c) => (
-                  <div key={c.id} className="flex gap-3">
+                  <div key={c.id} className="flex gap-3 group">
                     <button
                       onClick={() => c.author?.id && c.author.id !== user?.id && router.push(`/profile/${c.author.id}`)}
                       className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden ${c.author?.name ? 'bg-primary/20' : 'bg-[#1E293B]'}`}
@@ -1390,7 +1505,7 @@ export default function NetworkingPage() {
                       )}
                     </button>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => c.author?.id && c.author.id !== user?.id && router.push(`/profile/${c.author.id}`)}
                           className={`text-sm font-semibold ${c.author?.name ? 'text-white hover:underline' : 'text-[#64748B] italic'}`}
@@ -1400,6 +1515,29 @@ export default function NetworkingPage() {
                         <span className="text-gray-500 text-xs">
                           {new Date(c.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
                         </span>
+                        {/* Delete: comment author or post owner */}
+                        {(c.author?.id === user?.id || commentPost?.author?.id === user?.id) && (
+                          <button
+                            onClick={() => setDeleteConfirm({ type: 'comment', postId: commentPost!.id, commentId: c.id })}
+                            className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 text-gray-600 hover:text-red-400 transition-all"
+                            title="Elimina commento"
+                          >
+                            <Trash size={12} color="currentColor" />
+                          </button>
+                        )}
+                        {/* Report: only for non-own comments when user is not post owner */}
+                        {c.author?.id && c.author.id !== user?.id && commentPost?.author?.id !== user?.id && !reportedItems.has(c.id) && (
+                          <button
+                            onClick={() => setReportModal({ type: 'comment', id: c.id, postId: commentPost!.id })}
+                            className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 text-gray-600 hover:text-red-400 transition-all"
+                            title="Segnala commento"
+                          >
+                            <Flag size={12} color="currentColor" />
+                          </button>
+                        )}
+                        {reportedItems.has(c.id) && (
+                          <span className="text-[10px] text-gray-600 italic ml-auto">Segnalato</span>
+                        )}
                       </div>
                       <p className="text-gray-300 text-sm mt-0.5 break-words">{c.content}</p>
                     </div>
@@ -1421,7 +1559,7 @@ export default function NetworkingPage() {
                 maxLength={500}
               />
               <button
-                onClick={submitComment}
+                onClick={() => submitComment()}
                 disabled={!newComment.trim() || commentSending}
                 className="w-9 h-9 rounded-full bg-primary flex items-center justify-center disabled:opacity-40 transition-opacity"
               >
@@ -1432,6 +1570,159 @@ export default function NetworkingPage() {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay to close post context menu */}
+      {openPostMenu && (
+        <div className="fixed inset-0 z-[5]" onClick={() => setOpenPostMenu(null)} />
+      )}
+
+      {/* Content Blocked Toast */}
+      {blockedToast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[80] w-[calc(100%-2rem)] max-w-sm animate-fade-in">
+          <div className="bg-[#1E1215] border border-red-500/30 rounded-2xl px-4 py-3.5 flex items-start gap-3 shadow-xl">
+            <div className="w-7 h-7 rounded-full bg-red-500/20 flex items-center justify-center shrink-0 mt-0.5">
+              <span className="text-red-400 text-sm leading-none">✕</span>
+            </div>
+            <div>
+              <p className="text-white font-semibold text-sm">Contenuto non pubblicabile</p>
+              <p className="text-red-300/80 text-xs mt-0.5 leading-relaxed">
+                Il tuo post contiene parole che violano le linee guida della community e non può essere pubblicato.
+              </p>
+            </div>
+            <button onClick={() => setBlockedToast(false)} className="text-red-400/50 hover:text-red-400 transition-colors ml-auto shrink-0 mt-0.5">
+              <CloseSm size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Warn Modal */}
+      {warnPending && (
+        <div className="fixed inset-0 bg-black/70 z-[70] flex items-end sm:items-center justify-center" onClick={() => setWarnPending(null)}>
+          <div className="bg-surface w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-5 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-center mb-3 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-gray-600" />
+            </div>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-9 h-9 rounded-full bg-yellow-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                <span className="text-yellow-400 text-lg leading-none">⚠</span>
+              </div>
+              <div>
+                <h3 className="text-white font-semibold text-base mb-1">Linguaggio volgare rilevato</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  Il tuo {warnPending === 'post' ? 'post' : 'commento'} contiene linguaggio potenzialmente inappropriato per una community universitaria. Vuoi modificarlo o pubblicarlo comunque?
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setWarnPending(null)}
+                className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/5 transition-colors"
+              >
+                Modifica
+              </button>
+              <button
+                onClick={() => { const t = warnPending; setWarnPending(null); t === 'post' ? submitPost(true) : submitComment(true); }}
+                className="flex-1 py-2.5 rounded-xl bg-yellow-500/80 text-white text-sm font-medium hover:bg-yellow-500 transition-colors"
+              >
+                Pubblica comunque
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirm Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/70 z-[70] flex items-end sm:items-center justify-center" onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-surface w-full sm:max-w-xs sm:rounded-2xl rounded-t-2xl p-5 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-center mb-3 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-gray-600" />
+            </div>
+            <h3 className="text-white font-semibold text-base mb-1">
+              {deleteConfirm.type === 'post' ? 'Elimina post' : 'Elimina commento'}
+            </h3>
+            <p className="text-gray-400 text-sm mb-5">
+              {deleteConfirm.type === 'post'
+                ? 'Il post verrà eliminato definitivamente. Sei sicuro?'
+                : 'Il commento verrà eliminato definitivamente. Sei sicuro?'}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 text-sm hover:bg-white/5 transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 py-2.5 rounded-xl bg-red-500/80 text-white text-sm font-medium hover:bg-red-500 transition-colors"
+              >
+                Elimina
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Modal */}
+      {reportModal && (
+        <div className="fixed inset-0 bg-black/70 z-[70] flex items-end sm:items-center justify-center" onClick={() => { setReportModal(null); setReportReason(''); }}>
+          <div
+            className="bg-surface w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-5 animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Handle bar (mobile only) */}
+            <div className="flex justify-center mb-3 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-gray-600" />
+            </div>
+            {reportSuccess ? (
+              <div className="text-center py-4">
+                <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-3">
+                  <Check size={24} color="#4ade80" strokeWidth={2.5} />
+                </div>
+                <p className="text-white font-semibold">Segnalazione inviata</p>
+                <p className="text-gray-400 text-sm mt-1">Grazie per aver contribuito alla sicurezza della community.</p>
+              </div>
+            ) : (
+              <>
+                <h3 className="text-white font-semibold text-lg mb-1">Segnala contenuto</h3>
+                <p className="text-gray-400 text-sm mb-4">Perché vuoi segnalare questo contenuto?</p>
+                <div className="space-y-2 mb-5">
+                  {['Spam', 'Contenuto inappropriato', 'Molestie o bullismo', 'Disinformazione', 'Altro'].map((reason) => (
+                    <button
+                      key={reason}
+                      onClick={() => setReportReason(reason)}
+                      className={`w-full text-left px-4 py-2.5 rounded-xl text-sm transition-colors ${
+                        reportReason === reason
+                          ? 'bg-primary/20 text-primary border border-primary/40'
+                          : 'bg-card text-gray-300 hover:bg-white/5'
+                      }`}
+                    >
+                      {reason}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setReportModal(null); setReportReason(''); }}
+                    className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 text-sm hover:bg-white/5 transition-colors"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    onClick={submitReport}
+                    disabled={!reportReason || reportSending}
+                    className="flex-1 py-2.5 rounded-xl bg-red-500/80 text-white text-sm font-medium disabled:opacity-40 hover:bg-red-500 transition-colors"
+                  >
+                    {reportSending ? 'Invio...' : 'Segnala'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
