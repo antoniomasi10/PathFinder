@@ -87,12 +87,15 @@ app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
 app.use(correlationIdMiddleware);
 
-// Auth rate limiter: applies to login, register, refresh, resend-otp
+// Auth rate limiter: only applies to sensitive endpoints (login, register, password reset, OAuth)
+// Excludes /refresh (called automatically by the frontend), /check-username (called on every keystroke),
+// /logout, /verify-email, /change-password, /resend-otp (has its own limiter)
+const SENSITIVE_AUTH_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/google'];
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 15,
   message: { error: 'Troppi tentativi, riprova più tardi' },
-  skip: (req) => ['/logout', '/verify-email'].includes(req.path),
+  skip: (req) => !SENSITIVE_AUTH_PATHS.includes(req.path),
 });
 app.use('/api/auth', authLimiter);
 

@@ -131,6 +131,10 @@ model User {
   posts                  Post[]
   postLikes              PostLike[]
   postComments           PostComment[]
+  postReports            PostReport[]
+  commentReports         CommentReport[]
+  userReports            UserReport[]    @relation("UserReportReporter")
+  reportedBy             UserReport[]    @relation("UserReportTarget")
   savedOpportunities     Opportunity[]      @relation("SavedOpportunities")
   savedCourses           Course[]           @relation("SavedCourses")
   notificationPreference NotificationPreference?
@@ -314,17 +318,20 @@ model FriendRequest {
 }
 
 model Post {
-  id        String        @id @default(uuid())
-  authorId  String
-  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  content   String
-  images    String[]      @default([])
-  createdAt DateTime      @default(now())
-  likes     PostLike[]
-  comments  PostComment[]
+  id          String        @id @default(uuid())
+  authorId    String
+  author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content     String
+  images      String[]      @default([])
+  autoFlagged Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  likes       PostLike[]
+  comments    PostComment[]
+  reports     PostReport[]
 
   @@index([authorId])
   @@index([createdAt])
+  @@index([autoFlagged])
 }
 
 model PostLike {
@@ -340,15 +347,56 @@ model PostLike {
 }
 
 model PostComment {
+  id          String          @id @default(uuid())
+  postId      String
+  post        Post            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content     String
+  autoFlagged Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  reports     CommentReport[]
+
+  @@index([postId])
+}
+
+model PostReport {
   id        String   @id @default(uuid())
   postId    String
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  content   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason    String
   createdAt DateTime @default(now())
 
+  @@unique([postId, userId])
   @@index([postId])
+}
+
+model CommentReport {
+  id        String      @id @default(uuid())
+  commentId String
+  comment   PostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason    String
+  createdAt DateTime    @default(now())
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+}
+
+model UserReport {
+  id           String   @id @default(uuid())
+  targetUserId String
+  targetUser   User     @relation("UserReportTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  reporterId   String
+  reporter     User     @relation("UserReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reason       String
+  createdAt    DateTime @default(now())
+
+  @@unique([targetUserId, reporterId])
+  @@index([targetUserId])
 }
 
 model NotificationPreference {

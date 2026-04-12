@@ -55,6 +55,12 @@ export const createCommentSchema = z.object({
   content: z.string().min(1, 'Il commento non può essere vuoto').max(2000),
 });
 
+export const reportSchema = z.object({
+  reason: z.enum(['Spam', 'Contenuto inappropriato', 'Molestie o bullismo', 'Disinformazione', 'Altro'], {
+    errorMap: () => ({ message: 'Motivo non valido' }),
+  }),
+});
+
 export const friendRequestSchema = z.object({
   toUserId: z.string().uuid('ID utente non valido'),
 });
