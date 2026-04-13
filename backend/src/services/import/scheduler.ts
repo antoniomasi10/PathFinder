@@ -4,11 +4,15 @@
  * Cron schedules:
  * - EURES opportunities: daily at 03:00
  * - EU Youth/Eurodesk: weekly Monday 03:30
+ * - Arbeitnow: weekly Tuesday 03:30 | RemoteOK: weekly Tuesday 04:00
+ * - Stage4eu: weekly Wednesday 03:30 | The Muse: weekly Wednesday 04:00
+ * - Greenhouse: weekly Thursday 03:30 | Bundesagentur: weekly Thursday 04:30
+ * - Lever: weekly Friday 03:30
+ * - Ashby: weekly Saturday 03:30 | Workable: weekly Saturday 04:00
+ * - Personio: weekly Sunday 03:30 | Cleanup: weekly Sunday 05:00
  * - MUR universities: 1st of each month at 02:00
  * - MUR courses: 1st of each month at 02:30
- * - Greenhouse internships: weekly Thursday 03:30
  * - AlmaLaurea stats: quarterly (1st Jan, Apr, Jul, Oct at 04:00)
- * - Cleanup stale data: weekly Sunday at 05:00
  */
 import cron from 'node-cron';
 import { importUniversities, importCourses } from './mur.import';
@@ -20,6 +24,10 @@ import { importLeverOpportunities } from './lever.import';
 import { importAshbyOpportunities } from './ashby.import';
 import { importWorkableOpportunities } from './workable.import';
 import { importPersonioOpportunities } from './personio.import';
+import { importArbeitnowOpportunities } from './arbeitnow.import';
+import { importRemoteOKOpportunities } from './remoteok.import';
+import { importMuseOpportunities } from './themuse.import';
+import { importBundesagenturOpportunities } from './bundesagentur.import';
 import { importAlmaLaureaStats } from './almalaurea.import';
 import { runCleanup } from './cleanup.service';
 import { alertImportFailure } from './alerting';
@@ -39,6 +47,16 @@ export function startImportScheduler() {
   // Daily: EURES opportunities (03:00)
   cron.schedule('0 3 * * *', () => {
     runWithAlert('EURES', 'eures', 'opportunities', importOpportunities);
+  });
+
+  // Weekly Wednesday: The Muse internships (04:00)
+  cron.schedule('0 4 * * 3', () => {
+    runWithAlert('TheMuse', 'themuse', 'opportunities', importMuseOpportunities);
+  });
+
+  // Weekly Thursday: Bundesagentur internships (04:30)
+  cron.schedule('30 4 * * 4', () => {
+    runWithAlert('Bundesagentur', 'bundesagentur', 'opportunities', importBundesagenturOpportunities);
   });
 
   // Weekly Monday: EU Youth + Eurodesk (03:30)
@@ -76,6 +94,16 @@ export function startImportScheduler() {
     runWithAlert('Personio', 'personio', 'opportunities', importPersonioOpportunities);
   });
 
+  // Weekly Tuesday: Arbeitnow aggregator (03:30)
+  cron.schedule('30 3 * * 2', () => {
+    runWithAlert('Arbeitnow', 'arbeitnow', 'opportunities', importArbeitnowOpportunities);
+  });
+
+  // Weekly Tuesday: RemoteOK (04:00)
+  cron.schedule('0 4 * * 2', () => {
+    runWithAlert('RemoteOK', 'remoteok', 'opportunities', importRemoteOKOpportunities);
+  });
+
   // Monthly 1st: MUR universities (02:00) + courses (02:30)
   cron.schedule('0 2 1 * *', () => {
     runWithAlert('MUR Universities', 'mur', 'universities', importUniversities);
@@ -100,9 +128,11 @@ export function startImportScheduler() {
   });
 
   logger.info('[Scheduler] Import scheduler started:');
-  logger.info('  EURES: daily 03:00 | EU Youth: weekly Mon 03:30 | Stage4eu: weekly Wed 03:30');
-  logger.info('  Greenhouse: weekly Thu 03:30 | Lever: weekly Fri 03:30 | Ashby: weekly Sat 03:30');
-  logger.info('  Workable: weekly Sat 04:00 | Personio: weekly Sun 03:30');
+  logger.info('  EURES: daily 03:00');
+  logger.info('  EU Youth: Mon 03:30 | Arbeitnow: Tue 03:30 | RemoteOK: Tue 04:00');
+  logger.info('  Stage4eu: Wed 03:30 | TheMuse: Wed 04:00');
+  logger.info('  Greenhouse: Thu 03:30 | Bundesagentur: Thu 04:30');
+  logger.info('  Lever: Fri 03:30 | Ashby: Sat 03:30 | Workable: Sat 04:00');
+  logger.info('  Personio: Sun 03:30 | Cleanup: Sun 05:00');
   logger.info('  MUR: monthly 1st 02:00/02:30 | AlmaLaurea: quarterly');
-  logger.info('  Cleanup: weekly Sun 05:00');
 }

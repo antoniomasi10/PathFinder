@@ -46,12 +46,12 @@ const BOARDS: Record<string, string> = {
   'aisafety': 'Center for AI Safety',
   'fehrandpeers': 'Fehr & Peers',
   'quincyinst': 'Quincy Institute',
-  'cognite': 'Cognite',
   'solopulseco': 'SoloPulse',
   // High-growth companies
   'plaid': 'Plaid',
   'palantir': 'Palantir',
   'kraken': 'Kraken',
+  'bumbleinc': 'Bumble',
 };
 
 // ---------------------------------------------------------------------------

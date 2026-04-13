@@ -52,6 +52,7 @@ const BOARDS: Record<string, string> = {
   'deel': 'Deel',
   'n8n': 'n8n',
   'elevenlabs': 'ElevenLabs',
+  'mollie': 'Mollie',
 };
 
 // ---------------------------------------------------------------------------

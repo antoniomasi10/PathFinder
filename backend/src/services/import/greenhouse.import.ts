@@ -72,6 +72,7 @@ const BOARDS: Record<string, string> = {
   'trivago': 'Trivago',
   'monzo': 'Monzo',
   'sumup': 'SumUp',
+  'n26': 'N26',
 };
 
 // ---------------------------------------------------------------------------

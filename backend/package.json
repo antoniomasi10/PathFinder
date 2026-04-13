@@ -18,7 +18,11 @@
     "scrape:lever": "ts-node scripts/scrape-lever.ts",
     "scrape:ashby": "ts-node scripts/scrape-ashby.ts",
     "scrape:workable": "ts-node scripts/scrape-workable.ts",
-    "scrape:personio": "ts-node scripts/scrape-personio.ts"
+    "scrape:personio": "ts-node scripts/scrape-personio.ts",
+    "scrape:arbeitnow": "ts-node scripts/scrape-arbeitnow.ts",
+    "scrape:remoteok": "ts-node scripts/scrape-remoteok.ts",
+    "scrape:themuse": "ts-node scripts/scrape-themuse.ts",
+    "scrape:bundesagentur": "ts-node scripts/scrape-bundesagentur.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

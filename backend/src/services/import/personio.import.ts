@@ -38,6 +38,12 @@ const BOARDS: Record<string, string> = {
   'chrono24': 'Chrono24',
   'payhawk': 'Payhawk',
   'userlane': 'Userlane',
+  // New EU companies
+  '1komma5grad': '1KOMMA5°',
+  'thermondo': 'Thermondo',
+  'r2p-group': 'r2p Group',
+  'em-ag': 'em engineering methods',
+  'cosine': 'Cosine',
 };
 
 // ---------------------------------------------------------------------------

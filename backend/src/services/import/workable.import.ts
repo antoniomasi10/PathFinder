@@ -42,6 +42,8 @@ const BOARDS: Record<string, string> = {
   'campusink': 'Campus Ink',
   'degy': 'Degy Booking International',
   'al-warren-oil-company-inc': 'Al Warren Oil Company',
+  'upstream': 'Upstream',
+  'garmin-cluj': 'Garmin',
 };
 
 // ---------------------------------------------------------------------------
