@@ -1,65 +1,56 @@
 /**
  * MUR (Ministero dell'Università e della Ricerca) Data Import
- * Source: https://dati-ustat.mur.gov.it (CKAN API)
+ * Source: https://dati-ustat.mur.gov.it/dataset/metadati
  *
- * Live API — universities & courses refresh monthly.
- * DB is the cache: if the API is down, existing data remains valid.
- * Records get `sourceId` + `lastSyncedAt` for freshness tracking.
+ * Downloads public CSV datasets (Italian Open Data License v2.0).
+ * - atenei.csv: list of all Italian universities
+ * - corsidilaurea_2010-2024.csv: degree programmes (we only import the latest year)
+ *
+ * This avoids the CKAN /api/ endpoint which is blocked by robots.txt.
+ * CSV download URLs are standard CKAN resource links — not API calls.
+ *
+ * Runs monthly on the 1st at 02:00 (universities) and 02:30 (courses).
  */
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { CourseType } from '@prisma/client';
 import { validateUniversity, validateCourse } from './validation';
+import { parse } from 'csv-parse/sync';
 
-const CKAN_BASE = 'https://dati-ustat.mur.gov.it/api/3/action';
+// ---------------------------------------------------------------------------
+// CSV download URLs (CKAN resource downloads, NOT API calls)
+// ---------------------------------------------------------------------------
 
-interface CkanResponse {
-  success: boolean;
-  result: { records: any[]; total: number };
-}
+const ATENEI_CSV_URL =
+  'https://dati-ustat.mur.gov.it/dataset/bed0c71e-9f86-4a0f-a266-963b6f7bbbd2/resource/820aefe6-0662-4656-84ec-d8859a2a3b7e/download/atenei.csv';
 
-async function ckanSearch(resourceId: string, limit = 5000, offset = 0): Promise<any[]> {
-  const url = `${CKAN_BASE}/datastore_search?resource_id=${resourceId}&limit=${limit}&offset=${offset}`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(30000) });
-  if (!res.ok) throw new Error(`CKAN ${res.status}`);
-  const data = await res.json() as CkanResponse;
-  if (!data.success) throw new Error('CKAN success=false');
-  return data.result.records;
-}
+const CORSI_CSV_URL =
+  'https://dati-ustat.mur.gov.it/dataset/bed0c71e-9f86-4a0f-a266-963b6f7bbbd2/resource/c0e63906-7190-4568-892b-0cf399f56071/download/corsidilaurea_2010-2024.csv';
 
-async function ckanFetchAll(resourceId: string): Promise<any[]> {
-  const all: any[] = [];
-  let offset = 0;
-  while (true) {
-    const page = await ckanSearch(resourceId, 5000, offset);
-    all.push(...page);
-    if (page.length < 5000) break;
-    offset += 5000;
-  }
-  return all;
-}
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-async function discoverDatasets(): Promise<{ id: string; name: string }[]> {
-  const res = await fetch(`${CKAN_BASE}/package_search?q=*&rows=50`, { signal: AbortSignal.timeout(15000) });
-  if (!res.ok) return [];
-  const data = await res.json() as any;
-  if (!data.success) return [];
-  const out: { id: string; name: string }[] = [];
-  for (const pkg of data.result.results || []) {
-    for (const r of pkg.resources || []) {
-      if (r.format === 'CSV' || r.datastore_active) {
-        out.push({ id: r.id, name: `${pkg.title} — ${r.name || r.description || ''}` });
-      }
-    }
-  }
-  return out;
-}
-
-function mapCourseType(tipo: string): CourseType {
-  const t = (tipo || '').toLowerCase();
+function mapCourseType(desc: string): CourseType {
+  const t = (desc || '').toLowerCase();
   if (t.includes('magistrale') && !t.includes('ciclo')) return 'MAGISTRALE';
   if (t.includes('ciclo unico') || t.includes('ciclo_unico')) return 'CICLO_UNICO';
   return 'TRIENNALE';
+}
+
+async function downloadCsv(url: string): Promise<any[]> {
+  const res = await fetch(url, { signal: AbortSignal.timeout(60000) });
+  if (!res.ok) throw new Error(`CSV download failed: ${res.status}`);
+  const text = await res.text();
+  // Remove BOM if present
+  const clean = text.replace(/^\uFEFF/, '');
+  return parse(clean, {
+    delimiter: ';',
+    columns: true,
+    skip_empty_lines: true,
+    relax_column_count: true,
+    trim: true,
+  });
 }
 
 async function logImport(source: string, type: string, fn: () => Promise<number>): Promise<number> {
@@ -82,119 +73,140 @@ async function logImport(source: string, type: string, fn: () => Promise<number>
   }
 }
 
+// ---------------------------------------------------------------------------
+// University import
+// ---------------------------------------------------------------------------
+
 export async function importUniversities(): Promise<{ imported: number; source: string }> {
-  logger.info('[MUR] University import starting...');
+  logger.info('[MUR] University import starting (CSV download)...');
   const now = new Date();
-  let source = 'ckan-api';
 
   try {
     const count = await logImport('mur', 'universities', async () => {
-      let records: any[] = [];
-
-      // 1. Try dynamic dataset discovery
-      const datasets = await discoverDatasets();
-      const match = datasets.find(d => d.name.toLowerCase().includes('atene'));
-      if (match) {
-        records = await ckanFetchAll(match.id);
-        logger.info(`[MUR] Dataset "${match.name}": ${records.length} records`);
-      }
-
-      // 2. Fallback known resource ID
-      if (records.length === 0) {
-        try { records = await ckanSearch('a0e25055-f444-41e0-bab8-1e4cdcbbe659'); } catch { /* */ }
-      }
-
-      if (records.length === 0) throw new Error('No university data from CKAN');
+      const records = await downloadCsv(ATENEI_CSV_URL);
+      logger.info(`[MUR] Downloaded atenei.csv: ${records.length} rows`);
 
       let imported = 0;
       for (const r of records) {
-        const name = r.NOME_ATENEO || r.nome_ateneo || r.Nome || '';
-        const city = r.COMUNE || r.comune || r.Comune || '';
-        const code = String(r.COD_ATENEO || r.cod_ateneo || '').padStart(5, '0');
+        // Only import active universities (Status = A)
+        if (r.Status !== 'A') continue;
+
+        const name = r.NomeEsteso || '';
+        const city = r.CITTA || '';
+        const code = String(r.COD_Ateneo || '').padStart(5, '0');
         if (!name || code === '00000') continue;
 
-        const validated = validateUniversity({ name: name.trim(), city: city.trim(), websiteUrl: r.URL_SITO || null });
+        const validated = validateUniversity({
+          name: name.trim(),
+          city: city.trim(),
+          websiteUrl: null,
+        });
         if (!validated) continue;
 
         const sid = `mur-${code}`;
         await prisma.university.upsert({
           where: { id: sid },
-          update: { name: validated.name, city: validated.city, websiteUrl: validated.websiteUrl, isActive: true, sourceId: sid, lastSyncedAt: now },
-          create: { id: sid, name: validated.name, city: validated.city, country: 'Italia', websiteUrl: validated.websiteUrl, sourceId: sid, lastSyncedAt: now },
+          update: {
+            name: validated.name,
+            city: validated.city,
+            isActive: true,
+            sourceId: sid,
+            lastSyncedAt: now,
+          },
+          create: {
+            id: sid,
+            name: validated.name,
+            city: validated.city,
+            country: 'Italia',
+            sourceId: sid,
+            lastSyncedAt: now,
+          },
         });
         imported++;
       }
       return imported;
     });
 
-    logger.info(`[MUR] Imported ${count} universities from API`);
-    return { imported: count, source };
+    logger.info(`[MUR] Imported ${count} universities from CSV`);
+    return { imported: count, source: 'csv-download' };
   } catch (err) {
-    // API failed — check if we have recent data in DB
+    // CSV download failed — check if we have cached data
     const existing = await prisma.university.count({ where: { sourceId: { startsWith: 'mur-' } } });
     if (existing > 0) {
-      logger.warn(`[MUR] API failed but DB has ${existing} cached universities — skipping`);
+      logger.warn(`[MUR] CSV download failed but DB has ${existing} cached universities — skipping`);
       return { imported: 0, source: 'db-cache' };
     }
 
-    // DB empty + API down → first-run fallback only
-    logger.warn('[MUR] API failed and DB empty — using first-run seed');
-    source = 'first-run-seed';
+    logger.warn(`[MUR] CSV download failed and DB empty — using first-run seed`);
     const count = await importFirstRunUniversities(now);
-    return { imported: count, source };
+    return { imported: count, source: 'first-run-seed' };
   }
 }
 
+// ---------------------------------------------------------------------------
+// Course import
+// ---------------------------------------------------------------------------
+
 export async function importCourses(): Promise<{ imported: number; source: string }> {
-  logger.info('[MUR] Course import starting...');
+  logger.info('[MUR] Course import starting (CSV download)...');
   const now = new Date();
 
   try {
     const count = await logImport('mur', 'courses', async () => {
-      let records: any[] = [];
+      const records = await downloadCsv(CORSI_CSV_URL);
+      logger.info(`[MUR] Downloaded corsi.csv: ${records.length} rows`);
 
-      const datasets = await discoverDatasets();
-      const match = datasets.find(d => d.name.toLowerCase().includes('offerta') || d.name.toLowerCase().includes('cors'));
-      if (match) {
-        records = await ckanFetchAll(match.id);
-      }
-      if (records.length === 0) {
-        try { records = await ckanSearch('6f0b7666-1f5e-434c-a40a-6560e1a9a57f', 10000); } catch { /* */ }
-      }
-      if (records.length === 0) throw new Error('No course data from CKAN');
+      // Only import the latest year
+      const years = [...new Set(records.map((r: any) => r.ANNO_VALIDITA))].sort();
+      const latestYear = years[years.length - 1];
+      const latest = records.filter((r: any) => r.ANNO_VALIDITA === latestYear);
+      logger.info(`[MUR] Filtering to year ${latestYear}: ${latest.length} courses`);
 
+      // Build university lookup
       const universities = await prisma.university.findMany({ where: { isActive: true } });
-      const uniLookup = new Map(universities.map(u => [u.name.toLowerCase(), u]));
+      const uniByName = new Map(universities.map(u => [u.name.toLowerCase(), u]));
 
       let imported = 0;
-      for (const r of records) {
-        const courseName = r.NOME_CORSO || r.nome_corso || '';
-        const uniName = r.NOME_ATENEO || r.nome_ateneo || '';
-        if (!courseName || !uniName) continue;
+      for (const r of latest) {
+        const courseName = r.NOME_CORSO || '';
+        const uniShortName = r.NomeOperativo || '';
+        if (!courseName || !uniShortName) continue;
 
-        const uni = uniLookup.get(uniName.trim().toLowerCase()) ||
-          universities.find(u => u.name.toLowerCase().includes(uniName.trim().toLowerCase().slice(0, 20)));
+        // Match university by short name (NomeOperativo maps to the uni's short name)
+        const uni = universities.find(u =>
+          u.name.toLowerCase().includes(uniShortName.trim().toLowerCase()) ||
+          uniByName.has(uniShortName.trim().toLowerCase())
+        );
         if (!uni) continue;
 
         const validated = validateCourse({
           name: courseName.trim(),
-          field: r.AREA_SCIENTIFICA || null,
-          languageOfInstruction: r.LINGUA || 'Italiano',
+          field: r.Area || r.Gruppo_Nome?.trim() || null,
+          languageOfInstruction: 'Italiano',
         });
         if (!validated) continue;
 
-        const sid = `mur-c-${r._id || imported}`;
+        const sid = `mur-c-${latestYear}-${r.NUMERO || ''}-${imported}`;
         await prisma.course.upsert({
           where: { id: sid },
           update: {
-            name: validated.name, type: mapCourseType(r.TIPO_CORSO || ''),
-            field: validated.field, languageOfInstruction: validated.languageOfInstruction,
-            isActive: true, sourceId: sid, lastSyncedAt: now,
+            name: validated.name,
+            type: mapCourseType(r.DES || ''),
+            field: validated.field,
+            languageOfInstruction: validated.languageOfInstruction,
+            isActive: true,
+            sourceId: sid,
+            lastSyncedAt: now,
           },
           create: {
-            id: sid, universityId: uni.id, name: validated.name,
-            type: mapCourseType(r.TIPO_CORSO || ''), field: validated.field,
-            languageOfInstruction: validated.languageOfInstruction, sourceId: sid, lastSyncedAt: now,
+            id: sid,
+            universityId: uni.id,
+            name: validated.name,
+            type: mapCourseType(r.DES || ''),
+            field: validated.field,
+            languageOfInstruction: validated.languageOfInstruction,
+            sourceId: sid,
+            lastSyncedAt: now,
           },
         });
         imported++;
@@ -202,11 +214,12 @@ export async function importCourses(): Promise<{ imported: number; source: strin
       return imported;
     });
 
-    return { imported: count, source: 'ckan-api' };
+    logger.info(`[MUR] Imported ${count} courses from CSV`);
+    return { imported: count, source: 'csv-download' };
   } catch (err) {
     const existing = await prisma.course.count({ where: { sourceId: { startsWith: 'mur-' } } });
     if (existing > 0) {
-      logger.warn(`[MUR] Course API failed but DB has ${existing} cached — skipping`);
+      logger.warn(`[MUR] Course CSV failed but DB has ${existing} cached — skipping`);
       return { imported: 0, source: 'db-cache' };
     }
     logger.warn(`[MUR] Course import failed: ${err}`);
@@ -214,27 +227,30 @@ export async function importCourses(): Promise<{ imported: number; source: strin
   }
 }
 
-// Only used when DB is completely empty AND API is down (first startup)
+// ---------------------------------------------------------------------------
+// First-run seed (only when DB empty AND CSV download fails)
+// ---------------------------------------------------------------------------
+
 async function importFirstRunUniversities(now: Date): Promise<number> {
   const unis = [
-    { code: '00001', name: 'Politecnico di Milano', city: 'Milano', url: 'https://www.polimi.it' },
-    { code: '00002', name: 'Politecnico di Torino', city: 'Torino', url: 'https://www.polito.it' },
-    { code: '00003', name: 'Università degli Studi di Milano', city: 'Milano', url: 'https://www.unimi.it' },
-    { code: '00004', name: 'Università degli Studi di Roma "La Sapienza"', city: 'Roma', url: 'https://www.uniroma1.it' },
-    { code: '00005', name: 'Università di Bologna', city: 'Bologna', url: 'https://www.unibo.it' },
-    { code: '00006', name: 'Università Federico II', city: 'Napoli', url: 'https://www.unina.it' },
-    { code: '00007', name: 'Università degli Studi di Padova', city: 'Padova', url: 'https://www.unipd.it' },
-    { code: '00008', name: 'Università degli Studi di Firenze', city: 'Firenze', url: 'https://www.unifi.it' },
-    { code: '00009', name: 'Università degli Studi di Torino', city: 'Torino', url: 'https://www.unito.it' },
-    { code: '00010', name: 'Università di Pisa', city: 'Pisa', url: 'https://www.unipi.it' },
+    { code: '00101', name: 'Università degli studi di Torino', city: 'TORINO' },
+    { code: '00102', name: 'Politecnico di Torino', city: 'TORINO' },
+    { code: '01301', name: 'Università degli Studi di Milano', city: 'MILANO' },
+    { code: '01401', name: 'Politecnico di Milano', city: 'MILANO' },
+    { code: '05801', name: 'Università degli Studi di Roma "La Sapienza"', city: 'ROMA' },
+    { code: '03701', name: 'Università di Bologna', city: 'BOLOGNA' },
+    { code: '06301', name: 'Università Federico II', city: 'NAPOLI' },
+    { code: '02801', name: 'Università degli Studi di Padova', city: 'PADOVA' },
+    { code: '04801', name: 'Università degli Studi di Firenze', city: 'FIRENZE' },
+    { code: '05001', name: 'Università di Pisa', city: 'PISA' },
   ];
 
   for (const u of unis) {
     const sid = `mur-${u.code}`;
     await prisma.university.upsert({
       where: { id: sid },
-      update: { name: u.name, city: u.city, websiteUrl: u.url, isActive: true, sourceId: sid, lastSyncedAt: now },
-      create: { id: sid, name: u.name, city: u.city, country: 'Italia', websiteUrl: u.url, sourceId: sid, lastSyncedAt: now },
+      update: { name: u.name, city: u.city, isActive: true, sourceId: sid, lastSyncedAt: now },
+      create: { id: sid, name: u.name, city: u.city, country: 'Italia', sourceId: sid, lastSyncedAt: now },
     });
   }
   return unis.length;

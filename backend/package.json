@@ -22,7 +22,8 @@
     "scrape:arbeitnow": "ts-node scripts/scrape-arbeitnow.ts",
     "scrape:remoteok": "ts-node scripts/scrape-remoteok.ts",
     "scrape:themuse": "ts-node scripts/scrape-themuse.ts",
-    "scrape:bundesagentur": "ts-node scripts/scrape-bundesagentur.ts"
+    "scrape:bundesagentur": "ts-node scripts/scrape-bundesagentur.ts",
+    "scrape:fashionunited": "ts-node scripts/scrape-fashionunited.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

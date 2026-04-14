@@ -901,9 +901,10 @@ export default function HomePage() {
   }, []);
 
   // Load explore page (replaces current results)
-  const loadExplorePage = (page: number, scrollToTop = false) => {
+  const loadExplorePage = (page: number, scrollToTop = false, search = '') => {
     setLoadingExplore(true);
-    api.get(`/opportunities?page=${page}&limit=20`)
+    const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+    api.get(`/opportunities?page=${page}&limit=20${searchParam}`)
       .then(({ data }) => {
         const items = (data.data || data) as any[];
         const mapped = (Array.isArray(items) ? items : []).map(mapOpp);
@@ -922,6 +923,16 @@ export default function HomePage() {
 
   // Load first explore page on mount
   useEffect(() => { loadExplorePage(1); }, []);
+
+  // Reload explore results when search query changes (debounced)
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    const timer = setTimeout(() => {
+      loadExplorePage(1, false, trimmed);
+    }, 350);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
 
   // Filter sheet state
   const [filterOpen, setFilterOpen] = useState(false);
@@ -1116,11 +1127,11 @@ export default function HomePage() {
                 if (opp) handleSave(opp);
               }}
             />
-            {exploreTotalPages > 1 && !q && !hasActiveFilters && (
+            {exploreTotalPages > 1 && !hasActiveFilters && (
               <Pagination
                 currentPage={explorePage}
                 totalPages={exploreTotalPages}
-                onPageChange={(p) => loadExplorePage(p, true)}
+                onPageChange={(p) => loadExplorePage(p, true, searchQuery.trim())}
                 disabled={loadingExplore}
               />
             )}

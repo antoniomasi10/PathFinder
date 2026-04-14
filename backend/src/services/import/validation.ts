@@ -6,7 +6,6 @@
  */
 import { z } from 'zod';
 import { logger } from '../../utils/logger';
-
 // --- Opportunity validation ---
 
 const opportunitySchema = z.object({
@@ -35,7 +34,15 @@ export function validateOpportunity(data: Record<string, any>, source: string): 
       data.expiresAt = isNaN(d.getTime()) ? null : d;
     }
 
-    return opportunitySchema.parse(data);
+    const parsed = opportunitySchema.parse(data);
+
+    // Dedup: skip if same title+company already seen in this run
+    if (isDuplicateOpportunity(parsed.title, parsed.company || '')) {
+      logger.debug(`[Validation] Skipped duplicate ${source}: ${parsed.title.slice(0, 50)}`);
+      return null;
+    }
+
+    return parsed;
   } catch (err) {
     logger.debug(`[Validation] Skipped invalid ${source} opportunity: ${data.title?.slice(0, 50) || 'no-title'}`);
     return null;
@@ -81,6 +88,32 @@ export function validateCourse(data: Record<string, any>): ValidatedCourse | nul
     logger.debug(`[Validation] Skipped invalid course: ${data.name?.slice(0, 50) || 'no-name'}`);
     return null;
   }
+}
+
+// --- Runtime duplicate cache (shared across all importers within a single run) ---
+
+const seenTitleCompany = new Set<string>();
+
+function dedupKey(title: string, company: string): string {
+  return `${title.toLowerCase().trim()}|||${company.toLowerCase().trim()}`;
+}
+
+/**
+ * Check if an opportunity with the same title+company has already been
+ * seen in this process. Returns true if duplicate (should be skipped).
+ */
+export function isDuplicateOpportunity(title: string, company: string): boolean {
+  const key = dedupKey(title, company);
+  if (seenTitleCompany.has(key)) return true;
+  seenTitleCompany.add(key);
+  return false;
+}
+
+/**
+ * Reset the dedup cache (call at the start of each import run if needed).
+ */
+export function resetDedupCache(): void {
+  seenTitleCompany.clear();
 }
 
 // --- Duplicate detection ---

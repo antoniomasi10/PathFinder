@@ -17,6 +17,7 @@ const DAYS_MS = 24 * 60 * 60 * 1000;
 
 interface CleanupResult {
   expiredOpportunities: number;
+  deduplicatedOpportunities: number;
   flaggedStaleOpportunities: number;
   deactivatedUniversities: number;
   deactivatedCourses: number;
@@ -28,11 +29,30 @@ export async function runCleanup(): Promise<CleanupResult> {
   const now = new Date();
   const result: CleanupResult = {
     expiredOpportunities: 0,
+    deduplicatedOpportunities: 0,
     flaggedStaleOpportunities: 0,
     deactivatedUniversities: 0,
     deactivatedCourses: 0,
     prunedLogs: 0,
   };
+
+  // 0. Remove cross-source duplicates (same title+company, keep most recent)
+  const dupeGroups = await prisma.$queryRawUnsafe<{ ids: string[] }[]>(`
+    SELECT array_agg(id ORDER BY "postedAt" DESC) as ids
+    FROM "Opportunity"
+    GROUP BY LOWER(title), LOWER(company)
+    HAVING COUNT(*) > 1
+  `);
+  if (dupeGroups.length > 0) {
+    const idsToDelete = dupeGroups.flatMap(g => g.ids.slice(1));
+    if (idsToDelete.length > 0) {
+      const deleted = await prisma.opportunity.deleteMany({
+        where: { id: { in: idsToDelete } },
+      });
+      result.deduplicatedOpportunities = deleted.count;
+      logger.info(`[Cleanup] Removed ${deleted.count} duplicate opportunities`);
+    }
+  }
 
   // 1. Delete ONLY explicitly expired opportunities (expiresAt in the past)
   //    These have a clear expiration date from the source — safe to remove

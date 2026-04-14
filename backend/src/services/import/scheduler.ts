@@ -7,7 +7,7 @@
  * - Arbeitnow: weekly Tuesday 03:30 | RemoteOK: weekly Tuesday 04:00
  * - Stage4eu: weekly Wednesday 03:30 | The Muse: weekly Wednesday 04:00
  * - Greenhouse: weekly Thursday 03:30 | Bundesagentur: weekly Thursday 04:30
- * - Lever: weekly Friday 03:30
+ * - Lever: weekly Friday 03:30 | FashionUnited: weekly Friday 04:00
  * - Ashby: weekly Saturday 03:30 | Workable: weekly Saturday 04:00
  * - Personio: weekly Sunday 03:30 | Cleanup: weekly Sunday 05:00
  * - MUR universities: 1st of each month at 02:00
@@ -28,6 +28,7 @@ import { importArbeitnowOpportunities } from './arbeitnow.import';
 import { importRemoteOKOpportunities } from './remoteok.import';
 import { importMuseOpportunities } from './themuse.import';
 import { importBundesagenturOpportunities } from './bundesagentur.import';
+import { importFashionUnitedOpportunities } from './fashionunited.import';
 import { importAlmaLaureaStats } from './almalaurea.import';
 import { runCleanup } from './cleanup.service';
 import { alertImportFailure } from './alerting';
@@ -77,6 +78,11 @@ export function startImportScheduler() {
   // Weekly Friday: Lever internships (03:30)
   cron.schedule('30 3 * * 5', () => {
     runWithAlert('Lever', 'lever', 'opportunities', importLeverOpportunities);
+  });
+
+  // Weekly Friday: FashionUnited fashion internships (04:00)
+  cron.schedule('0 4 * * 5', () => {
+    runWithAlert('FashionUnited', 'fashionunited', 'opportunities', importFashionUnitedOpportunities);
   });
 
   // Weekly Saturday: Ashby internships (03:30)
@@ -132,7 +138,8 @@ export function startImportScheduler() {
   logger.info('  EU Youth: Mon 03:30 | Arbeitnow: Tue 03:30 | RemoteOK: Tue 04:00');
   logger.info('  Stage4eu: Wed 03:30 | TheMuse: Wed 04:00');
   logger.info('  Greenhouse: Thu 03:30 | Bundesagentur: Thu 04:30');
-  logger.info('  Lever: Fri 03:30 | Ashby: Sat 03:30 | Workable: Sat 04:00');
+  logger.info('  Lever: Fri 03:30 | FashionUnited: Fri 04:00');
+  logger.info('  Ashby: Sat 03:30 | Workable: Sat 04:00');
   logger.info('  Personio: Sun 03:30 | Cleanup: Sun 05:00');
   logger.info('  MUR: monthly 1st 02:00/02:30 | AlmaLaurea: quarterly');
 }
