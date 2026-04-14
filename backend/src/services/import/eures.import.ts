@@ -131,6 +131,8 @@ async function scrapePage(
       var compEl = document.getElementById('jv-employer-name-' + i);
       var company = compEl ? compEl.textContent.trim() : '';
       var locEl = document.getElementById('location-' + i + '-0');
+      if (!locEl) { locEl = card.querySelector('[id^="location-"]'); }
+      if (!locEl) { locEl = card.querySelector('.location, .ecl-content-block__location'); }
       var location = locEl ? locEl.textContent.trim().replace(/\\s+/g, ' ') : '';
       var country = '';
       if (locEl && locEl.childNodes[0]) { country = locEl.childNodes[0].textContent.trim(); }

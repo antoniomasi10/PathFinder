@@ -325,10 +325,12 @@ function FullWidthCard({
 
           {/* Location + date + source chips */}
           <div className="flex flex-wrap gap-2">
-            <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-3 py-2">
-              <MapPin size={14} strokeWidth={1.8} className="text-gray-400 flex-shrink-0" />
-              <span className="text-gray-300 text-xs">{opp.location}</span>
-            </div>
+            {opp.location && (
+              <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-3 py-2">
+                <MapPin size={14} strokeWidth={1.8} className="text-gray-400 flex-shrink-0" />
+                <span className="text-gray-300 text-xs">{opp.location}</span>
+              </div>
+            )}
             <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-3 py-2">
               <CalendarIcon size={14} strokeWidth={1.8} className="text-gray-400 flex-shrink-0" />
               <span className="text-gray-300 text-xs">{t.home.publishedDaysAgo}</span>
@@ -446,10 +448,12 @@ function HalfWidthCard({
 
           {/* Location + source chips */}
           <div className="flex flex-wrap gap-1.5">
-            <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-2.5 py-1.5">
-              <MapPin size={12} strokeWidth={1.8} className="text-gray-400 flex-shrink-0" />
-              <span className="text-gray-300 text-[11px]">{opp.location}</span>
-            </div>
+            {opp.location && (
+              <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-2.5 py-1.5">
+                <MapPin size={12} strokeWidth={1.8} className="text-gray-400 flex-shrink-0" />
+                <span className="text-gray-300 text-[11px]">{opp.location}</span>
+              </div>
+            )}
             {opp.source && (
               <div className="flex items-center bg-[#0D1117] rounded-xl px-2.5 py-1.5">
                 <span className="text-primary text-[11px] font-medium">{opp.source}</span>
