@@ -29,7 +29,6 @@ import api from '@/lib/api';
 import AdmissionSimulator from '@/components/AdmissionSimulator';
 import CourseComparison from '@/components/CourseComparison';
 import LivingMap from '@/components/LivingMap';
-import { useBadges } from '@/components/BadgeProvider';
 import { isValidExternalUrl } from '@/lib/urlValidation';
 
 export default function CourseDetailPage() {
@@ -38,8 +37,6 @@ export default function CourseDetailPage() {
   const course = MOCK_COURSES.find((c) => c.id === Number(params.id));
   const [backendCourse, setBackendCourse] = useState<any>(null);
   const { savedIds, toggleSave } = useSavedCourses();
-  const { track } = useBadges();
-
   // Also fetch from backend API for real data sync
   useEffect(() => {
     if (params.id) {
@@ -75,11 +72,6 @@ export default function CourseDetailPage() {
       console.error('Failed to fetch user profile:', err);
     });
   }, []);
-
-  // Track course view for badges
-  useEffect(() => {
-    if (course) track('courses_viewed');
-  }, [course, track]);
 
   useEffect(() => {
     if (!course || checklistInitialized) return;
@@ -286,7 +278,6 @@ export default function CourseDetailPage() {
           <div className="flex gap-3 max-w-md mx-auto">
             <button
               onClick={() => {
-                if (!bookmarked) track('courses_saved');
                 toggleSave({ id: courseId, name: backendCourse.name, university: backendCourse.university });
               }}
               className="flex-1 py-3 rounded-xl font-semibold shadow-md transition-colors"
@@ -494,7 +485,7 @@ export default function CourseDetailPage() {
       {/* Admission Simulator CTA */}
       <div className="px-5 pb-6">
         <button
-          onClick={() => { track('simulations_done'); setShowSimulator(true); }}
+          onClick={() => { setShowSimulator(true); }}
           className="w-full rounded-2xl p-5 text-left transition-transform active:scale-[0.98]"
           style={{
             background: 'linear-gradient(135deg, #1C2F43 0%, #162232 100%)',
@@ -571,7 +562,7 @@ export default function CourseDetailPage() {
           </div>
 
           <button
-            onClick={() => { const url = course.requirementsUrl || course.officialUrl; track('requirements_viewed'); if (isValidExternalUrl(url)) window.open(url, '_blank', 'noopener,noreferrer'); }}
+            onClick={() => { const url = course.requirementsUrl || course.officialUrl; if (isValidExternalUrl(url)) window.open(url, '_blank', 'noopener,noreferrer'); }}
             className="w-full py-2.5 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
             style={{ border: '1px solid #2A3F54', color: '#D0D4DC' }}
           >
@@ -631,7 +622,7 @@ export default function CourseDetailPage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => { if (!isAdded) { track('deadlines_added'); addToCalendar(deadline, index); } }}
+                  onClick={() => { if (!isAdded) { addToCalendar(deadline, index); } }}
                   className="flex items-center gap-1.5 self-start transition-colors"
                   style={{ color: isAdded ? '#22C55E' : '#D0D4DC' }}
                 >
@@ -689,7 +680,6 @@ export default function CourseDetailPage() {
         <div className="flex gap-3 max-w-md mx-auto">
           <button
             onClick={() => {
-              if (!bookmarked) track('courses_saved');
               const name = backendCourse?.name || course?.title || '';
               const uni = backendCourse?.university || (course ? { name: course.university, city: course.city } : undefined);
               toggleSave({ id: courseId, name, university: uni });
@@ -704,7 +694,7 @@ export default function CourseDetailPage() {
             {bookmarked ? 'Salvato' : 'Salva corso'}
           </button>
           <button
-            onClick={() => { track('courses_compared'); setShowComparison(true); }}
+            onClick={() => { setShowComparison(true); }}
             className="flex-1 py-3 rounded-xl font-semibold transition-colors"
             style={{ border: '2px solid #4A9EFF', color: '#4A9EFF' }}
           >
@@ -712,7 +702,7 @@ export default function CourseDetailPage() {
           </button>
         </div>
         <button
-          onClick={() => { track('applications_clicked'); if (isValidExternalUrl(course.officialUrl)) window.open(course.officialUrl, '_blank', 'noopener,noreferrer'); }}
+          onClick={() => { if (isValidExternalUrl(course.officialUrl)) window.open(course.officialUrl, '_blank', 'noopener,noreferrer'); }}
           className="w-full py-2.5 rounded-xl font-medium transition-colors mt-2 max-w-md mx-auto flex items-center justify-center gap-2"
           style={{ border: '1px solid #2A3F54', color: '#D0D4DC' }}
         >

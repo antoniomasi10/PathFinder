@@ -6,7 +6,6 @@ import TopBar from '@/components/TopBar';
 import { SavedOpportunitiesProvider } from '@/lib/savedOpportunities';
 import { SavedCoursesProvider } from '@/lib/savedCourses';
 import { ToastProvider } from '@/components/Toast';
-import BadgeProvider from '@/components/BadgeProvider';
 import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import { NotificationProvider } from '@/lib/notificationContext';
 import { isPushSupported, subscribeToPush } from '@/lib/pushManager';
@@ -90,7 +89,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   return (
     <ToastProvider>
       <NotificationProvider>
-      <BadgeProvider>
       <SavedOpportunitiesProvider>
         <SavedCoursesProvider>
         <div className="min-h-screen" style={{ backgroundColor: '#0D1117' }}>
@@ -103,7 +101,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </div>
         </SavedCoursesProvider>
       </SavedOpportunitiesProvider>
-      </BadgeProvider>
       </NotificationProvider>
     </ToastProvider>
   );
