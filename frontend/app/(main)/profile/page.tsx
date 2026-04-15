@@ -23,6 +23,7 @@ import {
 interface FullProfile {
   id: string;
   name: string;
+  surname: string;
   email: string;
   avatar?: string;
   bio?: string;
@@ -78,11 +79,13 @@ export default function ProfilePage() {
   const [showSkillsModal, setShowSkillsModal] = useState(false);
   const [modalSkills, setModalSkills] = useState<string[]>([]);
   const [editName, setEditName] = useState('');
+  const [editSurname, setEditSurname] = useState('');
   const [editBio, setEditBio] = useState('');
   const [editCourse, setEditCourse] = useState('');
   const [editYear, setEditYear] = useState<number | undefined>();
   const [editSkills, setEditSkills] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState('');
   const [friendSearch, setFriendSearch] = useState('');
   const [showSecurityPrivacySheet, setShowSecurityPrivacySheet] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -162,6 +165,7 @@ export default function ProfilePage() {
       }
       setProfile(profileData);
       setEditName(profileRes.data.name || '');
+      setEditSurname(profileRes.data.surname || '');
       setEditBio(profileRes.data.bio || '');
       setEditCourse(profileRes.data.courseOfStudy || '');
       setEditYear(profileRes.data.yearOfStudy);
@@ -178,20 +182,30 @@ export default function ProfilePage() {
   const openEditDialog = () => {
     if (profile) {
       setEditName(profile.name || '');
+      setEditSurname(profile.surname || '');
       setEditBio(profile.bio || '');
       setEditCourse(profile.courseOfStudy || '');
       setEditYear(profile.yearOfStudy);
       setEditSkills(profile.profile?.passions || []);
       setAvatarPreview(null);
+      setEditError('');
     }
     setShowEditDialog(true);
   };
 
   const saveProfile = async () => {
+    const trimmedName = editName.trim();
+    const trimmedSurname = editSurname.trim();
+    if (!trimmedName || !trimmedSurname) {
+      setEditError(t.profile.nameRequired);
+      return;
+    }
+    setEditError('');
     setSaving(true);
     try {
       await api.patch('/profile/me', {
         name: editName,
+        surname: editSurname,
         bio: editBio,
         courseOfStudy: editCourse,
         yearOfStudy: editYear,
@@ -336,7 +350,8 @@ export default function ProfilePage() {
 
   if (!profile) return null;
 
-  const initials = profile.name
+  const fullName = [profile.name, profile.surname].filter(Boolean).join(' ');
+  const initials = fullName
     .split(' ')
     .map((n) => n[0])
     .join('')
@@ -397,7 +412,7 @@ export default function ProfilePage() {
             {currentAvatar && isValidImageUrl(currentAvatar) ? (
               <img
                 src={currentAvatar}
-                alt={profile.name}
+                alt={fullName}
                 className="w-full h-full rounded-full object-cover"
               />
             ) : (
@@ -405,7 +420,7 @@ export default function ProfilePage() {
             )}
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">{profile.name}</h2>
+            <h2 className="text-xl font-bold text-white">{fullName}</h2>
             {privacyUniversity !== 'Nessuno' && profile.university && (
               <p className="text-sm text-[#94A3B8] mt-0.5">{profile.university.name}</p>
             )}
@@ -969,15 +984,26 @@ export default function ProfilePage() {
                 <p className="text-xs text-[#64748B] mt-2">{t.profile.tapToChangePhoto}</p>
               </div>
 
-              {/* Name */}
-              <div>
-                <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.profile.name}</label>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-4 py-3 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#4F46E5] transition-colors"
-                />
+              {/* Name & Surname */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.profile.name}</label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-4 py-3 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#4F46E5] transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.profile.surname}</label>
+                  <input
+                    type="text"
+                    value={editSurname}
+                    onChange={(e) => setEditSurname(e.target.value)}
+                    className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-4 py-3 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#4F46E5] transition-colors"
+                  />
+                </div>
               </div>
 
               {/* Bio */}
@@ -1051,6 +1077,12 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
+
+            {editError && (
+              <div className="bg-error/10 text-error rounded-xl px-4 py-3 text-sm">
+                {editError}
+              </div>
+            )}
 
             <div className="flex gap-3">
               <button

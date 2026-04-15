@@ -202,6 +202,7 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
     return {
       id: user.id,
       name: user.name,
+      surname: user.surname,
       avatar: user.avatar ?? null,
       university: canSeeUniversity && user.university ? { name: user.university.name } : null,
       publicProfile: false,
@@ -225,6 +226,7 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
   return {
     id: user.id,
     name: user.name,
+    surname: user.surname,
     avatar: user.avatar ?? null,
     bio: user.bio ?? null,
     courseOfStudy: user.courseOfStudy ?? null,
@@ -251,6 +253,7 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
 
 interface UpdateProfileData {
   name?: string;
+  surname?: string;
   bio?: string;
   avatar?: string;
   courseOfStudy?: string;
@@ -264,7 +267,7 @@ interface UpdateProfileData {
 }
 
 const ALLOWED_USER_FIELDS = [
-  'name', 'bio', 'avatar', 'courseOfStudy',
+  'name', 'surname', 'bio', 'avatar', 'courseOfStudy',
   'publicProfile', 'privacySkills', 'privacyUniversity',
   'privacySavedOpps', 'privacyPathmates', 'messagePrivacy',
 ] as const;

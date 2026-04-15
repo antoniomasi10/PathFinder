@@ -28,6 +28,7 @@ import {
 interface PublicProfile {
   id: string;
   name: string;
+  surname?: string;
   avatar?: string | null;
   bio?: string | null;
   courseOfStudy?: string | null;
@@ -294,11 +295,11 @@ export default function UserProfilePage() {
 
       {/* Profile header */}
       <div className="flex flex-col items-center text-center gap-3">
-        <UserAvatar name={profile.name} avatar={profile.avatar} size="lg" />
+        <UserAvatar name={[profile.name, profile.surname].filter(Boolean).join(' ')} avatar={profile.avatar} size="lg" />
 
         <div>
           <div className="flex items-center justify-center gap-2 flex-wrap">
-            <h1 className="text-xl font-bold text-white">{profile.name}</h1>
+            <h1 className="text-xl font-bold text-white">{[profile.name, profile.surname].filter(Boolean).join(' ')}</h1>
             {profile.isPathmate && (
               <span className="flex items-center gap-1 text-xs bg-[#22C55E]/15 text-[#22C55E] px-2.5 py-0.5 rounded-full font-medium border border-[#22C55E]/20">
                 <Check size={12} strokeWidth={2.5} />
