@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import prisma from '../lib/prisma';
-import { getHybridMatchedOpportunities } from '../services/matchingEngine';
+import { getHybridMatchedOpportunities, getNewOpportunities } from '../services/matchingEngine';
 import { trackInteraction } from '../services/interaction.service';
 
 const router = Router();
@@ -13,7 +13,20 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
     const skip = (page - 1) * limit;
 
-    const { matched } = req.query;
+    const { matched, new: isNew } = req.query;
+
+    if (isNew === 'true') {
+      // "Nuove" tab: recency (30%) + match (30%) + novelty bonus (40%)
+      const result = await getNewOpportunities(req.user!.userId, limit, skip);
+      res.json({
+        data: result.data,
+        total: result.total,
+        page,
+        totalPages: Math.ceil(result.total / limit),
+      });
+      return;
+    }
+
     if (matched === 'true') {
       // Use hybrid two-stage scoring (pgvector candidates + weighted re-ranking + feedback)
       const result = await getHybridMatchedOpportunities(req.user!.userId, limit, skip);
@@ -50,6 +63,16 @@ router.get('/saved', authMiddleware, async (req: Request, res: Response) => {
       include: { savedOpportunities: { include: { university: true } } },
     });
     res.json(user?.savedOpportunities || []);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Track view interaction
+router.post('/:id/view', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    trackInteraction(req.user!.userId, 'opportunity', req.params.id, 'view').catch(() => {});
+    res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
