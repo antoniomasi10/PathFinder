@@ -21,9 +21,9 @@
     "scrape:personio": "ts-node scripts/scrape-personio.ts",
     "scrape:arbeitnow": "ts-node scripts/scrape-arbeitnow.ts",
     "scrape:remoteok": "ts-node scripts/scrape-remoteok.ts",
-    "scrape:themuse": "ts-node scripts/scrape-themuse.ts",
-    "scrape:bundesagentur": "ts-node scripts/scrape-bundesagentur.ts",
-    "scrape:fashionunited": "ts-node scripts/scrape-fashionunited.ts"
+    "scrape:jobicy": "ts-node scripts/scrape-jobicy.ts",
+    "scrape:fashionunited": "ts-node scripts/scrape-fashionunited.ts",
+    "scrape:smartrecruiters": "ts-node scripts/scrape-smartrecruiters.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

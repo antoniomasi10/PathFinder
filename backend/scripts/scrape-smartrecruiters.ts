@@ -1,11 +1,11 @@
 /**
- * Manual The Muse scraper — run with: npm run scrape:themuse
+ * Manual SmartRecruiters scraper — run with: npm run scrape:smartrecruiters
  */
-import { importMuseOpportunities } from '../src/services/import/themuse.import';
+import { importSmartRecruitersOpportunities } from '../src/services/import/smartrecruiters.import';
 
-console.log('\n🌍 Starting The Muse scrape...\n');
+console.log('\n🌐 Starting SmartRecruiters scrape...\n');
 
-importMuseOpportunities()
+importSmartRecruitersOpportunities()
   .then(result => {
     console.log('\n✅ Done!');
     console.log(`   Imported: ${result.imported}`);

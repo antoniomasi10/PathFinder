@@ -6,7 +6,10 @@
  * This scraper uses Playwright (headless Chromium) to load the search page,
  * wait for the Angular SPA to render results, then extract job data from the DOM.
  *
- * Runs daily at 03:00 via scheduler.ts.
+ * NOTE: Currently DISABLED in scheduler.ts — no public API available.
+ * Existing EURES data remains in DB as static cache.
+ * This file is kept for reference in case EURES opens a public API in the future.
+ *
  * Records get `sourceId` + `lastSyncedAt` for freshness tracking.
  * Expired/stale records are cleaned by cleanup.service.ts.
  */

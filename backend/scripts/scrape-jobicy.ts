@@ -1,11 +1,11 @@
 /**
- * Manual Bundesagentur scraper — run with: npm run scrape:bundesagentur
+ * Manual Jobicy scraper — run with: npm run scrape:jobicy
  */
-import { importBundesagenturOpportunities } from '../src/services/import/bundesagentur.import';
+import { importJobicyOpportunities } from '../src/services/import/jobicy.import';
 
-console.log('\n🇩🇪 Starting Bundesagentur für Arbeit scrape...\n');
+console.log('\n🌐 Starting Jobicy scrape...\n');
 
-importBundesagenturOpportunities()
+importJobicyOpportunities()
   .then(result => {
     console.log('\n✅ Done!');
     console.log(`   Imported: ${result.imported}`);

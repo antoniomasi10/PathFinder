@@ -29,11 +29,13 @@ const STUDENT_RE = /\b(intern(?:ship)?|stage|stagiaire|trainee|graduate.program|
  * recently offered internships/stages.
  */
 const BOARDS: Record<string, string> = {
-  // AI/ML companies
+  // AI/ML companies — high brand recognition
   'openai': 'OpenAI',
   'perplexity': 'Perplexity',
   'cohere': 'Cohere',
   'replit': 'Replit',
+  // Big enterprise — cloud/data
+  'snowflake': 'Snowflake',
   // Fintech/SaaS
   'ramp': 'Ramp',
   'vanta': 'Vanta',
@@ -41,6 +43,7 @@ const BOARDS: Record<string, string> = {
   // European companies
   'backmarket': 'Back Market',
   'alan': 'Alan',
+  'mollie': 'Mollie',
   // Large tech with seasonal internships
   'linear': 'Linear',
   'supabase': 'Supabase',
@@ -52,7 +55,6 @@ const BOARDS: Record<string, string> = {
   'deel': 'Deel',
   'n8n': 'n8n',
   'elevenlabs': 'ElevenLabs',
-  'mollie': 'Mollie',
 };
 
 // ---------------------------------------------------------------------------

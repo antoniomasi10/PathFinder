@@ -60,6 +60,26 @@ const BOARDS: Record<string, string> = {
   'reddit': 'Reddit',
   'cockroachlabs': 'Cockroach Labs',
   'instacart': 'Instacart',
+  // Big enterprise — high brand recognition
+  'twitch': 'Twitch',
+  'discord': 'Discord',
+  'epicgames': 'Epic Games',
+  'riotgames': 'Riot Games',
+  'roblox': 'Roblox',
+  'unity3d': 'Unity',
+  'twilio': 'Twilio',
+  'zscaler': 'Zscaler',
+  'toast': 'Toast',
+  'udemy': 'Udemy',
+  'verkada': 'Verkada',
+  'coupang': 'Coupang',
+  'squarespace': 'Squarespace',
+  'intercom': 'Intercom',
+  'gitlab': 'GitLab',
+  'airtable': 'Airtable',
+  'janestreet': 'Jane Street',
+  // Finance / Trading
+  'flowtraders': 'Flow Traders',
   // European companies
   'elastic': 'Elastic',
   'wolt': 'Wolt',
@@ -73,6 +93,12 @@ const BOARDS: Record<string, string> = {
   'monzo': 'Monzo',
   'sumup': 'SumUp',
   'n26': 'N26',
+  'toogoodtogo': 'Too Good To Go',
+  'realtimeboardglobal': 'Miro',
+  'parloa': 'Parloa',
+  'gropyus': 'GROPYUS',
+  'remotecom': 'Remote',
+  'clara': 'Clara',
 };
 
 // ---------------------------------------------------------------------------

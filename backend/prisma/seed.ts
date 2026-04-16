@@ -20,7 +20,7 @@ async function main() {
   await prisma.userProfile.deleteMany();
   await prisma.user.deleteMany();
   // NOTE: Opportunities are NOT deleted here — they come from real sources
-  // (EURES, The Muse, FashionUnited, etc.) via the import scheduler.
+  // (EURES, FashionUnited, Greenhouse, etc.) via the import scheduler.
   // Only seed data (users, universities, courses, posts) is reset.
   await prisma.course.deleteMany();
   await prisma.university.deleteMany();
@@ -152,7 +152,7 @@ async function main() {
 
   await prisma.course.createMany({ data: coursesData });
 
-  // Opportunities are imported from real sources (EURES, The Muse, FashionUnited, etc.)
+  // Opportunities are imported from real sources (EURES, FashionUnited, Greenhouse, etc.)
   // via the import scheduler — no mock data needed.
 
   // ============ DEMO USERS ============

@@ -65,12 +65,8 @@ export async function sendVerificationEmail(to: string, name: string, code: stri
   `);
 
   if (!transporter) {
-    logger.info(`\n╔══════════════════════════════════════════╗`);
-    logger.info(`║  📧 VERIFICA EMAIL (dev mode)            ║`);
-    logger.info(`║  To: ${to.padEnd(35)}║`);
-    logger.info(`║  Codice OTP: ${code}                        ║`);
-    logger.info(`╚══════════════════════════════════════════╝\n`);
-    return;
+    logger.error('SMTP not configured — cannot send verification email');
+    throw new Error('Servizio email non configurato');
   }
 
   try {
@@ -98,12 +94,8 @@ export async function sendPasswordResetEmail(to: string, name: string, code: str
   `);
 
   if (!transporter) {
-    logger.info(`\n╔══════════════════════════════════════════╗`);
-    logger.info(`║  🔑 RESET PASSWORD (dev mode)            ║`);
-    logger.info(`║  To: ${to.padEnd(35)}║`);
-    logger.info(`║  Codice OTP: ${code}                        ║`);
-    logger.info(`╚══════════════════════════════════════════╝\n`);
-    return;
+    logger.error('SMTP not configured — cannot send password reset email');
+    throw new Error('Servizio email non configurato');
   }
 
   try {

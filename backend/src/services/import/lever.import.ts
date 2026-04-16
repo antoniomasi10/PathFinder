@@ -47,11 +47,13 @@ const BOARDS: Record<string, string> = {
   'fehrandpeers': 'Fehr & Peers',
   'quincyinst': 'Quincy Institute',
   'solopulseco': 'SoloPulse',
-  // High-growth companies
-  'plaid': 'Plaid',
+  // Big enterprise — high brand recognition
   'palantir': 'Palantir',
-  'kraken': 'Kraken',
   'bumbleinc': 'Bumble',
+  'plaid': 'Plaid',
+  'kraken': 'Kraken',
+  // European companies
+  'blablacar': 'BlaBlaCar',
 };
 
 // ---------------------------------------------------------------------------

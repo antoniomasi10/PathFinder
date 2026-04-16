@@ -2,21 +2,25 @@
  * Import Scheduler
  *
  * Cron schedules:
- * - EURES opportunities: daily at 03:00
- * - EU Youth/Eurodesk: weekly Monday 03:30
+ * - EU Youth/Eurodesk: weekly Monday 03:30 | SmartRecruiters: weekly Monday 04:00
  * - Arbeitnow: weekly Tuesday 03:30 | RemoteOK: weekly Tuesday 04:00
- * - Stage4eu: weekly Wednesday 03:30 | The Muse: weekly Wednesday 04:00
- * - Greenhouse: weekly Thursday 03:30 | Bundesagentur: weekly Thursday 04:30
+ * - Stage4eu: weekly Wednesday 03:30
+ * - Greenhouse: weekly Thursday 03:30 | Jobicy: weekly Thursday 04:00
  * - Lever: weekly Friday 03:30 | FashionUnited: weekly Friday 04:00
  * - Ashby: weekly Saturday 03:30 | Workable: weekly Saturday 04:00
  * - Personio: weekly Sunday 03:30 | Cleanup: weekly Sunday 05:00
  * - MUR universities: 1st of each month at 02:00
  * - MUR courses: 1st of each month at 02:30
  * - AlmaLaurea stats: quarterly (1st Jan, Apr, Jul, Oct at 04:00)
+ *
+ * NOTE: EURES scraper disabled — no public API available.
+ * Existing EURES data remains in DB as static cache.
+ *
+ * REMOVED: Bundesagentur — unofficial reverse-engineered API, BA explicitly opposed automated access.
+ * REMOVED: The Muse — ToS Section 3.3 prohibits replicating services. Replaced by Jobicy.
  */
 import cron from 'node-cron';
 import { importUniversities, importCourses } from './mur.import';
-import { importOpportunities } from './eures.import';
 import { importEUOpportunities } from './eu-youth.import';
 import { importStage4euOpportunities } from './stage4eu.import';
 import { importGreenhouseOpportunities } from './greenhouse.import';
@@ -26,9 +30,9 @@ import { importWorkableOpportunities } from './workable.import';
 import { importPersonioOpportunities } from './personio.import';
 import { importArbeitnowOpportunities } from './arbeitnow.import';
 import { importRemoteOKOpportunities } from './remoteok.import';
-import { importMuseOpportunities } from './themuse.import';
-import { importBundesagenturOpportunities } from './bundesagentur.import';
+import { importJobicyOpportunities } from './jobicy.import';
 import { importFashionUnitedOpportunities } from './fashionunited.import';
+import { importSmartRecruitersOpportunities } from './smartrecruiters.import';
 import { importAlmaLaureaStats } from './almalaurea.import';
 import { runCleanup } from './cleanup.service';
 import { alertImportFailure } from './alerting';
@@ -45,24 +49,18 @@ async function runWithAlert(name: string, source: string, type: string, fn: () =
 }
 
 export function startImportScheduler() {
-  // Daily: EURES opportunities (03:00)
-  cron.schedule('0 3 * * *', () => {
-    runWithAlert('EURES', 'eures', 'opportunities', importOpportunities);
-  });
-
-  // Weekly Wednesday: The Muse internships (04:00)
-  cron.schedule('0 4 * * 3', () => {
-    runWithAlert('TheMuse', 'themuse', 'opportunities', importMuseOpportunities);
-  });
-
-  // Weekly Thursday: Bundesagentur internships (04:30)
-  cron.schedule('30 4 * * 4', () => {
-    runWithAlert('Bundesagentur', 'bundesagentur', 'opportunities', importBundesagenturOpportunities);
-  });
+  // EURES: disabled — no public API, data kept as static cache in DB
+  // Bundesagentur: REMOVED — unofficial reverse-engineered API, BA explicitly opposed automated access
+  // The Muse: REMOVED — ToS Section 3.3 prohibits replicating services
 
   // Weekly Monday: EU Youth + Eurodesk (03:30)
   cron.schedule('30 3 * * 1', () => {
     runWithAlert('EU Youth', 'eu-youth', 'opportunities', importEUOpportunities);
+  });
+
+  // Weekly Monday: SmartRecruiters enterprise/German industrial (04:00)
+  cron.schedule('0 4 * * 1', () => {
+    runWithAlert('SmartRecruiters', 'smartrecruiters', 'opportunities', importSmartRecruitersOpportunities);
   });
 
   // Weekly Wednesday: Stage4eu (03:30)
@@ -73,6 +71,11 @@ export function startImportScheduler() {
   // Weekly Thursday: Greenhouse internships (03:30)
   cron.schedule('30 3 * * 4', () => {
     runWithAlert('Greenhouse', 'greenhouse', 'opportunities', importGreenhouseOpportunities);
+  });
+
+  // Weekly Thursday: Jobicy remote internships (04:00)
+  cron.schedule('0 4 * * 4', () => {
+    runWithAlert('Jobicy', 'jobicy', 'opportunities', importJobicyOpportunities);
   });
 
   // Weekly Friday: Lever internships (03:30)
@@ -134,10 +137,11 @@ export function startImportScheduler() {
   });
 
   logger.info('[Scheduler] Import scheduler started:');
-  logger.info('  EURES: daily 03:00');
-  logger.info('  EU Youth: Mon 03:30 | Arbeitnow: Tue 03:30 | RemoteOK: Tue 04:00');
-  logger.info('  Stage4eu: Wed 03:30 | TheMuse: Wed 04:00');
-  logger.info('  Greenhouse: Thu 03:30 | Bundesagentur: Thu 04:30');
+  logger.info('  EURES: disabled (static cache)');
+  logger.info('  EU Youth: Mon 03:30 | SmartRecruiters: Mon 04:00');
+  logger.info('  Arbeitnow: Tue 03:30 | RemoteOK: Tue 04:00');
+  logger.info('  Stage4eu: Wed 03:30');
+  logger.info('  Greenhouse: Thu 03:30 | Jobicy: Thu 04:00');
   logger.info('  Lever: Fri 03:30 | FashionUnited: Fri 04:00');
   logger.info('  Ashby: Sat 03:30 | Workable: Sat 04:00');
   logger.info('  Personio: Sun 03:30 | Cleanup: Sun 05:00');
