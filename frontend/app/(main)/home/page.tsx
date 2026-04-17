@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useSavedOpportunities } from '@/lib/savedOpportunities';
 import { useLanguage } from '@/lib/language';
@@ -776,12 +777,6 @@ export default function HomePage() {
   const allOpportunities = getOpportunities(t);
   const filterCategories = getFilterCategories(t);
 
-  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-  const [loadingOpps, setLoadingOpps] = useState(true);
-  const [newOpportunities, setNewOpportunities] = useState<Opportunity[]>([]);
-  const [loadingNew, setLoadingNew] = useState(false);
-  const newFetched = useRef(false);
-
   function mapOpportunity(opp: any, extras?: Partial<Opportunity>): Opportunity {
     return {
       id: opp.id,
@@ -802,37 +797,30 @@ export default function HomePage() {
     };
   }
 
-  useEffect(() => {
-    api.get('/opportunities?matched=true&limit=20')
-      .then(({ data }) => {
-        const items = data.data || data;
-        const mapped = (Array.isArray(items) ? items : []).map((opp: any) => mapOpportunity(opp));
-        setOpportunities(mapped.length > 0 ? mapped : [...allOpportunities].sort((a, b) => b.matchScore - a.matchScore));
-      })
-      .catch(() => {
-        setOpportunities([...allOpportunities].sort((a, b) => b.matchScore - a.matchScore));
-      })
-      .finally(() => setLoadingOpps(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const fallback = [...allOpportunities].sort((a, b) => b.matchScore - a.matchScore);
 
-  function fetchNewOpportunities() {
-    if (newFetched.current) return;
-    newFetched.current = true;
-    setLoadingNew(true);
-    api.get('/opportunities?new=true&limit=20')
-      .then(({ data }) => {
-        const items = data.data || data;
-        const mapped = (Array.isArray(items) ? items : []).map((opp: any) =>
-          mapOpportunity(opp, { isNew: opp.isNew ?? false })
-        );
-        setNewOpportunities(mapped.length > 0 ? mapped : [...allOpportunities].sort((a, b) => b.matchScore - a.matchScore));
-      })
-      .catch(() => {
-        setNewOpportunities([...allOpportunities].sort((a, b) => b.matchScore - a.matchScore));
-      })
-      .finally(() => setLoadingNew(false));
-  }
+  const { data: opportunities = fallback, isLoading: loadingOpps } = useQuery({
+    queryKey: ['opportunities', 'matched'],
+    queryFn: async () => {
+      const { data } = await api.get('/opportunities?matched=true&limit=20');
+      const items = data.data || data;
+      const mapped = (Array.isArray(items) ? items : []).map((opp: any) => mapOpportunity(opp));
+      return mapped.length > 0 ? mapped : fallback;
+    },
+  });
+
+  const { data: newOpportunities = [], isLoading: loadingNew } = useQuery({
+    queryKey: ['opportunities', 'new'],
+    queryFn: async () => {
+      const { data } = await api.get('/opportunities?new=true&limit=20');
+      const items = data.data || data;
+      const mapped = (Array.isArray(items) ? items : []).map((opp: any) =>
+        mapOpportunity(opp, { isNew: opp.isNew ?? false })
+      );
+      return mapped.length > 0 ? mapped : fallback;
+    },
+    enabled: tab === 'esplora',
+  });
 
   // Filter sheet state
   const [filterOpen, setFilterOpen] = useState(false);
@@ -845,8 +833,7 @@ export default function HomePage() {
 
   function handleTabChange(newTab: 'per-te' | 'esplora') {
     setTab(newTab);
-    setExpandedId(null); // collapse any open card on tab switch
-    if (newTab === 'esplora') fetchNewOpportunities();
+    setExpandedId(null);
   }
 
   const viewedRef = useRef<Set<string>>(new Set());

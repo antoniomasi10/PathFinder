@@ -3,6 +3,7 @@
 import { Sora, DM_Sans } from 'next/font/google';
 import './globals.css';
 import AuthProvider from '@/components/AuthProvider';
+import QueryProvider from '@/components/QueryProvider';
 import { LanguageProvider } from '@/lib/language';
 import { PrivacyProvider } from '@/lib/privacy';
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -43,13 +44,15 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
       <body className={`${sora.variable} ${dmSans.variable} font-body antialiased`}>
-        <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-          <LanguageProvider>
-            <PrivacyProvider>
-              <AuthProvider>{children}</AuthProvider>
-            </PrivacyProvider>
-          </LanguageProvider>
-        </GoogleOAuthProvider>
+        <QueryProvider>
+          <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+            <LanguageProvider>
+              <PrivacyProvider>
+                <AuthProvider>{children}</AuthProvider>
+              </PrivacyProvider>
+            </LanguageProvider>
+          </GoogleOAuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

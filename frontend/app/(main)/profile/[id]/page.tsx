@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useLanguage, getSkillLabel } from '@/lib/language';
 import {
@@ -131,86 +132,88 @@ export default function UserProfilePage() {
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const { user } = useAuth();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const { t } = useLanguage();
 
-  const [profile, setProfile] = useState<PublicProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-  const [sendingRequest, setSendingRequest] = useState(false);
-  const [removingPathmate, setRemovingPathmate] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportModal, setReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
-  const [reportSending, setReportSending] = useState(false);
   const [reportSuccess, setReportSuccess] = useState(false);
   const [reported, setReported] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
 
-  useEffect(() => {
-    if (!id) return;
+  if (id && id === user?.id) {
+    router.replace('/profile');
+  }
 
-    // If viewing own profile, redirect there
-    if (id === user?.id) {
-      router.replace('/profile');
-      return;
-    }
+  const { data: profile, isLoading: loading, isError: notFound } = useQuery<PublicProfile>({
+    queryKey: ['profile', id],
+    queryFn: async () => {
+      const { data } = await api.get(`/profile/${id}`);
+      return data;
+    },
+    enabled: !!id && id !== user?.id,
+    retry: false,
+  });
 
-    setLoading(true);
-    setNotFound(false);
+  const addPathmateMutation = useMutation({
+    mutationFn: () => api.post('/friends/request', { toUserId: profile!.id }),
+    onSuccess: () => {
+      queryClient.setQueryData<PublicProfile>(['profile', id], (p) =>
+        p ? { ...p, friendStatus: 'PENDING', iAmRequester: true } : p
+      );
+    },
+  });
 
-    api
-      .get(`/profile/${id}`)
-      .then(({ data }) => {
-        setProfile(data);
-      })
-      .catch(() => {
-        setNotFound(true);
-      })
-      .finally(() => setLoading(false));
-  }, [id, user?.id]);
+  const removePathmateMutation = useMutation({
+    mutationFn: () => api.delete(`/friends/${profile!.id}`),
+    onSuccess: () => {
+      queryClient.setQueryData<PublicProfile>(['profile', id], (p) =>
+        p ? { ...p, isPathmate: false, friendStatus: null } : p
+      );
+    },
+  });
 
-  const handleAddPathmate = async () => {
-    if (!profile || sendingRequest) return;
-    setSendingRequest(true);
-    try {
-      await api.post('/friends/request', { toUserId: profile.id });
-      setProfile((p) => (p ? { ...p, friendStatus: 'PENDING', iAmRequester: true } : p));
-    } catch {
-      // Request failed — do not update UI
-    } finally {
-      setSendingRequest(false);
-    }
-  };
+  const acceptRequestMutation = useMutation({
+    mutationFn: () => api.patch(`/friends/request/${profile!.friendRequestId}`, { status: 'ACCEPTED' }),
+    onSuccess: () => {
+      queryClient.setQueryData<PublicProfile>(['profile', id], (p) =>
+        p ? { ...p, isPathmate: true, friendStatus: 'ACCEPTED', iAmRequester: null } : p
+      );
+    },
+  });
 
-  const handleRemovePathmate = async () => {
-    if (!profile || removingPathmate) return;
-    setRemovingPathmate(true);
-    try {
-      await api.delete(`/friends/${profile.id}`);
-      setProfile((p) => (p ? { ...p, isPathmate: false, friendStatus: null } : p));
-    } catch {
-      // Request failed — do not update UI
-    } finally {
-      setRemovingPathmate(false);
-    }
-  };
+  const rejectRequestMutation = useMutation({
+    mutationFn: () => api.patch(`/friends/request/${profile!.friendRequestId}`, { status: 'REJECTED' }),
+    onSuccess: () => {
+      queryClient.setQueryData<PublicProfile>(['profile', id], (p) =>
+        p ? { ...p, friendStatus: null, friendRequestId: null, iAmRequester: null } : p
+      );
+    },
+  });
 
-  const handleAcceptRequest = async () => {
-    if (!profile?.friendRequestId) return;
-    try {
-      await api.patch(`/friends/request/${profile.friendRequestId}`, { status: 'ACCEPTED' });
-      setProfile((p) => (p ? { ...p, isPathmate: true, friendStatus: 'ACCEPTED', iAmRequester: null } : p));
-    } catch {}
-  };
+  const reportMutation = useMutation({
+    mutationFn: (reason: string) => api.post(`/users/${id}/report`, { reason }),
+    onSuccess: () => {
+      setReported(true);
+      setReportSuccess(true);
+      setTimeout(() => {
+        setReportModal(false);
+        setReportReason('');
+        setReportSuccess(false);
+      }, 2000);
+    },
+    onError: () => {
+      setReportModal(false);
+      setReportReason('');
+    },
+  });
 
-  const handleRejectRequest = async () => {
-    if (!profile?.friendRequestId) return;
-    try {
-      await api.patch(`/friends/request/${profile.friendRequestId}`, { status: 'REJECTED' });
-      setProfile((p) => (p ? { ...p, friendStatus: null, friendRequestId: null, iAmRequester: null } : p));
-    } catch {}
-  };
+  const handleAddPathmate = () => addPathmateMutation.mutate();
+  const handleRemovePathmate = () => removePathmateMutation.mutate();
+  const handleAcceptRequest = () => acceptRequestMutation.mutate();
+  const handleRejectRequest = () => rejectRequestMutation.mutate();
 
   const handleMessage = () => {
     if (!profile) return;
@@ -235,25 +238,9 @@ export default function UserProfilePage() {
     }
   };
 
-  const handleReport = async () => {
-    if (!reportReason || reportSending) return;
-    setReportSending(true);
-    try {
-      await api.post(`/users/${id}/report`, { reason: reportReason });
-      setReported(true);
-      setReportSuccess(true);
-      setTimeout(() => {
-        setReportModal(false);
-        setReportReason('');
-        setReportSuccess(false);
-      }, 2000);
-    } catch (err) {
-      console.error('Failed to report user:', err);
-      setReportModal(false);
-      setReportReason('');
-    } finally {
-      setReportSending(false);
-    }
+  const handleReport = () => {
+    if (!reportReason || reportMutation.isPending) return;
+    reportMutation.mutate(reportReason);
   };
 
   // ── Render states ──
@@ -411,7 +398,7 @@ export default function UserProfilePage() {
           {profile.isPathmate ? (
             <button
               onClick={handleRemovePathmate}
-              disabled={removingPathmate}
+              disabled={removePathmateMutation.isPending}
               className="flex items-center gap-1 text-xs text-[#EF4444]/70 border border-[#EF4444]/20 px-3 py-2 rounded-xl hover:bg-[#EF4444]/10 hover:text-[#EF4444] transition-colors disabled:opacity-40"
             >
               <UserIcon size={14} />
@@ -441,7 +428,7 @@ export default function UserProfilePage() {
             ) : (
               <button
                 onClick={handleAddPathmate}
-                disabled={sendingRequest}
+                disabled={addPathmateMutation.isPending}
                 className="flex items-center gap-1.5 text-sm text-[#4F46E5] border border-[#4F46E5]/40 px-4 py-2 rounded-xl hover:bg-[#4F46E5]/10 transition-colors disabled:opacity-50"
               >
                 <UserAdd size={16} />
@@ -625,10 +612,10 @@ export default function UserProfilePage() {
                   </button>
                   <button
                     onClick={handleReport}
-                    disabled={!reportReason || reportSending}
+                    disabled={!reportReason || reportMutation.isPending}
                     className="flex-1 py-2.5 rounded-xl bg-red-500/80 text-white text-sm font-medium disabled:opacity-40 hover:bg-red-500 transition-colors"
                   >
-                    {reportSending ? 'Invio...' : 'Segnala'}
+                    {reportMutation.isPending ? 'Invio...' : 'Segnala'}
                   </button>
                 </div>
               </>

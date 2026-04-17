@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useSavedOpportunities } from '@/lib/savedOpportunities';
 import { useSavedCourses } from '@/lib/savedCourses';
@@ -110,8 +111,8 @@ export default function ProfilePage() {
   const { savedCourses } = useSavedCourses();
   const [simulations, setSimulations] = useState<SavedSimulation[]>([]);
   const { language, setLanguage, t } = useLanguage();
+  const queryClient = useQueryClient();
   const [profile, setProfile] = useState<FullProfile | null>(null);
-  const [loading, setLoading] = useState(true);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [activeTab, setActiveTab] = useState<'settings' | 'pathmates'>('settings');
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -188,19 +189,9 @@ export default function ProfilePage() {
     return () => clearTimeout(timer);
   }, [expandedOppId]);
 
-  useEffect(() => {
-    loadData();
-    setSimulations(getSavedSimulations());
-  }, []);
-
-  useEffect(() => {
-    if (showSkillsModal) {
-      setModalSkills(profile?.profile?.passions || []);
-    }
-  }, [showSkillsModal]);
-
-  const loadData = async () => {
-    try {
+  const { isLoading: loading } = useQuery({
+    queryKey: ['profile', 'me'],
+    queryFn: async () => {
       const [profileRes, friendsRes, suggestionsRes] = await Promise.all([
         api.get('/profile/me'),
         api.get('/friends').catch(() => ({ data: [] })),
@@ -210,7 +201,7 @@ export default function ProfilePage() {
       const normalizedPassions = rawPassions.map(normalizePassionToKey);
       const profileData = profileRes.data;
       if (profileData.profile) profileData.profile.passions = normalizedPassions;
-      if (normalizedPassions.some((k, i) => k !== rawPassions[i])) {
+      if (normalizedPassions.some((k: string, i: number) => k !== rawPassions[i])) {
         api.patch('/profile/me', { passions: normalizedPassions }).catch(() => {});
       }
       setProfile(profileData);
@@ -222,12 +213,21 @@ export default function ProfilePage() {
       setEditSkills(normalizedPassions);
       setFriends(friendsRes.data);
       setSuggestedUsers(suggestionsRes.data);
-    } catch (err) {
-      console.error('Failed to load profile data:', err);
-    } finally {
-      setLoading(false);
+      return profileData;
+    },
+  });
+
+  useEffect(() => {
+    setSimulations(getSavedSimulations());
+  }, []);
+
+  useEffect(() => {
+    if (showSkillsModal) {
+      setModalSkills(profile?.profile?.passions || []);
     }
-  };
+  }, [showSkillsModal]);
+
+  const loadData = () => queryClient.invalidateQueries({ queryKey: ['profile', 'me'] });
 
   const openEditDialog = () => {
     if (profile) {

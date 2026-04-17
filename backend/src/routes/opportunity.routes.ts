@@ -3,6 +3,9 @@ import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { getHybridMatchedOpportunities, getNewOpportunities } from '../services/matchingEngine';
 import { trackInteraction } from '../services/interaction.service';
+import { cacheGet, cacheSet } from '../lib/cache';
+
+const OPP_TTL = 5 * 60; // 5 minutes per-user opportunity cache
 
 const router = Router();
 
@@ -16,26 +19,26 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     const { matched, new: isNew } = req.query;
 
     if (isNew === 'true') {
-      // "Nuove" tab: recency (30%) + match (30%) + novelty bonus (40%)
+      const cacheKey = `cache:opps:new:${req.user!.userId}:${page}:${limit}`;
+      const cached = await cacheGet(cacheKey);
+      if (cached) { res.json(cached); return; }
+
       const result = await getNewOpportunities(req.user!.userId, limit, skip);
-      res.json({
-        data: result.data,
-        total: result.total,
-        page,
-        totalPages: Math.ceil(result.total / limit),
-      });
+      const payload = { data: result.data, total: result.total, page, totalPages: Math.ceil(result.total / limit) };
+      await cacheSet(cacheKey, payload, OPP_TTL);
+      res.json(payload);
       return;
     }
 
     if (matched === 'true') {
-      // Use hybrid two-stage scoring (pgvector candidates + weighted re-ranking + feedback)
+      const cacheKey = `cache:opps:matched:${req.user!.userId}:${page}:${limit}`;
+      const cached = await cacheGet(cacheKey);
+      if (cached) { res.json(cached); return; }
+
       const result = await getHybridMatchedOpportunities(req.user!.userId, limit, skip);
-      res.json({
-        data: result.data,
-        total: result.total,
-        page,
-        totalPages: Math.ceil(result.total / limit),
-      });
+      const payload = { data: result.data, total: result.total, page, totalPages: Math.ceil(result.total / limit) };
+      await cacheSet(cacheKey, payload, OPP_TTL);
+      res.json(payload);
       return;
     }
 
