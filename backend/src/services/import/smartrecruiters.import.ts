@@ -20,6 +20,8 @@ import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { OpportunityType } from '@prisma/client';
 import { validateOpportunity } from './validation';
+import { batchUpsertOpportunities, markStaleOpportunities, OpportunityRecord } from './batch';
+import { stripHtml, mapOpportunityType, fetchWithRetry, runWithConcurrency } from './utils';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -29,19 +31,16 @@ const API_BASE = 'https://api.smartrecruiters.com/v1/companies';
 const FETCH_DELAY_MS = 400;
 const PAGE_SIZE = 100;
 const MAX_PAGES_PER_QUERY = 5;
+const BOARD_CONCURRENCY = 3;
 
-/** Search terms passed as `q=` param — broad net, filtered by title regex below */
+/** Search terms passed as `q=` param — broad net, filtered by title regex below.
+ *  Kept to 4 core terms: overlap between queries causes most postings to surface
+ *  multiple times, so extra queries waste bandwidth without adding coverage. */
 const SEARCH_QUERIES = [
   'intern',
-  'praktikum',
-  'werkstudent',
   'trainee',
+  'praktikum',
   'stage',
-  'stagiaire',
-  'tirocinio',
-  'apprenti',
-  'alternance',
-  'graduate',
 ];
 
 /** Regex matching student/intern titles (word boundary to avoid false positives like "internal") */
@@ -85,32 +84,7 @@ function isStudentRole(title: string): boolean {
   return STUDENT_RE.test(title);
 }
 
-function stripHtml(html: string): string {
-  if (!html) return '';
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/?(p|div|li|ul|ol|h[1-6])[^>]*>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/[ \t]+/g, ' ')
-    .trim();
-}
-
-function mapType(title: string): OpportunityType {
-  const t = title.toLowerCase();
-  if (t.includes('intern') || t.includes('tirocinio')) return 'INTERNSHIP';
-  if (t.includes('stage') || t.includes('stagiaire')) return 'STAGE';
-  if (t.includes('trainee') || t.includes('werkstudent') || t.includes('praktikum') || t.includes('praktikant')) return 'STAGE';
-  if (t.includes('apprenti') || t.includes('alternance') || t.includes('duales studium')) return 'STAGE';
-  if (t.includes('graduate')) return 'FELLOWSHIP';
-  return 'INTERNSHIP';
-}
+const mapType = mapOpportunityType;
 
 /** Build a human-readable location string from the structured location object */
 function formatLocation(loc: SRLocation | undefined): string {
@@ -197,12 +171,14 @@ export async function importSmartRecruitersOpportunities(options?: {
   });
 
   try {
-    let imported = 0;
     let skipped = 0;
     let boardsProcessed = 0;
     const seenPostingIds = new Set<string>();
+    const records: OpportunityRecord[] = [];
+    const seenSids: string[] = [];
+    const successfulCompanies: string[] = [];
 
-    for (const [companyId, companyName] of Object.entries(boards)) {
+    await runWithConcurrency(Object.entries(boards), BOARD_CONCURRENCY, async ([companyId, companyName]) => {
       try {
         logger.info(`[SmartRecruiters] Processing ${companyName} (${companyId})...`);
         let boardJobs = 0;
@@ -212,17 +188,15 @@ export async function importSmartRecruitersOpportunities(options?: {
           for (let page = 0; page < MAX_PAGES_PER_QUERY; page++) {
             const listUrl = `${API_BASE}/${encodeURIComponent(companyId)}/postings?q=${encodeURIComponent(query)}&limit=${PAGE_SIZE}&offset=${offset}`;
 
-            const res = await fetch(listUrl, {
-              signal: AbortSignal.timeout(15000),
+            const res = await fetchWithRetry(listUrl, {
+              timeoutMs: 15000,
               headers: { 'Accept': 'application/json' },
+              retries: 4,
+              maxBackoffMs: 60000,
+              logTag: `[SmartRecruiters] ${companyName} q="${query}"`,
             });
 
             if (!res.ok) {
-              if (res.status === 429) {
-                logger.warn(`[SmartRecruiters] ${companyName} q="${query}" rate limited — pausing 60s`);
-                await new Promise(r => setTimeout(r, 60000));
-                continue;
-              }
               logger.warn(`[SmartRecruiters] ${companyName} q="${query}" returned ${res.status}`);
               break;
             }
@@ -243,9 +217,11 @@ export async function importSmartRecruitersOpportunities(options?: {
               let jobUrl: string | null = null;
               try {
                 const detailUrl = `${API_BASE}/${encodeURIComponent(companyId)}/postings/${encodeURIComponent(job.id)}`;
-                const detailRes = await fetch(detailUrl, {
-                  signal: AbortSignal.timeout(15000),
+                const detailRes = await fetchWithRetry(detailUrl, {
+                  timeoutMs: 15000,
                   headers: { 'Accept': 'application/json' },
+                  retries: 2,
+                  logTag: `[SmartRecruiters] ${companyName} detail`,
                 });
                 if (detailRes.ok) {
                   const detail = await detailRes.json() as SRDetailResponse;
@@ -293,40 +269,23 @@ export async function importSmartRecruitersOpportunities(options?: {
               if (!validated) { skipped++; continue; }
 
               const sid = `smartrecruiters-${companyId}-${job.id}`;
-              await prisma.opportunity.upsert({
-                where: { id: sid },
-                update: {
-                  title: validated.title,
-                  description: validated.description,
-                  company: validated.company,
-                  url: validated.url,
-                  location: validated.location,
-                  isAbroad: validated.isAbroad,
-                  isRemote: validated.isRemote,
-                  type: mapType(job.name),
-                  tags,
-                  source: 'SmartRecruiters',
-                  sourceId: sid,
-                  lastSyncedAt: now,
-                },
-                create: {
-                  id: sid,
-                  title: validated.title,
-                  description: validated.description,
-                  company: validated.company,
-                  url: validated.url,
-                  location: validated.location,
-                  isAbroad: validated.isAbroad,
-                  isRemote: validated.isRemote,
-                  type: mapType(job.name),
-                  tags,
-                  postedAt: job.releasedDate ? new Date(job.releasedDate) : now,
-                  source: 'SmartRecruiters',
-                  sourceId: sid,
-                  lastSyncedAt: now,
-                },
+              seenSids.push(sid);
+              records.push({
+                id: sid,
+                title: validated.title,
+                description: validated.description,
+                company: validated.company || companyName,
+                url: validated.url ?? null,
+                location: validated.location || null,
+                isAbroad: validated.isAbroad,
+                isRemote: validated.isRemote,
+                type: mapType(job.name),
+                tags,
+                postedAt: job.releasedDate ? new Date(job.releasedDate) : now,
+                source: 'SmartRecruiters',
+                sourceId: sid,
+                lastSyncedAt: now,
               });
-              imported++;
               boardJobs++;
 
               await new Promise(r => setTimeout(r, FETCH_DELAY_MS));
@@ -340,10 +299,18 @@ export async function importSmartRecruitersOpportunities(options?: {
 
         logger.info(`[SmartRecruiters] ${companyName}: +${boardJobs} jobs`);
         boardsProcessed++;
+        successfulCompanies.push(companyName);
       } catch (err) {
         logger.warn(`[SmartRecruiters] ${companyName} failed: ${err}`);
       }
-    }
+    });
+
+    await batchUpsertOpportunities(records);
+    const imported = records.length;
+
+    const staleCount = successfulCompanies.length > 0
+      ? await markStaleOpportunities('SmartRecruiters', seenSids, { scopeCompanies: successfulCompanies })
+      : 0;
 
     await prisma.importLog.update({
       where: { id: log.id },
@@ -351,11 +318,11 @@ export async function importSmartRecruitersOpportunities(options?: {
         status: 'success',
         count: imported,
         finishedAt: new Date(),
-        metadata: { skipped, boardsProcessed, totalBoards: Object.keys(boards).length },
+        metadata: { skipped, boardsProcessed, totalBoards: Object.keys(boards).length, staleCount },
       },
     });
 
-    logger.info(`[SmartRecruiters] Imported ${imported}, skipped ${skipped} from ${boardsProcessed} boards`);
+    logger.info(`[SmartRecruiters] Imported ${imported}, skipped ${skipped}, expired ${staleCount} from ${boardsProcessed} boards`);
     return { imported, skipped, source: 'smartrecruiters' };
   } catch (err: any) {
     await prisma.importLog.update({

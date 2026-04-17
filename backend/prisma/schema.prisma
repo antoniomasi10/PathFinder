@@ -184,6 +184,7 @@ model Opportunity {
   source               String?         // e.g. "EURES", "Stage4eu" — CC BY 4.0 attribution
   sourceId             String?         // e.g. "eures-12345" — null = manual/seed
   lastSyncedAt         DateTime?       // last time this record was refreshed by import
+  dedupKey             String?         // normalized hash of title+company — used to skip cross-source duplicates
   embedding            Unsupported("vector(384)")?
 
   @@index([universityId])
@@ -191,6 +192,7 @@ model Opportunity {
   @@index([deadline])
   @@index([sourceId])
   @@index([lastSyncedAt])
+  @@index([dedupKey])
 }
 
 model University {

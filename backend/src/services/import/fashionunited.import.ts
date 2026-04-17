@@ -15,6 +15,8 @@ import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { OpportunityType } from '@prisma/client';
 import { validateOpportunity } from './validation';
+import { batchUpsertOpportunities, markStaleOpportunities, OpportunityRecord } from './batch';
+import { stripHtml, fetchWithRetry } from './utils';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -44,23 +46,6 @@ const REQUEST_DELAY_MS = 800;
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function stripHtml(html: string): string {
-  if (!html) return '';
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/?(p|div|li|ul|ol|h[1-6]|strong|em|span)[^>]*>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/[ \t]+/g, ' ')
-    .trim();
-}
 
 function mapType(title: string, keyword: string): OpportunityType {
   const t = title.toLowerCase();
@@ -133,9 +118,11 @@ export async function importFashionUnitedOpportunities(): Promise<{
   });
 
   try {
-    let imported = 0;
     let skipped = 0;
-    const seenIds = new Set<number>();
+    let requestsSucceeded = 0;
+    const seenApiIds = new Set<number>();
+    const records: OpportunityRecord[] = [];
+    const seenSids: string[] = [];
 
     for (const keyword of KEYWORDS) {
       for (let page = 0; page < MAX_PAGES; page++) {
@@ -144,14 +131,15 @@ export async function importFashionUnitedOpportunities(): Promise<{
 
           logger.info(`[FashionUnited] "${keyword}" offset ${offset}...`);
 
-          const res = await fetch(GRAPHQL_URL, {
+          const res = await fetchWithRetry(GRAPHQL_URL, {
             method: 'POST',
-            signal: AbortSignal.timeout(15000),
+            timeoutMs: 15000,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               query: JOBS_QUERY,
               variables: { keyword, limit: PAGE_SIZE, offset },
             }),
+            logTag: `[FashionUnited] "${keyword}" offset ${offset}`,
           });
 
           if (!res.ok) {
@@ -173,10 +161,11 @@ export async function importFashionUnitedOpportunities(): Promise<{
           const totalCount = body.data?.jobsCount || 0;
 
           if (jobs.length === 0) break;
+          requestsSucceeded++;
 
           for (const job of jobs) {
-            if (seenIds.has(job.id)) { skipped++; continue; }
-            seenIds.add(job.id);
+            if (seenApiIds.has(job.id)) { skipped++; continue; }
+            seenApiIds.add(job.id);
 
             const description = stripHtml(job.teaser || '').slice(0, 10000)
               || `${job.title} at ${job.company.name}`;
@@ -200,41 +189,24 @@ export async function importFashionUnitedOpportunities(): Promise<{
 
             const tags = ['Fashion', keyword].slice(0, 5);
 
-            await prisma.opportunity.upsert({
-              where: { id: sid },
-              update: {
-                title: validated.title,
-                description: validated.description,
-                company: validated.company,
-                url: validated.url,
-                location: validated.location,
-                isAbroad: validated.isAbroad,
-                isRemote: validated.isRemote,
-                type: mapType(job.title, keyword),
-                tags,
-                source: 'FashionUnited',
-                sourceId: sid,
-                lastSyncedAt: now,
-              },
-              create: {
-                id: sid,
-                title: validated.title,
-                description: validated.description,
-                company: validated.company,
-                url: validated.url,
-                location: validated.location,
-                isAbroad: validated.isAbroad,
-                isRemote: validated.isRemote,
-                type: mapType(job.title, keyword),
-                tags,
-                postedAt: job.publishedAt ? new Date(job.publishedAt) : now,
-                expiresAt: validated.expiresAt,
-                source: 'FashionUnited',
-                sourceId: sid,
-                lastSyncedAt: now,
-              },
+            seenSids.push(sid);
+            records.push({
+              id: sid,
+              title: validated.title,
+              description: validated.description,
+              company: validated.company || job.company.name || null,
+              url: validated.url ?? null,
+              location: validated.location || null,
+              isAbroad: validated.isAbroad,
+              isRemote: validated.isRemote,
+              type: mapType(job.title, keyword),
+              tags,
+              postedAt: job.publishedAt ? new Date(job.publishedAt) : now,
+              expiresAt: validated.expiresAt ?? null,
+              source: 'FashionUnited',
+              sourceId: sid,
+              lastSyncedAt: now,
             });
-            imported++;
           }
 
           // Stop if we've fetched all results
@@ -248,17 +220,26 @@ export async function importFashionUnitedOpportunities(): Promise<{
       }
     }
 
+    await batchUpsertOpportunities(records);
+    const imported = records.length;
+
+    // FashionUnited sends expiresAt explicitly for most postings, so mark-stale
+    // mostly covers the ones without expiry. Only run if enough data arrived.
+    const staleCount = requestsSucceeded >= 3
+      ? await markStaleOpportunities('FashionUnited', seenSids, { minSeenForStale: 10 })
+      : 0;
+
     await prisma.importLog.update({
       where: { id: log.id },
       data: {
         status: 'success',
         count: imported,
         finishedAt: new Date(),
-        metadata: { skipped },
+        metadata: { skipped, requestsSucceeded, staleCount },
       },
     });
 
-    logger.info(`[FashionUnited] Imported ${imported}, skipped ${skipped}`);
+    logger.info(`[FashionUnited] Imported ${imported}, skipped ${skipped}, expired ${staleCount}`);
     return { imported, skipped, source: 'fashionunited' };
   } catch (err: any) {
     await prisma.importLog.update({

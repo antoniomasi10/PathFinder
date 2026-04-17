@@ -12,6 +12,8 @@ import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { OpportunityType } from '@prisma/client';
 import { validateOpportunity } from './validation';
+import { batchUpsertOpportunities, markStaleOpportunities, OpportunityRecord } from './batch';
+import { stripHtml, mapOpportunityType, fetchWithRetry } from './utils';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -38,31 +40,7 @@ function isStudentRole(title: string, tags: string[]): boolean {
   return tags.some(tag => STUDENT_KEYWORDS.some(kw => tag.toLowerCase().includes(kw)));
 }
 
-function stripHtml(html: string): string {
-  if (!html) return '';
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/?(p|div|li|ul|ol|h[1-6])[^>]*>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/[ \t]+/g, ' ')
-    .trim();
-}
-
-function mapType(title: string): OpportunityType {
-  const t = title.toLowerCase();
-  if (t.includes('stage') || t.includes('tirocinio')) return 'STAGE';
-  if (t.includes('intern') || t.includes('traineeship')) return 'INTERNSHIP';
-  if (t.includes('trainee') || t.includes('apprenti') || t.includes('werkstudent')) return 'STAGE';
-  if (t.includes('graduate') || t.includes('fellow')) return 'FELLOWSHIP';
-  return 'INTERNSHIP';
-}
+const mapType = mapOpportunityType;
 
 // ---------------------------------------------------------------------------
 // API types
@@ -99,16 +77,15 @@ export async function importRemoteOKOpportunities(): Promise<{
   });
 
   try {
-    let imported = 0;
     let skipped = 0;
+    const records: OpportunityRecord[] = [];
+    const seenIds: string[] = [];
 
     logger.info('[RemoteOK] Fetching API...');
-    const res = await fetch(API_URL, {
-      signal: AbortSignal.timeout(30000),
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'PathFinderBot/1.0',
-      },
+    const res = await fetchWithRetry(API_URL, {
+      timeoutMs: 30000,
+      headers: { 'Accept': 'application/json' },
+      logTag: '[RemoteOK]',
     });
 
     if (!res.ok) {
@@ -146,41 +123,29 @@ export async function importRemoteOKOpportunities(): Promise<{
 
       if (!validated) { skipped++; continue; }
 
-      await prisma.opportunity.upsert({
-        where: { id: sid },
-        update: {
-          title: validated.title,
-          description: validated.description,
-          company: validated.company,
-          url: validated.url,
-          location: validated.location,
-          isAbroad: validated.isAbroad,
-          isRemote: validated.isRemote,
-          type: mapType(job.position),
-          tags: tags.slice(0, 5),
-          source: 'RemoteOK',
-          sourceId: sid,
-          lastSyncedAt: now,
-        },
-        create: {
-          id: sid,
-          title: validated.title,
-          description: validated.description,
-          company: validated.company,
-          url: validated.url,
-          location: validated.location,
-          isAbroad: validated.isAbroad,
-          isRemote: validated.isRemote,
-          type: mapType(job.position),
-          tags: tags.slice(0, 5),
-          postedAt: job.date ? new Date(job.date) : now,
-          source: 'RemoteOK',
-          sourceId: sid,
-          lastSyncedAt: now,
-        },
+      seenIds.push(sid);
+      records.push({
+        id: sid,
+        title: validated.title,
+        description: validated.description,
+        company: validated.company || null,
+        url: validated.url ?? null,
+        location: validated.location || null,
+        isAbroad: validated.isAbroad,
+        isRemote: validated.isRemote,
+        type: mapType(job.position),
+        tags: tags.slice(0, 5),
+        postedAt: job.date ? new Date(job.date) : now,
+        source: 'RemoteOK',
+        sourceId: sid,
+        lastSyncedAt: now,
       });
-      imported++;
     }
+
+    await batchUpsertOpportunities(records);
+    const imported = records.length;
+
+    const staleCount = await markStaleOpportunities('RemoteOK', seenIds, { minSeenForStale: 5 });
 
     await prisma.importLog.update({
       where: { id: log.id },
@@ -188,11 +153,11 @@ export async function importRemoteOKOpportunities(): Promise<{
         status: 'success',
         count: imported,
         finishedAt: new Date(),
-        metadata: { skipped },
+        metadata: { skipped, staleCount },
       },
     });
 
-    logger.info(`[RemoteOK] Imported ${imported}, skipped ${skipped}`);
+    logger.info(`[RemoteOK] Imported ${imported}, skipped ${skipped}, expired ${staleCount}`);
     return { imported, skipped, source: 'remoteok' };
   } catch (err: any) {
     await prisma.importLog.update({

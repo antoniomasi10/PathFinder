@@ -12,6 +12,8 @@ import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { OpportunityType } from '@prisma/client';
 import { validateOpportunity } from './validation';
+import { batchUpsertOpportunities, markStaleOpportunities, OpportunityRecord } from './batch';
+import { stripHtml, mapOpportunityType, fetchWithRetry } from './utils';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -45,32 +47,8 @@ function isStudentRole(title: string, jobTypes: string[]): boolean {
   return STUDENT_KEYWORDS.some(kw => t.includes(kw));
 }
 
-function stripHtml(html: string): string {
-  if (!html) return '';
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/?(p|div|li|ul|ol|h[1-6])[^>]*>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/[ \t]+/g, ' ')
-    .trim();
-}
-
-function mapType(title: string, jobTypes: string[]): OpportunityType {
-  const t = title.toLowerCase();
-  if (jobTypes.some(jt => jt.toLowerCase() === 'internship')) return 'INTERNSHIP';
-  if (t.includes('stage') || t.includes('tirocinio') || t.includes('praktikum')) return 'STAGE';
-  if (t.includes('intern') || t.includes('traineeship')) return 'INTERNSHIP';
-  if (t.includes('trainee') || t.includes('apprenti') || t.includes('werkstudent') || t.includes('alternance')) return 'STAGE';
-  if (t.includes('graduate') || t.includes('fellow')) return 'FELLOWSHIP';
-  return 'INTERNSHIP';
-}
+const mapType = (title: string, jobTypes: string[]): OpportunityType =>
+  mapOpportunityType(title, jobTypes);
 
 function extractCountryFromLocation(location: string): string {
   const loc = location.toLowerCase();
@@ -126,18 +104,21 @@ export async function importArbeitnowOpportunities(): Promise<{
   });
 
   try {
-    let imported = 0;
     let skipped = 0;
+    let pagesFetched = 0;
     const seenSlugs = new Set<string>();
+    const records: OpportunityRecord[] = [];
+    const seenIds: string[] = [];
 
     for (let page = 1; page <= MAX_PAGES; page++) {
       try {
         const url = `${API_BASE}?page=${page}`;
         logger.info(`[Arbeitnow] Fetching page ${page}...`);
 
-        const res = await fetch(url, {
-          signal: AbortSignal.timeout(15000),
+        const res = await fetchWithRetry(url, {
+          timeoutMs: 15000,
           headers: { 'Accept': 'application/json' },
+          logTag: `[Arbeitnow] page ${page}`,
         });
 
         if (!res.ok) {
@@ -183,41 +164,26 @@ export async function importArbeitnowOpportunities(): Promise<{
 
           if (!validated) { skipped++; continue; }
 
-          await prisma.opportunity.upsert({
-            where: { id: sid },
-            update: {
-              title: validated.title,
-              description: validated.description,
-              company: validated.company,
-              url: validated.url,
-              location: validated.location,
-              isAbroad: validated.isAbroad,
-              isRemote: validated.isRemote,
-              type: mapType(job.title, job.job_types),
-              tags,
-              source: 'Arbeitnow',
-              sourceId: sid,
-              lastSyncedAt: now,
-            },
-            create: {
-              id: sid,
-              title: validated.title,
-              description: validated.description,
-              company: validated.company,
-              url: validated.url,
-              location: validated.location,
-              isAbroad: validated.isAbroad,
-              isRemote: validated.isRemote,
-              type: mapType(job.title, job.job_types),
-              tags,
-              postedAt: job.created_at ? new Date(job.created_at * 1000) : now,
-              source: 'Arbeitnow',
-              sourceId: sid,
-              lastSyncedAt: now,
-            },
+          seenIds.push(sid);
+          records.push({
+            id: sid,
+            title: validated.title,
+            description: validated.description,
+            company: validated.company || null,
+            url: validated.url ?? null,
+            location: validated.location || null,
+            isAbroad: validated.isAbroad,
+            isRemote: validated.isRemote,
+            type: mapType(job.title, job.job_types),
+            tags,
+            postedAt: job.created_at ? new Date(job.created_at * 1000) : now,
+            source: 'Arbeitnow',
+            sourceId: sid,
+            lastSyncedAt: now,
           });
-          imported++;
         }
+
+        pagesFetched++;
 
         // Check if we've reached the last page
         if (page >= (body.meta?.last_page || MAX_PAGES)) {
@@ -233,17 +199,25 @@ export async function importArbeitnowOpportunities(): Promise<{
       }
     }
 
+    await batchUpsertOpportunities(records);
+    const imported = records.length;
+
+    // Only mark-stale if we successfully fetched a meaningful number of pages
+    const staleCount = pagesFetched >= 3
+      ? await markStaleOpportunities('Arbeitnow', seenIds, { minSeenForStale: 20 })
+      : 0;
+
     await prisma.importLog.update({
       where: { id: log.id },
       data: {
         status: 'success',
         count: imported,
         finishedAt: new Date(),
-        metadata: { skipped },
+        metadata: { skipped, pagesFetched, staleCount },
       },
     });
 
-    logger.info(`[Arbeitnow] Imported ${imported}, skipped ${skipped}`);
+    logger.info(`[Arbeitnow] Imported ${imported}, skipped ${skipped}, expired ${staleCount}`);
     return { imported, skipped, source: 'arbeitnow' };
   } catch (err: any) {
     await prisma.importLog.update({

@@ -17,6 +17,8 @@ import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { OpportunityType } from '@prisma/client';
 import { validateOpportunity } from './validation';
+import { batchUpsertOpportunities, markStaleOpportunities, OpportunityRecord } from './batch';
+import { mapOpportunityType, fetchWithRetry } from './utils';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -50,14 +52,7 @@ const BOARDS: Record<string, string> = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function mapType(title: string): OpportunityType {
-  const t = title.toLowerCase();
-  if (t.includes('intern')) return 'INTERNSHIP';
-  if (t.includes('stage') || t.includes('stagiaire') || t.includes('trainee')) return 'STAGE';
-  if (t.includes('graduate')) return 'FELLOWSHIP';
-  if (t.includes('apprenti') || t.includes('alternance') || t.includes('werkstudent') || t.includes('co-op')) return 'STAGE';
-  return 'INTERNSHIP';
-}
+const mapType = mapOpportunityType;
 
 function extractCountryCode(job: WorkableJob): string {
   // Workable provides countryCode directly in locations
@@ -129,18 +124,21 @@ export async function importWorkableOpportunities(options?: {
   });
 
   try {
-    let imported = 0;
     let skipped = 0;
     let boardsProcessed = 0;
+    const records: OpportunityRecord[] = [];
+    const seenIds: string[] = [];
+    const successfulCompanies: string[] = [];
 
     for (const [token, companyName] of Object.entries(boards)) {
       try {
         const url = `${API_BASE}/${token}`;
         logger.info(`[Workable] Fetching ${companyName} (${token})...`);
 
-        const res = await fetch(url, {
-          signal: AbortSignal.timeout(15000),
+        const res = await fetchWithRetry(url, {
+          timeoutMs: 15000,
           headers: { 'Accept': 'application/json' },
+          logTag: `[Workable] ${companyName}`,
         });
 
         if (!res.ok) {
@@ -186,48 +184,39 @@ export async function importWorkableOpportunities(options?: {
 
           if (!validated) { skipped++; continue; }
 
-          await prisma.opportunity.upsert({
-            where: { id: sid },
-            update: {
-              title: validated.title,
-              description: validated.description,
-              company: validated.company,
-              url: validated.url,
-              location: validated.location,
-              isAbroad: validated.isAbroad,
-              isRemote: validated.isRemote,
-              type: mapType(job.title),
-              tags,
-              source: 'Workable',
-              sourceId: sid,
-              lastSyncedAt: now,
-            },
-            create: {
-              id: sid,
-              title: validated.title,
-              description: validated.description,
-              company: validated.company,
-              url: validated.url,
-              location: validated.location,
-              isAbroad: validated.isAbroad,
-              isRemote: validated.isRemote,
-              type: mapType(job.title),
-              tags,
-              postedAt: job.published_on ? new Date(job.published_on) : now,
-              source: 'Workable',
-              sourceId: sid,
-              lastSyncedAt: now,
-            },
+          seenIds.push(sid);
+          records.push({
+            id: sid,
+            title: validated.title,
+            description: validated.description,
+            company: validated.company || companyName,
+            url: validated.url ?? null,
+            location: validated.location || null,
+            isAbroad: validated.isAbroad,
+            isRemote: validated.isRemote,
+            type: mapType(job.title),
+            tags,
+            postedAt: job.published_on ? new Date(job.published_on) : now,
+            source: 'Workable',
+            sourceId: sid,
+            lastSyncedAt: now,
           });
-          imported++;
         }
 
         boardsProcessed++;
+        successfulCompanies.push(companyName);
         await new Promise(r => setTimeout(r, FETCH_DELAY_MS));
       } catch (err) {
         logger.warn(`[Workable] ${companyName} failed: ${err}`);
       }
     }
+
+    await batchUpsertOpportunities(records);
+    const imported = records.length;
+
+    const staleCount = successfulCompanies.length > 0
+      ? await markStaleOpportunities('Workable', seenIds, { scopeCompanies: successfulCompanies })
+      : 0;
 
     await prisma.importLog.update({
       where: { id: log.id },
@@ -235,11 +224,11 @@ export async function importWorkableOpportunities(options?: {
         status: 'success',
         count: imported,
         finishedAt: new Date(),
-        metadata: { skipped, boardsProcessed, totalBoards: Object.keys(boards).length },
+        metadata: { skipped, boardsProcessed, totalBoards: Object.keys(boards).length, staleCount },
       },
     });
 
-    logger.info(`[Workable] Imported ${imported}, skipped ${skipped} from ${boardsProcessed} boards`);
+    logger.info(`[Workable] Imported ${imported}, skipped ${skipped}, expired ${staleCount} from ${boardsProcessed} boards`);
     return { imported, skipped, source: 'workable' };
   } catch (err: any) {
     await prisma.importLog.update({

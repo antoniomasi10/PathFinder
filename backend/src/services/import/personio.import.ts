@@ -14,12 +14,15 @@ import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { OpportunityType } from '@prisma/client';
 import { validateOpportunity } from './validation';
+import { batchUpsertOpportunities, markStaleOpportunities, OpportunityRecord } from './batch';
+import { stripHtml, mapOpportunityType, fetchWithRetry, runWithConcurrency } from './utils';
 
 // ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
 
 const FETCH_DELAY_MS = 500;
+const BOARD_CONCURRENCY = 4;
 
 const STUDENT_RE = /\b(intern(?:ship)?|stage|stagiaire|trainee|graduate.program|apprenti(?:ce)?|werkstudent|alternance|co-op|tirocinio)\b/i;
 
@@ -50,33 +53,7 @@ const BOARDS: Record<string, string> = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function stripHtml(html: string): string {
-  if (!html) return '';
-  return html
-    .replace(/<!\[CDATA\[/g, '')
-    .replace(/\]\]>/g, '')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/?(p|div|li|ul|ol|h[1-6]|span|strong|em|b|i)[^>]*>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#0?39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/[ \t]+/g, ' ')
-    .trim();
-}
-
-function mapType(title: string): OpportunityType {
-  const t = title.toLowerCase();
-  if (t.includes('intern')) return 'INTERNSHIP';
-  if (t.includes('stage') || t.includes('stagiaire') || t.includes('trainee')) return 'STAGE';
-  if (t.includes('graduate')) return 'FELLOWSHIP';
-  if (t.includes('apprenti') || t.includes('alternance') || t.includes('werkstudent') || t.includes('co-op')) return 'STAGE';
-  return 'INTERNSHIP';
-}
+const mapType = mapOpportunityType;
 
 function extractCountryFromOffice(office: string, subcompany: string): string {
   const text = `${office} ${subcompany}`.toLowerCase();
@@ -167,29 +144,32 @@ export async function importPersonioOpportunities(options?: {
   });
 
   try {
-    let imported = 0;
     let skipped = 0;
     let boardsProcessed = 0;
+    const records: OpportunityRecord[] = [];
+    const seenIds: string[] = [];
+    const successfulCompanies: string[] = [];
 
-    for (const [slug, companyName] of Object.entries(boards)) {
+    await runWithConcurrency(Object.entries(boards), BOARD_CONCURRENCY, async ([slug, companyName]) => {
       try {
         const url = `https://${slug}.jobs.personio.com/xml?language=en`;
         logger.info(`[Personio] Fetching ${companyName} (${slug})...`);
 
-        const res = await fetch(url, {
-          signal: AbortSignal.timeout(15000),
+        const res = await fetchWithRetry(url, {
+          timeoutMs: 15000,
           headers: { 'Accept': 'application/xml' },
+          logTag: `[Personio] ${companyName}`,
         });
 
         if (!res.ok) {
           logger.warn(`[Personio] ${companyName} returned ${res.status}`);
-          continue;
+          return;
         }
 
         const xml = await res.text();
         if (!xml.includes('workzag-jobs')) {
           logger.warn(`[Personio] ${companyName}: unexpected response`);
-          continue;
+          return;
         }
 
         const positions = parsePositions(xml);
@@ -228,48 +208,41 @@ export async function importPersonioOpportunities(options?: {
 
           if (!validated) { skipped++; continue; }
 
-          await prisma.opportunity.upsert({
-            where: { id: sid },
-            update: {
-              title: validated.title,
-              description: validated.description,
-              company: validated.company,
-              url: validated.url,
-              location: validated.location,
-              isAbroad: validated.isAbroad,
-              isRemote: validated.isRemote,
-              type: mapType(pos.name),
-              tags,
-              source: 'Personio',
-              sourceId: sid,
-              lastSyncedAt: now,
-            },
-            create: {
-              id: sid,
-              title: validated.title,
-              description: validated.description,
-              company: validated.company,
-              url: validated.url,
-              location: validated.location,
-              isAbroad: validated.isAbroad,
-              isRemote: validated.isRemote,
-              type: mapType(pos.name),
-              tags,
-              postedAt: pos.createdAt ? new Date(pos.createdAt) : now,
-              source: 'Personio',
-              sourceId: sid,
-              lastSyncedAt: now,
-            },
+          seenIds.push(sid);
+          const resolvedCompany = validated.company || pos.subcompany || companyName;
+          records.push({
+            id: sid,
+            title: validated.title,
+            description: validated.description,
+            company: resolvedCompany,
+            url: validated.url ?? null,
+            location: validated.location || null,
+            isAbroad: validated.isAbroad,
+            isRemote: validated.isRemote,
+            type: mapType(pos.name),
+            tags,
+            postedAt: pos.createdAt ? new Date(pos.createdAt) : now,
+            source: 'Personio',
+            sourceId: sid,
+            lastSyncedAt: now,
           });
-          imported++;
         }
 
         boardsProcessed++;
+        successfulCompanies.push(companyName);
         await new Promise(r => setTimeout(r, FETCH_DELAY_MS));
       } catch (err) {
         logger.warn(`[Personio] ${companyName} failed: ${err}`);
       }
-    }
+    });
+
+    await batchUpsertOpportunities(records);
+    const imported = records.length;
+
+    // Personio rows can use either subcompany or the configured companyName — don't scope by company
+    const staleCount = boardsProcessed > 0
+      ? await markStaleOpportunities('Personio', seenIds, { minSeenForStale: 5 })
+      : 0;
 
     await prisma.importLog.update({
       where: { id: log.id },
@@ -277,11 +250,11 @@ export async function importPersonioOpportunities(options?: {
         status: 'success',
         count: imported,
         finishedAt: new Date(),
-        metadata: { skipped, boardsProcessed, totalBoards: Object.keys(boards).length },
+        metadata: { skipped, boardsProcessed, totalBoards: Object.keys(boards).length, staleCount },
       },
     });
 
-    logger.info(`[Personio] Imported ${imported}, skipped ${skipped} from ${boardsProcessed} boards`);
+    logger.info(`[Personio] Imported ${imported}, skipped ${skipped}, expired ${staleCount} from ${boardsProcessed} boards`);
     return { imported, skipped, source: 'personio' };
   } catch (err: any) {
     await prisma.importLog.update({

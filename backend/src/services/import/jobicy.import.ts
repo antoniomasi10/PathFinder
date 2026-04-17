@@ -17,6 +17,8 @@ import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { OpportunityType } from '@prisma/client';
 import { validateOpportunity } from './validation';
+import { batchUpsertOpportunities, markStaleOpportunities, OpportunityRecord } from './batch';
+import { stripHtml, mapOpportunityType, fetchWithRetry } from './utils';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -27,22 +29,20 @@ const API_BASE = 'https://jobicy.com/api/v2/remote-jobs';
 /** Max results per request (API max is 100) */
 const RESULTS_PER_REQUEST = 50;
 
-/** Search tags targeting student opportunities */
+/** Search tags targeting student opportunities.
+ *  Kept to 4 tags: `intern`, `trainee`, `graduate`, `junior` cover the pool
+ *  returned by the redundant variants (`internship`, `entry-level`, `stage`,
+ *  `werkstudent`) with full dedup via seenIds. */
 const SEARCH_TAGS = [
-  'internship',
   'intern',
   'trainee',
   'graduate',
   'junior',
-  'entry-level',
-  'stage',
-  'werkstudent',
 ];
 
-/** Geo filters for European coverage */
+/** Geo filters for European coverage — `emea` overlaps heavily with `europe`. */
 const GEO_FILTERS = [
   'europe',
-  'emea',
   'anywhere',
 ];
 
@@ -72,32 +72,8 @@ function isStudentRole(title: string, jobTypes: string[], jobLevel: string): boo
   return STUDENT_KEYWORDS.some(kw => t.includes(kw));
 }
 
-function stripHtml(html: string): string {
-  if (!html) return '';
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/?(p|div|li|ul|ol|h[1-6])[^>]*>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/[ \t]+/g, ' ')
-    .trim();
-}
-
-function mapType(title: string, jobTypes: string[]): OpportunityType {
-  if (jobTypes.some(jt => jt.toLowerCase() === 'internship')) return 'INTERNSHIP';
-  const t = title.toLowerCase();
-  if (t.includes('stage') || t.includes('tirocinio') || t.includes('praktikum')) return 'STAGE';
-  if (t.includes('intern') || t.includes('traineeship')) return 'INTERNSHIP';
-  if (t.includes('trainee') || t.includes('apprenti') || t.includes('werkstudent') || t.includes('alternance')) return 'STAGE';
-  if (t.includes('graduate') || t.includes('fellow')) return 'FELLOWSHIP';
-  return 'INTERNSHIP';
-}
+const mapType = (title: string, jobTypes: string[]): OpportunityType =>
+  mapOpportunityType(title, jobTypes);
 
 function extractCountryFromGeo(geo: string): string {
   const g = geo.toLowerCase();
@@ -159,9 +135,11 @@ export async function importJobicyOpportunities(): Promise<{
   });
 
   try {
-    let imported = 0;
     let skipped = 0;
-    const seenIds = new Set<number>();
+    let requestsSucceeded = 0;
+    const seenApiIds = new Set<number>();
+    const records: OpportunityRecord[] = [];
+    const seenSids: string[] = [];
 
     for (const tag of SEARCH_TAGS) {
       for (const geo of GEO_FILTERS) {
@@ -175,12 +153,10 @@ export async function importJobicyOpportunities(): Promise<{
           const url = `${API_BASE}?${params.toString()}`;
           logger.info(`[Jobicy] Fetching tag="${tag}" geo="${geo}"...`);
 
-          const res = await fetch(url, {
-            signal: AbortSignal.timeout(30000),
-            headers: {
-              'Accept': 'application/json',
-              'User-Agent': 'PathFinderBot/1.0',
-            },
+          const res = await fetchWithRetry(url, {
+            timeoutMs: 30000,
+            headers: { 'Accept': 'application/json' },
+            logTag: `[Jobicy] tag="${tag}" geo="${geo}"`,
           });
 
           if (!res.ok) {
@@ -198,10 +174,11 @@ export async function importJobicyOpportunities(): Promise<{
 
           logger.info(`[Jobicy] Got ${jobs.length} results for tag="${tag}" geo="${geo}"`);
 
+          requestsSucceeded++;
           for (const job of jobs) {
             // Deduplicate within run
-            if (seenIds.has(job.id)) { skipped++; continue; }
-            seenIds.add(job.id);
+            if (seenApiIds.has(job.id)) { skipped++; continue; }
+            seenApiIds.add(job.id);
 
             // Filter: only student-relevant roles
             const jobTypes = job.jobType || [];
@@ -231,40 +208,23 @@ export async function importJobicyOpportunities(): Promise<{
 
             if (!validated) { skipped++; continue; }
 
-            await prisma.opportunity.upsert({
-              where: { id: sid },
-              update: {
-                title: validated.title,
-                description: validated.description,
-                company: validated.company,
-                url: validated.url,
-                location: validated.location,
-                isAbroad: validated.isAbroad,
-                isRemote: validated.isRemote,
-                type: mapType(job.jobTitle, jobTypes),
-                tags: industries,
-                source: 'Jobicy',
-                sourceId: sid,
-                lastSyncedAt: now,
-              },
-              create: {
-                id: sid,
-                title: validated.title,
-                description: validated.description,
-                company: validated.company,
-                url: validated.url,
-                location: validated.location,
-                isAbroad: validated.isAbroad,
-                isRemote: validated.isRemote,
-                type: mapType(job.jobTitle, jobTypes),
-                tags: industries,
-                postedAt: job.pubDate ? new Date(job.pubDate) : now,
-                source: 'Jobicy',
-                sourceId: sid,
-                lastSyncedAt: now,
-              },
+            seenSids.push(sid);
+            records.push({
+              id: sid,
+              title: validated.title,
+              description: validated.description,
+              company: validated.company || null,
+              url: validated.url ?? null,
+              location: validated.location || null,
+              isAbroad: validated.isAbroad,
+              isRemote: validated.isRemote,
+              type: mapType(job.jobTitle, jobTypes),
+              tags: industries,
+              postedAt: job.pubDate ? new Date(job.pubDate) : now,
+              source: 'Jobicy',
+              sourceId: sid,
+              lastSyncedAt: now,
             });
-            imported++;
           }
 
           // Respectful delay between requests
@@ -276,17 +236,24 @@ export async function importJobicyOpportunities(): Promise<{
       }
     }
 
+    await batchUpsertOpportunities(records);
+    const imported = records.length;
+
+    const staleCount = requestsSucceeded >= 3
+      ? await markStaleOpportunities('Jobicy', seenSids, { minSeenForStale: 10 })
+      : 0;
+
     await prisma.importLog.update({
       where: { id: log.id },
       data: {
         status: 'success',
         count: imported,
         finishedAt: new Date(),
-        metadata: { skipped },
+        metadata: { skipped, requestsSucceeded, staleCount },
       },
     });
 
-    logger.info(`[Jobicy] Imported ${imported}, skipped ${skipped}`);
+    logger.info(`[Jobicy] Imported ${imported}, skipped ${skipped}, expired ${staleCount}`);
     return { imported, skipped, source: 'jobicy' };
   } catch (err: any) {
     await prisma.importLog.update({

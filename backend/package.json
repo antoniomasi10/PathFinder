@@ -49,6 +49,7 @@
     "playwright": "^1.59.1",
     "sanitize-html": "^2.17.2",
     "socket.io": "^4.7.5",
+    "undici": "^8.1.0",
     "web-push": "^3.6.7",
     "zod": "^4.3.6"
   },

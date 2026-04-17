@@ -14,6 +14,8 @@ import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { OpportunityType } from '@prisma/client';
 import { validateOpportunity } from './validation';
+import { batchUpsertOpportunities, markStaleOpportunities, OpportunityRecord } from './batch';
+import { stripHtml, extractCountryCode, mapOpportunityType, fetchWithRetry } from './utils';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -112,51 +114,7 @@ function isStudentRole(title: string): boolean {
   return STUDENT_KEYWORDS.some(kw => t.includes(kw));
 }
 
-function stripHtml(html: string): string {
-  if (!html) return '';
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/?(p|div|li|ul|ol|h[1-6])[^>]*>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/[ \t]+/g, ' ')
-    .trim();
-}
-
-function mapType(title: string): OpportunityType {
-  const t = title.toLowerCase();
-  if (t.includes('intern') || t.includes('tirocinio')) return 'INTERNSHIP';
-  if (t.includes('stage') || t.includes('stagiaire')) return 'STAGE';
-  if (t.includes('trainee')) return 'STAGE';
-  if (t.includes('graduate')) return 'FELLOWSHIP';
-  if (t.includes('apprenti') || t.includes('alternance') || t.includes('werkstudent')) return 'STAGE';
-  return 'INTERNSHIP';
-}
-
-function extractCountryCode(location: string): string {
-  const loc = location.toLowerCase();
-  // Common patterns: "City, Country" or "City, State, Country"
-  if (loc.includes('italy') || loc.includes('italia') || loc.includes('milan') || loc.includes('rome') || loc.includes('roma')) return 'IT';
-  if (loc.includes('united states') || loc.includes('usa') || loc.includes('new york') || loc.includes('san francisco') || loc.includes('seattle') || loc.includes('los angeles')) return 'US';
-  if (loc.includes('united kingdom') || loc.includes('london') || loc.includes('uk')) return 'GB';
-  if (loc.includes('germany') || loc.includes('berlin') || loc.includes('munich') || loc.includes('münchen')) return 'DE';
-  if (loc.includes('france') || loc.includes('paris')) return 'FR';
-  if (loc.includes('netherlands') || loc.includes('amsterdam')) return 'NL';
-  if (loc.includes('spain') || loc.includes('madrid') || loc.includes('barcelona')) return 'ES';
-  if (loc.includes('ireland') || loc.includes('dublin')) return 'IE';
-  if (loc.includes('canada') || loc.includes('toronto') || loc.includes('vancouver')) return 'CA';
-  if (loc.includes('singapore')) return 'SG';
-  if (loc.includes('japan') || loc.includes('tokyo')) return 'JP';
-  if (loc.includes('australia') || loc.includes('sydney')) return 'AU';
-  if (loc.includes('remote')) return '';
-  return '';
-}
+const mapType = mapOpportunityType;
 
 // ---------------------------------------------------------------------------
 // API types
@@ -190,18 +148,21 @@ export async function importGreenhouseOpportunities(options?: {
   });
 
   try {
-    let imported = 0;
     let skipped = 0;
     let boardsProcessed = 0;
+    const records: OpportunityRecord[] = [];
+    const seenIds: string[] = [];
+    const successfulCompanies: string[] = [];
 
     for (const [token, companyName] of Object.entries(boards)) {
       try {
         const url = `${API_BASE}/${token}/jobs?content=true`;
         logger.info(`[Greenhouse] Fetching ${companyName} (${token})...`);
 
-        const res = await fetch(url, {
-          signal: AbortSignal.timeout(15000),
+        const res = await fetchWithRetry(url, {
+          timeoutMs: 15000,
           headers: { 'Accept': 'application/json' },
+          logTag: `[Greenhouse] ${companyName}`,
         });
 
         if (!res.ok) {
@@ -211,8 +172,6 @@ export async function importGreenhouseOpportunities(options?: {
 
         const data = await res.json() as { jobs: GHJob[] };
         const jobs = data.jobs || [];
-
-        // Filter for student/intern roles only
         const studentJobs = jobs.filter(j => isStudentRole(j.title));
 
         for (const job of studentJobs) {
@@ -221,10 +180,7 @@ export async function importGreenhouseOpportunities(options?: {
           const countryCode = extractCountryCode(location);
           const isAbroad = countryCode !== 'IT';
           const isRemote = location.toLowerCase().includes('remote');
-
           const description = stripHtml(job.content || '') || `${job.title} at ${companyName}`;
-
-          // Build tags from departments and offices
           const tags = [
             ...job.departments.map(d => d.name),
             ...job.offices.map(o => o.name),
@@ -243,48 +199,39 @@ export async function importGreenhouseOpportunities(options?: {
 
           if (!validated) { skipped++; continue; }
 
-          await prisma.opportunity.upsert({
-            where: { id: sid },
-            update: {
-              title: validated.title,
-              description: validated.description,
-              company: validated.company,
-              url: validated.url,
-              location: validated.location,
-              isAbroad: validated.isAbroad,
-              isRemote: validated.isRemote,
-              type: mapType(job.title),
-              tags,
-              source: 'Greenhouse',
-              sourceId: sid,
-              lastSyncedAt: now,
-            },
-            create: {
-              id: sid,
-              title: validated.title,
-              description: validated.description,
-              company: validated.company,
-              url: validated.url,
-              location: validated.location,
-              isAbroad: validated.isAbroad,
-              isRemote: validated.isRemote,
-              type: mapType(job.title),
-              tags,
-              postedAt: job.updated_at ? new Date(job.updated_at) : now,
-              source: 'Greenhouse',
-              sourceId: sid,
-              lastSyncedAt: now,
-            },
+          seenIds.push(sid);
+          records.push({
+            id: sid,
+            title: validated.title,
+            description: validated.description,
+            company: validated.company || companyName,
+            url: validated.url ?? null,
+            location: validated.location || null,
+            isAbroad: validated.isAbroad,
+            isRemote: validated.isRemote,
+            type: mapType(job.title),
+            tags,
+            postedAt: job.updated_at ? new Date(job.updated_at) : now,
+            source: 'Greenhouse',
+            sourceId: sid,
+            lastSyncedAt: now,
           });
-          imported++;
         }
 
         boardsProcessed++;
+        successfulCompanies.push(companyName);
         await new Promise(r => setTimeout(r, FETCH_DELAY_MS));
       } catch (err) {
         logger.warn(`[Greenhouse] ${companyName} failed: ${err}`);
       }
     }
+
+    await batchUpsertOpportunities(records);
+    const imported = records.length;
+
+    const staleCount = successfulCompanies.length > 0
+      ? await markStaleOpportunities('Greenhouse', seenIds, { scopeCompanies: successfulCompanies })
+      : 0;
 
     await prisma.importLog.update({
       where: { id: log.id },
@@ -292,11 +239,11 @@ export async function importGreenhouseOpportunities(options?: {
         status: 'success',
         count: imported,
         finishedAt: new Date(),
-        metadata: { skipped, boardsProcessed, totalBoards: Object.keys(boards).length },
+        metadata: { skipped, boardsProcessed, totalBoards: Object.keys(boards).length, staleCount },
       },
     });
 
-    logger.info(`[Greenhouse] Imported ${imported}, skipped ${skipped} from ${boardsProcessed} boards`);
+    logger.info(`[Greenhouse] Imported ${imported}, skipped ${skipped}, expired ${staleCount} from ${boardsProcessed} boards`);
     return { imported, skipped, source: 'greenhouse' };
   } catch (err: any) {
     await prisma.importLog.update({

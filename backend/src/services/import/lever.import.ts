@@ -14,6 +14,8 @@ import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { OpportunityType } from '@prisma/client';
 import { validateOpportunity } from './validation';
+import { batchUpsertOpportunities, markStaleOpportunities, OpportunityRecord } from './batch';
+import { stripHtml, extractCountryCode, mapOpportunityType, fetchWithRetry } from './utils';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -60,46 +62,7 @@ const BOARDS: Record<string, string> = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function stripHtml(html: string): string {
-  if (!html) return '';
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/?(p|div|li|ul|ol|h[1-6])[^>]*>/gi, '\n')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/[ \t]+/g, ' ')
-    .trim();
-}
-
-function mapType(title: string): OpportunityType {
-  const t = title.toLowerCase();
-  if (t.includes('intern')) return 'INTERNSHIP';
-  if (t.includes('stage') || t.includes('stagiaire') || t.includes('trainee')) return 'STAGE';
-  if (t.includes('graduate')) return 'FELLOWSHIP';
-  if (t.includes('apprenti') || t.includes('alternance') || t.includes('werkstudent') || t.includes('co-op')) return 'STAGE';
-  return 'INTERNSHIP';
-}
-
-function extractCountryCode(location: string): string {
-  const loc = location.toLowerCase();
-  if (loc.includes('italy') || loc.includes('milan') || loc.includes('rome') || loc.includes('roma')) return 'IT';
-  if (loc.includes('united states') || loc.includes('usa') || loc.includes('new york') || loc.includes('san francisco') || loc.includes('los angeles') || loc.includes('seattle')) return 'US';
-  if (loc.includes('united kingdom') || loc.includes('london') || loc.includes('uk')) return 'GB';
-  if (loc.includes('germany') || loc.includes('berlin') || loc.includes('munich')) return 'DE';
-  if (loc.includes('france') || loc.includes('paris')) return 'FR';
-  if (loc.includes('netherlands') || loc.includes('amsterdam')) return 'NL';
-  if (loc.includes('spain') || loc.includes('madrid') || loc.includes('barcelona')) return 'ES';
-  if (loc.includes('sweden') || loc.includes('stockholm')) return 'SE';
-  if (loc.includes('norway') || loc.includes('oslo')) return 'NO';
-  if (loc.includes('remote')) return '';
-  return '';
-}
+const mapType = mapOpportunityType;
 
 // ---------------------------------------------------------------------------
 // API types
@@ -140,18 +103,21 @@ export async function importLeverOpportunities(options?: {
   });
 
   try {
-    let imported = 0;
     let skipped = 0;
     let boardsProcessed = 0;
+    const records: OpportunityRecord[] = [];
+    const seenIds: string[] = [];
+    const successfulCompanies: string[] = [];
 
     for (const [token, companyName] of Object.entries(boards)) {
       try {
         const url = `${API_BASE}/${token}?limit=500`;
         logger.info(`[Lever] Fetching ${companyName} (${token})...`);
 
-        const res = await fetch(url, {
-          signal: AbortSignal.timeout(30000),
+        const res = await fetchWithRetry(url, {
+          timeoutMs: 30000,
           headers: { 'Accept': 'application/json' },
+          logTag: `[Lever] ${companyName}`,
         });
 
         if (!res.ok) {
@@ -204,48 +170,39 @@ export async function importLeverOpportunities(options?: {
 
           if (!validated) { skipped++; continue; }
 
-          await prisma.opportunity.upsert({
-            where: { id: sid },
-            update: {
-              title: validated.title,
-              description: validated.description,
-              company: validated.company,
-              url: validated.url,
-              location: validated.location,
-              isAbroad: validated.isAbroad,
-              isRemote: validated.isRemote,
-              type: mapType(job.text),
-              tags,
-              source: 'Lever',
-              sourceId: sid,
-              lastSyncedAt: now,
-            },
-            create: {
-              id: sid,
-              title: validated.title,
-              description: validated.description,
-              company: validated.company,
-              url: validated.url,
-              location: validated.location,
-              isAbroad: validated.isAbroad,
-              isRemote: validated.isRemote,
-              type: mapType(job.text),
-              tags,
-              postedAt: job.createdAt ? new Date(job.createdAt) : now,
-              source: 'Lever',
-              sourceId: sid,
-              lastSyncedAt: now,
-            },
+          seenIds.push(sid);
+          records.push({
+            id: sid,
+            title: validated.title,
+            description: validated.description,
+            company: validated.company || companyName,
+            url: validated.url ?? null,
+            location: validated.location || null,
+            isAbroad: validated.isAbroad,
+            isRemote: validated.isRemote,
+            type: mapType(job.text),
+            tags,
+            postedAt: job.createdAt ? new Date(job.createdAt) : now,
+            source: 'Lever',
+            sourceId: sid,
+            lastSyncedAt: now,
           });
-          imported++;
         }
 
         boardsProcessed++;
+        successfulCompanies.push(companyName);
         await new Promise(r => setTimeout(r, FETCH_DELAY_MS));
       } catch (err) {
         logger.warn(`[Lever] ${companyName} failed: ${err}`);
       }
     }
+
+    await batchUpsertOpportunities(records);
+    const imported = records.length;
+
+    const staleCount = successfulCompanies.length > 0
+      ? await markStaleOpportunities('Lever', seenIds, { scopeCompanies: successfulCompanies })
+      : 0;
 
     await prisma.importLog.update({
       where: { id: log.id },
@@ -253,11 +210,11 @@ export async function importLeverOpportunities(options?: {
         status: 'success',
         count: imported,
         finishedAt: new Date(),
-        metadata: { skipped, boardsProcessed, totalBoards: Object.keys(boards).length },
+        metadata: { skipped, boardsProcessed, totalBoards: Object.keys(boards).length, staleCount },
       },
     });
 
-    logger.info(`[Lever] Imported ${imported}, skipped ${skipped} from ${boardsProcessed} boards`);
+    logger.info(`[Lever] Imported ${imported}, skipped ${skipped}, expired ${staleCount} from ${boardsProcessed} boards`);
     return { imported, skipped, source: 'lever' };
   } catch (err: any) {
     await prisma.importLog.update({
