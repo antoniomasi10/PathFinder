@@ -7,7 +7,6 @@ import api from '@/lib/api';
 import { useSavedOpportunities } from '@/lib/savedOpportunities';
 import { useSavedCourses } from '@/lib/savedCourses';
 import { getSavedSimulations, SavedSimulation } from '@/components/AdmissionSimulator';
-import { BADGES, getAllBadgeStates, getUnlockedCount, RARITY_COLORS, RARITY_LABELS, type BadgeDefinition, type BadgeProgress } from '@/lib/badges';
 import { useLanguage, Language, LANGUAGE_DISPLAY_NAMES, SKILL_KEYS, getSkillLabel, normalizePassionToKey } from '@/lib/language';
 import { usePrivacy } from '@/lib/privacy';
 import ChangePasswordModal from '@/components/ChangePasswordModal';
@@ -25,6 +24,7 @@ import {
 interface FullProfile {
   id: string;
   name: string;
+  surname: string;
   email: string;
   avatar?: string;
   bio?: string;
@@ -118,11 +118,13 @@ export default function ProfilePage() {
   const [showSkillsModal, setShowSkillsModal] = useState(false);
   const [modalSkills, setModalSkills] = useState<string[]>([]);
   const [editName, setEditName] = useState('');
+  const [editSurname, setEditSurname] = useState('');
   const [editBio, setEditBio] = useState('');
   const [editCourse, setEditCourse] = useState('');
   const [editYear, setEditYear] = useState<number | undefined>();
   const [editSkills, setEditSkills] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState('');
   const [friendSearch, setFriendSearch] = useState('');
   const [showSecurityPrivacySheet, setShowSecurityPrivacySheet] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -213,6 +215,7 @@ export default function ProfilePage() {
       }
       setProfile(profileData);
       setEditName(profileRes.data.name || '');
+      setEditSurname(profileRes.data.surname || '');
       setEditBio(profileRes.data.bio || '');
       setEditCourse(profileRes.data.courseOfStudy || '');
       setEditYear(profileRes.data.yearOfStudy);
@@ -229,20 +232,30 @@ export default function ProfilePage() {
   const openEditDialog = () => {
     if (profile) {
       setEditName(profile.name || '');
+      setEditSurname(profile.surname || '');
       setEditBio(profile.bio || '');
       setEditCourse(profile.courseOfStudy || '');
       setEditYear(profile.yearOfStudy);
       setEditSkills(profile.profile?.passions || []);
       setAvatarPreview(null);
+      setEditError('');
     }
     setShowEditDialog(true);
   };
 
   const saveProfile = async () => {
+    const trimmedName = editName.trim();
+    const trimmedSurname = editSurname.trim();
+    if (!trimmedName || !trimmedSurname) {
+      setEditError(t.profile.nameRequired);
+      return;
+    }
+    setEditError('');
     setSaving(true);
     try {
       await api.patch('/profile/me', {
         name: editName,
+        surname: editSurname,
         bio: editBio,
         courseOfStudy: editCourse,
         yearOfStudy: editYear,
@@ -387,7 +400,8 @@ export default function ProfilePage() {
 
   if (!profile) return null;
 
-  const initials = profile.name
+  const fullName = [profile.name, profile.surname].filter(Boolean).join(' ');
+  const initials = fullName
     .split(' ')
     .map((n) => n[0])
     .join('')
@@ -450,7 +464,7 @@ export default function ProfilePage() {
             {currentAvatar && isValidImageUrl(currentAvatar) ? (
               <img
                 src={currentAvatar}
-                alt={profile.name}
+                alt={fullName}
                 className="w-full h-full rounded-full object-cover"
               />
             ) : (
@@ -458,7 +472,7 @@ export default function ProfilePage() {
             )}
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">{profile.name}</h2>
+            <h2 className="text-xl font-bold text-white">{fullName}</h2>
             {privacyUniversity !== 'Nessuno' && profile.university && (
               <p className="text-sm text-[#94A3B8] mt-0.5">{profile.university.name}</p>
             )}
@@ -804,9 +818,6 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Achievement Badges */}
-        <BadgesSection />
-
         {/* Tabs */}
         <div>
           <div className="flex bg-[#1E293B] rounded-xl p-1 mb-4">
@@ -1114,15 +1125,26 @@ export default function ProfilePage() {
                 <p className="text-xs text-[#64748B] mt-2">{t.profile.tapToChangePhoto}</p>
               </div>
 
-              {/* Name */}
-              <div>
-                <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.profile.name}</label>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-4 py-3 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#4F46E5] transition-colors"
-                />
+              {/* Name & Surname */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.profile.name}</label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-4 py-3 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#4F46E5] transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.profile.surname}</label>
+                  <input
+                    type="text"
+                    value={editSurname}
+                    onChange={(e) => setEditSurname(e.target.value)}
+                    className="w-full bg-[#0F172A] border border-[#334155] rounded-xl px-4 py-3 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#4F46E5] transition-colors"
+                  />
+                </div>
               </div>
 
               {/* Bio */}
@@ -1180,6 +1202,12 @@ export default function ProfilePage() {
                 </button>
               </div>
             </div>
+
+            {editError && (
+              <div className="bg-error/10 text-error rounded-xl px-4 py-3 text-sm">
+                {editError}
+              </div>
+            )}
 
             <div className="flex gap-3">
               <button
@@ -2323,205 +2351,6 @@ function LanguageDropdown() {
 }
 
 type PrivacyOption = 'Tutti' | 'Pathmates' | 'Nessuno';
-
-function BadgesSection() {
-  const [badges, setBadges] = useState<{ badge: BadgeDefinition; progress: BadgeProgress; unlocked: boolean }[]>([]);
-  const [selectedBadge, setSelectedBadge] = useState<{ badge: BadgeDefinition; progress: BadgeProgress; unlocked: boolean } | null>(null);
-
-  useEffect(() => {
-    // Load from localStorage immediately for fast render
-    setBadges(getAllBadgeStates());
-    // Then sync from backend
-    api.get('/badges').then((res) => {
-      const serverBadges = res.data.map((b: any) => ({
-        badge: { id: b.id, name: b.name, icon: b.icon, description: b.description, rarity: b.rarity, category: b.category, target: b.target, trackingKey: b.trackingKey },
-        progress: { current: b.progress, unlockedAt: b.unlockedAt },
-        unlocked: b.unlocked,
-      }));
-      if (serverBadges.length > 0) setBadges(serverBadges);
-    }).catch(() => {});
-  }, []);
-
-  const unlockedCount = badges.filter((b) => b.unlocked).length;
-  const totalCount = badges.length;
-  const pct = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0;
-
-  if (totalCount === 0) return null;
-
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-3">
-        <Trophy size={16} color="#FFD700" />
-        <h3 className="text-base font-semibold text-white">Achievement</h3>
-        <span className="text-xs ml-auto" style={{ color: '#8B8FA8' }}>
-          {unlockedCount}/{totalCount} ({pct}%)
-        </span>
-      </div>
-
-      <div className="h-1.5 rounded-full overflow-hidden mb-4" style={{ backgroundColor: '#1E293B' }}>
-        <div
-          className="h-full rounded-full transition-all"
-          style={{ width: `${pct}%`, backgroundColor: '#4F46E5' }}
-        />
-      </div>
-
-      <div className="bg-[#1E293B] rounded-2xl p-4">
-        <div className="grid grid-cols-4 gap-3">
-          {badges.map(({ badge, progress, unlocked }) => {
-            const colors = RARITY_COLORS[badge.rarity];
-            return (
-              <button
-                key={badge.id}
-                onClick={() => setSelectedBadge({ badge, progress, unlocked })}
-                className="flex flex-col items-center gap-1.5 transition-transform active:scale-95"
-              >
-                <div
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: '16px',
-                    background: unlocked ? colors.bg : '#2A2F3D',
-                    border: `2px solid ${unlocked ? colors.border : '#3A3F4D'}`,
-                    boxShadow: unlocked ? colors.glow : 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '28px',
-                    opacity: unlocked ? 1 : 0.4,
-                  }}
-                >
-                  {unlocked ? badge.icon : <Lock size={16} color="#64748B" />}
-                </div>
-                <span
-                  className="text-[10px] font-semibold leading-tight text-center"
-                  style={{ color: unlocked ? '#FFFFFF' : '#8B8FA8', maxWidth: '72px' }}
-                >
-                  {unlocked ? badge.name : '???'}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {selectedBadge && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '24px',
-          }}
-        >
-          <div
-            onClick={() => setSelectedBadge(null)}
-            style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)' }}
-          />
-          <div
-            style={{
-              position: 'relative',
-              backgroundColor: '#141B2D',
-              borderRadius: '20px',
-              padding: '28px 24px',
-              maxWidth: '320px',
-              width: '100%',
-              textAlign: 'center',
-            }}
-          >
-            <button
-              onClick={() => setSelectedBadge(null)}
-              style={{
-                position: 'absolute',
-                top: '12px',
-                right: '12px',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '4px',
-              }}
-            >
-              <CloseLg size={20} color="#8B8FA8" />
-            </button>
-
-            {(() => {
-              const { badge, progress, unlocked } = selectedBadge;
-              const colors = RARITY_COLORS[badge.rarity];
-              const progressPct = Math.min(Math.round((progress.current / badge.target) * 100), 100);
-              return (
-                <>
-                  <div
-                    style={{
-                      width: '88px',
-                      height: '88px',
-                      borderRadius: '20px',
-                      background: unlocked ? colors.bg : '#2A2F3D',
-                      border: `2px solid ${unlocked ? colors.border : '#3A3F4D'}`,
-                      boxShadow: unlocked ? colors.glow : 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '40px',
-                      margin: '0 auto 16px',
-                      opacity: unlocked ? 1 : 0.5,
-                    }}
-                  >
-                    {unlocked ? badge.icon : <Lock size={16} color="#64748B" />}
-                  </div>
-
-                  <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#FFFFFF', marginBottom: '4px' }}>
-                    {badge.name}
-                  </h3>
-                  <p style={{ fontSize: '13px', color: '#8B8FA8', marginBottom: '16px' }}>
-                    {badge.description}
-                  </p>
-
-                  <div className="h-2 rounded-full overflow-hidden mb-2" style={{ backgroundColor: '#2A2F3D' }}>
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: `${progressPct}%`,
-                        background: unlocked ? colors.bg : '#4F46E5',
-                      }}
-                    />
-                  </div>
-                  <p style={{ fontSize: '13px', color: '#D0D4DC', marginBottom: '12px' }}>
-                    {progress.current}/{badge.target}
-                  </p>
-
-                  <div
-                    className="inline-block px-3 py-1 rounded-full text-xs font-semibold"
-                    style={{
-                      background: unlocked ? colors.bg : '#2A2F3D',
-                      border: `1px solid ${unlocked ? colors.border : '#3A3F4D'}`,
-                      color: '#FFFFFF',
-                    }}
-                  >
-                    {RARITY_LABELS[badge.rarity]}
-                  </div>
-
-                  {unlocked && progress.unlockedAt && (
-                    <p style={{ fontSize: '11px', color: '#8B8FA8', marginTop: '12px' }}>
-                      Sbloccato il {new Date(progress.unlockedAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </p>
-                  )}
-
-                  {!unlocked && (
-                    <p style={{ fontSize: '12px', color: '#F59E0B', marginTop: '12px' }}>
-                      Ancora {badge.target - progress.current} per sbloccarlo!
-                    </p>
-                  )}
-                </>
-              );
-            })()}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function PrivacyDropdown({
   value,

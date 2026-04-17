@@ -91,7 +91,7 @@ model User {
   passwordHash      String?
   name              String
   surname           String                 @default("")
-  username          String?                @unique
+
   phone             String?
   googleId          String?                @unique
   provider          AuthProvider           @default(LOCAL)
