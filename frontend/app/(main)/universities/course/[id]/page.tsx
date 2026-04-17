@@ -25,11 +25,14 @@ import {
 } from '@/components/icons';
 import { MOCK_COURSES, CourseDeadline, CourseRequirement } from '@/lib/mockCourses';
 import { useSavedCourses } from '@/lib/savedCourses';
+import { useSavedOpportunities } from '@/lib/savedOpportunities';
 import api from '@/lib/api';
 import AdmissionSimulator from '@/components/AdmissionSimulator';
 import CourseComparison from '@/components/CourseComparison';
 import LivingMap from '@/components/LivingMap';
 import { isValidExternalUrl } from '@/lib/urlValidation';
+import { toISODeadline } from '@/lib/dateUtils';
+import { trackAction } from '@/lib/badges';
 
 export default function CourseDetailPage() {
   const params = useParams();
@@ -37,6 +40,8 @@ export default function CourseDetailPage() {
   const course = MOCK_COURSES.find((c) => c.id === Number(params.id));
   const [backendCourse, setBackendCourse] = useState<any>(null);
   const { savedIds, toggleSave } = useSavedCourses();
+  const { savedIds: savedOppIds, toggleSave: toggleSaveOpp } = useSavedOpportunities();
+
   // Also fetch from backend API for real data sync
   useEffect(() => {
     if (params.id) {
@@ -584,6 +589,8 @@ export default function CourseDetailPage() {
             const isAdded = calendarAdded.has(index);
             const isPast = deadline.status === 'past';
             const isImminent = deadline.status === 'upcoming';
+            const deadlineOppId = `course-deadline-${courseId}-${index}`;
+            const isSavedAsOpp = savedOppIds.has(deadlineOppId);
             const typeColors: Record<string, { bg: string; accent: string }> = {
               apertura: { bg: '#166534', accent: '#22C55E' },
               scadenza: { bg: '#92400E', accent: '#F59E0B' },
@@ -621,23 +628,37 @@ export default function CourseDetailPage() {
                     {deadline.label}
                   </p>
                 </div>
-                <button
-                  onClick={() => { if (!isAdded) { addToCalendar(deadline, index); } }}
-                  className="flex items-center gap-1.5 self-start transition-colors"
-                  style={{ color: isAdded ? '#22C55E' : '#D0D4DC' }}
-                >
-                  {isAdded ? (
-                    <>
-                      <Check size={14} />
-                      <span className="text-[11px] font-medium">Aggiunta</span>
-                    </>
-                  ) : (
-                    <>
-                      <Calendar size={14} />
-                      <span className="text-[11px] font-medium">Aggiungi</span>
-                    </>
-                  )}
-                </button>
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => { if (!isAdded) { trackAction('deadlines_added'); addToCalendar(deadline, index); } }}
+                    className="flex items-center gap-1.5 transition-colors"
+                    style={{ color: isAdded ? '#22C55E' : '#D0D4DC' }}
+                  >
+                    {isAdded ? (
+                      <>
+                        <Check className="w-3.5 h-3.5" />
+                        <span className="text-[11px] font-medium">Aggiunta</span>
+                      </>
+                    ) : (
+                      <>
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span className="text-[11px] font-medium">Aggiungi</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => toggleSaveOpp(deadlineOppId, {
+                      title: `${deadline.label} — ${course!.title}`,
+                      type: 'CORSO',
+                      deadline: toISODeadline(deadline.date),
+                      company: course!.university,
+                    })}
+                    className="transition-colors"
+                    style={{ color: isSavedAsOpp ? '#4F46E5' : '#D0D4DC' }}
+                  >
+                    <Bookmark className="w-3.5 h-3.5" filled={isSavedAsOpp} />
+                  </button>
+                </div>
               </div>
             );
           })}

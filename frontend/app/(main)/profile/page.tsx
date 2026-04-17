@@ -12,12 +12,13 @@ import { usePrivacy } from '@/lib/privacy';
 import ChangePasswordModal from '@/components/ChangePasswordModal';
 import { isValidImageUrl, isValidExternalUrl } from '@/lib/urlValidation';
 import { isPushSupported, subscribeToPush, unsubscribeFromPush, getPushPermissionState } from '@/lib/pushManager';
+import { parseDeadlineDate } from '@/lib/dateUtils';
 import {
   Pencil, EyeOff, Plus, Bookmark, ChevronDown, ChevronRight, MapPin, CalendarIcon,
   Gear, UsersGroup, Bell, Moon, Globe, ShieldCheck, CircleHelp, Info, Search,
   ChatDots, UserAdd, CloseLg, CloseSm, Camera, Check, Key, UserIcon, Award,
-  Trash, TriangleWarning, CircleWarning, Mail, FileText, Star,
-  Heart, Briefcase, GraduationCap, Plane, Rocket, Target, TrendingUp, CloseMd,
+  Trash, TriangleWarning, CircleWarning, Mail, FileText, Star, Lock, Trophy,
+  Heart, Briefcase, GraduationCap, Plane, Rocket, Target, TrendingUp, CloseMd, BookOpen,
 } from '@/components/icons';
 
 interface FullProfile {
@@ -30,6 +31,10 @@ interface FullProfile {
   courseOfStudy?: string;
   yearOfStudy?: number;
   university?: { name: string };
+  skills?: {
+    interests?: { id: string; name: string; selectedAt: string }[];
+    [key: string]: unknown;
+  };
   profile?: {
     clusterTag?: string;
     passions: string[];
@@ -55,14 +60,48 @@ const CLUSTER_COLORS: Record<string, string> = {
   Explorer: 'bg-[#EF4444]/20 text-[#EF4444]',
 };
 
-const TYPE_ICONS: Record<string, React.ReactNode> = {
-  INTERNSHIP: <Briefcase size={16} color="#4A9EFF" />,
-  SCHOLARSHIP: <GraduationCap size={16} color="#F59E0B" />,
-  ERASMUS: <Plane size={16} color="#22C55E" />,
-  PROJECT: <Rocket size={16} color="#EF4444" />,
-  EVENT: <CalendarIcon size={16} color="#9C5AFF" />,
-};
+function TypeIcon({ type, className = 'w-5 h-5' }: { type: string; className?: string }) {
+  const props = { className };
+  switch (type) {
+    case 'INTERNSHIP':   return <Briefcase {...props} />;
+    case 'SCHOLARSHIP':  return <GraduationCap {...props} />;
+    case 'ERASMUS':      return <Plane {...props} />;
+    case 'PROJECT':      return <Rocket {...props} />;
+    case 'EVENT':        return <CalendarIcon {...props} />;
+    case 'CORSO':        return <BookOpen {...props} />;
+    default:             return <Bookmark {...props} />;
+  }
+}
 
+function getDaysLeft(deadline: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = parseDeadlineDate(deadline);
+  if (!d) return Infinity;
+  d.setHours(0, 0, 0, 0);
+  return Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function DeadlineBadge({ deadline }: { deadline: string }) {
+  const daysLeft = getDaysLeft(deadline);
+  const parsed = parseDeadlineDate(deadline);
+  const dateStr = parsed ? parsed.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) : deadline;
+  const label = daysLeft <= 0 ? 'Scaduta' : daysLeft === 1 ? 'Scade domani' : dateStr;
+  const colors =
+    daysLeft <= 2
+      ? 'bg-red-500/20 text-red-400'
+      : daysLeft <= 14
+      ? 'bg-amber-500/20 text-amber-400'
+      : 'bg-green-500/20 text-green-400';
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${colors}`}>
+      <svg className="w-2.5 h-2.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+      </svg>
+      {label}
+    </span>
+  );
+}
 
 export default function ProfilePage() {
   const { user, setUser, logout } = useAuth();
@@ -130,13 +169,24 @@ export default function ProfilePage() {
     system: true,
   });
   const [savedTab, setSavedTab] = useState<'opportunities' | 'universities'>('opportunities');
+  const [oppSort, setOppSort] = useState<'recenti' | 'scadenza'>('recenti');
   const [expandedOppId, setExpandedOppId] = useState<string | null>(null);
   const [suggestedUsers, setSuggestedUsers] = useState<Friend[]>([]);
   const [sendingRequest, setSendingRequest] = useState<string | null>(null);
   const [removingFriend, setRemovingFriend] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const expandedCardRef = useRef<HTMLDivElement | null>(null);
+  const savedScrollRef = useRef<HTMLDivElement | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!expandedOppId) return;
+    const timer = setTimeout(() => {
+      expandedCardRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }, 30);
+    return () => clearTimeout(timer);
+  }, [expandedOppId]);
 
   useEffect(() => {
     loadData();
@@ -358,13 +408,15 @@ export default function ProfilePage() {
     .toUpperCase()
     .slice(0, 2);
 
+  const skillsData = profile.skills as any;
+  const coreSkills = skillsData?.core as { id: string; name: string }[] | null | undefined;
+  const sideSkills = skillsData?.side as { id: string; name: string }[] | null | undefined;
+  const interests = skillsData?.interests as { id: string; name: string; selectedAt: string }[] | undefined;
+  // Show core skills if defined, otherwise fall back to interests
+  const profilePills: { id: string; name: string }[] | undefined =
+    coreSkills && coreSkills.length > 0 ? coreSkills : interests;
+
   const tags: { label: string; color: string }[] = [];
-  if (profile.profile?.clusterTag) {
-    tags.push({
-      label: profile.profile.clusterTag,
-      color: CLUSTER_COLORS[profile.profile.clusterTag] || 'bg-[#334155] text-[#94A3B8]',
-    });
-  }
   if (profile.profile?.passions) {
     profile.profile.passions.forEach((p) => {
       tags.push({ label: getSkillLabel(p, t), color: 'bg-[#334155] text-[#94A3B8]' });
@@ -440,24 +492,58 @@ export default function ProfilePage() {
             <p className="text-sm text-[#94A3B8] max-w-xs leading-relaxed">{profile.bio}</p>
           )}
 
-          {/* Tags with + button */}
+          {/* Skill / Interest pills */}
           {privacySkills !== 'Nessuno' ? (
-            <div className="flex flex-wrap justify-center gap-2 pt-1">
-              {tags.map((tag) => (
-                <span
-                  key={tag.label}
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${tag.color}`}
+            <>
+              {profilePills && profilePills.length > 0 && (
+                <div className="flex justify-center gap-2 pt-1 overflow-x-auto max-w-full scrollbar-hide">
+                  {profilePills.map((pill) => (
+                    <span
+                      key={pill.id}
+                      className="px-3 py-1 rounded-full text-xs font-medium bg-[#4F46E5]/20 text-[#4F46E5] whitespace-nowrap flex-shrink-0"
+                    >
+                      {pill.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {/* Side skills rows */}
+              {sideSkills && sideSkills.length > 0 ? (
+                <div className="flex flex-col items-center gap-1.5">
+                  {/* Row 1: up to 3 pills */}
+                  <div className="flex justify-center gap-2">
+                    {sideSkills.slice(0, 3).map((pill) => (
+                      <span
+                        key={pill.id}
+                        className="px-2.5 py-0.5 rounded-full text-[11px] font-normal text-white border border-[#4F46E5]/50 whitespace-nowrap"
+                      >
+                        {pill.name}
+                      </span>
+                    ))}
+                  </div>
+                  {/* Row 2: remaining pills (up to 2), only if > 3 */}
+                  {sideSkills.length > 3 && (
+                    <div className="flex justify-center gap-2">
+                      {sideSkills.slice(3, 5).map((pill) => (
+                        <span
+                          key={pill.id}
+                          className="px-2.5 py-0.5 rounded-full text-[11px] font-normal text-white border border-[#4F46E5]/50 whitespace-nowrap"
+                        >
+                          {pill.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : coreSkills && coreSkills.length > 0 ? (
+                <button
+                  onClick={() => router.push('/profile/skills')}
+                  className="text-[11px] text-[#4F46E5]/70 hover:text-[#4F46E5] transition-colors"
                 >
-                  {tag.label}
-                </span>
-              ))}
-              <button
-                onClick={() => setShowSkillsModal(true)}
-                className="w-7 h-7 rounded-full bg-[#334155] flex items-center justify-center hover:bg-[#475569] transition-colors"
-              >
-                <Plus size={14} color="#94A3B8" strokeWidth={2.5} />
-              </button>
-            </div>
+                  + Aggiungi competenze secondarie
+                </button>
+              ) : null}
+            </>
           ) : (
             <p className="text-xs text-[#475569] italic pt-1">Competenze nascoste</p>
           )}
@@ -506,105 +592,128 @@ export default function ProfilePage() {
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
-                {savedOpps.map((opp) => {
-                  const isExpanded = expandedOppId === opp.id;
-                  return (
-                    <div key={opp.id} className="bg-[#161B22] rounded-2xl overflow-hidden">
-                      <button
-                        onClick={() => setExpandedOppId(isExpanded ? null : opp.id)}
-                        className="w-full text-left p-4 active:opacity-75 transition-opacity"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-[#1E293B] flex items-center justify-center flex-shrink-0">
-                            {TYPE_ICONS[opp.type] || <Target size={16} color="#94A3B8" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-semibold text-white line-clamp-2">{opp.title}</h4>
-                            <p className="text-xs text-[#64748B] truncate">{opp.company || opp.university?.name || ''}</p>
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#4F46E5]/20 text-[#4F46E5] font-medium uppercase">
-                              {opp.type}
-                            </span>
-                            <ChevronDown size={16} color="#6B7280" className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
-                          </div>
-                        </div>
-                      </button>
+              <>
+                {/* Sort selector */}
+                <div className="flex bg-[#1E293B] rounded-lg p-0.5 mb-3 w-fit">
+                  <button
+                    onClick={() => setOppSort('recenti')}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${oppSort === 'recenti' ? 'bg-[#4F46E5] text-white' : 'text-[#94A3B8] hover:text-white'}`}
+                  >
+                    Recenti
+                  </button>
+                  <button
+                    onClick={() => setOppSort('scadenza')}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${oppSort === 'scadenza' ? 'bg-[#4F46E5] text-white' : 'text-[#94A3B8] hover:text-white'}`}
+                  >
+                    In scadenza
+                  </button>
+                </div>
 
+                {/* Horizontal scroll — align-items:start so non-expanded cards don't stretch */}
+                <div ref={savedScrollRef} className="flex gap-3 overflow-x-auto no-scrollbar p-0.5 pb-2" style={{ alignItems: 'start' }}>
+                  {[...savedOpps].sort((a, b) => {
+                    if (oppSort !== 'scadenza') return 0;
+                    if (!a.deadline && !b.deadline) return 0;
+                    if (!a.deadline) return 1;
+                    if (!b.deadline) return -1;
+                    return (parseDeadlineDate(a.deadline)?.getTime() ?? Infinity) - (parseDeadlineDate(b.deadline)?.getTime() ?? Infinity);
+                  }).map((opp) => {
+                    const isExpanded = expandedOppId === opp.id;
+                    return (
                       <div
+                        key={opp.id}
+                        ref={isExpanded ? expandedCardRef : null}
                         style={{
-                          display: 'grid',
-                          gridTemplateRows: isExpanded ? '1fr' : '0fr',
-                          transition: 'grid-template-rows 0.32s cubic-bezier(0.4, 0, 0.2, 1)',
+                          flexShrink: 0,
+                          width: isExpanded ? `${savedScrollRef.current?.offsetWidth ?? 280}px` : '192px',
+                          transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1)',
                         }}
+                        className={`bg-[#161B22] rounded-2xl overflow-hidden ${isExpanded ? 'ring-1 ring-[#4F46E5]' : ''}`}
                       >
-                        <div style={{ overflow: 'hidden', minHeight: 0 }}>
-                          <div className="px-4 pb-4 space-y-3">
-                            <div className="h-px bg-[#1E293B]" />
+                        {/* Collapsed header — always visible */}
+                        <button
+                          onClick={() => setExpandedOppId(isExpanded ? null : opp.id)}
+                          className="w-full text-left p-3 active:opacity-75 transition-opacity flex flex-col"
+                          style={{ height: '150px' }}
+                        >
+                          <div className="w-9 h-9 rounded-lg bg-[#1E293B] flex items-center justify-center mb-2">
+                            <TypeIcon type={opp.type} />
+                          </div>
+                          <h4 className="text-[13px] font-semibold text-white line-clamp-2 leading-snug mb-1">{opp.title}</h4>
+                          <p className="text-[11px] text-[#64748B] truncate mb-2">{opp.company || opp.university?.name || ''}</p>
+                          {oppSort === 'scadenza'
+                            ? opp.deadline
+                              ? <DeadlineBadge deadline={opp.deadline} />
+                              : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#1E293B] text-[#64748B]">Non indicata</span>
+                            : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#4F46E5]/20 text-[#4F46E5] uppercase">{opp.type}</span>
+                          }
+                        </button>
 
-                            {opp.description && (
-                              <p className="text-gray-400 text-sm leading-relaxed">{opp.description}</p>
-                            )}
+                        {/* Expandable detail */}
+                        <div style={{ display: 'grid', gridTemplateRows: isExpanded ? '1fr' : '0fr', transition: 'grid-template-rows 0.3s cubic-bezier(0.4,0,0.2,1)' }}>
+                          <div style={{ overflow: 'hidden', minHeight: 0 }}>
+                            <div className="px-3 pb-3 space-y-2">
+                              <div className="h-px bg-[#1E293B]" />
 
-                            {(opp.location || opp.isRemote || opp.deadline) && (
-                              <div className="flex flex-wrap gap-2">
-                                {opp.location && (
-                                  <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-3 py-2">
-                                    <MapPin size={14} color="#9CA3AF" className="flex-shrink-0" />
-                                    <span className="text-gray-300 text-xs">{opp.location}</span>
-                                  </div>
-                                )}
-                                {opp.isRemote && (
-                                  <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-3 py-2">
-                                    <span className="text-gray-300 text-xs">Remoto</span>
-                                  </div>
-                                )}
-                                {opp.deadline && (
-                                  <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-3 py-2">
-                                    <CalendarIcon size={14} color="#9CA3AF" className="flex-shrink-0" />
-                                    <span className="text-gray-300 text-xs">Scadenza: {new Date(opp.deadline).toLocaleDateString('it-IT')}</span>
-                                  </div>
-                                )}
-                              </div>
-                            )}
+                              {opp.description && (
+                                <p className="text-gray-400 text-[11px] leading-relaxed">{opp.description}</p>
+                              )}
 
-                            {opp.about && (
-                              <>
-                                <div className="h-px bg-[#1E293B]" />
-                                <div>
-                                  <p className="text-white font-semibold text-sm mb-1">{opp.company || opp.university?.name}</p>
-                                  <p className="text-gray-400 text-sm leading-relaxed">{opp.about}</p>
+                              {(opp.location || opp.isRemote || opp.deadline) && (
+                                <div className="flex flex-col gap-1.5">
+                                  {opp.location && (
+                                    <div className="flex items-center gap-1.5">
+                                      <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                                      </svg>
+                                      <span className="text-gray-400 text-[11px]">{opp.location}{opp.isRemote ? ' · Remoto' : ''}</span>
+                                    </div>
+                                  )}
+                                  {opp.deadline && (
+                                    <div className="flex items-center gap-1.5">
+                                      <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+                                      </svg>
+                                      <span className="text-gray-400 text-[11px]">{parseDeadlineDate(opp.deadline)?.toLocaleDateString('it-IT') ?? opp.deadline}</span>
+                                    </div>
+                                  )}
                                 </div>
-                              </>
-                            )}
+                              )}
 
-                            <div className="flex gap-3">
-                              <button
-                                onClick={() => opp.url && isValidExternalUrl(opp.url) && window.open(opp.url, '_blank', 'noopener,noreferrer')}
-                                disabled={!opp.url || !isValidExternalUrl(opp.url)}
-                                className={`flex-1 py-3 rounded-2xl font-semibold text-sm transition-opacity ${
-                                  opp.url && isValidExternalUrl(opp.url)
-                                    ? 'bg-primary text-white active:opacity-90'
-                                    : 'bg-[#1E293B] text-gray-500 cursor-not-allowed'
-                                }`}
-                              >
-                                {opp.url && isValidExternalUrl(opp.url) ? 'Vai all\u2019opportunità' : 'Link non disponibile'}
-                              </button>
-                              <button
-                                onClick={() => toggleSave(opp.id)}
-                                className="w-12 h-12 bg-[#0D1117] rounded-2xl flex items-center justify-center flex-shrink-0 text-primary"
-                              >
-                                <Bookmark size={20} filled />
-                              </button>
+                              {opp.about && (
+                                <p className="text-gray-500 text-[10px] leading-relaxed line-clamp-3">{opp.about}</p>
+                              )}
+
+                              <div className="flex gap-2 pt-1">
+                                <button
+                                  onClick={() => opp.url && isValidExternalUrl(opp.url) && window.open(opp.url, '_blank', 'noopener,noreferrer')}
+                                  disabled={!opp.url || !isValidExternalUrl(opp.url)}
+                                  className={`flex-1 py-2.5 rounded-xl font-semibold text-[11px] transition-opacity ${
+                                    opp.url && isValidExternalUrl(opp.url)
+                                      ? 'bg-primary text-white active:opacity-90'
+                                      : 'bg-[#1E293B] text-gray-500 cursor-not-allowed'
+                                  }`}
+                                >
+                                  {opp.url && isValidExternalUrl(opp.url) ? 'Vai' : 'Non disponibile'}
+                                </button>
+                                <button
+                                  onClick={() => { toggleSave(opp.id); setExpandedOppId(null); }}
+                                  className="w-9 h-9 bg-[#0D1117] rounded-xl flex items-center justify-center flex-shrink-0 text-primary"
+                                >
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0z" />
+                                  </svg>
+                                </button>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              </>
             )
           ) : savedCourses.length === 0 ? (
             <div className="bg-[#1E293B] rounded-2xl p-6 text-center">
@@ -617,25 +726,57 @@ export default function ProfilePage() {
               </button>
             </div>
           ) : (
-            <div className="bg-[#1E293B] rounded-2xl p-4">
-              <div className="space-y-3">
-                {savedCourses.map((c) => (
+            <div ref={savedScrollRef} className="flex gap-3 overflow-x-auto no-scrollbar p-0.5 pb-2" style={{ alignItems: 'start' }}>
+              {savedCourses.map((c) => {
+                const isExpanded = expandedOppId === c.id;
+                return (
                   <div
                     key={c.id}
-                    onClick={() => router.push(`/universities/course/${c.id}`)}
-                    className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-[#2A3F54]/50 transition-colors"
-                    style={{ backgroundColor: '#0F172A' }}
+                    ref={isExpanded ? expandedCardRef : null}
+                    style={{
+                      flexShrink: 0,
+                      width: isExpanded ? `${savedScrollRef.current?.offsetWidth ?? 280}px` : '192px',
+                      transition: 'width 0.3s cubic-bezier(0.4,0,0.2,1)',
+                    }}
+                    className={`bg-[#161B22] rounded-2xl overflow-hidden ${isExpanded ? 'ring-1 ring-[#4F46E5]' : ''}`}
                   >
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#4F46E5' }}>
-                      <GraduationCap size={20} color="white" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-sm font-semibold text-white line-clamp-2 mb-0.5">{c.name}</h4>
-                      <p className="text-xs text-[#64748B] truncate">{c.university?.name} — {c.university?.city}</p>
+                    <button
+                      onClick={() => setExpandedOppId(isExpanded ? null : c.id)}
+                      className="w-full text-left p-3 active:opacity-75 transition-opacity flex flex-col"
+                      style={{ height: '150px' }}
+                    >
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-2" style={{ backgroundColor: '#4F46E5' }}>
+                        <GraduationCap className="w-5 h-5" />
+                      </div>
+                      <h4 className="text-[13px] font-semibold text-white line-clamp-2 leading-snug mb-1">{c.name}</h4>
+                      <p className="text-[11px] text-[#64748B] truncate">{c.university?.name}</p>
+                    </button>
+
+                    <div style={{ display: 'grid', gridTemplateRows: isExpanded ? '1fr' : '0fr', transition: 'grid-template-rows 0.3s cubic-bezier(0.4,0,0.2,1)' }}>
+                      <div style={{ overflow: 'hidden', minHeight: 0 }}>
+                        <div className="px-3 pb-3 space-y-2">
+                          <div className="h-px bg-[#1E293B]" />
+                          {c.university?.city && (
+                            <div className="flex items-center gap-1.5">
+                              <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                              </svg>
+                              <span className="text-gray-400 text-[11px]">{c.university?.city}</span>
+                            </div>
+                          )}
+                          <button
+                            onClick={() => router.push(`/universities/course/${c.id}`)}
+                            className="w-full py-2.5 rounded-xl bg-primary text-white font-semibold text-[11px] active:opacity-90 transition-opacity"
+                          >
+                            Vai al corso
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -945,7 +1086,7 @@ export default function ProfilePage() {
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setShowEditDialog(false)}
           />
-          <div className="relative w-full max-w-lg bg-[#1E293B] rounded-t-3xl sm:rounded-3xl p-6 space-y-5 animate-slide-up max-h-[90vh] overflow-y-auto no-scrollbar">
+          <div className="relative w-full max-w-lg bg-[#1E293B] rounded-t-3xl sm:rounded-3xl p-6 pb-[calc(1.5rem+5rem)] sm:pb-6 space-y-5 animate-slide-up max-h-[100vh] sm:max-h-[90vh] overflow-y-auto no-scrollbar">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-white">{t.profile.editProfile}</h3>
               <button
@@ -1046,35 +1187,19 @@ export default function ProfilePage() {
                 />
               </div>
 
-              {/* Skills in Edit */}
+              {/* Core Skills link */}
               <div>
                 <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.profile.skills}</label>
-                <div className="flex flex-wrap gap-2">
-                  {editSkills.map((skill) => (
-                    <span
-                      key={skill}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[#334155] text-[#94A3B8]"
-                    >
-                      {getSkillLabel(skill, t)}
-                      <button
-                        onClick={() => toggleEditSkill(skill)}
-                        className="hover:text-white transition-colors"
-                      >
-                        <CloseSm size={12} strokeWidth={2.5} />
-                      </button>
-                    </span>
-                  ))}
-                  <button
-                    onClick={() => {
-                      setShowEditDialog(false);
-                      setShowSkillsModal(true);
-                    }}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-[#4F46E5]/20 text-[#4F46E5] hover:bg-[#4F46E5]/30 transition-colors"
-                  >
-                    <Plus size={12} strokeWidth={2.5} />
-                    {t.profile.add}
-                  </button>
-                </div>
+                <button
+                  onClick={() => {
+                    setShowEditDialog(false);
+                    router.push('/profile/skills');
+                  }}
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-[#4F46E5]/20 text-[#4F46E5] hover:bg-[#4F46E5]/30 transition-colors"
+                >
+                  <Plus size={12} strokeWidth={2.5} />
+                  {t.profile.add}
+                </button>
               </div>
             </div>
 

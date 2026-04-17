@@ -1,5 +1,19 @@
 import { UserProfile, User, Opportunity, GpaRange, EnglishLevel, UserInteraction } from '@prisma/client';
 import prisma from '../lib/prisma';
+import type { UserSkills, SkillEntry } from './skills.service';
+
+function parseUserSkills(raw: unknown): UserSkills | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const obj = raw as Record<string, unknown>;
+  return {
+    core: Array.isArray(obj.core) ? obj.core : null,
+    side: Array.isArray(obj.side) ? obj.side : [],
+    promptShownAt: (obj.promptShownAt as string) || null,
+    promptDismissedAt: (obj.promptDismissedAt as string) || null,
+    definedAt: (obj.definedAt as string) || null,
+    lastUpdatedAt: (obj.lastUpdatedAt as string) || null,
+  };
+}
 
 const GPA_ORDER: Record<GpaRange, number> = {
   GPA_18_20: 1,
@@ -15,7 +29,7 @@ const ENGLISH_ORDER: Record<EnglishLevel, number> = {
   C2_PLUS: 4,
 };
 
-// Interest → preferred opportunity types (30 pts)
+// Interest → preferred opportunity types (max 20 pts)
 const INTEREST_TYPE_MAP: Record<string, string[]> = {
   tech: ['INTERNSHIP', 'STAGE'],
   business: ['FELLOWSHIP', 'INTERNSHIP'],
@@ -24,7 +38,7 @@ const INTEREST_TYPE_MAP: Record<string, string[]> = {
   general: ['STAGE', 'EVENT', 'EXTRACURRICULAR'],
 };
 
-// Cluster → preferred opportunity types (25 pts)
+// Cluster → preferred opportunity types (max 15 pts)
 const CLUSTER_TYPE_MAP: Record<string, string[]> = {
   Analista: ['INTERNSHIP', 'STAGE'],
   Creativo: ['EXTRACURRICULAR', 'EVENT'],
@@ -34,39 +48,155 @@ const CLUSTER_TYPE_MAP: Record<string, string[]> = {
   Explorer: ['STAGE', 'EVENT', 'INTERNSHIP'],
 };
 
+// Passion value → opportunity tags (used for tag-content matching, max 20 pts)
+const PASSION_TAG_MAP: Record<string, string[]> = {
+  // Legacy seed values
+  computer_science:    ['tech', 'react', 'nodejs', 'typescript', 'frontend', 'python', 'ml', 'data', 'cloud', 'ai', 'iot', 'security', 'cybersecurity'],
+  entrepreneurship:    ['startup', 'entrepreneurship', 'innovation', 'pitching', 'strategy', 'business'],
+  design:              ['design', 'ux', 'figma', 'fashion', 'communication'],
+  literature:          ['culture', 'literature', 'education', 'research', 'debate'],
+  engineering:         ['engineering', 'r&d', 'automotive', 'iot', 'science', 'physics'],
+  languages:           ['international', 'erasmus', 'culture'],
+  management:          ['consulting', 'strategy', 'business', 'management', 'finance', 'banking', 'graduate'],
+  music:               ['music', 'culture', 'performance'],
+  // InterestSelection values
+  ai_ml:               ['ai', 'ml', 'python', 'data', 'tech', 'research', 'cloud'],
+  web_development:     ['tech', 'react', 'nodejs', 'frontend', 'typescript', 'startup'],
+  data_science:        ['data', 'python', 'ml', 'ai', 'research', 'tech'],
+  mobile_dev:          ['tech', 'react', 'nodejs', 'frontend', 'startup'],
+  ricerca_scientifica: ['research', 'science', 'physics', 'r&d', 'education'],
+  business_strategy:   ['consulting', 'strategy', 'business', 'entrepreneurship', 'startup', 'pitching'],
+  finance:             ['finance', 'banking', 'audit', 'consulting', 'graduate'],
+  sustainability:      ['sustainability', 'environment', 'energy', 'social', 'volunteering'],
+  marketing:           ['marketing', 'social', 'digital', 'communication', 'pr', 'events'],
+  law_policy:          ['consulting', 'strategy', 'social', 'debate'],
+  healthcare:          ['healthcare', 'science', 'research', 'social', 'volunteering'],
+};
+
+// PrimaryInterest → tags (fallback when no passions defined)
+const INTEREST_TAG_MAP: Record<string, string[]> = {
+  tech:     ['tech', 'react', 'nodejs', 'typescript', 'frontend', 'python', 'ml', 'data', 'cloud', 'ai', 'iot', 'security', 'cybersecurity', 'engineering'],
+  business: ['consulting', 'strategy', 'business', 'finance', 'banking', 'entrepreneurship', 'management', 'graduate'],
+  creative: ['design', 'ux', 'figma', 'music', 'culture', 'communication', 'pr', 'fashion'],
+  sport:    ['leadership', 'community', 'teamwork', 'social', 'speaking'],
+  general:  ['career', 'networking', 'education', 'innovation'],
+};
+
 /**
- * Original static scoring function (preserved for backward compatibility).
+ * Tag-passion alignment score (max 20 pts).
+ * Counts how many opportunity tags overlap with tags derived from user passions.
+ * Falls back to primaryInterest-derived tags if no passions are defined.
+ * Each matching tag = 7 pts, capped at 20.
+ */
+function computeTagScore(
+  profile: Pick<UserProfile, 'passions' | 'primaryInterest'>,
+  opportunity: Pick<Opportunity, 'tags'>,
+): number {
+  const oppTags = (opportunity.tags || []).map((t) => t.toLowerCase().trim());
+  if (oppTags.length === 0) return 0;
+
+  const userTagSet = new Set<string>();
+  for (const passion of profile.passions || []) {
+    (PASSION_TAG_MAP[passion] || []).forEach((t) => userTagSet.add(t));
+  }
+
+  if (userTagSet.size === 0 && profile.primaryInterest) {
+    (INTEREST_TAG_MAP[profile.primaryInterest] || []).forEach((t) => userTagSet.add(t));
+  }
+
+  if (userTagSet.size === 0) return 0;
+
+  const matches = oppTags.filter((t) => userTagSet.has(t)).length;
+  return Math.min(20, matches * 7);
+}
+
+/**
+ * Compute skill match score (max 10 pts).
+ * Core skill in requiredSkills → +4, in recommendedSkills → +2.
+ * Side skill in requiredSkills → +2, in recommendedSkills → +1.
+ */
+function computeSkillMatchScore(
+  skills: UserSkills | null,
+  opportunity: { requiredSkills?: string | null; recommendedSkills?: string | null },
+): number {
+  if (!skills?.core) return 0;
+
+  const normalize = (str: string) => str.toLowerCase().trim();
+
+  const reqSkills = (opportunity.requiredSkills || '')
+    .split(',')
+    .map(normalize)
+    .filter(Boolean);
+
+  const recSkills = (opportunity.recommendedSkills || '')
+    .split(',')
+    .map(normalize)
+    .filter(Boolean);
+
+  let score = 0;
+
+  for (const skill of skills.core) {
+    const s = normalize(skill.name);
+    if (reqSkills.includes(s)) score += 4;
+    else if (recSkills.includes(s)) score += 2;
+  }
+
+  for (const skill of skills.side) {
+    const s = normalize(skill.name);
+    if (reqSkills.includes(s)) score += 2;
+    else if (recSkills.includes(s)) score += 1;
+  }
+
+  return Math.min(score, 10);
+}
+
+/**
+ * Weighted scoring function. Max is 100 naturally (no normalization needed).
+ *
+ * Breakdown:
+ *   Interest type alignment  → 20 pts
+ *   Cluster type alignment   → 15 pts
+ *   Tag-passion alignment    → 20 pts  (NEW: differentiates within same type)
+ *   GPA                      → 15 pts
+ *   English level            → 15 pts
+ *   Relocation willingness   → 10 pts
+ *   Year of study            →  5 pts
+ *   Skill match bonus        → +10 pts (clamped at 100)
  */
 export function scoreOpportunity(
   profile: UserProfile,
   user: Pick<User, 'gpa' | 'englishLevel' | 'willingToRelocate' | 'yearOfStudy'>,
-  opportunity: Opportunity
+  opportunity: Opportunity,
+  skills?: UserSkills | null,
 ): number {
   let score = 0;
 
-  // 1. Primary interest → opportunity type (30 pts)
+  // 1. Primary interest → opportunity type (max 20 pts)
   const interest = profile.primaryInterest || 'general';
   const preferredTypes = INTEREST_TYPE_MAP[interest] || INTEREST_TYPE_MAP.general;
   if (preferredTypes[0] === opportunity.type) {
-    score += 30;
-  } else if (preferredTypes.includes(opportunity.type)) {
     score += 20;
+  } else if (preferredTypes.includes(opportunity.type)) {
+    score += 13;
   } else {
-    score += 5;
+    score += 3;
   }
 
-  // 2. Cluster tag → opportunity type (25 pts)
+  // 2. Cluster tag → opportunity type (max 15 pts)
   const cluster = profile.clusterTag || 'Explorer';
   const clusterTypes = CLUSTER_TYPE_MAP[cluster] || CLUSTER_TYPE_MAP.Explorer;
   if (clusterTypes[0] === opportunity.type) {
-    score += 25;
-  } else if (clusterTypes.includes(opportunity.type)) {
     score += 15;
+  } else if (clusterTypes.includes(opportunity.type)) {
+    score += 9;
   } else {
-    score += 5;
+    score += 3;
   }
 
-  // 3. GPA sufficient (15 pts)
+  // 3. Tag-passion alignment (max 20 pts)
+  score += computeTagScore(profile, opportunity);
+
+  // 4. GPA sufficient (max 15 pts)
   if (!opportunity.minGpa) {
     score += 15;
   } else if (user.gpa && GPA_ORDER[user.gpa] >= GPA_ORDER[opportunity.minGpa]) {
@@ -75,7 +205,7 @@ export function scoreOpportunity(
     score += 8;
   }
 
-  // 4. English level (15 pts)
+  // 5. English level (max 15 pts)
   if (!opportunity.requiredEnglishLevel) {
     score += 15;
   } else if (user.englishLevel && ENGLISH_ORDER[user.englishLevel] >= ENGLISH_ORDER[opportunity.requiredEnglishLevel]) {
@@ -84,7 +214,7 @@ export function scoreOpportunity(
     score += 8;
   }
 
-  // 5. Willing to relocate (10 pts)
+  // 6. Willing to relocate (max 10 pts)
   if (!opportunity.isAbroad && !opportunity.location) {
     score += 10;
   } else if (opportunity.isRemote) {
@@ -95,12 +225,17 @@ export function scoreOpportunity(
     score += 5;
   }
 
-  // 6. Year of study accessibility (5 pts)
+  // 7. Year of study accessibility (max 5 pts)
   if (!user.yearOfStudy || user.yearOfStudy >= 2) {
     score += 5;
   } else {
     score += 2;
   }
+
+  // Base max: 100
+
+  // 8. Skill match bonus (max +10, clamped to 100)
+  score += computeSkillMatchScore(skills || null, opportunity);
 
   return Math.min(score, 100);
 }
@@ -182,8 +317,9 @@ export function scoreOpportunityWithFeedback(
   user: Pick<User, 'gpa' | 'englishLevel' | 'willingToRelocate' | 'yearOfStudy'>,
   opportunity: Opportunity,
   interactions: UserInteraction[],
+  skills?: UserSkills | null,
 ): number {
-  const baseScore = scoreOpportunity(profile, user, opportunity);
+  const baseScore = scoreOpportunity(profile, user, opportunity, skills);
   const feedbackBoost = computeFeedbackBoost(interactions, opportunity);
   return Math.max(0, Math.min(100, baseScore + feedbackBoost));
 }
@@ -260,9 +396,12 @@ export async function getHybridMatchedOpportunities(
     },
   });
 
+  // Parse user skills from JSON field
+  const userSkills = parseUserSkills(user.skills);
+
   // Stage 2: Re-rank with hybrid scoring
   const scored = candidates.map((opp) => {
-    const baseScore = scoreOpportunity(user.profile!, user, opp);
+    const baseScore = scoreOpportunity(user.profile!, user, opp, userSkills);
     const feedbackBoost = computeFeedbackBoost(interactions, opp);
     const vectorSim = opp.vectorSimilarity ?? 0;
 
@@ -304,7 +443,7 @@ export async function getHybridMatchedOpportunities(
       expiresAt: opp.expiresAt,
       sourceId: opp.sourceId,
       matchScore: Math.max(0, Math.min(100, Math.round(hybridScore))),
-      matchReason: getMatchReason(user.profile!, user, opp),
+      matchReason: getMatchReason(user.profile!, user, opp, userSkills),
     };
   });
 
@@ -316,20 +455,154 @@ export async function getHybridMatchedOpportunities(
   };
 }
 
-function getMatchReason(profile: any, user: any, opp: any): string {
-  const reasons: string[] = [];
+/**
+ * Scoring algorithm for the "Nuove" tab.
+ * Formula: RecencyScore * 0.30 + MatchScore * 0.30 + NoveltyBonus * 0.40
+ *
+ * RecencyScore: exponential decay based on days since postedAt (100 × e^(-0.07 × days))
+ * MatchScore:   base weighted score from scoreOpportunity (0-110, normalised to 0-100)
+ * NoveltyBonus: 100 if user has no interaction with this opportunity, 0 otherwise
+ */
+export async function getNewOpportunities(
+  userId: string,
+  limit: number = 20,
+  offset: number = 0,
+): Promise<{ data: any[]; total: number }> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { profile: true },
+  });
+
+  // Fetch all opportunities ordered by date as base pool
+  const allOpps = await prisma.opportunity.findMany({
+    include: { university: true },
+    orderBy: { postedAt: 'desc' },
+  });
+
+  // Fetch opportunity IDs the user has saved/applied (novelty = 0)
+  const seenInteractions = await prisma.userInteraction.findMany({
+    where: { userId, targetType: 'opportunity', action: { in: ['save', 'unsave', 'apply'] } },
+    select: { targetId: true },
+    distinct: ['targetId'],
+  });
+  const seenIds = new Set(seenInteractions.map((i) => i.targetId));
+
+  // Fetch opportunity IDs the user has viewed (25% ranking penalty)
+  const viewedInteractions = await prisma.userInteraction.findMany({
+    where: { userId, targetType: 'opportunity', action: 'view' },
+    select: { targetId: true },
+    distinct: ['targetId'],
+  });
+  const viewedIds = new Set(viewedInteractions.map((i) => i.targetId));
+
+  const userSkills = user ? parseUserSkills(user.skills) : null;
+
+  const now = Date.now();
+
+  const scored = allOpps.map((opp) => {
+    // RecencyScore: exponential decay (100 × e^(−0.07 × days_old))
+    const daysOld = (now - new Date(opp.postedAt).getTime()) / (1000 * 60 * 60 * 24);
+    const recencyScore = 100 * Math.exp(-0.07 * daysOld);
+
+    // Profile match score (0-100) — used for display
+    let profileMatchScore = 0;
+    if (user?.profile) {
+      profileMatchScore = scoreOpportunity(user.profile, user, opp, userSkills);
+    }
+
+    // NoveltyBonus: 100 if never saved/applied, 0 otherwise
+    const noveltyBonus = seenIds.has(opp.id) ? 0 : 100;
+
+    // View penalty: viewed opportunities score 25% less
+    const viewMultiplier = viewedIds.has(opp.id) ? 0.75 : 1.0;
+
+    // Composite score for ranking only (not shown to user)
+    const rankingScore = (recencyScore * 0.30 + profileMatchScore * 0.30 + noveltyBonus * 0.40) * viewMultiplier;
+
+    return {
+      id: opp.id,
+      title: opp.title,
+      description: opp.description,
+      about: opp.about,
+      url: opp.url,
+      type: opp.type,
+      universityId: opp.universityId,
+      university: opp.university,
+      company: opp.company,
+      location: opp.location,
+      isRemote: opp.isRemote,
+      isAbroad: opp.isAbroad,
+      requiredEnglishLevel: opp.requiredEnglishLevel,
+      minGpa: opp.minGpa,
+      tags: opp.tags,
+      deadline: opp.deadline,
+      postedAt: opp.postedAt,
+      expiresAt: opp.expiresAt,
+      sourceId: opp.sourceId,
+      matchScore: profileMatchScore,      // pure profile match — shown on card
+      _rankingScore: rankingScore,        // composite — used only for sort
+      isNew: daysOld <= 3,
+    };
+  });
+
+  scored.sort((a, b) => b._rankingScore - a._rankingScore);
+
+  // Strip internal ranking field before returning
+  const data = scored.slice(offset, offset + limit).map(({ _rankingScore, ...opp }) => opp);
+
+  return { data, total: scored.length };
+}
+
+function getMatchReason(profile: any, user: any, opp: any, skills?: UserSkills | null): string {
+  const reasons: { priority: number; text: string }[] = [];
+
+  // Skill-based reasons (highest priority)
+  if (skills?.core) {
+    const matchedCore = skills.core.filter((skill: SkillEntry) =>
+      opp.requiredSkills?.toLowerCase().includes(skill.name.toLowerCase()),
+    );
+
+    const matchedSide = skills.side.filter((skill: SkillEntry) =>
+      opp.requiredSkills?.toLowerCase().includes(skill.name.toLowerCase()),
+    );
+
+    if (matchedCore.length >= 2) {
+      reasons.push({
+        priority: 1,
+        text: `Le tue skills ${matchedCore.slice(0, 2).map((s: SkillEntry) => s.name).join(' e ')} sono richieste`,
+      });
+    } else if (matchedCore.length === 1) {
+      reasons.push({
+        priority: 1,
+        text: `La tua skill ${matchedCore[0].name} è richiesta`,
+      });
+    } else if (matchedSide.length >= 1) {
+      reasons.push({
+        priority: 2,
+        text: `La tua skill ${matchedSide[0].name} è un plus`,
+      });
+    }
+  }
+
+  // Existing reasons (lower priority)
   if (profile.primaryInterest === 'tech' && (opp.type === 'INTERNSHIP' || opp.type === 'STAGE')) {
-    reasons.push('In linea con i tuoi interessi tech');
+    reasons.push({ priority: 3, text: 'In linea con i tuoi interessi tech' });
   }
   if (profile.primaryInterest === 'business' && opp.type === 'FELLOWSHIP') {
-    reasons.push('Perfetto per il tuo percorso imprenditoriale');
+    reasons.push({ priority: 3, text: 'Perfetto per il tuo percorso imprenditoriale' });
   }
   if (profile.clusterTag === 'Creativo' && opp.type === 'EXTRACURRICULAR') {
-    reasons.push('Adatto al tuo profilo creativo');
+    reasons.push({ priority: 4, text: 'Adatto al tuo profilo creativo' });
   }
   if (opp.isRemote && user.willingToRelocate === 'NO') {
-    reasons.push('Disponibile in remoto');
+    reasons.push({ priority: 5, text: 'Disponibile in remoto' });
   }
-  if (reasons.length === 0) reasons.push('Opportunità consigliata per te');
-  return reasons.join(' · ');
+
+  if (reasons.length === 0) return 'Opportunità consigliata per te';
+
+  return reasons
+    .sort((a, b) => a.priority - b.priority)
+    .slice(0, 2)
+    .map((r) => r.text)
+    .join(' · ');
 }

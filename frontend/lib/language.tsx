@@ -38,7 +38,7 @@ const it = {
   // Home page
   home: {
     forYou: 'Per te',
-    explore: 'Esplora',
+    explore: 'Nuove',
     searchPlaceholder: 'Cerca opportunità…',
     filters: 'Filtri',
     reset: 'Reset',
@@ -383,7 +383,7 @@ const en: Translations = {
   },
   home: {
     forYou: 'For you',
-    explore: 'Explore',
+    explore: 'New',
     searchPlaceholder: 'Search opportunities…',
     filters: 'Filters',
     reset: 'Reset',
@@ -715,7 +715,7 @@ const zh: Translations = {
   },
   home: {
     forYou: '为你',
-    explore: '探索',
+    explore: '最新',
     searchPlaceholder: '搜索机会…',
     filters: '筛选',
     reset: '重置',
@@ -1047,7 +1047,7 @@ const es: Translations = {
   },
   home: {
     forYou: 'Para ti',
-    explore: 'Explorar',
+    explore: 'Nuevas',
     searchPlaceholder: 'Buscar oportunidades…',
     filters: 'Filtros',
     reset: 'Restablecer',
@@ -1379,7 +1379,7 @@ const fr: Translations = {
   },
   home: {
     forYou: 'Pour toi',
-    explore: 'Explorer',
+    explore: 'Nouvelles',
     searchPlaceholder: 'Rechercher des opportunités…',
     filters: 'Filtres',
     reset: 'Réinitialiser',

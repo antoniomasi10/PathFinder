@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import api from '@/lib/api';
+import { parseDeadlineDate } from '@/lib/dateUtils';
 
 export interface SavedOpportunity {
   id: string;
@@ -18,13 +19,27 @@ export interface SavedOpportunity {
   university?: { name: string };
 }
 
+type SaveListener = () => void;
+
 interface SavedOpportunitiesContextType {
   savedIds: Set<string>;
   savedOpps: SavedOpportunity[];
   toggleSave: (oppId: string, data?: Partial<SavedOpportunity>) => void;
+  onSave: (listener: SaveListener) => () => void;
 }
 
 const STORAGE_KEY = 'pathfinder_saved_opps';
+
+function isExpiredOver1Day(opp: SavedOpportunity): boolean {
+  if (!opp.deadline) return false;
+  const d = parseDeadlineDate(opp.deadline);
+  if (!d) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  // daysLeft < -1 means expired 2+ days ago ("più di 1 giorno fa")
+  return (d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24) < -1;
+}
 
 function loadFromStorage(): SavedOpportunity[] {
   try {
@@ -44,27 +59,30 @@ const SavedOpportunitiesContext = createContext<SavedOpportunitiesContextType>({
   savedIds: new Set(),
   savedOpps: [],
   toggleSave: () => {},
+  onSave: () => () => {},
 });
 
 export function SavedOpportunitiesProvider({ children }: { children: ReactNode }) {
-  const [savedOpps, setSavedOpps] = useState<SavedOpportunity[]>([]);
-  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [savedOpps, setSavedOpps] = useState<SavedOpportunity[]>(
+    () => loadFromStorage().filter((o) => !isExpiredOver1Day(o))
+  );
+  const [savedIds, setSavedIds] = useState<Set<string>>(
+    () => new Set(loadFromStorage().filter((o) => !isExpiredOver1Day(o)).map((o) => o.id))
+  );
   const savedIdsRef = useRef<Set<string>>(savedIds);
   savedIdsRef.current = savedIds;
+  const saveListeners = useRef<Set<SaveListener>>(new Set());
+
+  function onSave(listener: SaveListener) {
+    saveListeners.current.add(listener);
+    return () => { saveListeners.current.delete(listener); };
+  }
 
   useEffect(() => {
-    // Show cached data immediately, then sync from server
-    const cached = loadFromStorage();
-    if (cached.length > 0) {
-      setSavedOpps(cached);
-      setSavedIds(new Set(cached.map((o) => o.id)));
-    }
-
-    // Always fetch from server to stay in sync across devices
     api
       .get('/opportunities/saved')
       .then((res) => {
-        const opps: SavedOpportunity[] = (res.data || []).map((o: any) => ({
+        const serverOpps: SavedOpportunity[] = (res.data || []).map((o: any) => ({
           id: o.id,
           title: o.title,
           description: o.description,
@@ -78,22 +96,31 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
           tags: o.tags,
           university: o.university,
         }));
-        setSavedOpps(opps);
-        setSavedIds(new Set(opps.map((o) => o.id)));
-        persistToStorage(opps);
+
+        // Merge: server items take precedence; local-only items (e.g. mock data
+        // whose POST /save failed) are kept so they survive the sync.
+        const serverIds = new Set(serverOpps.map((o) => o.id));
+        const localOnly = loadFromStorage().filter((o) => !serverIds.has(o.id));
+        const merged = [...serverOpps, ...localOnly];
+
+        // Auto-remove opportunities expired more than 1 day ago.
+        const expired = merged.filter(isExpiredOver1Day);
+        const active = merged.filter((o) => !isExpiredOver1Day(o));
+
+        expired.forEach((o) => api.post(`/opportunities/${o.id}/save`).catch(() => {}));
+
+        setSavedOpps(active);
+        setSavedIds(new Set(active.map((o) => o.id)));
+        persistToStorage(active);
       })
-      .catch((err) => {
-        console.error('Failed to load saved opportunities:', err);
+      .catch(() => {
+        // Server unreachable — localStorage data already loaded above, keep it.
       });
   }, []);
 
-  function toggleSave(
-    oppId: string,
-    data?: Partial<SavedOpportunity>,
-  ) {
+  function toggleSave(oppId: string, data?: Partial<SavedOpportunity>) {
     const isSaved = savedIdsRef.current.has(oppId);
 
-    // Optimistic update
     if (isSaved) {
       setSavedIds((prev) => {
         const next = new Set(prev);
@@ -132,6 +159,11 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
       }
     }
 
+    // Notify listeners on save (not unsave)
+    if (!isSaved) {
+      saveListeners.current.forEach((fn) => fn());
+    }
+
     // Persist to server — localStorage is the source of truth, no rollback on failure
     api.post(`/opportunities/${oppId}/save`).catch((err) => {
       console.error('Failed to sync save with server:', err);
@@ -139,7 +171,7 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
   }
 
   return (
-    <SavedOpportunitiesContext.Provider value={{ savedIds, savedOpps, toggleSave }}>
+    <SavedOpportunitiesContext.Provider value={{ savedIds, savedOpps, toggleSave, onSave }}>
       {children}
     </SavedOpportunitiesContext.Provider>
   );

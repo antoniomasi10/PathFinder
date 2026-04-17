@@ -21,6 +21,9 @@ import {
   Bookmark,
   UsersGroup,
   MapPin,
+  MoreHorizontal,
+  Flag,
+  Share,
 } from '@/components/icons';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -37,6 +40,7 @@ interface PublicProfile {
   publicProfile: boolean;
   privacySavedOpps?: string;
   privacyPathmates?: string;
+  skills?: { interests?: { id: string; name: string; selectedAt: string }[]; [key: string]: unknown } | null;
   profile?: { clusterTag?: string | null; passions: string[] } | null;
   savedOpportunities?: Array<{
     id: string;
@@ -62,15 +66,6 @@ interface PublicProfile {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const CLUSTER_COLORS: Record<string, string> = {
-  Analista: 'bg-[#4F46E5]/20 text-[#4F46E5]',
-  Creativo: 'bg-[#EC4899]/20 text-[#EC4899]',
-  Leader: 'bg-[#F59E0B]/20 text-[#F59E0B]',
-  Imprenditore: 'bg-[#22C55E]/20 text-[#22C55E]',
-  Sociale: 'bg-[#06B6D4]/20 text-[#06B6D4]',
-  Explorer: 'bg-[#EF4444]/20 text-[#EF4444]',
-};
 
 const OPP_TYPE_ICON: Record<string, React.ReactNode> = {
   STAGE: <Briefcase size={16} color="#4A9EFF" />,
@@ -144,6 +139,13 @@ export default function UserProfilePage() {
   const [notFound, setNotFound] = useState(false);
   const [sendingRequest, setSendingRequest] = useState(false);
   const [removingPathmate, setRemovingPathmate] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [reportModal, setReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportSending, setReportSending] = useState(false);
+  const [reportSuccess, setReportSuccess] = useState(false);
+  const [reported, setReported] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -219,6 +221,41 @@ export default function UserProfilePage() {
     router.push('/networking');
   };
 
+  const handleShare = async () => {
+    const url = `${window.location.origin}/profile/${id}`;
+    setMenuOpen(false);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: profile?.name, url });
+      } catch {}
+    } else {
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    }
+  };
+
+  const handleReport = async () => {
+    if (!reportReason || reportSending) return;
+    setReportSending(true);
+    try {
+      await api.post(`/users/${id}/report`, { reason: reportReason });
+      setReported(true);
+      setReportSuccess(true);
+      setTimeout(() => {
+        setReportModal(false);
+        setReportReason('');
+        setReportSuccess(false);
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to report user:', err);
+      setReportModal(false);
+      setReportReason('');
+    } finally {
+      setReportSending(false);
+    }
+  };
+
   // ── Render states ──
 
   if (loading) return <LoadingSkeleton />;
@@ -264,26 +301,19 @@ export default function UserProfilePage() {
     profile.messagePrivacy === 'Tutti' ||
     (profile.messagePrivacy === 'Pathmates' && profile.isPathmate);
 
-  const tags: { label: string; color: string }[] = [];
-  if (profile.canSeeSkills) {
-    if (profile.profile?.clusterTag) {
-      tags.push({
-        label: profile.profile.clusterTag,
-        color:
-          CLUSTER_COLORS[profile.profile.clusterTag] || 'bg-[#334155] text-[#94A3B8]',
-      });
-    }
-    profile.profile?.passions?.forEach((p) =>
-      tags.push({ label: getSkillLabel(p, t), color: 'bg-[#334155] text-[#94A3B8]' })
-    );
-  }
+  const skillsData = profile.canSeeSkills ? (profile.skills as any) : undefined;
+  const coreSkills = skillsData?.core as { id: string; name: string }[] | null | undefined;
+  const sideSkills = skillsData?.side as { id: string; name: string }[] | null | undefined;
+  const interests = skillsData?.interests as { id: string; name: string; selectedAt: string }[] | undefined;
+  const profilePills: { id: string; name: string }[] | undefined =
+    coreSkills && coreSkills.length > 0 ? coreSkills : interests;
 
   // ── Main render ──
 
   return (
     <div className="px-4 py-4 space-y-5 pb-24">
-      {/* Back button */}
-      <div className="flex items-center">
+      {/* Back button + ⋯ menu */}
+      <div className="flex items-center justify-between">
         <button
           onClick={() => router.back()}
           className="flex items-center gap-1.5 text-[#94A3B8] hover:text-white transition-colors"
@@ -291,7 +321,52 @@ export default function UserProfilePage() {
           <ChevronLeft size={20} />
           <span className="text-sm">Indietro</span>
         </button>
+
+        <div className="relative">
+          <button
+            onClick={() => setMenuOpen((o) => !o)}
+            className="p-2 text-[#64748B] hover:text-white transition-colors rounded-xl hover:bg-[#1E293B]"
+          >
+            <MoreHorizontal size={20} />
+          </button>
+
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-[5]" onClick={() => setMenuOpen(false)} />
+              <div className="absolute right-0 top-full mt-1 bg-[#161B22] border border-[#1E293B] rounded-xl shadow-lg py-1 z-10 min-w-[170px]">
+                <button
+                  onClick={handleShare}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#94A3B8] hover:bg-[#1E293B] hover:text-white transition-colors"
+                >
+                  <Share size={15} />
+                  Condividi profilo
+                </button>
+                {!reported && (
+                  <button
+                    onClick={() => { setMenuOpen(false); setReportModal(true); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-[#1E293B] transition-colors"
+                  >
+                    <Flag size={15} color="currentColor" />
+                    Segnala utente
+                  </button>
+                )}
+                {reported && (
+                  <span className="block px-4 py-2.5 text-sm text-[#475569] italic">
+                    Già segnalato
+                  </span>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* Share copied toast */}
+      {shareCopied && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#161B22] border border-[#1E293B] rounded-xl px-4 py-2.5 text-sm text-white shadow-lg animate-fade-in">
+          Link copiato negli appunti
+        </div>
+      )}
 
       {/* Profile header */}
       <div className="flex flex-col items-center text-center gap-3">
@@ -388,22 +463,34 @@ export default function UserProfilePage() {
         </div>
       )}
 
-      {/* Skills / Tags */}
-      {tags.length > 0 && (
+      {/* Skill / Interest pills */}
+      {(profilePills && profilePills.length > 0) && (
         <div className="bg-[#161B22] border border-[#1E293B] rounded-2xl p-4">
           <h2 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3">
-            Competenze
+            {coreSkills && coreSkills.length > 0 ? 'Competenze' : 'Interessi'}
           </h2>
-          <div className="flex flex-wrap gap-2">
-            {tags.map((tag) => (
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+            {profilePills.map((pill) => (
               <span
-                key={tag.label}
-                className={`px-3 py-1 rounded-full text-xs font-medium ${tag.color}`}
+                key={pill.id}
+                className="px-3 py-1 rounded-full text-xs font-medium bg-[#4F46E5]/20 text-[#4F46E5] whitespace-nowrap flex-shrink-0"
               >
-                {tag.label}
+                {pill.name}
               </span>
             ))}
           </div>
+          {sideSkills && sideSkills.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide mt-2">
+              {sideSkills.map((pill) => (
+                <span
+                  key={pill.id}
+                  className="px-2.5 py-0.5 rounded-full text-[11px] font-normal text-white border border-[#4F46E5]/50 whitespace-nowrap flex-shrink-0"
+                >
+                  {pill.name}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -481,6 +568,72 @@ export default function UserProfilePage() {
               Pathmates non visibili
             </p>
           )}
+        </div>
+      )}
+
+      {/* Report Modal */}
+      {reportModal && (
+        <div
+          className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center"
+          onClick={() => { setReportModal(false); setReportReason(''); }}
+        >
+          <div
+            className="bg-[#0F1623] w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-5 animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-center mb-3 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-gray-600" />
+            </div>
+
+            {reportSuccess ? (
+              <div className="text-center py-4">
+                <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-3">
+                  <Check size={24} color="#4ade80" strokeWidth={2.5} />
+                </div>
+                <p className="text-white font-semibold">Segnalazione inviata</p>
+                <p className="text-[#94A3B8] text-sm mt-1">
+                  Grazie per aver contribuito alla sicurezza della community.
+                </p>
+              </div>
+            ) : (
+              <>
+                <h3 className="text-white font-semibold text-lg mb-1">Segnala utente</h3>
+                <p className="text-[#64748B] text-sm mb-4">
+                  Perché vuoi segnalare questo profilo?
+                </p>
+                <div className="space-y-2 mb-5">
+                  {['Profilo falso', 'Spam', 'Contenuto inappropriato', 'Molestie o bullismo', 'Altro'].map((reason) => (
+                    <button
+                      key={reason}
+                      onClick={() => setReportReason(reason)}
+                      className={`w-full text-left px-4 py-2.5 rounded-xl text-sm transition-colors ${
+                        reportReason === reason
+                          ? 'bg-[#4F46E5]/20 text-[#4F46E5] border border-[#4F46E5]/40'
+                          : 'bg-[#161B22] text-[#94A3B8] hover:bg-[#1E293B]'
+                      }`}
+                    >
+                      {reason}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setReportModal(false); setReportReason(''); }}
+                    className="flex-1 py-2.5 rounded-xl border border-[#1E293B] text-[#64748B] text-sm hover:bg-[#1E293B] transition-colors"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    onClick={handleReport}
+                    disabled={!reportReason || reportSending}
+                    className="flex-1 py-2.5 rounded-xl bg-red-500/80 text-white text-sm font-medium disabled:opacity-40 hover:bg-red-500 transition-colors"
+                  >
+                    {reportSending ? 'Invio...' : 'Segnala'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

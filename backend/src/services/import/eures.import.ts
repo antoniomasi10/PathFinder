@@ -9,6 +9,7 @@
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { OpportunityType } from '@prisma/client';
+import { translateOpportunity } from '../translation.service';
 import { validateOpportunity } from './validation';
 
 const EURES_SEARCH = 'https://europa.eu/eures/eures-searchengine/page/jv-search/search';
@@ -127,34 +128,34 @@ export async function importOpportunities(options?: {
               if (!validated) { skipped++; continue; }
 
               const sid = `eures-${handle}`;
+              const exists = await prisma.opportunity.findUnique({ where: { id: sid }, select: { id: true } });
 
-              await prisma.opportunity.upsert({
-                where: { id: sid },
-                update: {
-                  title: validated.title, description: validated.description,
-                  company: validated.company, url: validated.url,
-                  location: validated.location,
-                  isAbroad: validated.isAbroad,
-                  isRemote: validated.isRemote,
-                  type: mapType(title, desc),
-                  expiresAt: validated.expiresAt,
-                  tags: [kw],
-                  sourceId: sid,
-                  lastSyncedAt: now,
-                },
-                create: {
-                  id: sid, title: validated.title, description: validated.description,
-                  company: validated.company, url: validated.url,
-                  location: validated.location,
-                  isAbroad: validated.isAbroad,
-                  isRemote: validated.isRemote,
-                  type: mapType(title, desc),
-                  expiresAt: validated.expiresAt,
-                  tags: [kw],
-                  sourceId: sid,
-                  lastSyncedAt: now,
-                },
-              });
+              if (exists) {
+                // Already translated — only refresh metadata, never overwrite content
+                await prisma.opportunity.update({
+                  where: { id: sid },
+                  data: { expiresAt: expires, lastSyncedAt: now },
+                });
+              } else {
+                // New opportunity: translate title + description before saving
+                const translated = await translateOpportunity(validated.title, validated.description);
+                await prisma.opportunity.create({
+                  data: {
+                    id: sid,
+                    title: translated.title.slice(0, 200),
+                    description: translated.description.slice(0, 5000),
+                    company: validated.company, url: validated.url,
+                    location: validated.location,
+                    isAbroad: validated.isAbroad,
+                    isRemote: validated.isRemote,
+                    type: mapType(title, desc),
+                    expiresAt: validated.expiresAt,
+                    tags: [kw],
+                    sourceId: sid,
+                    lastSyncedAt: now,
+                  },
+                });
+              }
               imported++;
             }
 

@@ -40,6 +40,7 @@ export function userToText(
   user: { courseOfStudy?: string | null; yearOfStudy?: number | null; gpa?: string | null; englishLevel?: string | null; willingToRelocate?: string | null },
   profile: { primaryInterest?: string | null; clusterTag?: string | null; passions?: string[]; careerVision?: string | null; professionalGoal?: string | null },
   universityName?: string | null,
+  skills?: { core?: { name: string }[] | null; side?: { name: string }[] } | null,
 ): string {
   const parts: string[] = [];
 
@@ -54,6 +55,14 @@ export function userToText(
   if (user.gpa) parts.push(`GPA: ${user.gpa.replace('_', ' ')}`);
   if (user.englishLevel) parts.push(`Inglese: ${user.englishLevel.replace('_', ' ')}`);
   if (user.willingToRelocate) parts.push(`Trasferimento: ${user.willingToRelocate}`);
+
+  // Append skills to embedding text
+  if (skills?.core && skills.core.length > 0) {
+    parts.push(`Competenze principali: ${skills.core.map((s) => s.name).join(', ')}`);
+  }
+  if (skills?.side && skills.side.length > 0) {
+    parts.push(`Competenze secondarie: ${skills.side.map((s) => s.name).join(', ')}`);
+  }
 
   return parts.join('. ') || 'Studente universitario';
 }
@@ -115,7 +124,14 @@ export async function updateUserEmbedding(userId: string): Promise<void> {
 
     if (!user?.profile) return;
 
-    const text = userToText(user, user.profile, user.university?.name);
+    // Parse skills JSON for embedding text enrichment
+    const rawSkills = user.skills as Record<string, unknown> | null;
+    const skills = rawSkills ? {
+      core: Array.isArray(rawSkills.core) ? rawSkills.core as { name: string }[] : null,
+      side: Array.isArray(rawSkills.side) ? rawSkills.side as { name: string }[] : [],
+    } : null;
+
+    const text = userToText(user, user.profile, user.university?.name, skills);
     const embedding = await generateEmbedding(text);
     const vectorStr = `[${embedding.join(',')}]`;
 

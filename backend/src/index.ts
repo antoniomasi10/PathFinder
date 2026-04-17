@@ -24,6 +24,7 @@ import userRoutes from './routes/user.routes';
 import courseRoutes from './routes/course.routes';
 import badgeRoutes from './routes/badge.routes';
 import importRoutes from './routes/import.routes';
+import skillRoutes from './routes/skills.routes';
 import adminRoutes from './routes/admin.routes';
 import { setupChatSocket } from './socket/chatHandler';
 import { logger } from './utils/logger';
@@ -43,7 +44,7 @@ if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
 const ALLOWED_ORIGINS = [
   FRONTEND_URL,
   ...(process.env.EXTRA_ORIGINS ? process.env.EXTRA_ORIGINS.split(',') : []),
-  ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3000'] : []),
+  ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3000', 'http://localhost:3001'] : []),
 ].filter(Boolean);
 
 function corsOrigin(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
@@ -86,12 +87,15 @@ app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
 app.use(correlationIdMiddleware);
 
-// Auth rate limiter: applies to login, register, refresh, resend-otp
+// Auth rate limiter: only applies to sensitive endpoints (login, register, password reset, OAuth)
+// Excludes /refresh (called automatically by the frontend), /check-username (called on every keystroke),
+// /logout, /verify-email, /change-password, /resend-otp (has its own limiter)
+const SENSITIVE_AUTH_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/google'];
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 15,
   message: { error: 'Troppi tentativi, riprova più tardi' },
-  skip: (req) => ['/logout', '/verify-email'].includes(req.path),
+  skip: (req) => !SENSITIVE_AUTH_PATHS.includes(req.path),
 });
 app.use('/api/auth', authLimiter);
 
@@ -117,6 +121,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/badges', badgeRoutes);
 app.use('/api/import', importRoutes);
+app.use('/api/v1/users', skillRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health check
