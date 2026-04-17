@@ -28,6 +28,7 @@ interface Opportunity {
   skills: string[];
   matchReason: string;
   deadline: string;
+  isNew?: boolean;
 }
 
 function getScoreColor(score: number): string {
@@ -153,9 +154,10 @@ function matchesSearch(opp: Opportunity, q: string): boolean {
 
 function matchesBadgeFilters(opp: Opportunity, filters: Record<string, string[]>): boolean {
   const badge = opp.badge.toLowerCase();
+  const type = opp.type.toLowerCase();
   for (const values of Object.values(filters)) {
     if (values.length === 0) continue;
-    if (!values.some((v) => badge.includes(v))) return false;
+    if (!values.some((v) => badge.includes(v) || type.includes(v))) return false;
   }
   return true;
 }
@@ -333,10 +335,15 @@ function FullWidthCard({
           </div>
         </div>
 
-        <div className="mb-3">
+        <div className="mb-3 flex items-center gap-2">
           <span className="inline-block bg-[#1E293B] text-gray-400 text-[11px] font-semibold tracking-wider px-3 py-1.5 rounded-lg">
             {opp.badge}
           </span>
+          {opp.isNew && (
+            <span className="inline-block bg-primary/20 text-primary text-[11px] font-bold tracking-wider px-2.5 py-1.5 rounded-lg">
+              NEW
+            </span>
+          )}
         </div>
 
         {/* Description: teaser when collapsed, full when expanded */}
@@ -444,9 +451,14 @@ function HalfWidthCard({
           </span>
         </div>
         <p className="text-primary text-[11px] font-medium line-clamp-1">{opp.company}</p>
-        <span className="inline-block bg-[#1E293B] text-gray-400 text-[10px] font-semibold tracking-wider px-2 py-1 rounded-lg mt-3">
-          {opp.badge.split(' • ')[0]}
-        </span>
+        <div className="flex items-center gap-1.5 mt-3">
+          <span className="inline-block bg-[#1E293B] text-gray-400 text-[10px] font-semibold tracking-wider px-2 py-1 rounded-lg">
+            {opp.badge.split(' • ')[0]}
+          </span>
+          <span className="text-[11px] font-bold" style={{ color: getScoreColor(opp.matchScore) }}>
+            {opp.matchScore}%
+          </span>
+        </div>
       </button>
 
       {/* Expandable section */}
@@ -625,6 +637,7 @@ function EsploraGrid({
           <FullWidthCard
             key={chunk.items[0].id}
             opp={chunk.items[0]}
+            showScore
             isExpanded={expandedId === chunk.items[0].id}
             onToggle={() => onToggle(chunk.items[0].id)}
             isSaved={savedIds.has(chunk.items[0].id)}
@@ -765,27 +778,35 @@ export default function HomePage() {
 
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loadingOpps, setLoadingOpps] = useState(true);
+  const [newOpportunities, setNewOpportunities] = useState<Opportunity[]>([]);
+  const [loadingNew, setLoadingNew] = useState(false);
+  const newFetched = useRef(false);
+
+  function mapOpportunity(opp: any, extras?: Partial<Opportunity>): Opportunity {
+    return {
+      id: opp.id,
+      title: opp.title,
+      company: opp.company || opp.university?.name || '',
+      badge: `${opp.type}${opp.isRemote ? ' \u2022 REMOTE' : ''}`,
+      description: opp.description || '',
+      matchScore: opp.matchScore || 0,
+      location: opp.location || opp.university?.city || '',
+      about: opp.about || '',
+      url: opp.url || '',
+      type: opp.type || '',
+      remote: opp.isRemote || false,
+      skills: opp.tags || [],
+      matchReason: opp.matchReason || '',
+      deadline: opp.deadline || '',
+      ...extras,
+    };
+  }
 
   useEffect(() => {
     api.get('/opportunities?matched=true&limit=20')
       .then(({ data }) => {
         const items = data.data || data;
-        const mapped = (Array.isArray(items) ? items : []).map((opp: any) => ({
-          id: opp.id,
-          title: opp.title,
-          company: opp.company || opp.university?.name || '',
-          badge: `${opp.type}${opp.isRemote ? ' \u2022 REMOTE' : ''}`,
-          description: opp.description || '',
-          matchScore: opp.matchScore || 0,
-          location: opp.location || opp.university?.city || '',
-          about: opp.about || '',
-          url: opp.url || '',
-          type: opp.type || '',
-          remote: opp.isRemote || false,
-          skills: opp.tags || [],
-          matchReason: opp.matchReason || '',
-          deadline: opp.deadline || '',
-        }));
+        const mapped = (Array.isArray(items) ? items : []).map((opp: any) => mapOpportunity(opp));
         setOpportunities(mapped.length > 0 ? mapped : [...allOpportunities].sort((a, b) => b.matchScore - a.matchScore));
       })
       .catch(() => {
@@ -794,6 +815,24 @@ export default function HomePage() {
       .finally(() => setLoadingOpps(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function fetchNewOpportunities() {
+    if (newFetched.current) return;
+    newFetched.current = true;
+    setLoadingNew(true);
+    api.get('/opportunities?new=true&limit=20')
+      .then(({ data }) => {
+        const items = data.data || data;
+        const mapped = (Array.isArray(items) ? items : []).map((opp: any) =>
+          mapOpportunity(opp, { isNew: opp.isNew ?? false })
+        );
+        setNewOpportunities(mapped.length > 0 ? mapped : [...allOpportunities].sort((a, b) => b.matchScore - a.matchScore));
+      })
+      .catch(() => {
+        setNewOpportunities([...allOpportunities].sort((a, b) => b.matchScore - a.matchScore));
+      })
+      .finally(() => setLoadingNew(false));
+  }
 
   // Filter sheet state
   const [filterOpen, setFilterOpen] = useState(false);
@@ -807,10 +846,17 @@ export default function HomePage() {
   function handleTabChange(newTab: 'per-te' | 'esplora') {
     setTab(newTab);
     setExpandedId(null); // collapse any open card on tab switch
+    if (newTab === 'esplora') fetchNewOpportunities();
   }
+
+  const viewedRef = useRef<Set<string>>(new Set());
 
   function handleToggle(id: string) {
     setExpandedId((prev) => (prev === id ? null : id));
+    if (!viewedRef.current.has(id)) {
+      viewedRef.current.add(id);
+      api.post(`/opportunities/${id}/view`).catch(() => {});
+    }
   }
 
   function handleSave(opp: Opportunity) {
@@ -856,13 +902,13 @@ export default function HomePage() {
 
   const q = searchQuery.trim().toLowerCase();
 
-  // Filtered list for the Esplora tab (search + active filters combined)
-  const esploraFiltered = opportunities.filter(
+  // Filtered list for the Nuove tab (search + active filters combined)
+  const esploraFiltered = newOpportunities.filter(
     (opp) => matchesSearch(opp, q) && matchesBadgeFilters(opp, appliedFilters)
   );
 
   // Count shown live in the filter sheet button (draft filters + current search)
-  const draftMatchCount = opportunities.filter(
+  const draftMatchCount = newOpportunities.filter(
     (opp) => matchesSearch(opp, q) && matchesBadgeFilters(opp, draftFilters)
   ).length;
 
@@ -956,7 +1002,7 @@ export default function HomePage() {
 
       {/* ── Cards ─────────────────────────────────────────────────── */}
       <div className="px-4 pb-4">
-        {loadingOpps && opportunities.length === 0 ? (
+        {(loadingOpps && opportunities.length === 0) || (tab === 'esplora' && loadingNew) ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="bg-[#161B22] rounded-2xl p-5 animate-pulse">
@@ -999,7 +1045,7 @@ export default function HomePage() {
             onToggle={handleToggle}
             savedIds={savedIds}
             onSave={(id) => {
-              const opp = opportunities.find((o) => o.id === id);
+              const opp = newOpportunities.find((o) => o.id === id);
               if (opp) handleSave(opp);
             }}
           />
