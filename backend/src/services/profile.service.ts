@@ -379,3 +379,91 @@ export async function deleteAccount(userId: string) {
   //    (UserProfile, Notification, Post, PostLike, PostComment)
   await prisma.user.delete({ where: { id: userId } });
 }
+
+export async function getSuggestedUsers(currentUserId: string, limit = 20) {
+  const friendRelations = await prisma.friendRequest.findMany({
+    where: {
+      status: 'ACCEPTED',
+      OR: [{ fromUserId: currentUserId }, { toUserId: currentUserId }],
+    },
+    select: { fromUserId: true, toUserId: true },
+  });
+
+  const excludeIds = new Set<string>([currentUserId]);
+  friendRelations.forEach((r) => {
+    excludeIds.add(r.fromUserId);
+    excludeIds.add(r.toUserId);
+  });
+
+  return prisma.user.findMany({
+    where: {
+      id: { notIn: Array.from(excludeIds) },
+      profileCompleted: true,
+    },
+    take: limit,
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true, name: true, avatar: true, courseOfStudy: true, yearOfStudy: true,
+      university: { select: { name: true } },
+      profile: { select: { clusterTag: true } },
+    },
+  });
+}
+
+const SKILL_AREA_MAP: Record<string, string[]> = {
+  ai: ['python_base','machine_learning','reti_neurali','data_analysis','numpy_pandas','matematica_applicata','statistica','computer_science_base'],
+  web: ['html_css','javascript_base','react_base','sql_base','git','logica_di_programmazione','ui_base','no_code_tools'],
+  data: ['excel','statistica_ds','python_base_ds','sql_base_ds','r_base','data_visualization','analisi_dei_dati','google_sheets'],
+  mobile: ['swift_base','kotlin_base','react_native_base','flutter_base','ui_mobile','logica_di_programmazione_mobile','figma_base','no_code_tools_mobile'],
+  research: ['metodologia_della_ricerca','scrittura_accademica','statistica_ricerca','laboratorio_base','revisione_della_letteratura','r_base_ricerca','presentazione_dati'],
+  business: ['problem_solving','powerpoint','analisi_di_mercato','project_management_base','public_speaking','business_writing','teamwork'],
+  finance: ['contabilita_base','analisi_finanziaria_base','matematica_finanziaria','economia_aziendale','powerpoint_finance','bloomberg_base','python_base_finance'],
+  design: ['figma','canva','ui_design_base','ux_research_base','adobe_suite_base','prototipazione','graphic_design_base','branding_base'],
+  sustainability: ['analisi_ambientale_base','esg','economia_circolare','policy_analysis_base','ricerca_accademica','gis_base','redazione_report'],
+  marketing: ['social_media_base','copywriting','google_analytics_base','content_creation','seo_base','canva_marketing','email_marketing_base','storytelling'],
+  law: ['ricerca_giuridica','diritto_privato','diritto_pubblico','diritto_ue_base','legal_writing','policy_analysis','argomentazione','diritto_internazionale_base'],
+  healthcare: ['biologia_base','statistica_healthcare','ricerca_clinica_base','public_health_base','scrittura_scientifica','epidemiologia_base','python_base_healthcare'],
+};
+
+export async function searchUsers(
+  q: string | undefined,
+  clusterTag?: string,
+  currentUserId?: string,
+  yearOfStudy?: number,
+  coreSkillArea?: string,
+) {
+  const users = await prisma.user.findMany({
+    where: {
+      AND: [
+        q ? { name: { contains: q, mode: 'insensitive' } } : {},
+        { profileCompleted: true },
+        currentUserId ? { NOT: { id: currentUserId } } : {},
+        clusterTag ? { profile: { clusterTag } } : {},
+        yearOfStudy ? { yearOfStudy } : {},
+      ],
+    },
+    take: coreSkillArea ? 200 : 30,
+    select: {
+      id: true,
+      name: true,
+      avatar: true,
+      courseOfStudy: true,
+      yearOfStudy: true,
+      skills: true,
+      privacySkills: true,
+      university: { select: { name: true } },
+      profile: { select: { clusterTag: true } },
+    },
+  });
+
+  if (!coreSkillArea || !SKILL_AREA_MAP[coreSkillArea]) return users;
+
+  const areaSkillIds = new Set(SKILL_AREA_MAP[coreSkillArea]);
+  return users.filter((u) => {
+    // Respect skills privacy: exclude users who don't allow public skill visibility
+    if (u.privacySkills !== 'Tutti') return false;
+    const skills = u.skills as { core?: { id: string }[] | null } | null;
+    const coreIds = skills?.core?.map((s) => s.id) ?? [];
+    return coreIds.some((id) => areaSkillIds.has(id));
+  });
+}

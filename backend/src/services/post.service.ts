@@ -229,3 +229,39 @@ export async function reportComment(commentId: string, userId: string, reason: s
     throw err;
   }
 }
+
+export async function searchPosts(
+  q: string,
+  page: number = 1,
+  limit: number = 20,
+  currentUserId?: string,
+  sortBy: 'recent' | 'likes' = 'recent',
+) {
+  const fetchLimit = sortBy === 'likes' ? 200 : limit;
+  const fetchSkip = sortBy === 'likes' ? 0 : (page - 1) * limit;
+
+  const posts = await prisma.post.findMany({
+    skip: fetchSkip,
+    take: fetchLimit,
+    where: { content: { contains: q, mode: 'insensitive' } },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      author: { select: AUTHOR_SELECT },
+      _count: { select: { likes: true, comments: true } },
+      likes: currentUserId ? { where: { userId: currentUserId }, select: { userId: true } } : false,
+    },
+  });
+
+  const mapped = posts.map(({ likes, ...post }) => ({
+    ...post,
+    liked: Array.isArray(likes) && likes.length > 0,
+  }));
+
+  if (sortBy === 'likes') {
+    mapped.sort((a, b) => b._count.likes - a._count.likes);
+    const skip = (page - 1) * limit;
+    return mapped.slice(skip, skip + limit);
+  }
+
+  return mapped;
+}

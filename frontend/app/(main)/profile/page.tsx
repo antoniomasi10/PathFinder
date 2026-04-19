@@ -176,15 +176,28 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const expandedCardRef = useRef<HTMLDivElement | null>(null);
   const savedScrollRef = useRef<HTMLDivElement | null>(null);
+  const savedSectionRef = useRef<HTMLDivElement | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!expandedOppId) return;
     const timer = setTimeout(() => {
-      expandedCardRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-    }, 30);
+      savedSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => {
+        expandedCardRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }, 300);
+    }, 80);
     return () => clearTimeout(timer);
   }, [expandedOppId]);
+
+  useEffect(() => {
+    if (savedOpps.length === 0) return;
+    const oppId = sessionStorage.getItem('openSavedOpp');
+    if (!oppId) return;
+    sessionStorage.removeItem('openSavedOpp');
+    setSavedTab('opportunities');
+    setExpandedOppId(oppId);
+  }, [savedOpps]);
 
   useEffect(() => {
     loadData();
@@ -536,7 +549,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Salvati Section */}
-        <div style={privacySavedOpps === 'Nessuno' ? { display: 'none' } : undefined}>
+        <div ref={savedSectionRef} style={privacySavedOpps === 'Nessuno' ? { display: 'none' } : undefined}>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Bookmark size={16} color="#94A3B8" />
