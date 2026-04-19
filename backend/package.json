@@ -23,7 +23,12 @@
     "scrape:remoteok": "ts-node scripts/scrape-remoteok.ts",
     "scrape:jobicy": "ts-node scripts/scrape-jobicy.ts",
     "scrape:fashionunited": "ts-node scripts/scrape-fashionunited.ts",
-    "scrape:smartrecruiters": "ts-node scripts/scrape-smartrecruiters.ts"
+    "scrape:smartrecruiters": "ts-node scripts/scrape-smartrecruiters.ts",
+    "seed:curated": "ts-node --transpile-only prisma/seeds/curated-opportunities.ts && ts-node --transpile-only prisma/seeds/curated-opportunities-2.ts",
+    "import:opportunity-desk": "ts-node --transpile-only -e \"require('./src/services/import/opportunity-desk.import').importOpportunityDeskOpportunities().then(r=>console.log(JSON.stringify(r)))\"",
+    "import:hackclub": "ts-node --transpile-only -e \"require('./src/services/import/hackclub.import').importHackClubOpportunities().then(r=>console.log(JSON.stringify(r)))\"",
+    "import:devpost": "ts-node --transpile-only -e \"require('./src/services/import/devpost.import').importDevpostOpportunities().then(r=>console.log(JSON.stringify(r)))\"",
+    "import:best-courses": "ts-node --transpile-only -e \"require('./src/services/import/best-courses.import').importBestCoursesOpportunities().then(r=>console.log(JSON.stringify(r)))\""
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -63,6 +68,7 @@
     "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^7.0.11",
     "@types/sanitize-html": "^2.16.1",
+    "@types/uuid": "^10.0.0",
     "@types/web-push": "^3.6.4",
     "prisma": "^5.14.0",
     "ts-node": "^10.9.2",

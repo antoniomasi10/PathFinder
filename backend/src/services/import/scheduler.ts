@@ -33,7 +33,11 @@ import { importRemoteOKOpportunities } from './remoteok.import';
 import { importJobicyOpportunities } from './jobicy.import';
 import { importFashionUnitedOpportunities } from './fashionunited.import';
 import { importSmartRecruitersOpportunities } from './smartrecruiters.import';
+import { importHackClubOpportunities } from './hackclub.import';
+import { importDevpostOpportunities } from './devpost.import';
+import { importBestCoursesOpportunities } from './best-courses.import';
 import { importAlmaLaureaStats } from './almalaurea.import';
+import { importOpportunityDeskOpportunities } from './opportunity-desk.import';
 import { runCleanup } from './cleanup.service';
 import { alertImportFailure } from './alerting';
 import { logger } from '../../utils/logger';
@@ -53,6 +57,11 @@ export function startImportScheduler() {
   // Bundesagentur: REMOVED — unofficial reverse-engineered API, BA explicitly opposed automated access
   // The Muse: REMOVED — ToS Section 3.3 prohibits replicating services
 
+  // Mon/Wed/Fri: Opportunity Desk RSS (02:00) — fellowship, competition, research, volunteering
+  cron.schedule('0 2 * * 1,3,5', () => {
+    runWithAlert('Opportunity Desk', 'opportunity-desk', 'opportunities', importOpportunityDeskOpportunities);
+  });
+
   // Weekly Monday: EU Youth + Eurodesk (03:30)
   cron.schedule('30 3 * * 1', () => {
     runWithAlert('EU Youth', 'eu-youth', 'opportunities', importEUOpportunities);
@@ -61,6 +70,11 @@ export function startImportScheduler() {
   // Weekly Monday: SmartRecruiters enterprise/German industrial (04:00)
   cron.schedule('0 4 * * 1', () => {
     runWithAlert('SmartRecruiters', 'smartrecruiters', 'opportunities', importSmartRecruitersOpportunities);
+  });
+
+  // Weekly Monday: HackClub hackathons (04:30)
+  cron.schedule('30 4 * * 1', () => {
+    runWithAlert('HackClub', 'hackclub', 'opportunities', importHackClubOpportunities);
   });
 
   // Weekly Wednesday: Stage4eu (03:30)
@@ -77,6 +91,8 @@ export function startImportScheduler() {
   cron.schedule('0 4 * * 4', () => {
     runWithAlert('Jobicy', 'jobicy', 'opportunities', importJobicyOpportunities);
   });
+
+  // Devpost: DISABLED — ToS prohibits automated access (support@devpost.com for API access)
 
   // Weekly Friday: Lever internships (03:30)
   cron.schedule('30 3 * * 5', () => {
@@ -113,6 +129,8 @@ export function startImportScheduler() {
     runWithAlert('RemoteOK', 'remoteok', 'opportunities', importRemoteOKOpportunities);
   });
 
+  // BEST Courses: DISABLED — ToS unclear (403 on legal pages). Contact info@best.eu.org before re-enabling.
+
   // Monthly 1st: MUR universities (02:00) + courses (02:30)
   cron.schedule('0 2 1 * *', () => {
     runWithAlert('MUR Universities', 'mur', 'universities', importUniversities);
@@ -138,12 +156,12 @@ export function startImportScheduler() {
 
   logger.info('[Scheduler] Import scheduler started:');
   logger.info('  EURES: disabled (static cache)');
-  logger.info('  EU Youth: Mon 03:30 | SmartRecruiters: Mon 04:00');
+  logger.info('  EU Youth: Mon 03:30 | SmartRecruiters: Mon 04:00 | HackClub: Mon 04:30');
   logger.info('  Arbeitnow: Tue 03:30 | RemoteOK: Tue 04:00');
   logger.info('  Stage4eu: Wed 03:30');
   logger.info('  Greenhouse: Thu 03:30 | Jobicy: Thu 04:00');
   logger.info('  Lever: Fri 03:30 | FashionUnited: Fri 04:00');
   logger.info('  Ashby: Sat 03:30 | Workable: Sat 04:00');
   logger.info('  Personio: Sun 03:30 | Cleanup: Sun 05:00');
-  logger.info('  MUR: monthly 1st 02:00/02:30 | AlmaLaurea: quarterly');
+  logger.info('  BEST Courses: monthly 1st 03:30 | MUR: monthly 1st 02:00/02:30 | AlmaLaurea: quarterly');
 }

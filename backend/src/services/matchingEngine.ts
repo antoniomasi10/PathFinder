@@ -1,5 +1,6 @@
-import { UserProfile, User, Opportunity, GpaRange, EnglishLevel, UserInteraction } from '@prisma/client';
+import { UserProfile, User, Opportunity, GpaRange, EnglishLevel, UserInteraction, OpportunityType, FieldOfStudy } from '@prisma/client';
 import prisma from '../lib/prisma';
+import { normalizeFieldToEnum } from './import/utils';
 
 const GPA_ORDER: Record<GpaRange, number> = {
   GPA_18_20: 1,
@@ -15,92 +16,190 @@ const ENGLISH_ORDER: Record<EnglishLevel, number> = {
   C2_PLUS: 4,
 };
 
-// Interest → preferred opportunity types (30 pts)
-const INTEREST_TYPE_MAP: Record<string, string[]> = {
-  tech: ['INTERNSHIP', 'STAGE'],
-  business: ['FELLOWSHIP', 'INTERNSHIP'],
-  creative: ['EXTRACURRICULAR', 'EVENT'],
-  sport: ['EXTRACURRICULAR', 'EVENT'],
-  general: ['STAGE', 'EVENT', 'EXTRACURRICULAR'],
+// Interest → preferred opportunity types (ordered: first = top match)
+const INTEREST_TYPE_MAP: Record<string, OpportunityType[]> = {
+  tech:               ['INTERNSHIP', 'STAGE', 'HACKATHON', 'BOOTCAMP', 'RESEARCH'],
+  business:           ['FELLOWSHIP', 'INTERNSHIP', 'SUMMER_PROGRAM', 'COMPETITION', 'CONFERENCE'],
+  creative:           ['EXTRACURRICULAR', 'EVENT', 'CONFERENCE', 'BOOTCAMP'],
+  sport:              ['EXTRACURRICULAR', 'EVENT', 'COMPETITION'],
+  general:            ['STAGE', 'EVENT', 'EXTRACURRICULAR'],
+  // onboarding InterestSelection values
+  ai_ml:              ['RESEARCH', 'HACKATHON', 'INTERNSHIP', 'BOOTCAMP'],
+  web_development:    ['INTERNSHIP', 'STAGE', 'HACKATHON', 'BOOTCAMP'],
+  data_science:       ['RESEARCH', 'HACKATHON', 'INTERNSHIP', 'COMPETITION'],
+  mobile_dev:         ['INTERNSHIP', 'STAGE', 'HACKATHON', 'BOOTCAMP'],
+  ricerca_scientifica:['RESEARCH', 'FELLOWSHIP', 'EXCHANGE', 'SUMMER_PROGRAM'],
+  business_strategy:  ['FELLOWSHIP', 'COMPETITION', 'SUMMER_PROGRAM', 'CONFERENCE'],
+  finance:            ['INTERNSHIP', 'FELLOWSHIP', 'COMPETITION'],
+  sustainability:     ['VOLUNTEERING', 'RESEARCH', 'EXCHANGE', 'FELLOWSHIP'],
+  marketing:          ['INTERNSHIP', 'STAGE', 'EVENT', 'CONFERENCE'],
+  law_policy:         ['FELLOWSHIP', 'COMPETITION', 'CONFERENCE', 'EXCHANGE'],
+  healthcare:         ['RESEARCH', 'VOLUNTEERING', 'EXCHANGE', 'INTERNSHIP'],
 };
 
-// Cluster → preferred opportunity types (25 pts)
-const CLUSTER_TYPE_MAP: Record<string, string[]> = {
-  Analista: ['INTERNSHIP', 'STAGE'],
-  Creativo: ['EXTRACURRICULAR', 'EVENT'],
-  Leader: ['FELLOWSHIP', 'INTERNSHIP'],
-  Imprenditore: ['FELLOWSHIP', 'STAGE'],
-  Sociale: ['EXTRACURRICULAR', 'EVENT'],
-  Explorer: ['STAGE', 'EVENT', 'INTERNSHIP'],
+// Cluster tag → preferred opportunity types (ordered: first = top match)
+const CLUSTER_TYPE_MAP: Record<string, OpportunityType[]> = {
+  Analista:     ['INTERNSHIP', 'STAGE', 'RESEARCH', 'HACKATHON', 'COMPETITION'],
+  Creativo:     ['EXTRACURRICULAR', 'EVENT', 'CONFERENCE', 'BOOTCAMP'],
+  Leader:       ['FELLOWSHIP', 'INTERNSHIP', 'COMPETITION', 'CONFERENCE', 'SUMMER_PROGRAM'],
+  Imprenditore: ['FELLOWSHIP', 'STAGE', 'SUMMER_PROGRAM', 'COMPETITION', 'CONFERENCE'],
+  Sociale:      ['EXTRACURRICULAR', 'EVENT', 'VOLUNTEERING', 'EXCHANGE', 'CONFERENCE'],
+  Explorer:     ['EXCHANGE', 'SUMMER_PROGRAM', 'CONFERENCE', 'EVENT', 'RESEARCH', 'FELLOWSHIP'],
+};
+
+// ---------------------------------------------------------------------------
+// Per-type scoring profiles
+// ---------------------------------------------------------------------------
+
+interface ScoringProfile {
+  // Base dimension weights — their sum + bonus sum = 100 for a perfect match
+  interest: number;
+  cluster: number;
+  gpa: number;
+  english: number;
+  relocate: number;
+  year: number;
+  // Adjustment bonuses (awarded if criteria met; 0 otherwise)
+  fieldMatchBonus: number;      // user field of study ∈ eligibleFields
+  costBonus: number;            // cost == 0 || hasScholarship
+  deadlineUrgencyBonus: number; // deadline within 14 days (don't miss it)
+  locationMatchBonus: number;   // reserved V2 — always 0 until user.country available
+}
+
+// Each profile: base weights + bonus maxima sum to 100
+const SCORING_PROFILES: Record<OpportunityType, ScoringProfile> = {
+  //                        interest cluster gpa english relocate year | field cost  dead  loc
+  STAGE:          { interest:30, cluster:25, gpa:15, english:15, relocate:10, year:5,  fieldMatchBonus:0,  costBonus:0,  deadlineUrgencyBonus:0,  locationMatchBonus:0  },
+  INTERNSHIP:     { interest:30, cluster:25, gpa:15, english:15, relocate:10, year:5,  fieldMatchBonus:0,  costBonus:0,  deadlineUrgencyBonus:0,  locationMatchBonus:0  },
+  EXTRACURRICULAR:{ interest:25, cluster:25, gpa:5,  english:10, relocate:10, year:5,  fieldMatchBonus:5,  costBonus:5,  deadlineUrgencyBonus:0,  locationMatchBonus:10 },
+  EVENT:          { interest:20, cluster:10, gpa:0,  english:5,  relocate:10, year:0,  fieldMatchBonus:10, costBonus:15, deadlineUrgencyBonus:10, locationMatchBonus:20 },
+  FELLOWSHIP:     { interest:20, cluster:20, gpa:20, english:20, relocate:10, year:5,  fieldMatchBonus:0,  costBonus:0,  deadlineUrgencyBonus:5,  locationMatchBonus:0  },
+  SUMMER_PROGRAM: { interest:15, cluster:15, gpa:5,  english:15, relocate:10, year:5,  fieldMatchBonus:15, costBonus:15, deadlineUrgencyBonus:0,  locationMatchBonus:5  },
+  HACKATHON:      { interest:15, cluster:10, gpa:0,  english:10, relocate:5,  year:0,  fieldMatchBonus:20, costBonus:15, deadlineUrgencyBonus:15, locationMatchBonus:10 },
+  COMPETITION:    { interest:15, cluster:15, gpa:5,  english:15, relocate:10, year:5,  fieldMatchBonus:15, costBonus:5,  deadlineUrgencyBonus:10, locationMatchBonus:5  },
+  EXCHANGE:       { interest:10, cluster:15, gpa:10, english:25, relocate:15, year:10, fieldMatchBonus:5,  costBonus:0,  deadlineUrgencyBonus:10, locationMatchBonus:0  },
+  VOLUNTEERING:   { interest:10, cluster:20, gpa:0,  english:15, relocate:15, year:5,  fieldMatchBonus:10, costBonus:5,  deadlineUrgencyBonus:5,  locationMatchBonus:15 },
+  CONFERENCE:     { interest:20, cluster:10, gpa:0,  english:10, relocate:10, year:0,  fieldMatchBonus:10, costBonus:15, deadlineUrgencyBonus:5,  locationMatchBonus:20 },
+  BOOTCAMP:       { interest:20, cluster:10, gpa:5,  english:10, relocate:10, year:5,  fieldMatchBonus:15, costBonus:15, deadlineUrgencyBonus:0,  locationMatchBonus:10 },
+  RESEARCH:       { interest:15, cluster:10, gpa:25, english:20, relocate:10, year:0,  fieldMatchBonus:15, costBonus:0,  deadlineUrgencyBonus:5,  locationMatchBonus:0  },
 };
 
 /**
- * Original static scoring function (preserved for backward compatibility).
+ * Profile-aware scoring function. Uses per-OpportunityType weight profiles
+ * so that GPA matters for fellowships/research but not hackathons, field
+ * match matters for summer schools but not generic internships, etc.
+ *
+ * Score range: 0–100.
  */
 export function scoreOpportunity(
   profile: UserProfile,
-  user: Pick<User, 'gpa' | 'englishLevel' | 'willingToRelocate' | 'yearOfStudy'>,
-  opportunity: Opportunity
+  user: Pick<User, 'gpa' | 'englishLevel' | 'willingToRelocate' | 'yearOfStudy' | 'courseOfStudy'>,
+  opportunity: Opportunity,
 ): number {
+  const p = SCORING_PROFILES[opportunity.type] ?? SCORING_PROFILES.INTERNSHIP;
   let score = 0;
 
-  // 1. Primary interest → opportunity type (30 pts)
+  // 1. Primary interest → opportunity type
   const interest = profile.primaryInterest || 'general';
-  const preferredTypes = INTEREST_TYPE_MAP[interest] || INTEREST_TYPE_MAP.general;
+  const preferredTypes = INTEREST_TYPE_MAP[interest] ?? INTEREST_TYPE_MAP.general;
   if (preferredTypes[0] === opportunity.type) {
-    score += 30;
+    score += p.interest;
   } else if (preferredTypes.includes(opportunity.type)) {
-    score += 20;
+    score += Math.round(p.interest * 0.65);
   } else {
-    score += 5;
+    score += Math.round(p.interest * 0.15);
   }
 
-  // 2. Cluster tag → opportunity type (25 pts)
+  // 2. Cluster tag → opportunity type
   const cluster = profile.clusterTag || 'Explorer';
-  const clusterTypes = CLUSTER_TYPE_MAP[cluster] || CLUSTER_TYPE_MAP.Explorer;
+  const clusterTypes = CLUSTER_TYPE_MAP[cluster] ?? CLUSTER_TYPE_MAP.Explorer;
   if (clusterTypes[0] === opportunity.type) {
-    score += 25;
+    score += p.cluster;
   } else if (clusterTypes.includes(opportunity.type)) {
-    score += 15;
+    score += Math.round(p.cluster * 0.60);
   } else {
-    score += 5;
+    score += Math.round(p.cluster * 0.15);
   }
 
-  // 3. GPA sufficient (15 pts)
-  if (!opportunity.minGpa) {
-    score += 15;
-  } else if (user.gpa && GPA_ORDER[user.gpa] >= GPA_ORDER[opportunity.minGpa]) {
-    score += 15;
-  } else if (user.gpa && GPA_ORDER[user.gpa] === GPA_ORDER[opportunity.minGpa] - 1) {
-    score += 8;
+  // 3. GPA sufficient
+  if (p.gpa > 0) {
+    if (!opportunity.minGpa) {
+      score += p.gpa;
+    } else if (user.gpa && GPA_ORDER[user.gpa] >= GPA_ORDER[opportunity.minGpa]) {
+      score += p.gpa;
+    } else if (user.gpa && GPA_ORDER[user.gpa] === GPA_ORDER[opportunity.minGpa] - 1) {
+      score += Math.round(p.gpa * 0.5);
+    }
   }
 
-  // 4. English level (15 pts)
-  if (!opportunity.requiredEnglishLevel) {
-    score += 15;
-  } else if (user.englishLevel && ENGLISH_ORDER[user.englishLevel] >= ENGLISH_ORDER[opportunity.requiredEnglishLevel]) {
-    score += 15;
-  } else if (user.englishLevel && ENGLISH_ORDER[user.englishLevel] === ENGLISH_ORDER[opportunity.requiredEnglishLevel] - 1) {
-    score += 8;
+  // 4. English level
+  if (p.english > 0) {
+    if (!opportunity.requiredEnglishLevel) {
+      score += p.english;
+    } else if (user.englishLevel && ENGLISH_ORDER[user.englishLevel] >= ENGLISH_ORDER[opportunity.requiredEnglishLevel]) {
+      score += p.english;
+    } else if (user.englishLevel && ENGLISH_ORDER[user.englishLevel] === ENGLISH_ORDER[opportunity.requiredEnglishLevel] - 1) {
+      score += Math.round(p.english * 0.5);
+    }
   }
 
-  // 5. Willing to relocate (10 pts)
-  if (!opportunity.isAbroad && !opportunity.location) {
-    score += 10;
-  } else if (opportunity.isRemote) {
-    score += 10;
-  } else if (user.willingToRelocate === 'YES') {
-    score += 10;
-  } else if (user.willingToRelocate === 'MAYBE') {
-    score += 5;
+  // 5. Relocation willingness
+  if (p.relocate > 0) {
+    if (!opportunity.isAbroad && !opportunity.location) {
+      score += p.relocate;
+    } else if (opportunity.isRemote || (opportunity as any).format === 'ONLINE') {
+      score += p.relocate;
+    } else if (user.willingToRelocate === 'YES') {
+      score += p.relocate;
+    } else if (user.willingToRelocate === 'MAYBE') {
+      score += Math.round(p.relocate * 0.5);
+    }
   }
 
-  // 6. Year of study accessibility (5 pts)
-  if (!user.yearOfStudy || user.yearOfStudy >= 2) {
-    score += 5;
-  } else {
-    score += 2;
+  // 6. Year of study accessibility
+  if (p.year > 0) {
+    const opp = opportunity as any;
+    const yearOk =
+      !user.yearOfStudy ||
+      (!opp.minYearOfStudy && !opp.maxYearOfStudy) ||
+      ((!opp.minYearOfStudy || user.yearOfStudy >= opp.minYearOfStudy) &&
+       (!opp.maxYearOfStudy || user.yearOfStudy <= opp.maxYearOfStudy));
+    if (yearOk) {
+      score += p.year;
+    } else {
+      score += Math.round(p.year * 0.3);
+    }
   }
+
+  // 7. Field of study bonus
+  if (p.fieldMatchBonus > 0) {
+    const opp = opportunity as any;
+    const eligibleFields: FieldOfStudy[] = opp.eligibleFields ?? [];
+    if (eligibleFields.length === 0) {
+      // No restriction → full bonus
+      score += p.fieldMatchBonus;
+    } else if (user.courseOfStudy) {
+      const userField = normalizeFieldToEnum(user.courseOfStudy);
+      if (userField === 'ANY' || eligibleFields.includes(userField) || eligibleFields.includes('ANY')) {
+        score += p.fieldMatchBonus;
+      }
+    }
+  }
+
+  // 8. Cost / scholarship bonus (free or covered = good match for students)
+  if (p.costBonus > 0) {
+    const opp = opportunity as any;
+    const isFreeOrCovered = opp.cost == null || opp.cost === 0 || opp.hasScholarship;
+    if (isFreeOrCovered) score += p.costBonus;
+  }
+
+  // 9. Deadline urgency bonus (closing within 14 days = surface it now)
+  if (p.deadlineUrgencyBonus > 0 && opportunity.deadline) {
+    const daysUntil = (opportunity.deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+    if (daysUntil > 0 && daysUntil <= 14) score += p.deadlineUrgencyBonus;
+  }
+
+  // 10. Location match bonus — V2 (requires user.country, skipped for now)
 
   return Math.min(score, 100);
 }
@@ -179,7 +278,7 @@ function computeFeedbackBoost(
  */
 export function scoreOpportunityWithFeedback(
   profile: UserProfile,
-  user: Pick<User, 'gpa' | 'englishLevel' | 'willingToRelocate' | 'yearOfStudy'>,
+  user: Pick<User, 'gpa' | 'englishLevel' | 'willingToRelocate' | 'yearOfStudy' | 'courseOfStudy'>,
   opportunity: Opportunity,
   interactions: UserInteraction[],
 ): number {
@@ -338,19 +437,63 @@ export async function getHybridMatchedOpportunities(
 }
 
 function getMatchReason(profile: any, user: any, opp: any): string {
-  const reasons: string[] = [];
+  const reasons: { priority: number; text: string }[] = [];
+
+  // Field match
+  if (opp.eligibleFields?.length > 0 && user.courseOfStudy) {
+    const userField = normalizeFieldToEnum(user.courseOfStudy);
+    if (opp.eligibleFields.includes(userField)) {
+      reasons.push({ priority: 1, text: 'Aperto al tuo percorso di studi' });
+    }
+  }
+
+  // Free / scholarship
+  if (opp.hasScholarship) reasons.push({ priority: 2, text: 'Borsa di studio disponibile' });
+  if (opp.cost === 0) reasons.push({ priority: 2, text: 'Partecipazione gratuita' });
+
+  // Deadline urgency
+  if (opp.deadline) {
+    const daysUntil = (new Date(opp.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+    if (daysUntil > 0 && daysUntil <= 7) {
+      reasons.push({ priority: 1, text: `Scade tra ${Math.ceil(daysUntil)} giorni` });
+    }
+  }
+
+  // Type-specific reasons
+  const typeReasons: Partial<Record<string, string>> = {
+    HACKATHON:      'Ottimo per il tuo profilo tecnico',
+    RESEARCH:       'In linea con i tuoi interessi di ricerca',
+    FELLOWSHIP:     'Perfetto per accelerare il tuo percorso',
+    EXCHANGE:       'Esperienza internazionale consigliata per te',
+    SUMMER_PROGRAM: 'Programma estivo in linea con i tuoi interessi',
+    COMPETITION:    'Metti alla prova le tue competenze',
+    CONFERENCE:     'Espandi la tua rete professionale',
+    VOLUNTEERING:   'In linea con i tuoi valori',
+    BOOTCAMP:       'Accelera le tue competenze pratiche',
+  };
+  if (typeReasons[opp.type]) {
+    reasons.push({ priority: 3, text: typeReasons[opp.type]! });
+  }
+
+  // Interest/cluster generic reasons (lower priority)
   if (profile.primaryInterest === 'tech' && (opp.type === 'INTERNSHIP' || opp.type === 'STAGE')) {
-    reasons.push('In linea con i tuoi interessi tech');
+    reasons.push({ priority: 4, text: 'In linea con i tuoi interessi tech' });
   }
   if (profile.primaryInterest === 'business' && opp.type === 'FELLOWSHIP') {
-    reasons.push('Perfetto per il tuo percorso imprenditoriale');
+    reasons.push({ priority: 4, text: 'Perfetto per il tuo percorso imprenditoriale' });
   }
   if (profile.clusterTag === 'Creativo' && opp.type === 'EXTRACURRICULAR') {
-    reasons.push('Adatto al tuo profilo creativo');
+    reasons.push({ priority: 4, text: 'Adatto al tuo profilo creativo' });
   }
   if (opp.isRemote && user.willingToRelocate === 'NO') {
-    reasons.push('Disponibile in remoto');
+    reasons.push({ priority: 3, text: 'Disponibile in remoto' });
   }
-  if (reasons.length === 0) reasons.push('Opportunità consigliata per te');
-  return reasons.join(' · ');
+
+  if (reasons.length === 0) return 'Opportunità consigliata per te';
+
+  return reasons
+    .sort((a, b) => a.priority - b.priority)
+    .slice(0, 2)
+    .map(r => r.text)
+    .join(' · ');
 }

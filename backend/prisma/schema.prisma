@@ -33,6 +33,39 @@ enum OpportunityType {
   EXTRACURRICULAR
   EVENT
   FELLOWSHIP
+  SUMMER_PROGRAM
+  HACKATHON
+  COMPETITION
+  EXCHANGE
+  VOLUNTEERING
+  CONFERENCE
+  BOOTCAMP
+  RESEARCH
+}
+
+enum OpportunityFormat {
+  ONLINE
+  IN_PERSON
+  HYBRID
+}
+
+enum FieldOfStudy {
+  COMPUTER_SCIENCE
+  ENGINEERING
+  MEDICINE
+  LIFE_SCIENCES
+  PHYSICAL_SCIENCES
+  MATHEMATICS
+  ECONOMICS
+  BUSINESS
+  LAW
+  POLITICAL_SCIENCE
+  HUMANITIES
+  DESIGN
+  ARCHITECTURE
+  PSYCHOLOGY
+  EDUCATION
+  ANY
 }
 
 enum CourseType {
@@ -184,8 +217,34 @@ model Opportunity {
   source               String?         // e.g. "EURES", "Stage4eu" — CC BY 4.0 attribution
   sourceId             String?         // e.g. "eures-12345" — null = manual/seed
   lastSyncedAt         DateTime?       // last time this record was refreshed by import
-  dedupKey             String?         // normalized hash of title+company — used to skip cross-source duplicates
+  dedupKey             String?         // normalized hash of title+company/organizer — used to skip cross-source duplicates
   embedding            Unsupported("vector(384)")?
+
+  // --- Time / duration (events, summer school, hackathons) ---
+  startDate            DateTime?
+  endDate              DateTime?
+  durationDays         Int?
+
+  // --- Format + location detail ---
+  format               OpportunityFormat?
+  city                 String?
+  country              String?         // ISO-3166-1 alpha-2 (e.g. "IT", "DE")
+
+  // --- Cost / compensation ---
+  cost                 Int?            // EUR; 0 = free, null = unknown
+  hasScholarship       Boolean         @default(false)
+  scholarshipDetails   String?
+  stipend              Int?            // EUR/month offered to participant
+
+  // --- Structured prerequisites ---
+  eligibleFields       FieldOfStudy[]  @default([])  // empty = any field
+  minYearOfStudy       Int?
+  maxYearOfStudy       Int?
+  requiredLanguages    Json            @default("[]") // [{lang:"en",level:"B2"}]
+
+  // --- Provenance ---
+  organizer            String?         // for non-company events: "TEDxMilano", "IFMSA Italy"
+  verified             Boolean         @default(false) // manually curated/verified
 
   @@index([universityId])
   @@index([type])
@@ -193,6 +252,11 @@ model Opportunity {
   @@index([sourceId])
   @@index([lastSyncedAt])
   @@index([dedupKey])
+  @@index([startDate])
+  @@index([format])
+  @@index([country])
+  @@index([type, deadline])
+  @@index([type, startDate])
 }
 
 model University {

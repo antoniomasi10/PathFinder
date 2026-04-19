@@ -5,7 +5,7 @@
  * were diverging (some covered Italy, others didn't; some handled `praktikum`,
  * others didn't). Keep this file authoritative.
  */
-import { OpportunityType } from '@prisma/client';
+import { FieldOfStudy, OpportunityType } from '@prisma/client';
 import { Agent, setGlobalDispatcher } from 'undici';
 import { logger } from '../../utils/logger';
 
@@ -111,28 +111,108 @@ export function extractCountryCode(location: string): string {
 // ---------------------------------------------------------------------------
 
 /**
- * Maps a job title (and optional job_types array from the source) to our
- * OpportunityType enum. Covers EN/IT/DE/FR terminology.
+ * Maps a job/event title (and optional type tags from source) to our OpportunityType enum.
+ * Covers EN/IT/DE/FR terminology. More specific types are checked first to avoid
+ * false positives (e.g. "summer intern" should resolve to INTERNSHIP, not SUMMER_PROGRAM).
  */
 export function mapOpportunityType(title: string, jobTypes?: string[] | null): OpportunityType {
-  if (jobTypes?.some(jt => jt.toLowerCase() === 'internship')) return 'INTERNSHIP';
+  const jt = jobTypes?.map(j => j.toLowerCase()) ?? [];
   const t = title.toLowerCase();
 
-  // Italian / English internship terms → INTERNSHIP
+  // --- Source-declared type tags (highest priority) ---
+  if (jt.includes('internship')) return 'INTERNSHIP';
+  if (jt.includes('hackathon')) return 'HACKATHON';
+  if (jt.includes('volunteer') || jt.includes('volunteering')) return 'VOLUNTEERING';
+  if (jt.includes('exchange')) return 'EXCHANGE';
+
+  // --- Hackathon / competition ---
+  if (t.includes('hackathon') || t.includes('hackatlon')) return 'HACKATHON';
+  if (t.includes('datathon') || t.includes('codefest')) return 'HACKATHON';
+  if (t.includes('case competition') || t.includes('business competition') ||
+      t.includes('pitch competition') || t.includes('startup competition') ||
+      t.includes('formula student') || t.includes('formula sae') ||
+      t.includes('igem') || t.includes('nasa space apps') ||
+      t.includes('imagine cup') || t.includes('premio') ||
+      t.includes('award') || t.includes('challenge')) return 'COMPETITION';
+
+  // --- Research program ---
+  if (t.includes('research program') || t.includes('research fellowship') ||
+      t.includes('summer research') || t.includes('research stay') ||
+      t.includes('research scholar') || t.includes('research internship') ||
+      t.includes('cern summer') || t.includes('laboratory placement')) return 'RESEARCH';
+
+  // --- Summer program / bootcamp (check before "intern" to avoid swallowing "summer intern") ---
+  if ((t.includes('summer school') || t.includes('scuola estiva') ||
+       t.includes('summer academy') || t.includes('winter school')) &&
+      !t.includes('intern')) return 'SUMMER_PROGRAM';
+  if (t.includes('summer program') && !t.includes('intern')) return 'SUMMER_PROGRAM';
+  if (t.includes('bootcamp') || t.includes('boot camp') ||
+      t.includes('intensive course') || t.includes('coding course')) return 'BOOTCAMP';
+
+  // --- Conference / event ---
+  if (t.includes('conference') || t.includes('conferenza') ||
+      t.includes('congresso') || t.includes('symposium') ||
+      t.includes('forum') || t.includes('summit') && !t.includes('intern')) return 'CONFERENCE';
+  if (t.includes('tedx') || t.includes('ted talk') || t.includes('meetup') ||
+      t.includes('networking event') || t.includes('open day')) return 'EVENT';
+
+  // --- Exchange / volunteer ---
+  if (t.includes('erasmus') || t.includes('exchange program') ||
+      t.includes('aiesec') || t.includes('ifmsa') ||
+      t.includes('scambio') || t.includes('rotary youth') ||
+      t.includes('youth exchange') || t.includes('cultural exchange')) return 'EXCHANGE';
+  if (t.includes('volunteer') || t.includes('volontariato') ||
+      t.includes('european solidarity') || t.includes('service civile') ||
+      t.includes('corps') || t.includes('corps')) return 'VOLUNTEERING';
+
+  // --- Internship / stage (EN/IT/DE/FR) ---
   if (t.includes('intern') || t.includes('tirocinio') || t.includes('traineeship')) return 'INTERNSHIP';
-
-  // French / Italian "stage" → STAGE
   if (t.includes('stage') || t.includes('stagiaire')) return 'STAGE';
-
-  // German / FR / DE categories → STAGE
   if (t.includes('praktikum') || t.includes('praktikant')) return 'STAGE';
   if (t.includes('trainee') || t.includes('werkstudent')) return 'STAGE';
   if (t.includes('apprenti') || t.includes('alternance') ||
       t.includes('duales studium') || t.includes('co-op')) return 'STAGE';
 
-  if (t.includes('graduate') || t.includes('fellow')) return 'FELLOWSHIP';
+  // --- Fellowship (graduate programs, named fellowships) ---
+  if (t.includes('fellow') || t.includes('graduate program') ||
+      t.includes('graduate scheme') || t.includes('leadership program') ||
+      t.includes('silicon valley') || t.includes('scholar')) return 'FELLOWSHIP';
 
   return 'INTERNSHIP';
+}
+
+// ---------------------------------------------------------------------------
+// FieldOfStudy normalizer
+// ---------------------------------------------------------------------------
+
+const FIELD_KEYWORD_MAP: Array<{ keywords: string[]; field: FieldOfStudy }> = [
+  { keywords: ['computer science', 'informatica', 'software', 'computing', 'data science', 'ai ', 'machine learning', 'cybersecurity', 'information technology', 'it '], field: 'COMPUTER_SCIENCE' },
+  { keywords: ['engineer', 'ingegneria', 'mechanical', 'electrical', 'civil', 'aerospace', 'chemical engineering', 'biomedical engineering', 'industrial engineering'], field: 'ENGINEERING' },
+  { keywords: ['medicine', 'medical', 'medicina', 'clinical', 'surgery', 'pharmacy', 'dental', 'nursing', 'healthcare professional'], field: 'MEDICINE' },
+  { keywords: ['biology', 'biologia', 'biochemistry', 'biotech', 'biotechnology', 'life science', 'genetics', 'ecology', 'microbiology'], field: 'LIFE_SCIENCES' },
+  { keywords: ['physics', 'fisica', 'chemistry', 'chimica', 'astronomy', 'geoscience', 'material science'], field: 'PHYSICAL_SCIENCES' },
+  { keywords: ['mathematics', 'matematica', 'statistics', 'statistica', 'actuarial', 'quantitative'], field: 'MATHEMATICS' },
+  { keywords: ['economics', 'economia', 'econom', 'finance', 'finanza', 'banking', 'accounting'], field: 'ECONOMICS' },
+  { keywords: ['business', 'management', 'marketing', 'mba', 'bba', 'entrepreneurship', 'strategy', 'commerce'], field: 'BUSINESS' },
+  { keywords: ['law', 'legge', 'giurisprudenza', 'legal', 'jurisprudence', 'diritto'], field: 'LAW' },
+  { keywords: ['political science', 'scienze politiche', 'politics', 'international relations', 'policy', 'diplomacy', 'public administration'], field: 'POLITICAL_SCIENCE' },
+  { keywords: ['humanities', 'lettere', 'literature', 'history', 'philosophy', 'linguistics', 'language', 'arts', 'cultura'], field: 'HUMANITIES' },
+  { keywords: ['design', 'graphic', 'ux', 'ui ', 'fashion', 'product design', 'architecture interior', 'visual'], field: 'DESIGN' },
+  { keywords: ['architecture', 'architettura', 'urban planning', 'urbanistica'], field: 'ARCHITECTURE' },
+  { keywords: ['psychology', 'psicologia', 'neuroscience', 'behavioral', 'cognitive'], field: 'PSYCHOLOGY' },
+  { keywords: ['education', 'pedagogia', 'teaching', 'pedagogy', 'training'], field: 'EDUCATION' },
+];
+
+/**
+ * Maps a free-text field-of-study string (from scraper sources) to a FieldOfStudy enum value.
+ * Returns 'ANY' if no match — callers should treat ANY as "open to all disciplines".
+ */
+export function normalizeFieldToEnum(raw: string): FieldOfStudy {
+  const r = raw.toLowerCase();
+  for (const { keywords, field } of FIELD_KEYWORD_MAP) {
+    if (keywords.some(kw => r.includes(kw))) return field;
+  }
+  return 'ANY';
 }
 
 // ---------------------------------------------------------------------------
@@ -147,10 +227,13 @@ export function mapOpportunityType(title: string, jobTypes?: string[] | null): O
  * (lowercase, strip punctuation/role-decoration) we can detect and skip the
  * cross-source duplicates at insert time.
  *
+ * For events/hackathons without a company, pass `organizer` as the second arg.
+ *
  * Returns null if inputs are too short/empty to produce a meaningful key —
  * callers should NOT use that as a dedup signal (treat as "no match").
  */
-export function buildDedupKey(title: string, company: string | null | undefined): string | null {
+export function buildDedupKey(title: string, companyOrOrganizer: string | null | undefined): string | null {
+  const company = companyOrOrganizer;
   const norm = (s: string) =>
     s.toLowerCase()
       .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')      // drop accents
@@ -285,4 +368,59 @@ export async function runWithConcurrency<T>(
     }
   });
   await Promise.all(runners);
+}
+
+// ---------------------------------------------------------------------------
+// RSS feed parser (lightweight, no external dependency)
+// ---------------------------------------------------------------------------
+
+export interface RSSItem {
+  title: string;
+  link: string;
+  pubDate: Date | null;
+  description: string;   // stripped plain text
+  rawHtml: string;       // raw HTML from description/content:encoded for further parsing
+  categories: string[];
+  guid: string;
+}
+
+/**
+ * Parses an RSS 2.0 feed XML string into structured items.
+ * Handles CDATA wrappers and both <description> and <content:encoded>.
+ */
+export function parseRSSFeed(xml: string): RSSItem[] {
+  const items: RSSItem[] = [];
+  const blocks = xml.match(/<item>([\s\S]*?)<\/item>/g) ?? [];
+
+  for (const block of blocks) {
+    const get = (tag: string): string => {
+      const re = new RegExp(`<${tag}[^>]*?>([\\s\\S]*?)<\\/${tag}>`, 'i');
+      const m = block.match(re);
+      if (!m) return '';
+      return m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').trim();
+    };
+
+    const title = get('title');
+    const link = get('link') || get('guid');
+    if (!title || !link) continue;
+
+    const pubDateStr = get('pubDate');
+    const rawHtml = get('content:encoded') || get('description');
+    const categories: string[] = [];
+    for (const m of block.matchAll(/<category[^>]*?>([^<]+)<\/category>/gi)) {
+      categories.push(m[1].trim());
+    }
+
+    items.push({
+      title,
+      link,
+      pubDate: pubDateStr ? new Date(pubDateStr) : null,
+      description: stripHtml(rawHtml),
+      rawHtml,
+      categories,
+      guid: get('guid') || link,
+    });
+  }
+
+  return items;
 }

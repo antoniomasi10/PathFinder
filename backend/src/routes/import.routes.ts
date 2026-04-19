@@ -9,7 +9,12 @@ import { importUniversities, importCourses } from '../services/import/mur.import
 import { importOpportunities } from '../services/import/eures.import';
 import { importEUOpportunities } from '../services/import/eu-youth.import';
 import { importAlmaLaureaStats } from '../services/import/almalaurea.import';
+import { importOpportunityDeskOpportunities } from '../services/import/opportunity-desk.import';
+import { importHackClubOpportunities } from '../services/import/hackclub.import';
+import { importDevpostOpportunities } from '../services/import/devpost.import';
+import { importBestCoursesOpportunities } from '../services/import/best-courses.import';
 import { runCleanup, getDataFreshnessStats } from '../services/import/cleanup.service';
+import { upsertManualOpportunity } from '../services/import/manual.import';
 
 const router = Router();
 
@@ -50,6 +55,28 @@ router.post('/eu-youth', ...adminAuth, async (_req: Request, res: Response) => {
 router.post('/almalaurea', ...adminAuth, async (_req: Request, res: Response) => {
   try { res.json(await importAlmaLaureaStats()); }
   catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/import/opportunity-desk
+router.post('/opportunity-desk', ...adminAuth, async (_req: Request, res: Response) => {
+  try { res.json(await importOpportunityDeskOpportunities()); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/import/hackclub
+router.post('/hackclub', ...adminAuth, async (_req: Request, res: Response) => {
+  try { res.json(await importHackClubOpportunities()); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// Devpost: DISABLED — ToS prohibits automated access. Obtain permission before re-enabling.
+
+// BEST Courses: DISABLED — contact info@best.eu.org for data usage permission before re-enabling.
+
+// POST /api/import/manual — upsert a single curated opportunity (verified=true)
+router.post('/manual', ...adminAuth, async (req: Request, res: Response) => {
+  try { res.json(await upsertManualOpportunity(req.body)); }
+  catch (err: any) { res.status(400).json({ error: err.message }); }
 });
 
 // POST /api/import/cleanup

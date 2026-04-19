@@ -10,7 +10,7 @@
  *   The weekly cleanup job deletes rows with expiresAt < now, so expired
  *   postings disappear from users' feeds within a week.
  */
-import { OpportunityType } from '@prisma/client';
+import { FieldOfStudy, OpportunityFormat, OpportunityType } from '@prisma/client';
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { buildDedupKey } from './utils';
@@ -28,9 +28,27 @@ export interface OpportunityRecord {
   tags: string[];
   postedAt: Date;
   expiresAt?: Date | null;
+  deadline?: Date | null;
   source: string;
   sourceId: string;
   lastSyncedAt: Date;
+  // event/experience fields (all optional — existing importers leave undefined)
+  organizer?: string | null;
+  startDate?: Date | null;
+  endDate?: Date | null;
+  durationDays?: number | null;
+  format?: OpportunityFormat | null;
+  city?: string | null;
+  country?: string | null;
+  cost?: number | null;
+  hasScholarship?: boolean;
+  scholarshipDetails?: string | null;
+  stipend?: number | null;
+  eligibleFields?: FieldOfStudy[];
+  minYearOfStudy?: number | null;
+  maxYearOfStudy?: number | null;
+  requiredLanguages?: object[];
+  verified?: boolean;
 }
 
 const UPDATE_CHUNK_SIZE = 100;
@@ -43,7 +61,7 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
   if (records.length === 0) return;
 
   // Attach dedup key to each record so updates also refresh it on older rows.
-  const enriched = records.map(r => ({ ...r, dedupKey: buildDedupKey(r.title, r.company) }));
+  const enriched = records.map(r => ({ ...r, dedupKey: buildDedupKey(r.title, r.company ?? r.organizer) }));
 
   const ids = enriched.map(r => r.id);
   const existing = new Set(
@@ -104,10 +122,27 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
         tags: r.tags,
         postedAt: r.postedAt,
         expiresAt: r.expiresAt ?? null,
+        deadline: r.deadline ?? null,
         source: r.source,
         sourceId: r.sourceId,
         lastSyncedAt: r.lastSyncedAt,
         dedupKey: r.dedupKey,
+        organizer: r.organizer ?? null,
+        startDate: r.startDate ?? null,
+        endDate: r.endDate ?? null,
+        durationDays: r.durationDays ?? null,
+        format: r.format ?? null,
+        city: r.city ?? null,
+        country: r.country ?? null,
+        cost: r.cost ?? null,
+        hasScholarship: r.hasScholarship ?? false,
+        scholarshipDetails: r.scholarshipDetails ?? null,
+        stipend: r.stipend ?? null,
+        eligibleFields: r.eligibleFields ?? [],
+        minYearOfStudy: r.minYearOfStudy ?? null,
+        maxYearOfStudy: r.maxYearOfStudy ?? null,
+        requiredLanguages: r.requiredLanguages ?? [],
+        verified: r.verified ?? false,
       })),
       skipDuplicates: true,
     });
@@ -130,10 +165,27 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
             type: r.type,
             tags: r.tags,
             expiresAt: r.expiresAt ?? null,
+            deadline: r.deadline ?? null,
             source: r.source,
             sourceId: r.sourceId,
             lastSyncedAt: r.lastSyncedAt,
             dedupKey: r.dedupKey,
+            organizer: r.organizer ?? null,
+            startDate: r.startDate ?? null,
+            endDate: r.endDate ?? null,
+            durationDays: r.durationDays ?? null,
+            format: r.format ?? null,
+            city: r.city ?? null,
+            country: r.country ?? null,
+            cost: r.cost ?? null,
+            hasScholarship: r.hasScholarship ?? false,
+            scholarshipDetails: r.scholarshipDetails ?? null,
+            stipend: r.stipend ?? null,
+            eligibleFields: r.eligibleFields ?? [],
+            minYearOfStudy: r.minYearOfStudy ?? null,
+            maxYearOfStudy: r.maxYearOfStudy ?? null,
+            requiredLanguages: r.requiredLanguages ?? [],
+            verified: r.verified ?? false,
           },
         }),
       ),
