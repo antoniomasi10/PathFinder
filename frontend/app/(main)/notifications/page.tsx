@@ -18,6 +18,23 @@ interface Notification {
   linkTo?: string;
   icon?: string;
   createdAt: string;
+  data?: Record<string, any>;
+}
+
+function resolveNavTarget(notif: Notification): string | null {
+  const { type, data, linkTo } = notif;
+  if (type === 'OPPORTUNITY_DEADLINE' || type === 'NEW_OPPORTUNITY') {
+    const id = data?.opportunityId;
+    if (id) {
+      sessionStorage.setItem('openSavedOpp', id);
+      return '/profile';
+    }
+  }
+  if (type === 'POST_LIKE' || type === 'POST_COMMENT' || type === 'COMMENT_REPLY') {
+    const id = data?.postId;
+    if (id) return `/networking?post=${id}`;
+  }
+  return linkTo ?? null;
 }
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -99,9 +116,8 @@ export default function NotificationsPage() {
       setNotifications((prev) => prev.map((n) => n.id === notif.id ? { ...n, isRead: true } : n));
       refresh();
     }
-    if (notif.linkTo) {
-      router.push(notif.linkTo);
-    }
+    const target = resolveNavTarget(notif);
+    if (target) router.push(target);
   };
 
   const markAllRead = async () => {

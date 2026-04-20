@@ -15,7 +15,13 @@ const router = Router();
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    // Use personalized feed (falls back to chronological if no profile)
+    const q = (req.query.q as string | undefined)?.trim();
+    if (q) {
+      const sortBy = req.query.sortBy === 'likes' ? 'likes' : 'recent';
+      const posts = await postService.searchPosts(q, page, 20, req.user!.userId, sortBy);
+      res.json(posts);
+      return;
+    }
     const posts = await postService.getPersonalizedPosts(page, 20, req.user!.userId);
     res.json(posts);
   } catch (err: any) {
@@ -77,7 +83,7 @@ router.post('/:id/like', authMiddleware, async (req: Request, res: Response) => 
         post.authorId,
         'POST_LIKE',
         `${liker?.name || 'Qualcuno'} ha messo mi piace al tuo post`,
-        `/networking`,
+        `/networking?post=${post.id}`,
         '\u{2764}\u{FE0F}',
         { postId: post.id, fromUserId: req.user!.userId }
       );
@@ -129,7 +135,7 @@ router.post('/:id/comments', authMiddleware, validate(createCommentSchema), asyn
         post.authorId,
         'POST_COMMENT',
         `${commenter?.name || 'Qualcuno'} ha commentato: "${preview}"`,
-        `/networking`,
+        `/networking?post=${post.id}`,
         '\u{1F4AC}',
         { postId: post.id, fromUserId: req.user!.userId }
       );
