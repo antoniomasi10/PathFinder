@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import prisma from '../lib/prisma';
-import { getHybridMatchedOpportunities, getNewOpportunities } from '../services/matchingEngine';
+import { getHybridMatchedOpportunities, getNewOpportunities, OppFilters } from '../services/matchingEngine';
 import { trackInteraction } from '../services/interaction.service';
 
 const router = Router();
@@ -13,45 +13,85 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
     const skip = (page - 1) * limit;
 
-    const { matched, new: isNew, search } = req.query;
+    const { matched, new: isNew } = req.query;
+
+    // Parse common filters
+    const filters: OppFilters = {};
+    const search = (req.query.search as string || '').trim();
+    if (search) filters.search = search;
+    const company = (req.query.company as string || '').trim();
+    if (company) filters.company = company;
+    const location = (req.query.location as string || '').trim();
+    if (location) filters.location = location;
+    if (req.query.isRemote === 'true') filters.isRemote = true;
+    if (req.query.isAbroad === 'true') filters.isAbroad = true;
+    const englishLevel = (req.query.englishLevel as string || '');
+    if (englishLevel) filters.englishLevels = englishLevel.split(',').filter(Boolean);
+    const deadline = (req.query.deadline as string || '');
+    if (deadline) filters.deadline = deadline;
+    const hasFilters = Object.keys(filters).length > 0;
 
     if (isNew === 'true') {
-      // "Nuove" tab: recency (30%) + match (30%) + novelty bonus (40%)
-      const result = await getNewOpportunities(req.user!.userId, limit, skip);
-      res.json({
-        data: result.data,
-        total: result.total,
-        page,
-        totalPages: Math.ceil(result.total / limit),
-      });
+      const result = await getNewOpportunities(req.user!.userId, limit, skip, hasFilters ? filters : {});
+      res.json({ data: result.data, total: result.total, page, totalPages: Math.ceil(result.total / limit) });
       return;
     }
 
     if (matched === 'true') {
-      // Use hybrid two-stage scoring (pgvector candidates + weighted re-ranking + feedback)
-      const result = await getHybridMatchedOpportunities(req.user!.userId, limit, skip);
-      res.json({
-        data: result.data,
-        total: result.total,
-        page,
-        totalPages: Math.ceil(result.total / limit),
-      });
+      const result = await getHybridMatchedOpportunities(req.user!.userId, limit, skip, hasFilters ? filters : {});
+      res.json({ data: result.data, total: result.total, page, totalPages: Math.ceil(result.total / limit) });
       return;
     }
 
-    // Optional search filter
-    const searchTerm = typeof search === 'string' ? search.trim() : '';
-    const hasSearch = searchTerm.length > 0;
-    const searchPattern = hasSearch ? `%${searchTerm}%` : null;
+    // Plain explore: build dynamic WHERE for raw SQL (avoids Unsupported vector column)
+    const conditions: string[] = [];
+    const params: any[] = [limit, skip];
+    let idx = 3;
 
-    // Use raw query to avoid Prisma failing on the Unsupported vector column
-    const whereClause = hasSearch
-      ? `WHERE o."title" ILIKE $3 OR o."company" ILIKE $3`
-      : '';
+    if (search) {
+      conditions.push(`(o."title" ILIKE $${idx} OR o."company" ILIKE $${idx})`);
+      params.push(`%${search}%`); idx++;
+    }
+    if (company) {
+      conditions.push(`o."company" ILIKE $${idx}`);
+      params.push(`%${company}%`); idx++;
+    }
+    if (location) {
+      conditions.push(`o."location" ILIKE $${idx}`);
+      params.push(`%${location}%`); idx++;
+    }
+    if (req.query.isRemote === 'true') { conditions.push(`o."isRemote" = $${idx}`); params.push(true); idx++; }
+    if (req.query.isAbroad === 'true') { conditions.push(`o."isAbroad" = $${idx}`); params.push(true); idx++; }
+    if (englishLevel) {
+      const levels = englishLevel.split(',').filter(Boolean);
+      if (levels.length) {
+        const placeholders = levels.map(() => `$${idx++}`).join(', ');
+        conditions.push(`o."requiredEnglishLevel" IN (${placeholders})`);
+        params.push(...levels);
+      }
+    }
+    if (deadline === '7' || deadline === '30') {
+      const now = new Date(); now.setHours(0, 0, 0, 0);
+      const end = new Date(now); end.setDate(end.getDate() + parseInt(deadline));
+      conditions.push(`(o."deadline" >= $${idx} AND o."deadline" <= $${idx + 1})`);
+      params.push(now, end); idx += 2;
+    } else if (deadline === 'month') {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      conditions.push(`(o."deadline" >= $${idx} AND o."deadline" <= $${idx + 1})`);
+      params.push(start, end); idx += 2;
+    }
 
-    const params: any[] = hasSearch
-      ? [limit, skip, searchPattern]
-      : [limit, skip];
+    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Count params exclude $1/$2 (limit/skip)
+    const countParams = params.slice(2);
+    const countConditions = conditions.map((c, i) => {
+      // Re-index from $1 for count query
+      return c.replace(/\$(\d+)/g, (_, n) => `$${parseInt(n) - 2}`);
+    });
+    const countWhere = countConditions.length ? `WHERE ${countConditions.join(' AND ')}` : '';
 
     const [opportunities, countResult] = await Promise.all([
       prisma.$queryRawUnsafe<any[]>(
@@ -68,15 +108,15 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
          LIMIT $1 OFFSET $2`,
         ...params,
       ),
-      hasSearch
+      countParams.length
         ? prisma.$queryRawUnsafe<[{ count: bigint }]>(
-            `SELECT COUNT(*)::bigint as count FROM "Opportunity" o WHERE o."title" ILIKE $1 OR o."company" ILIKE $1`,
-            searchPattern,
+            `SELECT COUNT(*)::bigint as count FROM "Opportunity" o ${countWhere}`,
+            ...countParams,
           )
         : prisma.opportunity.count(),
     ]);
 
-    const total = hasSearch
+    const total = countParams.length
       ? Number((countResult as [{ count: bigint }])[0].count)
       : (countResult as number);
 
