@@ -1,21 +1,22 @@
 /**
  * Opportunity Desk — RSS Feed Import
- * Source: https://opportunitydesk.org/feed/
+ * Source: https://opportunitydesk.org/feed/ (WordPress category feeds)
  *
  * Opportunity Desk aggregates global opportunities: fellowships, competitions,
  * research grants, scholarships, volunteering, conferences, and internships.
- * The RSS feed is public (WordPress, no auth). Content is published under
- * standard copyright with attribution expected.
+ * The RSS feeds are public (WordPress standard /feed/ endpoints, no auth).
+ * We subscribe to 8 category-specific feeds to maximize coverage and improve
+ * OpportunityType classification accuracy over the generic main feed.
  *
  * Attribution: "via Opportunity Desk (opportunitydesk.org)" — included in source field.
  *
- * Runs every 2 days (Mon/Wed/Fri) at 03:00 via scheduler.ts.
+ * Runs every 2 days (Mon/Wed/Fri) at 02:00 via scheduler.ts.
  */
 import { FieldOfStudy, OpportunityType } from '@prisma/client';
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { validateOpportunity } from './validation';
-import { batchUpsertOpportunities, OpportunityRecord } from './batch';
+import { batchUpsertOpportunities, markStaleOpportunities, OpportunityRecord } from './batch';
 import {
   stripHtml,
   extractCountryCode,
@@ -23,6 +24,7 @@ import {
   normalizeFieldToEnum,
   fetchWithRetry,
   parseRSSFeed,
+  fetchMetaDescription,
   type RSSItem,
 } from './utils';
 
@@ -30,9 +32,23 @@ import {
 // Configuration
 // ---------------------------------------------------------------------------
 
-const FEED_URL = 'https://opportunitydesk.org/feed/?posts_per_page=50';
-const FETCH_DELAY_MS = 1000;
+const BASE_URL = 'https://opportunitydesk.org';
+const FEED_DELAY_MS = 2000;   // delay between RSS feed fetches (rate-limiting)
+const ENRICH_DELAY_MS = 300;  // delay between meta-description HTTP fetches
 const SOURCE_KEY = 'opportunity-desk';
+
+// Category feeds give better type classification and ~8x more items vs main feed.
+// Each entry: [feedUrl, forcedType (or null = use category/title detection)]
+const CATEGORY_FEEDS: Array<{ url: string; forcedType: OpportunityType | null }> = [
+  { url: `${BASE_URL}/category/fellowships/feed/?posts_per_page=50`,    forcedType: 'FELLOWSHIP'   },
+  { url: `${BASE_URL}/category/scholarships/feed/?posts_per_page=50`,   forcedType: 'FELLOWSHIP'   },
+  { url: `${BASE_URL}/category/competitions/feed/?posts_per_page=50`,   forcedType: 'COMPETITION'  },
+  { url: `${BASE_URL}/category/conferences/feed/?posts_per_page=50`,    forcedType: 'CONFERENCE'   },
+  { url: `${BASE_URL}/category/internships/feed/?posts_per_page=50`,    forcedType: 'INTERNSHIP'   },
+  { url: `${BASE_URL}/category/volunteering/feed/?posts_per_page=50`,   forcedType: 'VOLUNTEERING' },
+  { url: `${BASE_URL}/category/exchange-programs/feed/?posts_per_page=50`, forcedType: 'EXCHANGE'  },
+  { url: `${BASE_URL}/category/research/feed/?posts_per_page=50`,       forcedType: 'RESEARCH'     },
+];
 
 // ---------------------------------------------------------------------------
 // Type mapping helpers
@@ -185,35 +201,45 @@ export async function importOpportunityDeskOpportunities(): Promise<{
 
   try {
     let skipped = 0;
+    let totalParsed = 0;
     const records: OpportunityRecord[] = [];
-
-    // Fetch RSS feed
-    const res = await fetchWithRetry(FEED_URL, {
-      timeoutMs: 20000,
-      headers: { 'Accept': 'application/rss+xml, application/xml, text/xml' },
-      logTag: '[OpportunityDesk]',
-    });
-
-    if (!res.ok) {
-      throw new Error(`RSS fetch failed: HTTP ${res.status}`);
-    }
-
-    const xml = await res.text();
-    const items = parseRSSFeed(xml);
-    logger.info(`[OpportunityDesk] Parsed ${items.length} RSS items`);
-
-    // Dedup: skip IDs already processed in this batch
     const batchIds = new Set<string>();
 
-    for (const item of items) {
+    // Fetch all category feeds, deduplicating by sourceId across feeds
+    for (const { url, forcedType } of CATEGORY_FEEDS) {
+      await new Promise(r => setTimeout(r, FEED_DELAY_MS));
       try {
-        await new Promise(r => setTimeout(r, FETCH_DELAY_MS));
-        processItem(item, now, records, batchIds);
+        const res = await fetchWithRetry(url, {
+          timeoutMs: 20000,
+          headers: { 'Accept': 'application/rss+xml, application/xml, text/xml' },
+          logTag: '[OpportunityDesk]',
+          retries: 2,
+        });
+
+        if (!res.ok) {
+          logger.warn(`[OpportunityDesk] Feed ${url} returned HTTP ${res.status} — skipping`);
+          continue;
+        }
+
+        const xml = await res.text();
+        const items = parseRSSFeed(xml);
+        totalParsed += items.length;
+        logger.info(`[OpportunityDesk] Feed ${url.split('/category/')[1]?.split('/')[0] ?? 'main'}: ${items.length} items`);
+
+        for (const item of items) {
+          try {
+            processItem(item, now, records, batchIds, forcedType);
+          } catch (err) {
+            logger.warn(`[OpportunityDesk] Item error "${item.title?.slice(0, 50)}": ${err}`);
+            skipped++;
+          }
+        }
       } catch (err) {
-        logger.warn(`[OpportunityDesk] Item processing error for "${item.title?.slice(0, 50)}": ${err}`);
-        skipped++;
+        logger.warn(`[OpportunityDesk] Feed fetch error for ${url}: ${err}`);
       }
     }
+
+    logger.info(`[OpportunityDesk] Parsed ${totalParsed} items across ${CATEGORY_FEEDS.length} feeds, ${records.length} unique`);
 
     // Validate and filter
     const validRecords: OpportunityRecord[] = [];
@@ -240,7 +266,26 @@ export async function importOpportunityDeskOpportunities(): Promise<{
       validRecords.push(r);
     }
 
+    // Enrich sparse descriptions with article og:description (limit to 30 to keep runtime reasonable)
+    let enriched = 0;
+    for (const r of validRecords) {
+      if (enriched >= 30) break;
+      if (r.description.length >= 200) continue;
+      const meta = await fetchMetaDescription(r.url ?? '');
+      if (meta && meta.length > r.description.length) {
+        r.description = meta.slice(0, 2000);
+        enriched++;
+      }
+      await new Promise(res => setTimeout(res, ENRICH_DELAY_MS));
+    }
+    if (enriched > 0) logger.info(`[OpportunityDesk] Enriched ${enriched} sparse descriptions`);
+
     await batchUpsertOpportunities(validRecords);
+
+    // Mark opportunities no longer appearing in any feed as expired.
+    // Threshold = 20 to avoid mass-expiry if OD has a partial outage on one run.
+    const seenIds = validRecords.map(r => r.id);
+    await markStaleOpportunities(SOURCE_KEY, seenIds, { minSeenForStale: 20 });
 
     await prisma.importLog.update({
       where: { id: log.id },
@@ -248,7 +293,7 @@ export async function importOpportunityDeskOpportunities(): Promise<{
         status: 'success',
         count: validRecords.length,
         finishedAt: new Date(),
-        metadata: { skipped, totalParsed: items.length },
+        metadata: { skipped, totalParsed, feeds: CATEGORY_FEEDS.length },
       },
     });
 
@@ -269,6 +314,7 @@ function processItem(
   now: Date,
   records: OpportunityRecord[],
   batchIds: Set<string>,
+  forcedType: OpportunityType | null = null,
 ): void {
   const sid = buildSourceId(item.link);
   if (batchIds.has(sid)) return;
@@ -276,8 +322,9 @@ function processItem(
 
   const fullText = `${item.title} ${item.description}`;
 
-  // Determine type: categories first, then title-based fallback
+  // Type resolution: forced (from category feed URL) > RSS categories > title heuristics
   const type: OpportunityType =
+    forcedType ??
     mapTypeFromCategories(item.categories) ??
     mapOpportunityType(item.title);
 
@@ -289,12 +336,12 @@ function processItem(
 
   // Location / country
   const locationMatch = fullText.match(
-    /\b(italy|italia|germany|france|spain|uk|united kingdom|usa|united states|netherlands|austria|switzerland|sweden|norway|belgium|poland|canada|australia|singapore|japan)\b/i,
+    /\b(italy|italia|germany|deutschland|france|spain|uk|united kingdom|usa|united states|netherlands|austria|switzerland|sweden|norway|denmark|finland|belgium|poland|portugal|czech republic|czechia|hungary|romania|croatia|greece|ireland|canada|australia|new zealand|singapore|japan|india|china|south korea|korea|brazil|argentina|turkey|ukraine|russia|south africa|egypt|nigeria|kenya|morocco|israel|uae|united arab emirates|qatar)\b/i,
   );
   const locationRaw = locationMatch?.[0] ?? '';
   const country = extractCountryCode(locationRaw) || '';
   const isAbroad = country !== 'IT' && country !== '';
-  const isRemote = /\b(online|virtual|remote|worldwide|global)\b/i.test(fullText);
+  const isRemote = /\b(online|virtual|remote|worldwide|global|international)\b/i.test(fullText);
 
   // Expiry: deadline if known, otherwise 90 days from pubDate
   const pubDate = item.pubDate ?? now;

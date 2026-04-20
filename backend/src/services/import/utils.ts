@@ -101,7 +101,54 @@ export function extractCountryCode(location: string): string {
   if (loc.includes('poland') || loc.includes('warsaw')) return 'PL';
   if (loc.includes('singapore')) return 'SG';
   if (loc.includes('japan') || loc.includes('tokyo')) return 'JP';
-  if (loc.includes('australia') || loc.includes('sydney')) return 'AU';
+  if (loc.includes('australia') || loc.includes('sydney') || loc.includes('melbourne')) return 'AU';
+  if (loc.includes('new zealand') || loc.includes('auckland')) return 'NZ';
+  if (loc.includes('india') || loc.includes('delhi') || loc.includes('mumbai') || loc.includes('bangalore')) return 'IN';
+  if (loc.includes('china') || loc.includes('beijing') || loc.includes('shanghai')) return 'CN';
+  if (loc.includes('south korea') || loc.includes('korea') || loc.includes('seoul')) return 'KR';
+  if (loc.includes('brazil') || loc.includes('são paulo') || loc.includes('sao paulo') || loc.includes('rio de janeiro')) return 'BR';
+  if (loc.includes('argentina') || loc.includes('buenos aires')) return 'AR';
+  if (loc.includes('mexico') || loc.includes('ciudad de mexico')) return 'MX';
+  if (loc.includes('denmark') || loc.includes('copenhagen')) return 'DK';
+  if (loc.includes('finland') || loc.includes('helsinki')) return 'FI';
+  if (loc.includes('portugal') || loc.includes('lisbon') || loc.includes('porto')) return 'PT';
+  if (loc.includes('czechia') || loc.includes('czech republic') || loc.includes('prague') || loc.includes('praga')) return 'CZ';
+  if (loc.includes('hungary') || loc.includes('budapest')) return 'HU';
+  if (loc.includes('romania') || loc.includes('bucharest')) return 'RO';
+  if (loc.includes('croatia') || loc.includes('zagreb')) return 'HR';
+  if (loc.includes('greece') || loc.includes('athens')) return 'GR';
+  if (loc.includes('ukraine') || loc.includes('kyiv')) return 'UA';
+  if (loc.includes('turkey') || loc.includes('istanbul') || loc.includes('ankara')) return 'TR';
+  if (loc.includes('russia') || loc.includes('moscow')) return 'RU';
+  if (loc.includes('israel') || loc.includes('tel aviv')) return 'IL';
+  if (loc.includes('united arab emirates') || loc.includes('uae') || loc.includes('dubai') || loc.includes('abu dhabi')) return 'AE';
+  if (loc.includes('saudi arabia') || loc.includes('riyadh')) return 'SA';
+  if (loc.includes('egypt') || loc.includes('cairo')) return 'EG';
+  if (loc.includes('south africa') || loc.includes('cape town') || loc.includes('johannesburg')) return 'ZA';
+  if (loc.includes('nigeria') || loc.includes('lagos') || loc.includes('abuja')) return 'NG';
+  if (loc.includes('kenya') || loc.includes('nairobi')) return 'KE';
+  if (loc.includes('morocco') || loc.includes('casablanca') || loc.includes('rabat')) return 'MA';
+  if (loc.includes('qatar') || loc.includes('doha')) return 'QA';
+  if (loc.includes('thailand') || loc.includes('bangkok')) return 'TH';
+  if (loc.includes('indonesia') || loc.includes('jakarta')) return 'ID';
+  if (loc.includes('malaysia') || loc.includes('kuala lumpur')) return 'MY';
+  if (loc.includes('philippines') || loc.includes('manila')) return 'PH';
+  if (loc.includes('vietnam') || loc.includes('hanoi') || loc.includes('ho chi minh')) return 'VN';
+  if (loc.includes('taiwan') || loc.includes('taipei')) return 'TW';
+  if (loc.includes('hong kong')) return 'HK';
+  if (loc.includes('colombia') || loc.includes('bogota')) return 'CO';
+  if (loc.includes('chile') || loc.includes('santiago')) return 'CL';
+  if (loc.includes('peru') || loc.includes('lima')) return 'PE';
+  if (loc.includes('pakistan') || loc.includes('karachi') || loc.includes('islamabad')) return 'PK';
+  if (loc.includes('luxembourg')) return 'LU';
+  if (loc.includes('slovakia') || loc.includes('bratislava')) return 'SK';
+  if (loc.includes('slovenia') || loc.includes('ljubljana')) return 'SI';
+  if (loc.includes('bulgaria') || loc.includes('sofia')) return 'BG';
+  if (loc.includes('serbia') || loc.includes('belgrade')) return 'RS';
+  if (loc.includes('iceland') || loc.includes('reykjavik')) return 'IS';
+  if (loc.includes('latvia') || loc.includes('riga')) return 'LV';
+  if (loc.includes('lithuania') || loc.includes('vilnius')) return 'LT';
+  if (loc.includes('estonia') || loc.includes('tallinn')) return 'EE';
 
   return '';
 }
@@ -186,21 +233,21 @@ export function mapOpportunityType(title: string, jobTypes?: string[] | null): O
 // ---------------------------------------------------------------------------
 
 const FIELD_KEYWORD_MAP: Array<{ keywords: string[]; field: FieldOfStudy }> = [
-  { keywords: ['computer science', 'informatica', 'software', 'computing', 'data science', 'ai ', 'machine learning', 'cybersecurity', 'information technology', 'it '], field: 'COMPUTER_SCIENCE' },
-  { keywords: ['engineer', 'ingegneria', 'mechanical', 'electrical', 'civil', 'aerospace', 'chemical engineering', 'biomedical engineering', 'industrial engineering'], field: 'ENGINEERING' },
-  { keywords: ['medicine', 'medical', 'medicina', 'clinical', 'surgery', 'pharmacy', 'dental', 'nursing', 'healthcare professional'], field: 'MEDICINE' },
-  { keywords: ['biology', 'biologia', 'biochemistry', 'biotech', 'biotechnology', 'life science', 'genetics', 'ecology', 'microbiology'], field: 'LIFE_SCIENCES' },
-  { keywords: ['physics', 'fisica', 'chemistry', 'chimica', 'astronomy', 'geoscience', 'material science'], field: 'PHYSICAL_SCIENCES' },
-  { keywords: ['mathematics', 'matematica', 'statistics', 'statistica', 'actuarial', 'quantitative'], field: 'MATHEMATICS' },
-  { keywords: ['economics', 'economia', 'econom', 'finance', 'finanza', 'banking', 'accounting'], field: 'ECONOMICS' },
-  { keywords: ['business', 'management', 'marketing', 'mba', 'bba', 'entrepreneurship', 'strategy', 'commerce'], field: 'BUSINESS' },
-  { keywords: ['law', 'legge', 'giurisprudenza', 'legal', 'jurisprudence', 'diritto'], field: 'LAW' },
-  { keywords: ['political science', 'scienze politiche', 'politics', 'international relations', 'policy', 'diplomacy', 'public administration'], field: 'POLITICAL_SCIENCE' },
-  { keywords: ['humanities', 'lettere', 'literature', 'history', 'philosophy', 'linguistics', 'language', 'arts', 'cultura'], field: 'HUMANITIES' },
-  { keywords: ['design', 'graphic', 'ux', 'ui ', 'fashion', 'product design', 'architecture interior', 'visual'], field: 'DESIGN' },
-  { keywords: ['architecture', 'architettura', 'urban planning', 'urbanistica'], field: 'ARCHITECTURE' },
-  { keywords: ['psychology', 'psicologia', 'neuroscience', 'behavioral', 'cognitive'], field: 'PSYCHOLOGY' },
-  { keywords: ['education', 'pedagogia', 'teaching', 'pedagogy', 'training'], field: 'EDUCATION' },
+  { keywords: ['computer science', 'informatica', 'software', 'computing', 'data science', 'data engineering', 'ai ', 'artificial intelligence', 'machine learning', 'deep learning', 'cybersecurity', 'information technology', 'it ', 'programming', 'coding', 'web development', 'cloud', 'devops', 'blockchain', 'cryptography', 'nlp', 'computer vision', 'robotics software'], field: 'COMPUTER_SCIENCE' },
+  { keywords: ['engineer', 'ingegneria', 'mechanical', 'electrical', 'civil', 'aerospace', 'chemical engineering', 'biomedical engineering', 'industrial engineering', 'robotics', 'automation', 'embedded', 'hardware', 'electronics', 'iot', 'renewable energy', 'manufacturing', 'materials engineering'], field: 'ENGINEERING' },
+  { keywords: ['medicine', 'medical', 'medicina', 'clinical', 'surgery', 'pharmacy', 'pharmacology', 'dental', 'nursing', 'healthcare professional', 'public health', 'epidemiology', 'oncology', 'cardiology', 'radiology', 'pathology'], field: 'MEDICINE' },
+  { keywords: ['biology', 'biologia', 'biochemistry', 'biochimica', 'biotech', 'biotechnology', 'life science', 'genetics', 'genomics', 'ecology', 'microbiology', 'molecular biology', 'cell biology', 'biophysics', 'neurobiology', 'marine biology', 'zoology', 'botany', 'environmental science'], field: 'LIFE_SCIENCES' },
+  { keywords: ['physics', 'fisica', 'chemistry', 'chimica', 'astronomy', 'astrophysics', 'geoscience', 'geology', 'material science', 'materials science', 'nanotechnology', 'photonics', 'quantum', 'nuclear', 'thermodynamics', 'optics'], field: 'PHYSICAL_SCIENCES' },
+  { keywords: ['mathematics', 'matematica', 'statistics', 'statistica', 'actuarial', 'quantitative', 'applied math', 'calculus', 'algebra', 'probability', 'data analysis', 'operations research', 'mathematical modeling'], field: 'MATHEMATICS' },
+  { keywords: ['economics', 'economia', 'econom', 'finance', 'finanza', 'financial', 'banking', 'accounting', 'investment', 'trading', 'hedge fund', 'fintech', 'microeconomics', 'macroeconomics', 'development economics', 'behavioral economics'], field: 'ECONOMICS' },
+  { keywords: ['business', 'management', 'marketing', 'mba', 'bba', 'entrepreneurship', 'startup', 'strategy', 'commerce', 'supply chain', 'operations', 'consulting', 'sales', 'retail', 'e-commerce', 'brand', 'human resources', 'organizational'], field: 'BUSINESS' },
+  { keywords: ['law', 'legge', 'giurisprudenza', 'legal', 'jurisprudence', 'diritto', 'intellectual property', 'human rights law', 'international law', 'corporate law', 'constitutional', 'litigation', 'regulation', 'compliance'], field: 'LAW' },
+  { keywords: ['political science', 'scienze politiche', 'politics', 'international relations', 'policy', 'diplomacy', 'public administration', 'governance', 'geopolitics', 'democracy', 'security studies', 'conflict', 'peace studies', 'un ', 'united nations', 'eu ', 'european union'], field: 'POLITICAL_SCIENCE' },
+  { keywords: ['humanities', 'lettere', 'literature', 'history', 'philosophy', 'linguistics', 'language', 'arts ', 'cultural studies', 'culture', 'communication', 'journalism', 'media studies', 'anthropology', 'sociology', 'gender studies', 'religious studies', 'museum', 'heritage', 'translation'], field: 'HUMANITIES' },
+  { keywords: ['design', 'graphic design', 'ux', 'ui ', 'user experience', 'fashion design', 'product design', 'industrial design', 'visual design', 'motion design', 'game design', 'interaction design', 'branding', 'typography', 'illustration'], field: 'DESIGN' },
+  { keywords: ['architecture', 'architettura', 'urban planning', 'urbanistica', 'urban design', 'landscape architecture', 'spatial planning', 'real estate development'], field: 'ARCHITECTURE' },
+  { keywords: ['psychology', 'psicologia', 'neuroscience', 'neuroscienze', 'behavioral', 'cognitive science', 'cognitive psychology', 'clinical psychology', 'mental health', 'counseling', 'psychiatry'], field: 'PSYCHOLOGY' },
+  { keywords: ['education', 'pedagogia', 'teaching', 'pedagogy', 'e-learning', 'instructional design', 'curriculum', 'edtech', 'higher education', 'school'], field: 'EDUCATION' },
 ];
 
 /**
@@ -423,4 +470,62 @@ export function parseRSSFeed(xml: string): RSSItem[] {
   }
 
   return items;
+}
+
+// ---------------------------------------------------------------------------
+// Meta description enrichment
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches the <meta name="description"> or og:description from a URL.
+ * Used to enrich auto-generated descriptions from sources that don't provide
+ * full body text in their API/RSS response (e.g. conference websites).
+ *
+ * Returns null on any error or timeout — callers should fall back to their
+ * own generated description.
+ */
+export async function fetchMetaDescription(url: string, timeoutMs = 8000): Promise<string | null> {
+  if (!url) return null;
+  try {
+    const res = await fetchWithRetry(url, {
+      timeoutMs,
+      headers: {
+        'Accept': 'text/html',
+        'User-Agent': 'Mozilla/5.0 (compatible; PathFinder-bot/1.0; +https://pathfinder.app)',
+      },
+      logTag: '[MetaFetch]',
+      retries: 1,
+    });
+    if (!res.ok) return null;
+
+    // Only parse text/html responses to avoid downloading binaries
+    const ct = res.headers.get('content-type') ?? '';
+    if (!ct.includes('text/html')) return null;
+
+    // Read only first 8 KB — meta tags are always in <head>
+    const reader = res.body?.getReader();
+    if (!reader) return null;
+    let html = '';
+    let bytes = 0;
+    while (bytes < 8192) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      html += new TextDecoder().decode(value);
+      bytes += value.length;
+    }
+    reader.cancel().catch(() => {});
+
+    // og:description first (often longer/better), then standard name=description
+    const og = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']{10,500})["']/i)
+      ?? html.match(/<meta[^>]+content=["']([^"']{10,500})["'][^>]+property=["']og:description["']/i);
+    if (og?.[1]) return og[1].trim();
+
+    const std = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']{10,500})["']/i)
+      ?? html.match(/<meta[^>]+content=["']([^"']{10,500})["'][^>]+name=["']description["']/i);
+    if (std?.[1]) return std[1].trim();
+
+    return null;
+  } catch {
+    return null;
+  }
 }

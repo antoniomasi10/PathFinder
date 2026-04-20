@@ -13,8 +13,10 @@ import { importOpportunityDeskOpportunities } from '../services/import/opportuni
 import { importHackClubOpportunities } from '../services/import/hackclub.import';
 import { importDevpostOpportunities } from '../services/import/devpost.import';
 import { importBestCoursesOpportunities } from '../services/import/best-courses.import';
+import { importConfsTechOpportunities } from '../services/import/confstech.import';
 import { runCleanup, getDataFreshnessStats } from '../services/import/cleanup.service';
 import { upsertManualOpportunity } from '../services/import/manual.import';
+import { resetDedupCache } from '../services/import/validation';
 
 const router = Router();
 
@@ -73,6 +75,12 @@ router.post('/hackclub', ...adminAuth, async (_req: Request, res: Response) => {
 
 // BEST Courses: DISABLED — contact info@best.eu.org for data usage permission before re-enabling.
 
+// POST /api/import/confstech
+router.post('/confstech', ...adminAuth, async (_req: Request, res: Response) => {
+  try { res.json(await importConfsTechOpportunities()); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
 // POST /api/import/manual — upsert a single curated opportunity (verified=true)
 router.post('/manual', ...adminAuth, async (req: Request, res: Response) => {
   try { res.json(await upsertManualOpportunity(req.body)); }
@@ -88,15 +96,13 @@ router.post('/cleanup', ...adminAuth, async (_req: Request, res: Response) => {
 // POST /api/import/all — run everything
 router.post('/all', ...adminAuth, async (_req: Request, res: Response) => {
   try {
-    const results = {
-      universities: await importUniversities(),
-      courses: await importCourses(),
-      eures: await importOpportunities(),
-      euYouth: await importEUOpportunities(),
-      almalaurea: await importAlmaLaureaStats(),
-      cleanup: await runCleanup(),
-    };
-    res.json(results);
+    resetDedupCache(); const universities = await importUniversities();
+    resetDedupCache(); const courses = await importCourses();
+    resetDedupCache(); const eures = await importOpportunities();
+    resetDedupCache(); const euYouth = await importEUOpportunities();
+    resetDedupCache(); const almalaurea = await importAlmaLaureaStats();
+    const cleanup = await runCleanup();
+    res.json({ universities, courses, eures, euYouth, almalaurea, cleanup });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

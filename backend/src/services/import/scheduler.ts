@@ -36,13 +36,18 @@ import { importSmartRecruitersOpportunities } from './smartrecruiters.import';
 import { importHackClubOpportunities } from './hackclub.import';
 import { importDevpostOpportunities } from './devpost.import';
 import { importBestCoursesOpportunities } from './best-courses.import';
+import { importConfsTechOpportunities } from './confstech.import';
 import { importAlmaLaureaStats } from './almalaurea.import';
 import { importOpportunityDeskOpportunities } from './opportunity-desk.import';
 import { runCleanup } from './cleanup.service';
 import { alertImportFailure } from './alerting';
+import { resetDedupCache } from './validation';
 import { logger } from '../../utils/logger';
 
 async function runWithAlert(name: string, source: string, type: string, fn: () => Promise<any>) {
+  // Reset the in-process dedup cache before each import so stale keys from a
+  // previous weekly run don't cause legitimate new records to be silently skipped.
+  resetDedupCache();
   try {
     const result = await fn();
     logger.info(`[Scheduler] ${name}: ${JSON.stringify(result)}`);
@@ -75,6 +80,11 @@ export function startImportScheduler() {
   // Weekly Monday: HackClub hackathons (04:30)
   cron.schedule('30 4 * * 1', () => {
     runWithAlert('HackClub', 'hackclub', 'opportunities', importHackClubOpportunities);
+  });
+
+  // Weekly Wednesday: Confs.tech tech conferences (03:00) — MIT license open data
+  cron.schedule('0 3 * * 3', () => {
+    runWithAlert('ConfsTech', 'confstech', 'opportunities', importConfsTechOpportunities);
   });
 
   // Weekly Wednesday: Stage4eu (03:30)
@@ -158,6 +168,7 @@ export function startImportScheduler() {
   logger.info('  EURES: disabled (static cache)');
   logger.info('  EU Youth: Mon 03:30 | SmartRecruiters: Mon 04:00 | HackClub: Mon 04:30');
   logger.info('  Arbeitnow: Tue 03:30 | RemoteOK: Tue 04:00');
+  logger.info('  ConfsTech: Wed 03:00 (tech conferences, MIT license)');
   logger.info('  Stage4eu: Wed 03:30');
   logger.info('  Greenhouse: Thu 03:30 | Jobicy: Thu 04:00');
   logger.info('  Lever: Fri 03:30 | FashionUnited: Fri 04:00');
