@@ -31,7 +31,6 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
           id: data.id,
           name: data.name,
           surname: data.surname ?? '',
-          username: data.username ?? '',
           phone: data.phone,
           email: data.email,
           avatar: data.avatar,

@@ -28,12 +28,12 @@ function setRefreshCookie(res: Response, token: string) {
 
 export async function register(req: Request, res: Response) {
   try {
-    const { name, surname, username, email, password, phone, universityId, courseOfStudy } = req.body;
-    if (!name || !surname || !username || !email || !password) {
-      res.status(400).json({ error: 'Nome, cognome, username, email e password sono obbligatori' });
+    const { name, surname, email, password, phone, universityId, courseOfStudy } = req.body;
+    if (!name || !surname || !email || !password) {
+      res.status(400).json({ error: 'Nome, cognome, email e password sono obbligatori' });
       return;
     }
-    const result = await registerUser({ name, surname, username, email, password, phone, universityId, courseOfStudy });
+    const result = await registerUser({ name, surname, email, password, phone, universityId, courseOfStudy });
 
     setRefreshCookie(res, result.refreshToken);
     trackUserToken(result.user.id, result.refreshToken).catch(() => {});

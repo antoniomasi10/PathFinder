@@ -6,7 +6,6 @@ export interface AuthUser {
   id: string;
   name: string;
   surname: string;
-  username: string;
   phone?: string;
   email: string;
   avatar?: string | null;
