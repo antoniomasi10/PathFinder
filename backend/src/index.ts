@@ -93,7 +93,7 @@ app.use(correlationIdMiddleware);
 const SENSITIVE_AUTH_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/google'];
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 15,
+  max: 50,
   message: { error: 'Troppi tentativi, riprova più tardi' },
   skip: (req) => !SENSITIVE_AUTH_PATHS.includes(req.path),
 });

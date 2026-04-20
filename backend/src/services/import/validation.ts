@@ -5,19 +5,40 @@
  * Returns null if the record is invalid and should be skipped.
  */
 import { z } from 'zod';
+import { FieldOfStudy, OpportunityFormat } from '@prisma/client';
 import { logger } from '../../utils/logger';
+
+const opportunityFormatValues = Object.values(OpportunityFormat) as [OpportunityFormat, ...OpportunityFormat[]];
+const fieldOfStudyValues = Object.values(FieldOfStudy) as [FieldOfStudy, ...FieldOfStudy[]];
 
 // --- Opportunity validation ---
 
 const opportunitySchema = z.object({
   title: z.string().min(3).max(300),
   description: z.string().min(10).max(10000),
-  company: z.string().max(200).optional().default(''),
+  company: z.string().max(200).nullable().optional().default(''),
   url: z.string().url().max(2000).nullable().optional(),
-  location: z.string().max(200).optional().default(''),
+  location: z.string().max(200).nullable().optional().default(''),
   isAbroad: z.boolean().default(false),
   isRemote: z.boolean().default(false),
   expiresAt: z.date().nullable().optional(),
+  // event / experience fields
+  organizer: z.string().max(200).nullable().optional(),
+  startDate: z.date().nullable().optional(),
+  endDate: z.date().nullable().optional(),
+  durationDays: z.number().int().positive().nullable().optional(),
+  format: z.enum(opportunityFormatValues).nullable().optional(),
+  city: z.string().max(100).nullable().optional(),
+  country: z.string().max(2).nullable().optional(),
+  cost: z.number().int().min(0).nullable().optional(),
+  hasScholarship: z.boolean().default(false),
+  scholarshipDetails: z.string().max(500).nullable().optional(),
+  stipend: z.number().int().min(0).nullable().optional(),
+  eligibleFields: z.array(z.enum(fieldOfStudyValues)).default([]),
+  minYearOfStudy: z.number().int().min(1).max(6).nullable().optional(),
+  maxYearOfStudy: z.number().int().min(1).max(8).nullable().optional(),
+  requiredLanguages: z.array(z.object({ lang: z.string(), level: z.string() })).default([]),
+  verified: z.boolean().default(false),
 });
 
 export type ValidatedOpportunity = z.infer<typeof opportunitySchema>;
@@ -30,12 +51,25 @@ export function validateOpportunity(data: Record<string, any>, source: string): 
         data.url = null;
       }
     }
-    if (data.expiresAt && !(data.expiresAt instanceof Date)) {
-      const d = new Date(data.expiresAt);
-      data.expiresAt = isNaN(d.getTime()) ? null : d;
+    for (const dateField of ['expiresAt', 'startDate', 'endDate'] as const) {
+      if (data[dateField] && !(data[dateField] instanceof Date)) {
+        const d = new Date(data[dateField]);
+        data[dateField] = isNaN(d.getTime()) ? null : d;
+      }
+    }
+    if (data.country && typeof data.country === 'string') {
+      data.country = data.country.toUpperCase().slice(0, 2);
     }
 
-    return opportunitySchema.parse(data);
+    const parsed = opportunitySchema.parse(data);
+
+    // Dedup: skip if same title+company already seen in this run
+    if (isDuplicateOpportunity(parsed.title, parsed.company || '')) {
+      logger.debug(`[Validation] Skipped duplicate ${source}: ${parsed.title.slice(0, 50)}`);
+      return null;
+    }
+
+    return parsed;
   } catch (err) {
     logger.debug(`[Validation] Skipped invalid ${source} opportunity: ${data.title?.slice(0, 50) || 'no-title'}`);
     return null;
@@ -81,6 +115,32 @@ export function validateCourse(data: Record<string, any>): ValidatedCourse | nul
     logger.debug(`[Validation] Skipped invalid course: ${data.name?.slice(0, 50) || 'no-name'}`);
     return null;
   }
+}
+
+// --- Runtime duplicate cache (shared across all importers within a single run) ---
+
+const seenTitleCompany = new Set<string>();
+
+function dedupKey(title: string, company: string): string {
+  return `${title.toLowerCase().trim()}|||${company.toLowerCase().trim()}`;
+}
+
+/**
+ * Check if an opportunity with the same title+company has already been
+ * seen in this process. Returns true if duplicate (should be skipped).
+ */
+export function isDuplicateOpportunity(title: string, company: string): boolean {
+  const key = dedupKey(title, company);
+  if (seenTitleCompany.has(key)) return true;
+  seenTitleCompany.add(key);
+  return false;
+}
+
+/**
+ * Reset the dedup cache (call at the start of each import run if needed).
+ */
+export function resetDedupCache(): void {
+  seenTitleCompany.clear();
 }
 
 // --- Duplicate detection ---

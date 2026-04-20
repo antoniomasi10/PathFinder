@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 import { logger } from '../utils/logger';
 
-const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER);
+const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 
 const transporter = smtpConfigured
   ? nodemailer.createTransport({

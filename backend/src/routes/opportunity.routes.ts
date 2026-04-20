@@ -13,7 +13,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     const limit = Math.min(parseInt(req.query.limit as string) || 20, 50);
     const skip = (page - 1) * limit;
 
-    const { matched, new: isNew } = req.query;
+    const { matched, new: isNew, search } = req.query;
 
     if (isNew === 'true') {
       // "Nuove" tab: recency (30%) + match (30%) + novelty bonus (40%)
@@ -39,15 +39,46 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       return;
     }
 
-    const [opportunities, total] = await Promise.all([
-      prisma.opportunity.findMany({
-        include: { university: true },
-        orderBy: { postedAt: 'desc' },
-        take: limit,
-        skip,
-      }),
-      prisma.opportunity.count(),
+    // Optional search filter
+    const searchTerm = typeof search === 'string' ? search.trim() : '';
+    const hasSearch = searchTerm.length > 0;
+    const searchPattern = hasSearch ? `%${searchTerm}%` : null;
+
+    // Use raw query to avoid Prisma failing on the Unsupported vector column
+    const whereClause = hasSearch
+      ? `WHERE o."title" ILIKE $3 OR o."company" ILIKE $3`
+      : '';
+
+    const params: any[] = hasSearch
+      ? [limit, skip, searchPattern]
+      : [limit, skip];
+
+    const [opportunities, countResult] = await Promise.all([
+      prisma.$queryRawUnsafe<any[]>(
+        `SELECT o."id", o."title", o."description", o."about", o."url", o."type",
+                o."universityId", o."company", o."location", o."isRemote", o."isAbroad",
+                o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
+                o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
+                u."name" as "universityName", u."city" as "universityCity",
+                u."id" as "uniId", u."logoUrl" as "universityLogoUrl"
+         FROM "Opportunity" o
+         LEFT JOIN "University" u ON o."universityId" = u."id"
+         ${whereClause}
+         ORDER BY o."postedAt" DESC
+         LIMIT $1 OFFSET $2`,
+        ...params,
+      ),
+      hasSearch
+        ? prisma.$queryRawUnsafe<[{ count: bigint }]>(
+            `SELECT COUNT(*)::bigint as count FROM "Opportunity" o WHERE o."title" ILIKE $1 OR o."company" ILIKE $1`,
+            searchPattern,
+          )
+        : prisma.opportunity.count(),
     ]);
+
+    const total = hasSearch
+      ? Number((countResult as [{ count: bigint }])[0].count)
+      : (countResult as number);
 
     res.json({ data: opportunities, total, page, totalPages: Math.ceil(total / limit) });
   } catch (err: any) {

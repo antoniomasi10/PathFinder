@@ -1,6 +1,7 @@
-import { UserProfile, User, Opportunity, GpaRange, EnglishLevel, UserInteraction } from '@prisma/client';
+import { UserProfile, User, Opportunity, GpaRange, EnglishLevel, UserInteraction, OpportunityType, FieldOfStudy } from '@prisma/client';
 import prisma from '../lib/prisma';
 import type { UserSkills, SkillEntry } from './skills.service';
+import { normalizeFieldToEnum } from './import/utils';
 
 function parseUserSkills(raw: unknown): UserSkills | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -29,23 +30,72 @@ const ENGLISH_ORDER: Record<EnglishLevel, number> = {
   C2_PLUS: 4,
 };
 
-// Interest → preferred opportunity types (max 20 pts)
-const INTEREST_TYPE_MAP: Record<string, string[]> = {
-  tech: ['INTERNSHIP', 'STAGE'],
-  business: ['FELLOWSHIP', 'INTERNSHIP'],
-  creative: ['EXTRACURRICULAR', 'EVENT'],
-  sport: ['EXTRACURRICULAR', 'EVENT'],
-  general: ['STAGE', 'EVENT', 'EXTRACURRICULAR'],
+// Interest → preferred opportunity types (ordered: first = top match)
+const INTEREST_TYPE_MAP: Record<string, OpportunityType[]> = {
+  tech:               ['INTERNSHIP', 'STAGE', 'HACKATHON', 'BOOTCAMP', 'RESEARCH'],
+  business:           ['FELLOWSHIP', 'INTERNSHIP', 'SUMMER_PROGRAM', 'COMPETITION', 'CONFERENCE'],
+  creative:           ['EXTRACURRICULAR', 'EVENT', 'CONFERENCE', 'BOOTCAMP'],
+  sport:              ['EXTRACURRICULAR', 'EVENT', 'COMPETITION'],
+  general:            ['STAGE', 'EVENT', 'EXTRACURRICULAR'],
+  // onboarding InterestSelection values
+  ai_ml:              ['RESEARCH', 'HACKATHON', 'INTERNSHIP', 'BOOTCAMP'],
+  web_development:    ['INTERNSHIP', 'STAGE', 'HACKATHON', 'BOOTCAMP'],
+  data_science:       ['RESEARCH', 'HACKATHON', 'INTERNSHIP', 'COMPETITION'],
+  mobile_dev:         ['INTERNSHIP', 'STAGE', 'HACKATHON', 'BOOTCAMP'],
+  ricerca_scientifica:['RESEARCH', 'FELLOWSHIP', 'EXCHANGE', 'SUMMER_PROGRAM'],
+  business_strategy:  ['FELLOWSHIP', 'COMPETITION', 'SUMMER_PROGRAM', 'CONFERENCE'],
+  finance:            ['INTERNSHIP', 'FELLOWSHIP', 'COMPETITION'],
+  sustainability:     ['VOLUNTEERING', 'RESEARCH', 'EXCHANGE', 'FELLOWSHIP'],
+  marketing:          ['INTERNSHIP', 'STAGE', 'EVENT', 'CONFERENCE'],
+  law_policy:         ['FELLOWSHIP', 'COMPETITION', 'CONFERENCE', 'EXCHANGE'],
+  healthcare:         ['RESEARCH', 'VOLUNTEERING', 'EXCHANGE', 'INTERNSHIP'],
 };
 
-// Cluster → preferred opportunity types (max 15 pts)
-const CLUSTER_TYPE_MAP: Record<string, string[]> = {
-  Analista: ['INTERNSHIP', 'STAGE'],
-  Creativo: ['EXTRACURRICULAR', 'EVENT'],
-  Leader: ['FELLOWSHIP', 'INTERNSHIP'],
-  Imprenditore: ['FELLOWSHIP', 'STAGE'],
-  Sociale: ['EXTRACURRICULAR', 'EVENT'],
-  Explorer: ['STAGE', 'EVENT', 'INTERNSHIP'],
+// Cluster tag → preferred opportunity types (ordered: first = top match)
+const CLUSTER_TYPE_MAP: Record<string, OpportunityType[]> = {
+  Analista:     ['INTERNSHIP', 'STAGE', 'RESEARCH', 'HACKATHON', 'COMPETITION'],
+  Creativo:     ['EXTRACURRICULAR', 'EVENT', 'CONFERENCE', 'BOOTCAMP'],
+  Leader:       ['FELLOWSHIP', 'INTERNSHIP', 'COMPETITION', 'CONFERENCE', 'SUMMER_PROGRAM'],
+  Imprenditore: ['FELLOWSHIP', 'STAGE', 'SUMMER_PROGRAM', 'COMPETITION', 'CONFERENCE'],
+  Sociale:      ['EXTRACURRICULAR', 'EVENT', 'VOLUNTEERING', 'EXCHANGE', 'CONFERENCE'],
+  Explorer:     ['EXCHANGE', 'SUMMER_PROGRAM', 'CONFERENCE', 'EVENT', 'RESEARCH', 'FELLOWSHIP'],
+};
+
+// ---------------------------------------------------------------------------
+// Per-type scoring profiles
+// ---------------------------------------------------------------------------
+
+interface ScoringProfile {
+  // Base dimension weights — their sum + bonus sum = 100 for a perfect match
+  interest: number;
+  cluster: number;
+  gpa: number;
+  english: number;
+  relocate: number;
+  year: number;
+  // Adjustment bonuses (awarded if criteria met; 0 otherwise)
+  fieldMatchBonus: number;      // user field of study ∈ eligibleFields
+  costBonus: number;            // cost == 0 || hasScholarship
+  deadlineUrgencyBonus: number; // deadline within 14 days (don't miss it)
+  locationMatchBonus: number;   // reserved V2 — always 0 until user.country available
+}
+
+// Each profile: base weights + bonus maxima sum to 100
+const SCORING_PROFILES: Record<OpportunityType, ScoringProfile> = {
+  //                        interest cluster gpa english relocate year | field cost  dead  loc
+  STAGE:          { interest:30, cluster:25, gpa:15, english:15, relocate:10, year:5,  fieldMatchBonus:0,  costBonus:0,  deadlineUrgencyBonus:0,  locationMatchBonus:0  },
+  INTERNSHIP:     { interest:30, cluster:25, gpa:15, english:15, relocate:10, year:5,  fieldMatchBonus:0,  costBonus:0,  deadlineUrgencyBonus:0,  locationMatchBonus:0  },
+  EXTRACURRICULAR:{ interest:25, cluster:25, gpa:5,  english:10, relocate:10, year:5,  fieldMatchBonus:5,  costBonus:5,  deadlineUrgencyBonus:0,  locationMatchBonus:10 },
+  EVENT:          { interest:20, cluster:10, gpa:0,  english:5,  relocate:10, year:0,  fieldMatchBonus:10, costBonus:15, deadlineUrgencyBonus:10, locationMatchBonus:20 },
+  FELLOWSHIP:     { interest:20, cluster:20, gpa:20, english:20, relocate:10, year:5,  fieldMatchBonus:0,  costBonus:0,  deadlineUrgencyBonus:5,  locationMatchBonus:0  },
+  SUMMER_PROGRAM: { interest:15, cluster:15, gpa:5,  english:15, relocate:10, year:5,  fieldMatchBonus:15, costBonus:15, deadlineUrgencyBonus:0,  locationMatchBonus:5  },
+  HACKATHON:      { interest:15, cluster:10, gpa:0,  english:10, relocate:5,  year:0,  fieldMatchBonus:20, costBonus:15, deadlineUrgencyBonus:15, locationMatchBonus:10 },
+  COMPETITION:    { interest:15, cluster:15, gpa:5,  english:15, relocate:10, year:5,  fieldMatchBonus:15, costBonus:5,  deadlineUrgencyBonus:10, locationMatchBonus:5  },
+  EXCHANGE:       { interest:10, cluster:15, gpa:10, english:25, relocate:15, year:10, fieldMatchBonus:5,  costBonus:0,  deadlineUrgencyBonus:10, locationMatchBonus:0  },
+  VOLUNTEERING:   { interest:10, cluster:20, gpa:0,  english:15, relocate:15, year:5,  fieldMatchBonus:10, costBonus:5,  deadlineUrgencyBonus:5,  locationMatchBonus:15 },
+  CONFERENCE:     { interest:20, cluster:10, gpa:0,  english:10, relocate:10, year:0,  fieldMatchBonus:10, costBonus:15, deadlineUrgencyBonus:5,  locationMatchBonus:20 },
+  BOOTCAMP:       { interest:20, cluster:10, gpa:5,  english:10, relocate:10, year:5,  fieldMatchBonus:15, costBonus:15, deadlineUrgencyBonus:0,  locationMatchBonus:10 },
+  RESEARCH:       { interest:15, cluster:10, gpa:25, english:20, relocate:10, year:0,  fieldMatchBonus:15, costBonus:0,  deadlineUrgencyBonus:5,  locationMatchBonus:0  },
 };
 
 // Passion value → opportunity tags (used for tag-content matching, max 20 pts)
@@ -83,7 +133,7 @@ const INTEREST_TAG_MAP: Record<string, string[]> = {
 };
 
 /**
- * Tag-passion alignment score (max 20 pts).
+ * Tag-passion alignment score (max 20 pts, additive bonus).
  * Counts how many opportunity tags overlap with tags derived from user passions.
  * Falls back to primaryInterest-derived tags if no passions are defined.
  * Each matching tag = 7 pts, capped at 20.
@@ -151,90 +201,128 @@ function computeSkillMatchScore(
 }
 
 /**
- * Weighted scoring function. Max is 100 naturally (no normalization needed).
+ * Profile-aware scoring function. Uses per-OpportunityType weight profiles
+ * so that GPA matters for fellowships/research but not hackathons, field
+ * match matters for summer schools but not generic internships, etc.
+ * Adds a skill-match bonus (max +10, clamped to 100) on top.
  *
- * Breakdown:
- *   Interest type alignment  → 20 pts
- *   Cluster type alignment   → 15 pts
- *   Tag-passion alignment    → 20 pts  (NEW: differentiates within same type)
- *   GPA                      → 15 pts
- *   English level            → 15 pts
- *   Relocation willingness   → 10 pts
- *   Year of study            →  5 pts
- *   Skill match bonus        → +10 pts (clamped at 100)
+ * Score range: 0–100.
  */
 export function scoreOpportunity(
   profile: UserProfile,
-  user: Pick<User, 'gpa' | 'englishLevel' | 'willingToRelocate' | 'yearOfStudy'>,
+  user: Pick<User, 'gpa' | 'englishLevel' | 'willingToRelocate' | 'yearOfStudy' | 'courseOfStudy'>,
   opportunity: Opportunity,
   skills?: UserSkills | null,
 ): number {
+  const p = SCORING_PROFILES[opportunity.type] ?? SCORING_PROFILES.INTERNSHIP;
   let score = 0;
 
-  // 1. Primary interest → opportunity type (max 20 pts)
+  // 1. Primary interest → opportunity type
   const interest = profile.primaryInterest || 'general';
-  const preferredTypes = INTEREST_TYPE_MAP[interest] || INTEREST_TYPE_MAP.general;
+  const preferredTypes = INTEREST_TYPE_MAP[interest] ?? INTEREST_TYPE_MAP.general;
   if (preferredTypes[0] === opportunity.type) {
-    score += 20;
+    score += p.interest;
   } else if (preferredTypes.includes(opportunity.type)) {
-    score += 13;
+    score += Math.round(p.interest * 0.65);
   } else {
-    score += 3;
+    score += Math.round(p.interest * 0.15);
   }
 
-  // 2. Cluster tag → opportunity type (max 15 pts)
+  // 2. Cluster tag → opportunity type
   const cluster = profile.clusterTag || 'Explorer';
-  const clusterTypes = CLUSTER_TYPE_MAP[cluster] || CLUSTER_TYPE_MAP.Explorer;
+  const clusterTypes = CLUSTER_TYPE_MAP[cluster] ?? CLUSTER_TYPE_MAP.Explorer;
   if (clusterTypes[0] === opportunity.type) {
-    score += 15;
+    score += p.cluster;
   } else if (clusterTypes.includes(opportunity.type)) {
-    score += 9;
+    score += Math.round(p.cluster * 0.60);
   } else {
-    score += 3;
+    score += Math.round(p.cluster * 0.15);
   }
 
-  // 3. Tag-passion alignment (max 20 pts)
+  // 3. GPA sufficient
+  if (p.gpa > 0) {
+    if (!opportunity.minGpa) {
+      score += p.gpa;
+    } else if (user.gpa && GPA_ORDER[user.gpa] >= GPA_ORDER[opportunity.minGpa]) {
+      score += p.gpa;
+    } else if (user.gpa && GPA_ORDER[user.gpa] === GPA_ORDER[opportunity.minGpa] - 1) {
+      score += Math.round(p.gpa * 0.5);
+    }
+  }
+
+  // 4. English level
+  if (p.english > 0) {
+    if (!opportunity.requiredEnglishLevel) {
+      score += p.english;
+    } else if (user.englishLevel && ENGLISH_ORDER[user.englishLevel] >= ENGLISH_ORDER[opportunity.requiredEnglishLevel]) {
+      score += p.english;
+    } else if (user.englishLevel && ENGLISH_ORDER[user.englishLevel] === ENGLISH_ORDER[opportunity.requiredEnglishLevel] - 1) {
+      score += Math.round(p.english * 0.5);
+    }
+  }
+
+  // 5. Relocation willingness
+  if (p.relocate > 0) {
+    if (!opportunity.isAbroad && !opportunity.location) {
+      score += p.relocate;
+    } else if (opportunity.isRemote || (opportunity as any).format === 'ONLINE') {
+      score += p.relocate;
+    } else if (user.willingToRelocate === 'YES') {
+      score += p.relocate;
+    } else if (user.willingToRelocate === 'MAYBE') {
+      score += Math.round(p.relocate * 0.5);
+    }
+  }
+
+  // 6. Year of study accessibility
+  if (p.year > 0) {
+    const opp = opportunity as any;
+    const yearOk =
+      !user.yearOfStudy ||
+      (!opp.minYearOfStudy && !opp.maxYearOfStudy) ||
+      ((!opp.minYearOfStudy || user.yearOfStudy >= opp.minYearOfStudy) &&
+       (!opp.maxYearOfStudy || user.yearOfStudy <= opp.maxYearOfStudy));
+    if (yearOk) {
+      score += p.year;
+    } else {
+      score += Math.round(p.year * 0.3);
+    }
+  }
+
+  // 7. Field of study bonus
+  if (p.fieldMatchBonus > 0) {
+    const opp = opportunity as any;
+    const eligibleFields: FieldOfStudy[] = opp.eligibleFields ?? [];
+    if (eligibleFields.length === 0) {
+      // No restriction → full bonus
+      score += p.fieldMatchBonus;
+    } else if (user.courseOfStudy) {
+      const userField = normalizeFieldToEnum(user.courseOfStudy);
+      if (userField === 'ANY' || eligibleFields.includes(userField) || eligibleFields.includes('ANY')) {
+        score += p.fieldMatchBonus;
+      }
+    }
+  }
+
+  // 8. Cost / scholarship bonus (free or covered = good match for students)
+  if (p.costBonus > 0) {
+    const opp = opportunity as any;
+    const isFreeOrCovered = opp.cost == null || opp.cost === 0 || opp.hasScholarship;
+    if (isFreeOrCovered) score += p.costBonus;
+  }
+
+  // 9. Deadline urgency bonus (closing within 14 days = surface it now)
+  if (p.deadlineUrgencyBonus > 0 && opportunity.deadline) {
+    const daysUntil = (opportunity.deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+    if (daysUntil > 0 && daysUntil <= 14) score += p.deadlineUrgencyBonus;
+  }
+
+  // 10. Location match bonus — V2 (requires user.country, skipped for now)
+
+  // 11. Tag-passion alignment bonus (additive, max +20, clamped to 100)
   score += computeTagScore(profile, opportunity);
 
-  // 4. GPA sufficient (max 15 pts)
-  if (!opportunity.minGpa) {
-    score += 15;
-  } else if (user.gpa && GPA_ORDER[user.gpa] >= GPA_ORDER[opportunity.minGpa]) {
-    score += 15;
-  } else if (user.gpa && GPA_ORDER[user.gpa] === GPA_ORDER[opportunity.minGpa] - 1) {
-    score += 8;
-  }
-
-  // 5. English level (max 15 pts)
-  if (!opportunity.requiredEnglishLevel) {
-    score += 15;
-  } else if (user.englishLevel && ENGLISH_ORDER[user.englishLevel] >= ENGLISH_ORDER[opportunity.requiredEnglishLevel]) {
-    score += 15;
-  } else if (user.englishLevel && ENGLISH_ORDER[user.englishLevel] === ENGLISH_ORDER[opportunity.requiredEnglishLevel] - 1) {
-    score += 8;
-  }
-
-  // 6. Willing to relocate (max 10 pts)
-  if (!opportunity.isAbroad && !opportunity.location) {
-    score += 10;
-  } else if (opportunity.isRemote) {
-    score += 10;
-  } else if (user.willingToRelocate === 'YES') {
-    score += 10;
-  } else if (user.willingToRelocate === 'MAYBE') {
-    score += 5;
-  }
-
-  // 7. Year of study accessibility (max 5 pts)
-  if (!user.yearOfStudy || user.yearOfStudy >= 2) {
-    score += 5;
-  } else {
-    score += 2;
-  }
-
-  // Base max: 100
-
-  // 8. Skill match bonus (max +10, clamped to 100)
+  // 12. Skill match bonus (additive, max +10, clamped to 100)
   score += computeSkillMatchScore(skills || null, opportunity);
 
   return Math.min(score, 100);
@@ -314,7 +402,7 @@ function computeFeedbackBoost(
  */
 export function scoreOpportunityWithFeedback(
   profile: UserProfile,
-  user: Pick<User, 'gpa' | 'englishLevel' | 'willingToRelocate' | 'yearOfStudy'>,
+  user: Pick<User, 'gpa' | 'englishLevel' | 'willingToRelocate' | 'yearOfStudy' | 'courseOfStudy'>,
   opportunity: Opportunity,
   interactions: UserInteraction[],
   skills?: UserSkills | null,
@@ -343,13 +431,21 @@ export async function getHybridMatchedOpportunities(
 
   if (!user?.profile) {
     // Fallback: return opportunities by date if no profile
+    // Use raw query to avoid Prisma failing on the Unsupported vector column
     const [opps, total] = await Promise.all([
-      prisma.opportunity.findMany({
-        include: { university: true },
-        orderBy: { postedAt: 'desc' },
-        take: limit,
-        skip: offset,
-      }),
+      prisma.$queryRawUnsafe<any[]>(
+        `SELECT o."id", o."title", o."description", o."about", o."url", o."type",
+                o."universityId", o."company", o."location", o."isRemote", o."isAbroad",
+                o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
+                o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
+                u."name" as "universityName", u."city" as "universityCity",
+                u."id" as "uniId", u."logoUrl" as "universityLogoUrl"
+         FROM "Opportunity" o
+         LEFT JOIN "University" u ON o."universityId" = u."id"
+         ORDER BY o."postedAt" DESC
+         LIMIT $1 OFFSET $2`,
+        limit, offset,
+      ),
       prisma.opportunity.count(),
     ]);
     return { data: opps, total };
@@ -365,25 +461,37 @@ export async function getHybridMatchedOpportunities(
   let candidates: any[];
 
   if (userHasEmbedding) {
-    // Stage 1: Candidate retrieval via pgvector (top 50)
+    // Stage 1: Candidate retrieval — all opportunities with vector similarity
+    // Explicitly list columns to avoid selecting the Unsupported vector column
     candidates = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT o.*, u."name" as "universityName", u."city" as "universityCity",
+      `SELECT o."id", o."title", o."description", o."about", o."url", o."type",
+              o."universityId", o."company", o."location", o."isRemote", o."isAbroad",
+              o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
+              o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
+              u."name" as "universityName", u."city" as "universityCity",
               u."id" as "uniId", u."logoUrl" as "universityLogoUrl",
-              1 - (o.embedding <=> usr.embedding) AS "vectorSimilarity"
+              CASE WHEN o.embedding IS NOT NULL THEN 1 - (o.embedding <=> usr.embedding) ELSE 0 END AS "vectorSimilarity"
        FROM "Opportunity" o
        LEFT JOIN "University" u ON o."universityId" = u."id"
        CROSS JOIN "User" usr
-       WHERE usr.id = $1 AND o.embedding IS NOT NULL
-       ORDER BY o.embedding <=> usr.embedding
-       LIMIT 50`,
+       WHERE usr.id = $1
+       ORDER BY o."postedAt" DESC`,
       userId,
     );
   } else {
     // Fallback: get all opportunities (Phase 1 behavior)
-    candidates = await prisma.opportunity.findMany({
-      include: { university: true },
-      orderBy: { postedAt: 'desc' },
-    });
+    // Use raw query to avoid Prisma failing on the Unsupported vector column
+    candidates = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT o."id", o."title", o."description", o."about", o."url", o."type",
+              o."universityId", o."company", o."location", o."isRemote", o."isAbroad",
+              o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
+              o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
+              u."name" as "universityName", u."city" as "universityCity",
+              u."id" as "uniId", u."logoUrl" as "universityLogoUrl"
+       FROM "Opportunity" o
+       LEFT JOIN "University" u ON o."universityId" = u."id"
+       ORDER BY o."postedAt" DESC`,
+    );
   }
 
   // Get user interactions for feedback scoring (last 90 days)
@@ -441,6 +549,7 @@ export async function getHybridMatchedOpportunities(
       deadline: opp.deadline,
       postedAt: opp.postedAt,
       expiresAt: opp.expiresAt,
+      source: opp.source,
       sourceId: opp.sourceId,
       matchScore: Math.max(0, Math.min(100, Math.round(hybridScore))),
       matchReason: getMatchReason(user.profile!, user, opp, userSkills),
@@ -460,7 +569,7 @@ export async function getHybridMatchedOpportunities(
  * Formula: RecencyScore * 0.30 + MatchScore * 0.30 + NoveltyBonus * 0.40
  *
  * RecencyScore: exponential decay based on days since postedAt (100 × e^(-0.07 × days))
- * MatchScore:   base weighted score from scoreOpportunity (0-110, normalised to 0-100)
+ * MatchScore:   base weighted score from scoreOpportunity (0-100)
  * NoveltyBonus: 100 if user has no interaction with this opportunity, 0 otherwise
  */
 export async function getNewOpportunities(
@@ -584,12 +693,48 @@ function getMatchReason(profile: any, user: any, opp: any, skills?: UserSkills |
     }
   }
 
-  // Existing reasons (lower priority)
+  // Field match
+  if (opp.eligibleFields?.length > 0 && user.courseOfStudy) {
+    const userField = normalizeFieldToEnum(user.courseOfStudy);
+    if (opp.eligibleFields.includes(userField)) {
+      reasons.push({ priority: 2, text: 'Aperto al tuo percorso di studi' });
+    }
+  }
+
+  // Free / scholarship
+  if (opp.hasScholarship) reasons.push({ priority: 2, text: 'Borsa di studio disponibile' });
+  if (opp.cost === 0) reasons.push({ priority: 2, text: 'Partecipazione gratuita' });
+
+  // Deadline urgency
+  if (opp.deadline) {
+    const daysUntil = (new Date(opp.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+    if (daysUntil > 0 && daysUntil <= 7) {
+      reasons.push({ priority: 2, text: `Scade tra ${Math.ceil(daysUntil)} giorni` });
+    }
+  }
+
+  // Type-specific reasons
+  const typeReasons: Partial<Record<string, string>> = {
+    HACKATHON:      'Ottimo per il tuo profilo tecnico',
+    RESEARCH:       'In linea con i tuoi interessi di ricerca',
+    FELLOWSHIP:     'Perfetto per accelerare il tuo percorso',
+    EXCHANGE:       'Esperienza internazionale consigliata per te',
+    SUMMER_PROGRAM: 'Programma estivo in linea con i tuoi interessi',
+    COMPETITION:    'Metti alla prova le tue competenze',
+    CONFERENCE:     'Espandi la tua rete professionale',
+    VOLUNTEERING:   'In linea con i tuoi valori',
+    BOOTCAMP:       'Accelera le tue competenze pratiche',
+  };
+  if (typeReasons[opp.type]) {
+    reasons.push({ priority: 3, text: typeReasons[opp.type]! });
+  }
+
+  // Interest/cluster generic reasons (lower priority)
   if (profile.primaryInterest === 'tech' && (opp.type === 'INTERNSHIP' || opp.type === 'STAGE')) {
-    reasons.push({ priority: 3, text: 'In linea con i tuoi interessi tech' });
+    reasons.push({ priority: 4, text: 'In linea con i tuoi interessi tech' });
   }
   if (profile.primaryInterest === 'business' && opp.type === 'FELLOWSHIP') {
-    reasons.push({ priority: 3, text: 'Perfetto per il tuo percorso imprenditoriale' });
+    reasons.push({ priority: 4, text: 'Perfetto per il tuo percorso imprenditoriale' });
   }
   if (profile.clusterTag === 'Creativo' && opp.type === 'EXTRACURRICULAR') {
     reasons.push({ priority: 4, text: 'Adatto al tuo profilo creativo' });

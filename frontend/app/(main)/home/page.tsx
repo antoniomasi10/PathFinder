@@ -32,6 +32,18 @@ interface Opportunity {
   matchReason: string;
   deadline: string;
   isNew?: boolean;
+  source?: string;
+}
+
+const CC_BY_SOURCES = new Set([
+  'EURES',
+  'Portale Europeo Giovani',
+  'MUR',
+  'AlmaLaurea',
+]);
+
+function isCCBYSource(source?: string): boolean {
+  return !!source && CC_BY_SOURCES.has(source);
 }
 
 interface AdvancedFilters {
@@ -423,21 +435,41 @@ function FullWidthCard({ opp, showScore, isExpanded, onToggle, isSaved, onSave }
       <Accordion open={isExpanded}>
         <div className="px-5 pb-5 space-y-4">
           <div className="h-px bg-[#1E293B]" />
+
+          {/* Location + date + source chips */}
           <div className="flex flex-wrap gap-2">
-            <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-3 py-2">
-              <MapPin size={14} strokeWidth={1.8} className="text-gray-400 flex-shrink-0" />
-              <span className="text-gray-300 text-xs">{opp.location}</span>
-            </div>
+            {opp.location && (
+              <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-3 py-2">
+                <MapPin size={14} strokeWidth={1.8} className="text-gray-400 flex-shrink-0" />
+                <span className="text-gray-300 text-xs">{opp.location}</span>
+              </div>
+            )}
             <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-3 py-2">
               <CalendarIcon size={14} strokeWidth={1.8} className="text-gray-400 flex-shrink-0" />
               <span className="text-gray-300 text-xs">{t.home.publishedDaysAgo}</span>
             </div>
+            {opp.source && (
+              <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-3 py-2">
+                <span className="text-primary text-xs font-medium">{opp.source}</span>
+              </div>
+            )}
           </div>
           <div className="h-px bg-[#1E293B]" />
           <div>
             <p className="text-white font-semibold text-sm mb-2">{opp.company}</p>
             <p className="text-gray-400 text-sm leading-relaxed">{opp.about}</p>
           </div>
+
+          {/* Source attribution */}
+          {opp.source && (
+            <p className="text-gray-500 text-[10px]">
+              {isCCBYSource(opp.source)
+                ? `Dati forniti da ${opp.source} — licenza CC BY 4.0`
+                : `Fonte: ${opp.source}`}
+            </p>
+          )}
+
+          {/* CTA */}
           <div className="flex gap-3">
             <button onClick={() => opp.url && isValidExternalUrl(opp.url) && window.open(opp.url, '_blank', 'noopener,noreferrer')}
               disabled={!opp.url || !isValidExternalUrl(opp.url)}
@@ -489,15 +521,37 @@ function HalfWidthCard({ opp, isExpanded, onToggle, isSaved, onSave }: {
         <div className="px-4 pb-4 space-y-3">
           <div className="h-px bg-[#1E293B]" />
           <p className="text-gray-400 text-[12px] leading-relaxed">{opp.description}</p>
-          <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-2.5 py-1.5 self-start w-fit">
-            <MapPin size={12} strokeWidth={1.8} className="text-gray-400 flex-shrink-0" />
-            <span className="text-gray-300 text-[11px]">{opp.location}</span>
+
+          {/* Location + source chips */}
+          <div className="flex flex-wrap gap-1.5">
+            {opp.location && (
+              <div className="flex items-center gap-1.5 bg-[#0D1117] rounded-xl px-2.5 py-1.5">
+                <MapPin size={12} strokeWidth={1.8} className="text-gray-400 flex-shrink-0" />
+                <span className="text-gray-300 text-[11px]">{opp.location}</span>
+              </div>
+            )}
+            {opp.source && (
+              <div className="flex items-center bg-[#0D1117] rounded-xl px-2.5 py-1.5">
+                <span className="text-primary text-[11px] font-medium">{opp.source}</span>
+              </div>
+            )}
           </div>
           <div className="h-px bg-[#1E293B]" />
           <div>
             <p className="text-white font-semibold text-[12px] mb-1.5">{opp.company}</p>
             <p className="text-gray-400 text-[11px] leading-relaxed">{opp.about}</p>
           </div>
+
+          {/* Source attribution */}
+          {opp.source && (
+            <p className="text-gray-500 text-[9px]">
+              {isCCBYSource(opp.source)
+                ? `Dati forniti da ${opp.source} — licenza CC BY 4.0`
+                : `Fonte: ${opp.source}`}
+            </p>
+          )}
+
+          {/* CTA — scaled down to fit the narrow column */}
           <div className="flex gap-2 pt-1">
             <button onClick={() => opp.url && isValidExternalUrl(opp.url) && window.open(opp.url, '_blank', 'noopener,noreferrer')}
               disabled={!opp.url || !isValidExternalUrl(opp.url)}
@@ -642,6 +696,84 @@ function SearchHistoryDropdown({ history, onSelect, onRemove, onClear }: {
           </button>
         </div>
       ))}
+    </div>
+  );
+}
+
+/* ── Pagination ─────────────────────────────────────────────────── */
+
+function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+  disabled,
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  disabled?: boolean;
+}) {
+  // Build page numbers: show at most 5 pages around current
+  const pages: (number | '...')[] = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (currentPage > 3) pages.push('...');
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (currentPage < totalPages - 2) pages.push('...');
+    pages.push(totalPages);
+  }
+
+  const btnBase = 'w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all active:opacity-75';
+
+  return (
+    <div className="flex items-center justify-center gap-1.5 mt-6 mb-2">
+      {/* Prev arrow */}
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={disabled || currentPage === 1}
+        className={`${btnBase} ${currentPage === 1 ? 'text-gray-600 cursor-not-allowed' : 'bg-[#161B22] text-gray-300'}`}
+        aria-label="Pagina precedente"
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10 12L6 8L10 4" />
+        </svg>
+      </button>
+
+      {/* Page numbers */}
+      {pages.map((p, i) =>
+        p === '...' ? (
+          <span key={`dots-${i}`} className="w-8 text-center text-gray-500 text-sm">...</span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onPageChange(p)}
+            disabled={disabled || p === currentPage}
+            className={`${btnBase} ${
+              p === currentPage
+                ? 'bg-primary text-white'
+                : 'bg-[#161B22] text-gray-400 hover:text-white'
+            }`}
+          >
+            {p}
+          </button>
+        )
+      )}
+
+      {/* Next arrow */}
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={disabled || currentPage === totalPages}
+        className={`${btnBase} ${currentPage === totalPages ? 'text-gray-600 cursor-not-allowed' : 'bg-[#161B22] text-gray-300'}`}
+        aria-label="Pagina successiva"
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 4L10 8L6 12" />
+        </svg>
+      </button>
     </div>
   );
 }
@@ -825,8 +957,13 @@ export default function HomePage() {
   const allOpportunities = getOpportunities(t);
   const filterCategories = getFilterCategories(t);
 
+  // "Per te" — matched opportunities with pagination
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loadingOpps, setLoadingOpps] = useState(true);
+  const [perTePage, setPerTePage] = useState(1);
+  const [perTeTotalPages, setPerTeTotalPages] = useState(1);
+  const perTeTopRef = useRef<HTMLDivElement>(null);
+
   const [newOpportunities, setNewOpportunities] = useState<Opportunity[]>([]);
   const [loadingNew, setLoadingNew] = useState(false);
   const newFetched = useRef(false);
@@ -867,28 +1004,39 @@ export default function HomePage() {
   function mapOpportunity(opp: any, extras?: Partial<Opportunity>): Opportunity {
     return {
       id: opp.id, title: opp.title,
-      company: opp.company || opp.university?.name || '',
+      company: opp.company || opp.universityName || opp.university?.name || '',
       badge: `${opp.type}${opp.isRemote ? ' \u2022 REMOTE' : ''}`,
       description: opp.description || '', matchScore: opp.matchScore || 0,
-      location: opp.location || opp.university?.city || '',
+      location: opp.location || opp.universityCity || opp.university?.city || '',
       about: opp.about || '', url: opp.url || '', type: opp.type || '',
       remote: opp.isRemote || false, isAbroad: opp.isAbroad || false,
       skills: opp.tags || [], requiredEnglishLevel: opp.requiredEnglishLevel || '',
       matchReason: opp.matchReason || '', deadline: opp.deadline || '',
+      source: opp.source || '',
       ...extras,
     };
   }
 
-  useEffect(() => {
-    api.get('/opportunities?matched=true&limit=20')
+  const loadPerTePage = (page: number, scrollToTop = false) => {
+    setLoadingOpps(true);
+    api.get(`/opportunities?matched=true&page=${page}&limit=20`)
       .then(({ data }) => {
         const items = data.data || data;
         const mapped = (Array.isArray(items) ? items : []).map((o: any) => mapOpportunity(o));
         setOpportunities(mapped.length > 0 ? mapped : [...allOpportunities].sort((a, b) => b.matchScore - a.matchScore));
+        setPerTeTotalPages(data.totalPages || 1);
+        setPerTePage(page);
+        if (scrollToTop) {
+          setTimeout(() => {
+            perTeTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 50);
+        }
       })
       .catch(() => setOpportunities([...allOpportunities].sort((a, b) => b.matchScore - a.matchScore)))
       .finally(() => setLoadingOpps(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  };
+
+  useEffect(() => { loadPerTePage(1); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchNewOpportunities = useCallback(() => {
@@ -1084,18 +1232,29 @@ export default function HomePage() {
             ))}
           </div>
         ) : tab === 'per-te' ? (
-          !perTeFiltered.length ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-500">
-              <Search size={40} strokeWidth={1.5} className="mb-3" />
-              <p className="text-sm font-medium">{t.home.noOpportunities}</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {perTeFiltered.map((opp) => (
-                <FullWidthCard key={opp.id} opp={opp} showScore isExpanded={expandedId === opp.id} onToggle={() => handleToggle(opp.id)} isSaved={savedIds.has(opp.id)} onSave={() => handleSave(opp)} />
-              ))}
-            </div>
-          )
+          <>
+            <div ref={perTeTopRef} style={{ scrollMarginTop: 120 }} />
+            {!perTeFiltered.length ? (
+              <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+                <Search size={40} strokeWidth={1.5} className="mb-3" />
+                <p className="text-sm font-medium">{t.home.noOpportunities}</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {perTeFiltered.map((opp) => (
+                  <FullWidthCard key={opp.id} opp={opp} showScore isExpanded={expandedId === opp.id} onToggle={() => handleToggle(opp.id)} isSaved={savedIds.has(opp.id)} onSave={() => handleSave(opp)} />
+                ))}
+              </div>
+            )}
+            {perTeTotalPages > 1 && !hasActiveFilters && (
+              <Pagination
+                currentPage={perTePage}
+                totalPages={perTeTotalPages}
+                onPageChange={(p) => loadPerTePage(p, true)}
+                disabled={loadingOpps}
+              />
+            )}
+          </>
         ) : !esploraFiltered.length ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-500">
             <Search size={40} strokeWidth={1.5} className="mb-3" />
