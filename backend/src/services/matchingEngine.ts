@@ -1,7 +1,40 @@
-import { UserProfile, User, Opportunity, GpaRange, EnglishLevel, UserInteraction, OpportunityType, FieldOfStudy } from '@prisma/client';
+import { UserProfile, User, Opportunity, GpaRange, EnglishLevel, UserInteraction, OpportunityType, FieldOfStudy, Prisma } from '@prisma/client';
 import prisma from '../lib/prisma';
 import type { UserSkills, SkillEntry } from './skills.service';
 import { normalizeFieldToEnum } from './import/utils';
+
+export interface OppFilters {
+  search?: string;
+  company?: string;
+  location?: string;
+  isRemote?: boolean;
+  isAbroad?: boolean;
+  englishLevels?: string[];
+  deadline?: string;
+}
+
+function applyOppFilters(items: any[], f: OppFilters): any[] {
+  return items.filter((opp) => {
+    if (f.search) {
+      const q = f.search.toLowerCase();
+      if (!(opp.title || '').toLowerCase().includes(q) && !(opp.company || '').toLowerCase().includes(q)) return false;
+    }
+    if (f.company && !(opp.company || '').toLowerCase().includes(f.company.toLowerCase())) return false;
+    if (f.location && !(opp.location || '').toLowerCase().includes(f.location.toLowerCase())) return false;
+    if (f.isRemote !== undefined && Boolean(opp.isRemote) !== f.isRemote) return false;
+    if (f.isAbroad !== undefined && Boolean(opp.isAbroad) !== f.isAbroad) return false;
+    if (f.englishLevels?.length && (!opp.requiredEnglishLevel || !f.englishLevels.includes(opp.requiredEnglishLevel))) return false;
+    if (f.deadline && opp.deadline) {
+      const now = new Date(); now.setHours(0, 0, 0, 0);
+      const d = new Date(opp.deadline); d.setHours(0, 0, 0, 0);
+      const daysLeft = Math.ceil((d.getTime() - now.getTime()) / 86400000);
+      if (f.deadline === '7' && daysLeft > 7) return false;
+      if (f.deadline === '30' && daysLeft > 30) return false;
+      if (f.deadline === 'month' && (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear())) return false;
+    }
+    return true;
+  });
+}
 
 function parseUserSkills(raw: unknown): UserSkills | null {
   if (!raw || typeof raw !== 'object') return null;
@@ -423,6 +456,7 @@ export async function getHybridMatchedOpportunities(
   userId: string,
   limit: number = 20,
   offset: number = 0,
+  filters: OppFilters = {},
 ): Promise<{ data: any[]; total: number }> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -558,9 +592,10 @@ export async function getHybridMatchedOpportunities(
 
   scored.sort((a, b) => b.matchScore - a.matchScore);
 
+  const filtered = Object.keys(filters).length ? applyOppFilters(scored, filters) : scored;
   return {
-    data: scored.slice(offset, offset + limit),
-    total: scored.length,
+    data: filtered.slice(offset, offset + limit),
+    total: filtered.length,
   };
 }
 
@@ -576,14 +611,41 @@ export async function getNewOpportunities(
   userId: string,
   limit: number = 20,
   offset: number = 0,
+  filters: OppFilters = {},
 ): Promise<{ data: any[]; total: number }> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { profile: true },
   });
 
-  // Fetch all opportunities ordered by date as base pool
+  // Build Prisma where from filters
+  const where: Prisma.OpportunityWhereInput = {};
+  if (filters.search) {
+    where.OR = [
+      { title: { contains: filters.search, mode: 'insensitive' } },
+      { company: { contains: filters.search, mode: 'insensitive' } },
+    ];
+  }
+  if (filters.company) where.company = { contains: filters.company, mode: 'insensitive' };
+  if (filters.location) where.location = { contains: filters.location, mode: 'insensitive' };
+  if (filters.isRemote !== undefined) where.isRemote = filters.isRemote;
+  if (filters.isAbroad !== undefined) where.isAbroad = filters.isAbroad;
+  if (filters.englishLevels?.length) where.requiredEnglishLevel = { in: filters.englishLevels as any };
+  if (filters.deadline) {
+    const now = new Date(); now.setHours(0, 0, 0, 0);
+    if (filters.deadline === '7' || filters.deadline === '30') {
+      const end = new Date(now); end.setDate(end.getDate() + parseInt(filters.deadline));
+      where.deadline = { gte: now, lte: end };
+    } else if (filters.deadline === 'month') {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      where.deadline = { gte: start, lte: end };
+    }
+  }
+
+  // Fetch opportunities (pre-filtered for efficiency)
   const allOpps = await prisma.opportunity.findMany({
+    where: Object.keys(where).length ? where : undefined,
     include: { university: true },
     orderBy: { postedAt: 'desc' },
   });

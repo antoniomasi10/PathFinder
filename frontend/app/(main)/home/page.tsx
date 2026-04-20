@@ -138,9 +138,8 @@ function matchesSearch(opp: Opportunity, q: string): boolean {
   return opp.title.toLowerCase().includes(q) || opp.company.toLowerCase().includes(q) || opp.badge.toLowerCase().includes(q);
 }
 
-function matchesAllFilters(opp: Opportunity, q: string, f: AdvancedFilters, tab: 'per-te' | 'esplora'): boolean {
-  if (!matchesSearch(opp, q)) return false;
-
+// Only client-side filters — server handles: search, company, location, remote, abroad, englishLevels, deadline
+function matchesClientFilters(opp: Opportunity, f: AdvancedFilters, tab: 'per-te' | 'esplora'): boolean {
   // Badge chips (tipo / modalità / livello)
   const badge = opp.badge.toLowerCase();
   const type = opp.type.toLowerCase();
@@ -148,38 +147,26 @@ function matchesAllFilters(opp: Opportunity, q: string, f: AdvancedFilters, tab:
     if (values.length === 0) continue;
     if (!values.some((v) => badge.includes(v) || type.includes(v))) return false;
   }
-
-  // Text filters
-  if (f.company && !opp.company.toLowerCase().includes(f.company.toLowerCase())) return false;
-  if (f.location && !opp.location.toLowerCase().includes(f.location.toLowerCase())) return false;
-
   // Score range
   if (opp.matchScore < f.minScore || opp.matchScore > f.maxScore) return false;
-
-  // Deadline
-  if (f.deadline) {
-    const daysLeft = getDaysLeft(opp.deadline);
-    if (f.deadline === '7' && daysLeft > 7) return false;
-    if (f.deadline === '30' && daysLeft > 30) return false;
-    if (f.deadline === 'month') {
-      const today = new Date();
-      const d = parseDeadlineDate(opp.deadline);
-      if (!d || d.getMonth() !== today.getMonth() || d.getFullYear() !== today.getFullYear()) return false;
-    }
-  }
-
-  // Toggles
-  if (f.onlyRemote && !opp.remote) return false;
-  if (f.onlyAbroad && !opp.isAbroad) return false;
+  // onlyNew (esplora only — not a server param)
   if (f.onlyNew && tab !== 'per-te' && !opp.isNew) return false;
-
-  // English level
-  if (f.englishLevels.length > 0 && (!opp.requiredEnglishLevel || !f.englishLevels.includes(opp.requiredEnglishLevel))) return false;
-
   // Skills/tags
   if (f.tags.length > 0 && !opp.skills.some((s) => f.tags.includes(s))) return false;
-
   return true;
+}
+
+function buildServerParams(search: string, f: AdvancedFilters): string {
+  const p: Record<string, string> = {};
+  if (search.trim()) p.search = search.trim();
+  if (f.company) p.company = f.company;
+  if (f.location) p.location = f.location;
+  if (f.onlyRemote) p.isRemote = 'true';
+  if (f.onlyAbroad) p.isAbroad = 'true';
+  if (f.englishLevels.length) p.englishLevel = f.englishLevels.join(',');
+  if (f.deadline) p.deadline = f.deadline;
+  const qs = new URLSearchParams(p).toString();
+  return qs ? `&${qs}` : '';
 }
 
 function hasAnyFilter(f: AdvancedFilters): boolean {
@@ -966,7 +953,11 @@ export default function HomePage() {
 
   const [newOpportunities, setNewOpportunities] = useState<Opportunity[]>([]);
   const [loadingNew, setLoadingNew] = useState(false);
-  const newFetched = useRef(false);
+  const [esploraPage, setEsploraPage] = useState(1);
+  const [esploraTotalPages, setEsploraTotalPages] = useState(1);
+  const esploraTopRef = useRef<HTMLDivElement>(null);
+
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   useEffect(() => { setSearchHistory(loadHistory()); }, []);
@@ -1017,40 +1008,41 @@ export default function HomePage() {
     };
   }
 
-  const loadPerTePage = (page: number, scrollToTop = false) => {
+  const loadPerTePage = useCallback((page: number, search: string, filters: AdvancedFilters, scrollToTop = false) => {
     setLoadingOpps(true);
-    api.get(`/opportunities?matched=true&page=${page}&limit=20`)
+    const qs = buildServerParams(search, filters);
+    api.get(`/opportunities?matched=true&page=${page}&limit=20${qs}`)
       .then(({ data }) => {
         const items = data.data || data;
         const mapped = (Array.isArray(items) ? items : []).map((o: any) => mapOpportunity(o));
         setOpportunities(mapped.length > 0 ? mapped : [...allOpportunities].sort((a, b) => b.matchScore - a.matchScore));
         setPerTeTotalPages(data.totalPages || 1);
         setPerTePage(page);
-        if (scrollToTop) {
-          setTimeout(() => {
-            perTeTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }, 50);
-        }
+        if (scrollToTop) setTimeout(() => perTeTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
       })
       .catch(() => setOpportunities([...allOpportunities].sort((a, b) => b.matchScore - a.matchScore)))
       .finally(() => setLoadingOpps(false));
-  };
-
-  useEffect(() => { loadPerTePage(1); // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchNewOpportunities = useCallback(() => {
-    if (newFetched.current) return;
-    newFetched.current = true; setLoadingNew(true);
-    api.get('/opportunities?new=true&limit=20')
+  const loadEsploraPage = useCallback((page: number, search: string, filters: AdvancedFilters, scrollToTop = false) => {
+    setLoadingNew(true);
+    const qs = buildServerParams(search, filters);
+    api.get(`/opportunities?new=true&page=${page}&limit=20${qs}`)
       .then(({ data }) => {
         const items = data.data || data;
         const mapped = (Array.isArray(items) ? items : []).map((o: any) => mapOpportunity(o, { isNew: o.isNew ?? false }));
         setNewOpportunities(mapped.length > 0 ? mapped : [...allOpportunities].sort((a, b) => b.matchScore - a.matchScore));
+        setEsploraTotalPages(data.totalPages || 1);
+        setEsploraPage(page);
+        if (scrollToTop) setTimeout(() => esploraTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
       })
       .catch(() => setNewOpportunities([...allOpportunities].sort((a, b) => b.matchScore - a.matchScore)))
       .finally(() => setLoadingNew(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => { loadPerTePage(1, '', DEFAULT_FILTERS); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // All unique tags from both datasets
@@ -1081,16 +1073,30 @@ export default function HomePage() {
     setFilterOpen(true);
   }
 
+  // Debounce search → re-fetch on server
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      if (tab === 'per-te') loadPerTePage(1, searchQuery, appliedFilters);
+      else loadEsploraPage(1, searchQuery, appliedFilters);
+    }, 350);
+    return () => { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
   function applyFilters() {
-    setAppliedFilters({ ...draftFilters });
+    const newFilters = { ...draftFilters };
+    setAppliedFilters(newFilters);
     setFilterOpen(false);
+    if (tab === 'per-te') loadPerTePage(1, searchQuery, newFilters);
+    else loadEsploraPage(1, searchQuery, newFilters);
   }
 
   const hasActiveFilters = hasAnyFilter(appliedFilters);
 
   function handleTabChange(newTab: 'per-te' | 'esplora') {
     setTab(newTab); setExpandedId(null);
-    if (newTab === 'esplora') fetchNewOpportunities();
+    if (newTab === 'esplora') loadEsploraPage(1, searchQuery, appliedFilters);
   }
 
   const viewedRef = useRef<Set<string>>(new Set());
@@ -1103,9 +1109,9 @@ export default function HomePage() {
     toggleSave(opp.id, { title: opp.title, company: opp.company, type: opp.type, description: opp.description, about: opp.about, location: opp.location, isRemote: opp.remote, url: opp.url, deadline: opp.deadline });
   }
 
-  // Smart search — pool limited to opportunities that pass the active filters (query excluded)
-  const perTePool = opportunities.filter((o) => matchesAllFilters(o, '', appliedFilters, 'per-te'));
-  const esploraPool = newOpportunities.filter((o) => matchesAllFilters(o, '', appliedFilters, 'esplora'));
+  // Smart search — search already applied server-side; pool is the loaded items
+  const perTePool = opportunities.filter((o) => matchesClientFilters(o, appliedFilters, 'per-te'));
+  const esploraPool = newOpportunities.filter((o) => matchesClientFilters(o, appliedFilters, 'esplora'));
   const suggestions = getSuggestions(searchQuery, perTePool, esploraPool);
   const showSuggestions = searchFocused && searchQuery.trim().length > 0 && suggestions.length > 0;
   const showHistory = searchFocused && searchQuery.trim().length === 0 && searchHistory.length > 0;
@@ -1113,7 +1119,7 @@ export default function HomePage() {
   function handleSuggestionSelect(s: Suggestion) {
     addToHistory(searchQuery);
     setSearchFocused(false); setActiveSuggestionIndex(-1); setSearchQuery('');
-    if (tab !== s.tab) { setTab(s.tab); if (s.tab === 'esplora') fetchNewOpportunities(); }
+    if (tab !== s.tab) { setTab(s.tab); if (s.tab === 'esplora') loadEsploraPage(1, searchQuery, appliedFilters); }
     setTimeout(() => setExpandedId(s.opp.id), 80);
   }
 
@@ -1137,12 +1143,14 @@ export default function HomePage() {
 
   const q = searchQuery.trim().toLowerCase();
 
-  const perTeFiltered = opportunities.filter((o) => matchesAllFilters(o, q, appliedFilters, 'per-te'));
-  const esploraFiltered = newOpportunities.filter((o) => matchesAllFilters(o, q, appliedFilters, 'esplora'));
+  // Server already filters search/company/location/remote/abroad/english/deadline
+  // Only apply remaining client-side filters (badges, score range, tags, onlyNew)
+  const perTeFiltered = opportunities.filter((o) => matchesClientFilters(o, appliedFilters, 'per-te'));
+  const esploraFiltered = newOpportunities.filter((o) => matchesClientFilters(o, appliedFilters, 'esplora'));
 
-  // Live count in filter sheet footer
+  // Live count in filter sheet footer (approximate — current page only for client-side filters)
   const activeDataset = tab === 'per-te' ? opportunities : newOpportunities;
-  const draftMatchCount = activeDataset.filter((o) => matchesAllFilters(o, q, draftFilters, tab)).length;
+  const draftMatchCount = activeDataset.filter((o) => matchesClientFilters(o, draftFilters, tab)).length;
 
   return (
     <>
@@ -1246,11 +1254,11 @@ export default function HomePage() {
                 ))}
               </div>
             )}
-            {perTeTotalPages > 1 && !hasActiveFilters && (
+            {perTeTotalPages > 1 && (
               <Pagination
                 currentPage={perTePage}
                 totalPages={perTeTotalPages}
-                onPageChange={(p) => loadPerTePage(p, true)}
+                onPageChange={(p) => loadPerTePage(p, searchQuery, appliedFilters, true)}
                 disabled={loadingOpps}
               />
             )}
@@ -1261,8 +1269,19 @@ export default function HomePage() {
             <p className="text-sm font-medium">{t.home.noOpportunities}</p>
           </div>
         ) : (
-          <EsploraGrid items={esploraFiltered} expandedId={expandedId} onToggle={handleToggle} savedIds={savedIds}
-            onSave={(id) => { const o = newOpportunities.find((x) => x.id === id); if (o) handleSave(o); }} />
+          <>
+            <div ref={esploraTopRef} style={{ scrollMarginTop: 120 }} />
+            <EsploraGrid items={esploraFiltered} expandedId={expandedId} onToggle={handleToggle} savedIds={savedIds}
+              onSave={(id) => { const o = newOpportunities.find((x) => x.id === id); if (o) handleSave(o); }} />
+            {esploraTotalPages > 1 && (
+              <Pagination
+                currentPage={esploraPage}
+                totalPages={esploraTotalPages}
+                onPageChange={(p) => loadEsploraPage(p, searchQuery, appliedFilters, true)}
+                disabled={loadingNew}
+              />
+            )}
+          </>
         )}
       </div>
 
