@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/language';
 import { useNotifications } from '@/lib/notificationContext';
@@ -73,58 +74,79 @@ function formatTimeAgo(dateStr: string): string {
 }
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const router = useRouter();
   const { t } = useLanguage();
   const { refresh } = useNotifications();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    api.get('/notifications?page=1&limit=20')
-      .then(({ data }) => {
-        const items = data.data || data;
-        setNotifications(Array.isArray(items) ? items : []);
-        if (data.totalPages) setTotalPages(data.totalPages);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, isLoading: loading } = useQuery<{ notifications: Notification[]; totalPages: number }>({
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      const { data } = await api.get('/notifications?page=1&limit=20');
+      const items = data.data || data;
+      return { notifications: Array.isArray(items) ? items : [], totalPages: data.totalPages ?? 1 };
+    },
+  });
+
+  const notifications = data?.notifications ?? [];
+  const totalPages = data?.totalPages ?? 1;
 
   const loadMore = async () => {
     if (loadingMore || page >= totalPages) return;
     setLoadingMore(true);
     try {
       const nextPage = page + 1;
-      const { data } = await api.get(`/notifications?page=${nextPage}&limit=20`);
-      const items = data.data || data;
-      setNotifications((prev) => [...prev, ...(Array.isArray(items) ? items : [])]);
+      const { data: res } = await api.get(`/notifications?page=${nextPage}&limit=20`);
+      const items = res.data || res;
+      queryClient.setQueryData<{ notifications: Notification[]; totalPages: number }>(
+        ['notifications'],
+        (prev) => prev
+          ? { ...prev, notifications: [...prev.notifications, ...(Array.isArray(items) ? items : [])] }
+          : prev!
+      );
       setPage(nextPage);
-      if (data.totalPages) setTotalPages(data.totalPages);
-    } catch (err) {
-      console.error('Failed to load more notifications:', err);
+    } catch {
+      // ignore
     } finally {
       setLoadingMore(false);
     }
   };
 
-  const markAsRead = async (notif: Notification) => {
-    if (!notif.isRead) {
-      await api.patch(`/notifications/${notif.id}/read`);
-      setNotifications((prev) => prev.map((n) => n.id === notif.id ? { ...n, isRead: true } : n));
+  const markReadMutation = useMutation({
+    mutationFn: (id: string) => api.patch(`/notifications/${id}/read`),
+    onSuccess: (_, id) => {
+      queryClient.setQueryData<{ notifications: Notification[]; totalPages: number }>(
+        ['notifications'],
+        (prev) => prev
+          ? { ...prev, notifications: prev.notifications.map((n) => n.id === id ? { ...n, isRead: true } : n) }
+          : prev!
+      );
       refresh();
-    }
+    },
+  });
+
+  const markAllReadMutation = useMutation({
+    mutationFn: () => api.patch('/notifications/read-all'),
+    onSuccess: () => {
+      queryClient.setQueryData<{ notifications: Notification[]; totalPages: number }>(
+        ['notifications'],
+        (prev) => prev
+          ? { ...prev, notifications: prev.notifications.map((n) => ({ ...n, isRead: true })) }
+          : prev!
+      );
+      refresh();
+    },
+  });
+
+  const markAsRead = async (notif: Notification) => {
+    if (!notif.isRead) markReadMutation.mutate(notif.id);
     const target = resolveNavTarget(notif);
     if (target) router.push(target);
   };
 
-  const markAllRead = async () => {
-    await api.patch('/notifications/read-all');
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    refresh();
-  };
+  const markAllRead = () => markAllReadMutation.mutate();
 
   const hasUnread = notifications.some((n) => !n.isRead);
 

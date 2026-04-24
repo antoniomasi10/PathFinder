@@ -6,12 +6,29 @@ import prisma from '../lib/prisma';
 import { createNotification } from '../services/notification.service';
 import { trackInteraction } from '../services/interaction.service';
 import { getSmartFriendSuggestions } from '../services/similarity.service';
+import { cacheGet, cacheSet, cacheDel } from '../lib/cache';
+
+const FRIENDS_TTL = 2 * 60;       // 2 minutes
+const SUGGESTIONS_TTL = 10 * 60;  // 10 minutes
+
+function invalidateFriendsCache(...userIds: string[]) {
+  return Promise.all(
+    userIds.flatMap((id) => [
+      cacheDel(`cache:friends:${id}`),
+      cacheDel(`cache:friend-suggestions:${id}`),
+    ])
+  ).catch(() => {});
+}
 
 const router = Router();
 
 // Get friends list
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
+    const cacheKey = `cache:friends:${req.user!.userId}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) { res.json(cached); return; }
+
     const friends = await prisma.friendRequest.findMany({
       where: {
         status: 'ACCEPTED',
@@ -30,6 +47,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       return f.fromUserId === req.user!.userId ? f.toUser : f.fromUser;
     });
 
+    await cacheSet(cacheKey, friendUsers, FRIENDS_TTL);
     res.json(friendUsers);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -150,6 +168,8 @@ router.patch('/request/:id', authMiddleware, async (req: Request, res: Response)
         '\u{1F91D}',
         { fromUserId: req.user!.userId }
       );
+      // Both users' friend lists changed
+      invalidateFriendsCache(req.user!.userId, request.fromUserId);
     }
 
     res.json(request);
@@ -161,7 +181,12 @@ router.patch('/request/:id', authMiddleware, async (req: Request, res: Response)
 // Get suggested pathmates (smart scoring: profile similarity, university, mutual friends, shared saves)
 router.get('/suggestions', authMiddleware, async (req: Request, res: Response) => {
   try {
+    const cacheKey = `cache:friend-suggestions:${req.user!.userId}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) { res.json(cached); return; }
+
     const suggestions = await getSmartFriendSuggestions(req.user!.userId, 10);
+    await cacheSet(cacheKey, suggestions, SUGGESTIONS_TTL);
     res.json(suggestions);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -186,6 +211,7 @@ router.delete('/:friendId', authMiddleware, async (req: Request, res: Response) 
       return;
     }
 
+    invalidateFriendsCache(req.user!.userId, req.params.friendId);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

@@ -3,6 +3,10 @@ import { NotificationType } from '@prisma/client';
 import { shouldNotify } from './notificationPreference.service';
 import { getOrCreatePreferences } from './notificationPreference.service';
 import { sendPushToUser } from './webPush.service';
+import { cacheGet, cacheSet, cacheDel } from '../lib/cache';
+
+const NOTIF_COUNT_TTL = 30; // seconds
+const notifCountKey = (userId: string) => `cache:notif:counts:${userId}`;
 
 // Types that should NOT appear in notification center (chat messages)
 const CHAT_ONLY_TYPES: NotificationType[] = ['NEW_MESSAGE'];
@@ -60,6 +64,12 @@ export async function createNotification(
     }
   } catch {}
 
+  // New notification changes both unread count and badge counts
+  Promise.all([
+    cacheDel(notifCountKey(userId)),
+    cacheDel(`cache:notif:badges:${userId}`),
+  ]).catch(() => {});
+
   return notification;
 }
 
@@ -99,34 +109,50 @@ export async function getNotifications(userId: string, page: number = 1, limit: 
   return { data: notifications, total, page, totalPages: Math.ceil(total / limit) };
 }
 
-export async function markAsRead(notificationId: string) {
-  return prisma.notification.update({
+export async function markAsRead(notificationId: string, userId: string) {
+  const result = await prisma.notification.update({
     where: { id: notificationId },
     data: { isRead: true },
   });
+  Promise.all([
+    cacheDel(notifCountKey(userId)),
+    cacheDel(`cache:notif:badges:${userId}`),
+  ]).catch(() => {});
+  return result;
 }
 
 export async function markAllAsRead(userId: string) {
-  return prisma.notification.updateMany({
+  const result = await prisma.notification.updateMany({
     where: { userId, isRead: false, type: { notIn: CHAT_ONLY_TYPES } },
     data: { isRead: true },
   });
+  Promise.all([
+    cacheDel(notifCountKey(userId)),
+    cacheDel(`cache:notif:badges:${userId}`),
+  ]).catch(() => {});
+  return result;
 }
 
-export async function getUnreadCount(userId: string) {
-  return prisma.notification.count({
+export async function getUnreadCount(userId: string): Promise<number> {
+  const cached = await cacheGet<{ unread: number }>(notifCountKey(userId));
+  if (cached) return cached.unread;
+
+  const count = await prisma.notification.count({
     where: { userId, isRead: false, type: { notIn: CHAT_ONLY_TYPES } },
   });
+  // Store alongside badge counts if already cached, else just prime the key
+  await cacheSet(notifCountKey(userId), { unread: count }, NOTIF_COUNT_TTL);
+  return count;
 }
 
-// Badge counts per tab
 export async function getBadgeCounts(userId: string) {
+  const cacheKey = `cache:notif:badges:${userId}`;
+  const cached = await cacheGet<{ networking: number; opportunities: number; chat: number }>(cacheKey);
+  if (cached) return cached;
+
   const [networking, opportunities, chat] = await Promise.all([
-    // Networking: pending friend requests + unread networking notifications
     Promise.all([
-      prisma.friendRequest.count({
-        where: { toUserId: userId, status: 'PENDING' },
-      }),
+      prisma.friendRequest.count({ where: { toUserId: userId, status: 'PENDING' } }),
       prisma.notification.count({
         where: {
           userId,
@@ -136,20 +162,16 @@ export async function getBadgeCounts(userId: string) {
       }),
     ]).then(([pending, notifs]) => pending + notifs),
 
-    // Opportunities: unread opportunity notifications
     prisma.notification.count({
-      where: {
-        userId,
-        isRead: false,
-        type: { in: ['NEW_OPPORTUNITY', 'OPPORTUNITY_DEADLINE'] },
-      },
+      where: { userId, isRead: false, type: { in: ['NEW_OPPORTUNITY', 'OPPORTUNITY_DEADLINE'] } },
     }),
 
-    // Chat: unread messages count
     prisma.pathMatesMessage.count({
       where: { receiverId: userId, readAt: null },
     }),
   ]);
 
-  return { networking, opportunities, chat };
+  const result = { networking, opportunities, chat };
+  await cacheSet(cacheKey, result, NOTIF_COUNT_TTL);
+  return result;
 }

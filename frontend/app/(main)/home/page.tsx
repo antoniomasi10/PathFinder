@@ -992,6 +992,7 @@ export default function HomePage() {
     return () => document.removeEventListener('mousedown', handleOutside);
   }, []);
 
+
   function mapOpportunity(opp: any, extras?: Partial<Opportunity>): Opportunity {
     return {
       id: opp.id, title: opp.title,

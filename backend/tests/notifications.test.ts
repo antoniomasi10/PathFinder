@@ -199,7 +199,7 @@ describe('Mark As Read', () => {
     const unread = result.data.find((n: any) => !n.isRead);
     expect(unread).toBeDefined();
 
-    const updated = await markAsRead(unread!.id);
+    const updated = await markAsRead(unread!.id, users.userB.id);
     expect(updated.isRead).toBe(true);
 
     // Verify in DB
@@ -431,7 +431,7 @@ describe('Edge Cases', () => {
     const result = await getNotifications(users.userA.id);
     const readNotif = result.data.find((n: any) => n.isRead);
     if (readNotif) {
-      const result = await markAsRead(readNotif.id);
+      const result = await markAsRead(readNotif.id, users.userA.id);
       expect(result.isRead).toBe(true);
     }
   });

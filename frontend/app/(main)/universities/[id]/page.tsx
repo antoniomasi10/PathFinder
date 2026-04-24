@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/language';
 import { isValidExternalUrl } from '@/lib/urlValidation';
@@ -37,17 +37,17 @@ function getCourseTypeLabels(t: ReturnType<typeof useLanguage>['t']): Record<str
 
 export default function UniversityDetailPage() {
   const { id } = useParams();
-  const [university, setUniversity] = useState<UniversityDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const { t } = useLanguage();
   const COURSE_TYPE_LABELS = getCourseTypeLabels(t);
 
-  useEffect(() => {
-    api.get(`/universities/${id}`)
-      .then(({ data }) => setUniversity(data))
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [id]);
+  const { data: university, isLoading: loading } = useQuery<UniversityDetail>({
+    queryKey: ['university', id],
+    queryFn: async () => {
+      const { data } = await api.get(`/universities/${id}`);
+      return data;
+    },
+    enabled: !!id,
+  });
 
   if (loading) {
     return (
