@@ -191,6 +191,7 @@ model UserProfile {
   freeTimeActivity    String?
   problemSolvingStyle String?
   riskTolerance     String?
+  coreValue         String?
   careerVision      String?
   professionalGoal  String?
   passions          String[]
