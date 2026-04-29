@@ -1,27 +1,19 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { ArrowLeft } from '@/components/icons';
-
 interface Props {
   onClick: () => void;
 }
 
 export default function BackButton({ onClick }: Props) {
   return (
-    <motion.button
+    <button
       onClick={onClick}
-      className="w-16 h-16 rounded-full flex items-center justify-center"
-      style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
-      whileHover={{ scale: 1.05, backgroundColor: 'rgba(255,255,255,0.15)' }}
-      whileTap={{ scale: 0.95 }}
+      className="flex items-center justify-center rounded-full hover:bg-[#e6e7f8] transition-colors"
+      style={{ width: 36, height: 36 }}
     >
-      <motion.div
-        animate={{ x: [0, -3, 0] }}
-        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-      >
-        <ArrowLeft size={24} color="white" />
-      </motion.div>
-    </motion.button>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M13 4l-6 6 6 6" stroke="#595e78" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
   );
 }

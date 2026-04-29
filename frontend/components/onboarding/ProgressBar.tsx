@@ -8,23 +8,21 @@ interface Props {
 }
 
 export default function ProgressBar({ currentStep }: Props) {
+  const pct = Math.round(((currentStep + 1) / TOTAL_STEPS) * 100);
+
   return (
-    <div className="flex gap-1.5">
-      {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-        <div
-          key={i}
-          className="h-1.5 flex-1 rounded-full overflow-hidden"
-          style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}
-        >
-          <motion.div
-            className="h-full rounded-full"
-            style={{ background: 'linear-gradient(90deg, #6366f1, #8b5cf6)' }}
-            initial={false}
-            animate={{ width: i <= currentStep ? '100%' : '0%' }}
-            transition={{ duration: 0.6, delay: i * 0.05, ease: [0.4, 0, 0.2, 1] as const }}
-          />
-        </div>
-      ))}
+    <div className="flex flex-col gap-2 mb-8">
+      <span className="text-base text-[#595e78]" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
+        Step {currentStep + 1} di {TOTAL_STEPS}
+      </span>
+      <div className="h-2 bg-[#ecedff] rounded-full overflow-hidden">
+        <motion.div
+          className="h-full bg-[#615fe2] rounded-full"
+          initial={false}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] as const }}
+        />
+      </div>
     </div>
   );
 }

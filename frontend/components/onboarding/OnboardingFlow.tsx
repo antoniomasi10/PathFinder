@@ -123,8 +123,15 @@ export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps
   const phase = currentStep < TOTAL_STEPS ? 'questions' : 'interests';
 
   return (
-    <div className="min-h-screen relative">
-      <AmbientBackground />
+    <div className="min-h-screen relative font-jakarta" style={{ background: '#fbf8ff' }}>
+      {/* Watermark decorativo */}
+      <img
+        src="/logo-coha-watermark.svg"
+        alt=""
+        aria-hidden
+        className="absolute pointer-events-none select-none"
+        style={{ left: -440, top: 71, width: 1070, height: 782, opacity: 1 }}
+      />
 
       <AnimatePresence mode="wait">
         {phase === 'interests' ? (
@@ -147,124 +154,121 @@ export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps
             initial={false}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="relative z-10 flex flex-col min-h-screen px-6 pt-12 pb-32"
+            className="relative z-10 flex flex-col min-h-screen"
+            style={{
+              border: '8px solid white',
+              boxShadow: '0px 0px 0px 1px rgba(172,176,206,0.3), 0px 25px 50px -12px rgba(0,0,0,0.25)',
+            }}
           >
-            {/* Progress bar */}
-            <ProgressBar currentStep={currentStep} />
+            {/* Contenuto scrollabile */}
+            <div className="flex-1 overflow-y-auto pt-6 px-6 pb-32">
+              {/* Barra progresso + back */}
+              <div className="flex items-center gap-3 mb-0">
+                {currentStep > 0 && <BackButton onClick={handleBack} />}
+                <div className="flex-1">
+                  <ProgressBar currentStep={currentStep} />
+                </div>
+              </div>
 
-            {/* Animated question content */}
-            <AnimatePresence mode="wait" custom={direction}>
-              <motion.div
-                key={currentStep}
-                custom={direction}
-                variants={slideVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={slideTransition}
-                className="mt-8 flex-1"
-              >
-                <QuestionCard
-                  questionNumber={question!.id}
-                  questionText={question!.question}
-                  isMultiSelect={isMultiSelect}
+              {/* Domanda + opzioni animate */}
+              <AnimatePresence mode="wait" custom={direction}>
+                <motion.div
+                  key={currentStep}
+                  custom={direction}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={slideTransition}
                 >
-                  {question!.options.map((option) => {
-                    const isSelected = isMultiSelect
-                      ? selectedMulti.includes(option)
-                      : selectedAnswer === option;
-                    return (
-                      <OptionButton
-                        key={option}
-                        label={option}
-                        isSelected={isSelected}
-                        isMultiSelect={isMultiSelect}
-                        onSelect={() => isMultiSelect ? handleMultiToggle(option) : handleSelect(option)}
-                      />
-                    );
-                  })}
+                  <QuestionCard
+                    questionNumber={question!.id}
+                    questionText={question!.question}
+                    isMultiSelect={isMultiSelect}
+                  >
+                    {question!.options.map((option) => {
+                      const isSelected = isMultiSelect
+                        ? selectedMulti.includes(option)
+                        : selectedAnswer === option;
+                      return (
+                        <OptionButton
+                          key={option}
+                          label={option}
+                          isSelected={isSelected}
+                          isMultiSelect={isMultiSelect}
+                          onSelect={() => isMultiSelect ? handleMultiToggle(option) : handleSelect(option)}
+                        />
+                      );
+                    })}
 
-                  {/* "Altro" option */}
-                  {question!.hasOtherField && (
-                    <motion.div
-                      variants={{
-                        hidden: { opacity: 0, y: 20 },
-                        visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] as const } },
-                      }}
-                      className="w-full rounded-2xl px-4 py-4 transition-colors duration-200"
-                      style={{
-                        backgroundColor: isOtherSelected ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.05)',
-                        border: `1.5px solid ${isOtherSelected ? '#6366f1' : 'transparent'}`,
-                      }}
-                    >
-                      <button
-                        onClick={() => isMultiSelect ? handleMultiToggle('__other__') : handleSelect('__other__')}
-                        className="flex items-center gap-3 w-full text-left"
+                    {/* Opzione "Altro" */}
+                    {question!.hasOtherField && (
+                      <motion.div
+                        variants={{
+                          hidden: { opacity: 0, y: 16 },
+                          visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.4, 0, 0.2, 1] as const } },
+                        }}
+                        className="w-full rounded-[24px] px-[18px] py-[14px] border-2 transition-colors duration-200"
+                        style={{
+                          backgroundColor: isOtherSelected ? 'rgba(243,242,255,0.75)' : 'rgba(255,255,255,0.75)',
+                          borderColor: isOtherSelected ? '#4a4bd7' : 'rgba(172,176,206,0.4)',
+                        }}
                       >
-                        {isMultiSelect ? (
-                          <motion.div
-                            className="flex items-center justify-center flex-shrink-0"
+                        <button
+                          onClick={() => isMultiSelect ? handleMultiToggle('__other__') : handleSelect('__other__')}
+                          className="flex items-center gap-[18px] w-full text-left"
+                        >
+                          <div
+                            className="flex-shrink-0 flex items-center justify-center rounded-[8px]"
                             style={{
-                              width: 22, height: 22, borderRadius: 6,
-                              backgroundColor: isOtherSelected ? '#6366f1' : 'rgba(255,255,255,0.1)',
-                              border: isOtherSelected ? 'none' : '1.5px solid rgba(255,255,255,0.2)',
+                              width: 28, height: 28,
+                              backgroundColor: isOtherSelected ? '#615fe2' : 'white',
+                              border: isOtherSelected ? 'none' : '2px solid rgba(172,176,206,0.6)',
                             }}
-                            animate={isOtherSelected ? { scale: [1, 1.2, 1] } : {}}
-                            transition={{ duration: 0.3 }}
                           >
                             {isOtherSelected && (
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                <polyline points="20 6 9 17 4 12" />
+                              <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
+                                <path d="M1.5 5.5L5.5 9.5L12.5 1.5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                               </svg>
                             )}
-                          </motion.div>
-                        ) : (
-                          <div
-                            className="flex items-center justify-center flex-shrink-0"
-                            style={{
-                              width: 22, height: 22, borderRadius: '50%',
-                              border: `1.5px solid ${isOtherSelected ? '#6366f1' : 'rgba(255,255,255,0.2)'}`,
-                            }}
-                          >
-                            {isOtherSelected && (
-                              <motion.div
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#6366f1' }}
-                              />
-                            )}
                           </div>
-                        )}
-                        <span className="text-white text-lg">Altro...</span>
-                      </button>
+                          <span
+                            className="text-base text-[#2c3149]"
+                            style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: isOtherSelected ? 500 : 400 }}
+                          >
+                            Altro...
+                          </span>
+                        </button>
 
-                      <AnimatePresence>
-                        {isOtherSelected && (
-                          <motion.input
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            type="text"
-                            value={otherTexts[questionId] ?? ''}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleOtherText(e.target.value)}
-                            placeholder="Scrivi qui"
-                            autoFocus
-                            className="mt-3 w-full bg-transparent text-white text-sm placeholder-gray-500 border-b outline-none pb-1"
-                            style={{ borderColor: '#6366f1' }}
-                          />
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
-                  )}
-                </QuestionCard>
-              </motion.div>
-            </AnimatePresence>
+                        <AnimatePresence>
+                          {isOtherSelected && (
+                            <motion.input
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              type="text"
+                              value={otherTexts[questionId] ?? ''}
+                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleOtherText(e.target.value)}
+                              placeholder="Scrivi qui"
+                              autoFocus
+                              className="mt-3 w-full bg-transparent text-[#2c3149] text-sm placeholder-[#acb0ce] border-b border-[#615fe2] outline-none pb-1"
+                            />
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    )}
+                  </QuestionCard>
+                </motion.div>
+              </AnimatePresence>
+            </div>
 
-            {/* Navigation buttons — fixed bottom */}
-            <div className="fixed bottom-8 left-6 right-6 flex justify-between items-center z-20">
-              <div>
-                {currentStep > 0 && <BackButton onClick={handleBack} />}
-              </div>
+            {/* Bottom action con gradient fade */}
+            <div
+              className="fixed bottom-0 left-0 right-0 z-20 px-6 pb-6 pt-12"
+              style={{
+                background: 'linear-gradient(to top, #fbf8ff 60%, rgba(251,248,255,0.9) 80%, transparent 100%)',
+              }}
+            >
               <NextButton disabled={!canGoNext} onClick={handleNext} />
             </div>
           </motion.div>
