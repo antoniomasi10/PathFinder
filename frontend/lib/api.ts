@@ -6,6 +6,22 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PUBLIC_API_URL && window.
   console.warn('NEXT_PUBLIC_API_URL is not set - using localhost fallback');
 }
 
+// In-memory token store — never touches localStorage so XSS cannot steal JWTs.
+// Token is recovered automatically on page load via the httpOnly refresh-token cookie.
+let _accessToken: string | null = null;
+
+export function setAccessToken(token: string | null) {
+  _accessToken = token;
+}
+
+export function getAccessToken(): string | null {
+  return _accessToken;
+}
+
+export function clearAccessToken() {
+  _accessToken = null;
+}
+
 const api = axios.create({
   baseURL: `${API_URL}/api`,
   withCredentials: true,
@@ -17,9 +33,8 @@ const api = axios.create({
 const etagStore = new Map<string, { etag: string; data: unknown }>();
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (_accessToken) {
+    config.headers.Authorization = `Bearer ${_accessToken}`;
   }
 
   if (config.method?.toLowerCase() === 'get' && config.url) {
@@ -58,17 +73,17 @@ api.interceptors.response.use(
       return api(originalRequest);
     }
 
-    // Token expired — refresh and retry
+    // Token expired — refresh via httpOnly cookie and retry
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
         const { data } = await axios.post(`${API_URL}/api/auth/refresh`, {}, { withCredentials: true });
-        localStorage.setItem('accessToken', data.accessToken);
+        setAccessToken(data.accessToken);
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         reauthenticateSockets();
         return api(originalRequest);
       } catch {
-        localStorage.removeItem('accessToken');
+        clearAccessToken();
         return Promise.reject(error);
       }
     }

@@ -7,12 +7,8 @@ export default function RootPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      router.replace('/home');
-    } else {
-      router.replace('/login');
-    }
+    // Always attempt /home; AuthProvider will redirect to /login if there's no valid session.
+    router.replace('/home');
   }, [router]);
 
   return (

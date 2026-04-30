@@ -473,6 +473,33 @@ export function parseRSSFeed(xml: string): RSSItem[] {
 }
 
 // ---------------------------------------------------------------------------
+// Company logo resolution (Clearbit)
+// ---------------------------------------------------------------------------
+
+/**
+ * Extracts the hostname from a URL, stripping the www. prefix.
+ * Returns null on invalid URLs.
+ */
+export function extractDomain(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Builds a Clearbit logo URL from an opportunity's application URL.
+ * Does NOT verify the logo exists — callers should handle broken images.
+ * Returns null if the URL is missing or unparseable.
+ */
+export function buildClearbitLogoUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const domain = extractDomain(url);
+  return domain ? `https://logo.clearbit.com/${domain}` : null;
+}
+
+// ---------------------------------------------------------------------------
 // Meta description enrichment
 // ---------------------------------------------------------------------------
 

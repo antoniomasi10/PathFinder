@@ -7,6 +7,7 @@ import QueryProvider from '@/components/QueryProvider';
 import { LanguageProvider } from '@/lib/language';
 import { PrivacyProvider } from '@/lib/privacy';
 import { GoogleOAuthProvider } from '@react-oauth/google';
+import CookieBanner from '@/components/CookieBanner';
 
 const sora = Sora({
   subsets: ['latin'],
@@ -49,6 +50,7 @@ export default function RootLayout({
             <LanguageProvider>
               <PrivacyProvider>
                 <AuthProvider>{children}</AuthProvider>
+                <CookieBanner />
               </PrivacyProvider>
             </LanguageProvider>
           </GoogleOAuthProvider>

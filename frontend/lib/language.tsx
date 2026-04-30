@@ -151,6 +151,9 @@ const it = {
     universityHidden: 'Università nascosta',
     deletingAccount: 'Eliminando...',
     deleteIrreversibleMsg: 'Questa azione è irreversibile. Tutti i tuoi dati verranno eliminati definitivamente.',
+    deleteExportReminder: 'Prima di procedere, puoi scaricare una copia di tutti i tuoi dati.',
+    exportingData: 'Esportazione in corso...',
+    exportDataSuccess: 'Dati scaricati',
   },
   // Privacy sheet
   privacy: {
@@ -172,6 +175,8 @@ const it = {
     deleteAccount: 'Elimina account',
     everyone: 'Tutti',
     nobody: 'Nessuno',
+    marketingConsentLabel: 'Comunicazioni di marketing',
+    marketingConsentDesc: 'Ricevi aggiornamenti sulle opportunit\u00e0 e novit\u00e0 della piattaforma',
   },
   // Security sheet
   security: {
@@ -515,6 +520,9 @@ const en: Translations = {
     universityHidden: 'University hidden',
     deletingAccount: 'Deleting...',
     deleteIrreversibleMsg: 'This action is irreversible. All your data will be permanently deleted.',
+    deleteExportReminder: 'Before proceeding, you can download a copy of all your data.',
+    exportingData: 'Exporting...',
+    exportDataSuccess: 'Data downloaded',
   },
   privacy: {
     title: 'Privacy',
@@ -535,6 +543,8 @@ const en: Translations = {
     deleteAccount: 'Delete account',
     everyone: 'Everyone',
     nobody: 'Nobody',
+    marketingConsentLabel: 'Marketing communications',
+    marketingConsentDesc: 'Receive updates on opportunities and platform news',
   },
   security: {
     title: 'Security',
@@ -869,6 +879,9 @@ const zh: Translations = {
     universityHidden: '大学已隐藏',
     deletingAccount: '删除中...',
     deleteIrreversibleMsg: '此操作不可逆。您的所有数据将被永久删除。',
+    deleteExportReminder: '在继续之前，您可以下载所有数据的副本。',
+    exportingData: '导出中...',
+    exportDataSuccess: '数据已下载',
   },
   privacy: {
     title: '隐私',
@@ -889,6 +902,8 @@ const zh: Translations = {
     deleteAccount: '删除账户',
     everyone: '所有人',
     nobody: '无人',
+    marketingConsentLabel: '营销通信',
+    marketingConsentDesc: '接收机会更新和平台新闻',
   },
   security: {
     title: '安全',
@@ -1223,6 +1238,9 @@ const es: Translations = {
     universityHidden: 'Universidad oculta',
     deletingAccount: 'Eliminando...',
     deleteIrreversibleMsg: 'Esta acción es irreversible. Todos tus datos serán eliminados permanentemente.',
+    deleteExportReminder: 'Antes de continuar, puedes descargar una copia de todos tus datos.',
+    exportingData: 'Exportando...',
+    exportDataSuccess: 'Datos descargados',
   },
   privacy: {
     title: 'Privacidad',
@@ -1243,6 +1261,8 @@ const es: Translations = {
     deleteAccount: 'Eliminar cuenta',
     everyone: 'Todos',
     nobody: 'Nadie',
+    marketingConsentLabel: 'Comunicaciones de marketing',
+    marketingConsentDesc: 'Recibe actualizaciones sobre oportunidades y novedades de la plataforma',
   },
   security: {
     title: 'Seguridad',
@@ -1577,6 +1597,9 @@ const fr: Translations = {
     universityHidden: 'Université masquée',
     deletingAccount: 'Suppression...',
     deleteIrreversibleMsg: 'Cette action est irréversible. Toutes tes données seront définitivement supprimées.',
+    deleteExportReminder: 'Avant de continuer, tu peux télécharger une copie de toutes tes données.',
+    exportingData: 'Exportation...',
+    exportDataSuccess: 'Données téléchargées',
   },
   privacy: {
     title: 'Confidentialité',
@@ -1597,6 +1620,8 @@ const fr: Translations = {
     deleteAccount: 'Supprimer le compte',
     everyone: 'Tout le monde',
     nobody: 'Personne',
+    marketingConsentLabel: 'Communications marketing',
+    marketingConsentDesc: "Reçois des mises à jour sur les opportunités et les nouveautés de la plateforme",
   },
   security: {
     title: 'Sécurité',

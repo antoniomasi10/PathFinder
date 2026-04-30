@@ -32,6 +32,10 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     if (englishLevel) filters.englishLevels = englishLevel.split(',').filter(Boolean);
     const deadline = (req.query.deadline as string || '');
     if (deadline) filters.deadline = deadline;
+    const types = (req.query.type as string || '');
+    if (types) filters.types = types.split(',').filter(Boolean);
+    const tags = (req.query.tags as string || '');
+    if (tags) filters.tags = tags.split(',').filter(Boolean);
     const hasFilters = Object.keys(filters).length > 0;
 
     if (isNew === 'true') {
@@ -87,6 +91,22 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
         params.push(...levels);
       }
     }
+    if (types) {
+      const typeList = types.split(',').filter(Boolean);
+      if (typeList.length) {
+        const placeholders = typeList.map(() => `$${idx++}`).join(', ');
+        conditions.push(`o."type"::text IN (${placeholders})`);
+        params.push(...typeList);
+      }
+    }
+    if (tags) {
+      const tagList = tags.split(',').filter(Boolean);
+      if (tagList.length) {
+        const placeholders = tagList.map(() => `$${idx++}`).join(', ');
+        conditions.push(`o."tags" && ARRAY[${placeholders}]::text[]`);
+        params.push(...tagList);
+      }
+    }
     if (deadline === '7' || deadline === '30') {
       const now = new Date(); now.setHours(0, 0, 0, 0);
       const end = new Date(now); end.setDate(end.getDate() + parseInt(deadline));
@@ -113,7 +133,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     const [opportunities, countResult] = await Promise.all([
       prisma.$queryRawUnsafe<any[]>(
         `SELECT o."id", o."title", o."description", o."about", o."url", o."type",
-                o."universityId", o."company", o."location", o."isRemote", o."isAbroad",
+                o."universityId", o."company", o."companyLogoUrl", o."location", o."isRemote", o."isAbroad",
                 o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
                 o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
                 u."name" as "universityName", u."city" as "universityCity",

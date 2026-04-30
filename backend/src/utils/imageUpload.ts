@@ -1,4 +1,4 @@
-import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 import r2Client, { R2_BUCKET, R2_CONFIGURED } from '../lib/r2';
 import cloudinary from '../lib/cloudinary';
@@ -111,4 +111,35 @@ export async function uploadImage(dataUri: string, folder: string): Promise<stri
 export async function uploadImages(dataUris: string[], folder: string): Promise<string[]> {
   if (dataUris.length === 0) return [];
   return Promise.all(dataUris.map((uri) => uploadImage(uri, folder)));
+}
+
+/**
+ * Delete a previously uploaded file from R2 or Cloudinary.
+ * Silently ignores unknown URL formats or errors.
+ */
+export async function deleteFile(url: string): Promise<void> {
+  if (!url) return;
+
+  const r2Endpoint = (process.env.R2_PUBLIC_URL || process.env.R2_ENDPOINT || '').replace(/\/$/, '');
+  if (r2Endpoint && url.startsWith(r2Endpoint) && R2_CONFIGURED) {
+    const key = url.slice(r2Endpoint.length + 1); // strip leading slash
+    try {
+      await r2Client.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: key }));
+    } catch (err) {
+      logger.warn('R2 delete failed', { key, error: String(err) });
+    }
+    return;
+  }
+
+  if (url.startsWith('https://res.cloudinary.com/') && CLOUDINARY_CONFIGURED) {
+    try {
+      // Extract public_id: .../upload/v<version>/<folder>/<name>.<ext>
+      const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.[a-z0-9]+$/i);
+      if (match) {
+        await cloudinary.uploader.destroy(match[1]);
+      }
+    } catch (err) {
+      logger.warn('Cloudinary delete failed', { url, error: String(err) });
+    }
+  }
 }

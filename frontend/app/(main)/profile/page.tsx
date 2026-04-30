@@ -32,6 +32,7 @@ interface FullProfile {
   courseOfStudy?: string;
   yearOfStudy?: number;
   university?: { name: string };
+  marketingConsent?: boolean;
   skills?: {
     interests?: { id: string; name: string; selectedAt: string }[];
     [key: string]: unknown;
@@ -147,7 +148,9 @@ export default function ProfilePage() {
   const [showSocialSheet, setShowSocialSheet] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [exportingData, setExportingData] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
   // Privacy settings from global context (persisted to localStorage)
   const {
     publicProfile,
@@ -218,6 +221,7 @@ export default function ProfilePage() {
         api.patch('/profile/me', { passions: normalizedPassions }).catch(() => {});
       }
       setProfile(profileData);
+      setMarketingConsent(profileRes.data.marketingConsent ?? false);
       setEditName(profileRes.data.name || '');
       setEditSurname(profileRes.data.surname || '');
       setEditBio(profileRes.data.bio || '');
@@ -372,6 +376,34 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     logout();
+  };
+
+  const handleMarketingConsentToggle = async () => {
+    const newValue = !marketingConsent;
+    setMarketingConsent(newValue);
+    try {
+      await api.patch('/profile/me', { marketingConsent: newValue });
+    } catch {
+      setMarketingConsent(!newValue);
+    }
+  };
+
+  const handleExportData = async () => {
+    setExportingData(true);
+    try {
+      const { data } = await api.get('/profile/me/export');
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'pathfinder-data.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // silent fail — user can retry
+    } finally {
+      setExportingData(false);
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -1410,9 +1442,45 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* Dati e personalizzazione */}
+          <div className="bg-[#1E293B] rounded-2xl p-4">
+            <h4 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider mb-3">{t.privacy.dataPersonalization}</h4>
+            <div className="flex items-center justify-between py-1">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
+                  <Mail size={20} color="#4F46E5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm text-white font-medium">{t.privacy.marketingConsentLabel}</p>
+                  <p className="text-xs text-[#64748B] leading-snug mt-0.5">{t.privacy.marketingConsentDesc}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleMarketingConsentToggle}
+                className={`relative flex-shrink-0 ml-3 w-11 h-6 rounded-full transition-colors duration-200 ${marketingConsent ? 'bg-[#4F46E5]' : 'bg-[#334155]'}`}
+                role="switch"
+                aria-checked={marketingConsent}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${marketingConsent ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </div>
+          </div>
+
           {/* Account */}
           <div className="bg-[#1E293B] rounded-2xl overflow-hidden">
             <h4 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider px-4 pt-4 pb-2">Account</h4>
+            <button onClick={handleExportData} disabled={exportingData} className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-white/5 transition-colors disabled:opacity-60">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/20 flex items-center justify-center flex-shrink-0">
+                  <FileText size={20} color="#4F46E5" />
+                </div>
+                <span className="text-sm text-white font-medium">
+                  {exportingData ? t.profile.exportingData : t.privacy.downloadData}
+                </span>
+              </div>
+              <ChevronRight size={16} color="rgba(148,163,184,0.5)" />
+            </button>
+            <div className="ml-4 mr-4 h-px bg-[#334155]/50" />
             <button onClick={() => { setShowSecurityPrivacySheet(false); setShowDeleteModal(true); }} className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-[#EF4444]/5 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-[22%] bg-[#EF4444]/10 flex items-center justify-center flex-shrink-0">
@@ -2227,6 +2295,16 @@ export default function ProfilePage() {
             <div className="text-center">
               <h3 className="text-white font-bold text-lg mb-1">{t.privacy.deleteAccount}</h3>
               <p className="text-sm text-[#94A3B8]">{t.profile.deleteIrreversibleMsg}</p>
+            </div>
+            <div className="bg-[#0F172A] rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+              <p className="text-xs text-[#94A3B8] flex-1">{t.profile.deleteExportReminder}</p>
+              <button
+                onClick={handleExportData}
+                disabled={exportingData || deletingAccount}
+                className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-[#1E293B] text-xs text-[#4F46E5] font-medium hover:bg-[#334155] transition-colors disabled:opacity-50"
+              >
+                {exportingData ? t.profile.exportingData : t.privacy.downloadData}
+              </button>
             </div>
             <div className="flex gap-3 pt-2">
               <button

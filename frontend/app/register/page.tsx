@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import api from '@/lib/api';
+import api, { setAccessToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -23,6 +23,8 @@ export default function RegisterPage() {
   const [universityId, setUniversityId] = useState('');
   const [courseOfStudy, setCourseOfStudy] = useState('');
   const [universities, setUniversities] = useState<University[]>([]);
+  const [tosConsent, setTosConsent] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -64,6 +66,11 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!tosConsent) {
+      setError('Devi accettare i Termini di Servizio e la Privacy Policy per registrarti');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -75,8 +82,10 @@ export default function RegisterPage() {
         phone: phone || undefined,
         universityId,
         courseOfStudy,
+        tosConsent,
+        marketingConsent,
       });
-      localStorage.setItem('accessToken', data.accessToken);
+      setAccessToken(data.accessToken);
       setUser(data.user);
       router.push('/verify-email');
     } catch (err: any) {
@@ -224,9 +233,40 @@ export default function RegisterPage() {
               />
             </div>
 
+            {/* GDPR consent */}
+            <div className="space-y-3 pt-2">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={tosConsent}
+                  onChange={(e) => setTosConsent(e.target.checked)}
+                  className="mt-0.5 accent-primary flex-shrink-0"
+                  required
+                />
+                <span className="text-sm text-text-secondary">
+                  Ho letto e accetto i{' '}
+                  <a href="/terms" className="text-primary underline" target="_blank" rel="noopener noreferrer">Termini di Servizio</a>
+                  {' '}e la{' '}
+                  <a href="/privacy" className="text-primary underline" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+                  {' '}<span className="text-error">*</span>
+                </span>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={marketingConsent}
+                  onChange={(e) => setMarketingConsent(e.target.checked)}
+                  className="mt-0.5 accent-primary flex-shrink-0"
+                />
+                <span className="text-sm text-text-secondary">
+                  Acconsento a ricevere comunicazioni di marketing e aggiornamenti sulle opportunità (opzionale)
+                </span>
+              </label>
+            </div>
+
             <button
               type="submit"
-              disabled={loading || !passwordValid}
+              disabled={loading || !passwordValid || !tosConsent}
               className="btn-primary w-full disabled:opacity-50"
             >
               {loading ? 'Registrazione...' : 'Registrati'}

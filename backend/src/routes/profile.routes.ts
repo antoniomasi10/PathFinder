@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { authMiddleware, verifiedMiddleware } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { updateProfileSchema } from '../schemas';
-import { saveQuestionnaire, getProfile, getProfileForViewer, updateProfile, deleteAccount, searchUsers, getSuggestedUsers } from '../services/profile.service';
+import { saveQuestionnaire, getProfile, getProfileForViewer, updateProfile, deleteAccount, exportUserData, searchUsers, getSuggestedUsers } from '../services/profile.service';
 import { updateUserEmbedding } from '../services/embedding.service';
 import { cacheDel } from '../lib/cache';
 
@@ -77,6 +77,17 @@ router.patch('/me', verifiedMiddleware, validate(updateProfileSchema), async (re
     res.json(updated);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+router.get('/me/export', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const data = await exportUserData(req.user!.userId);
+    res.setHeader('Content-Disposition', 'attachment; filename="pathfinder-export.json"');
+    res.setHeader('Content-Type', 'application/json');
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 

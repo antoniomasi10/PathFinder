@@ -4,6 +4,7 @@ import { adminMiddleware } from '../middleware/admin';
 import prisma from '../lib/prisma';
 import { logSecurityEvent } from '../utils/securityLogger';
 import { createNotification } from '../services/notification.service';
+import { buildClearbitLogoUrl, runWithConcurrency } from '../services/import/utils';
 
 const router = Router();
 const adminAuth = [verifiedMiddleware, adminMiddleware];
@@ -111,6 +112,32 @@ router.patch('/users/:id/role', ...adminAuth, async (req: Request, res: Response
     );
 
     res.json(updated);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/opportunities/enrich-logos
+// Backfills companyLogoUrl for existing opportunities that have a url but no logo.
+router.post('/opportunities/enrich-logos', ...adminAuth, async (req: Request, res: Response) => {
+  try {
+    const opportunities = await prisma.opportunity.findMany({
+      where: { companyLogoUrl: null, url: { not: null } },
+      select: { id: true, url: true },
+    });
+
+    let updated = 0;
+    await runWithConcurrency(opportunities, 10, async (opp) => {
+      const logoUrl = buildClearbitLogoUrl(opp.url);
+      if (!logoUrl) return;
+      await prisma.opportunity.update({
+        where: { id: opp.id },
+        data: { companyLogoUrl: logoUrl },
+      });
+      updated++;
+    });
+
+    res.json({ processed: opportunities.length, updated });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

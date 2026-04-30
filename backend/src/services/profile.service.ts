@@ -1,15 +1,16 @@
 import prisma from '../lib/prisma';
 import { GpaRange, EnglishLevel, WillingnessToRelocate } from '@prisma/client';
-import { uploadImage } from '../utils/imageUpload';
+import { uploadImage, deleteFile } from '../utils/imageUpload';
+import { sanitizeText } from '../utils/sanitize';
 
-/** Select all User scalar fields except `embedding` (Unsupported vector type) and `passwordHash`. */
+/** Select all User scalar fields except `embedding`, `passwordHash`, and internal reset fields. */
 const safeUserSelect = {
   id: true, email: true, name: true, surname: true, phone: true,
   googleId: true, provider: true, emailVerified: true, avatar: true, avatarBgColor: true,
   bio: true, universityId: true, courseOfStudy: true, yearOfStudy: true, gpa: true,
   englishLevel: true, willingToRelocate: true, profileCompleted: true, publicProfile: true,
   privacySavedOpps: true, privacyPathmates: true, messagePrivacy: true, privacySkills: true,
-  privacyUniversity: true, passwordResetToken: true, passwordResetExpiry: true,
+  privacyUniversity: true, tosConsentAt: true, privacyConsentAt: true,
   skills: true,
   createdAt: true, updatedAt: true,
 } as const;
@@ -290,12 +291,14 @@ interface UpdateProfileData {
   privacySavedOpps?: string;
   privacyPathmates?: string;
   messagePrivacy?: string;
+  marketingConsent?: boolean;
 }
 
 const ALLOWED_USER_FIELDS = [
   'name', 'surname', 'bio', 'avatar', 'courseOfStudy',
   'publicProfile', 'privacySkills', 'privacyUniversity',
   'privacySavedOpps', 'privacyPathmates', 'messagePrivacy',
+  'marketingConsent',
 ] as const;
 
 export async function updateProfile(userId: string, data: UpdateProfileData) {
@@ -309,9 +312,18 @@ export async function updateProfile(userId: string, data: UpdateProfileData) {
     }
   }
 
-  // Upload avatar to Cloudinary if it's a data URI
+  // Sanitize bio to strip any HTML
+  if (typeof userFields.bio === 'string') {
+    userFields.bio = sanitizeText(userFields.bio);
+  }
+
+  // Upload avatar and clean up the old one
   if (typeof userFields.avatar === 'string' && userFields.avatar.startsWith('data:image/')) {
+    const existing = await prisma.user.findUnique({ where: { id: userId }, select: { avatar: true } });
     userFields.avatar = await uploadImage(userFields.avatar as string, 'avatars');
+    if (existing?.avatar) {
+      deleteFile(existing.avatar).catch(() => {});
+    }
   }
 
   if (passions !== undefined) {
@@ -381,6 +393,69 @@ export async function deleteAccount(userId: string) {
   // 5. Delete the user — remaining relations have onDelete: Cascade
   //    (UserProfile, Notification, Post, PostLike, PostComment)
   await prisma.user.delete({ where: { id: userId } });
+}
+
+/** GDPR Art. 20 — returns all personal data held for a user in machine-readable JSON. */
+export async function exportUserData(userId: string) {
+  const [user, messages, posts, friendRequests, savedOpps, savedCourses, badges, interactions] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true, email: true, name: true, surname: true, phone: true,
+        provider: true, emailVerified: true, bio: true,
+        courseOfStudy: true, yearOfStudy: true, gpa: true, englishLevel: true, willingToRelocate: true,
+        publicProfile: true, skills: true,
+        tosConsentAt: true, privacyConsentAt: true, marketingConsent: true,
+        createdAt: true, updatedAt: true,
+        profile: true,
+        university: { select: { id: true, name: true, city: true } },
+      },
+    }),
+    prisma.pathMatesMessage.findMany({
+      where: { senderId: userId },
+      select: { id: true, receiverId: true, groupId: true, content: true, sentAt: true },
+      orderBy: { sentAt: 'desc' },
+    }),
+    prisma.post.findMany({
+      where: { authorId: userId },
+      select: { id: true, content: true, images: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.friendRequest.findMany({
+      where: { OR: [{ fromUserId: userId }, { toUserId: userId }] },
+      select: { id: true, fromUserId: true, toUserId: true, status: true, createdAt: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { savedOpportunities: { select: { id: true, title: true, company: true } } },
+    }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { savedCourses: { select: { id: true, name: true } } },
+    }),
+    prisma.userBadge.findMany({
+      where: { userId },
+      select: { badgeId: true, progress: true, unlockedAt: true },
+    }),
+    prisma.userInteraction.findMany({
+      where: { userId },
+      select: { targetType: true, targetId: true, action: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+    }),
+  ]);
+
+  return {
+    exportedAt: new Date().toISOString(),
+    profile: user,
+    messages,
+    posts,
+    friendRequests,
+    savedOpportunities: savedOpps?.savedOpportunities ?? [],
+    savedCourses: savedCourses?.savedCourses ?? [],
+    badges,
+    interactions,
+  };
 }
 
 export async function getSuggestedUsers(currentUserId: string, limit = 20) {

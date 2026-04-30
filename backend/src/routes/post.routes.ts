@@ -7,6 +7,7 @@ import { createNotification } from '../services/notification.service';
 import { validateImages } from '../utils/imageValidation';
 import { uploadImages } from '../utils/imageUpload';
 import { moderateContent } from '../utils/moderation';
+import { sanitizeText } from '../utils/sanitize';
 import prisma from '../lib/prisma';
 import { trackInteraction } from '../services/interaction.service';
 
@@ -33,7 +34,8 @@ router.post('/', authMiddleware, validate(createPostSchema), async (req: Request
   try {
     const { content, images } = req.body;
 
-    const mod = moderateContent(content);
+    const sanitized = sanitizeText(content);
+    const mod = moderateContent(sanitized);
     if (mod.action === 'HARD_BLOCK') {
       res.status(400).json({ error: mod.reason, code: 'CONTENT_BLOCKED' });
       return;
@@ -41,7 +43,7 @@ router.post('/', authMiddleware, validate(createPostSchema), async (req: Request
 
     const validImages = validateImages(images);
     const imageUrls = await uploadImages(validImages, 'posts');
-    const post = await postService.createPost(req.user!.userId, content, imageUrls, mod.action === 'FLAG');
+    const post = await postService.createPost(req.user!.userId, sanitized, imageUrls, mod.action === 'FLAG');
     res.status(201).json(post);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -56,12 +58,13 @@ router.patch('/:id', authMiddleware, async (req: Request, res: Response) => {
       res.status(400).json({ error: 'Contenuto non valido' });
       return;
     }
+    const sanitizedContent = sanitizeText(content);
     let imageUrls: string[] | undefined;
     if (images !== undefined) {
       const validImages = validateImages(images);
       imageUrls = await uploadImages(validImages, 'posts');
     }
-    const post = await postService.updatePost(req.params.id, req.user!.userId, content, imageUrls);
+    const post = await postService.updatePost(req.params.id, req.user!.userId, sanitizedContent, imageUrls);
     res.json(post);
   } catch (err: any) {
     const status = err.message.includes('non trovato') ? 404 : err.message.includes('non puoi') ? 403 : 400;
@@ -114,13 +117,14 @@ router.get('/:id/comments', authMiddleware, async (req: Request, res: Response) 
 
 router.post('/:id/comments', authMiddleware, validate(createCommentSchema), async (req: Request, res: Response) => {
   try {
-    const mod = moderateContent(req.body.content);
+    const sanitizedComment = sanitizeText(req.body.content);
+    const mod = moderateContent(sanitizedComment);
     if (mod.action === 'HARD_BLOCK') {
       res.status(400).json({ error: mod.reason, code: 'CONTENT_BLOCKED' });
       return;
     }
 
-    const comment = await postService.createComment(req.params.id, req.user!.userId, req.body.content, mod.action === 'FLAG');
+    const comment = await postService.createComment(req.params.id, req.user!.userId, sanitizedComment, mod.action === 'FLAG');
     trackInteraction(req.user!.userId, 'post', req.params.id, 'comment').catch(() => {});
     const post = await postService.getPostById(req.params.id);
     if (post && post.authorId !== req.user!.userId) {

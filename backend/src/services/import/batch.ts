@@ -13,7 +13,7 @@
 import { FieldOfStudy, OpportunityFormat, OpportunityType } from '@prisma/client';
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
-import { buildDedupKey } from './utils';
+import { buildDedupKey, buildClearbitLogoUrl } from './utils';
 
 export interface OpportunityRecord {
   id: string;
@@ -49,6 +49,7 @@ export interface OpportunityRecord {
   maxYearOfStudy?: number | null;
   requiredLanguages?: object[];
   verified?: boolean;
+  companyLogoUrl?: string | null;
 }
 
 const UPDATE_CHUNK_SIZE = 100;
@@ -60,8 +61,12 @@ const UPDATE_CHUNK_SIZE = 100;
 export async function batchUpsertOpportunities(records: OpportunityRecord[]): Promise<void> {
   if (records.length === 0) return;
 
-  // Attach dedup key to each record so updates also refresh it on older rows.
-  const enriched = records.map(r => ({ ...r, dedupKey: buildDedupKey(r.title, r.company ?? r.organizer) }));
+  // Attach dedup key and resolve company logo for each record.
+  const enriched = records.map(r => ({
+    ...r,
+    dedupKey: buildDedupKey(r.title, r.company ?? r.organizer),
+    companyLogoUrl: r.companyLogoUrl ?? buildClearbitLogoUrl(r.url),
+  }));
 
   const ids = enriched.map(r => r.id);
   const existing = new Set(
@@ -127,6 +132,7 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
         sourceId: r.sourceId,
         lastSyncedAt: r.lastSyncedAt,
         dedupKey: r.dedupKey,
+        companyLogoUrl: r.companyLogoUrl ?? null,
         organizer: r.organizer ?? null,
         startDate: r.startDate ?? null,
         endDate: r.endDate ?? null,
@@ -170,6 +176,7 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
             sourceId: r.sourceId,
             lastSyncedAt: r.lastSyncedAt,
             dedupKey: r.dedupKey,
+            companyLogoUrl: r.companyLogoUrl ?? null,
             organizer: r.organizer ?? null,
             startDate: r.startDate ?? null,
             endDate: r.endDate ?? null,

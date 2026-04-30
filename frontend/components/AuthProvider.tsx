@@ -3,7 +3,7 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { AuthContext, AuthUser } from '@/lib/auth';
-import api from '@/lib/api';
+import api, { clearAccessToken } from '@/lib/api';
 import { useLanguage } from '@/lib/language';
 
 const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
@@ -16,15 +16,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      setLoading(false);
-      if (!publicPaths.includes(pathname)) {
-        router.replace('/login');
-      }
-      return;
-    }
-
+    // No localStorage check — token lives in memory only.
+    // On first load the token is empty; the Axios interceptor will automatically
+    // call /api/auth/refresh (using the httpOnly cookie) and set the in-memory
+    // token before retrying /profile/me.
     api.get('/profile/me')
       .then(({ data }) => {
         setUser({
@@ -50,8 +45,8 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch(() => {
-        // Token invalid or expired — clean up and redirect
-        localStorage.removeItem('accessToken');
+        // No valid session (no refresh cookie or cookie expired)
+        clearAccessToken();
         if (!publicPaths.includes(pathname)) {
           router.replace('/login');
         }
@@ -61,7 +56,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     api.post('/auth/logout').catch(() => {});
-    localStorage.removeItem('accessToken');
+    clearAccessToken();
     setUser(null);
     router.replace('/login');
   };

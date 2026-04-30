@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useQueryClient } from '@tanstack/react-query';
-import api from '@/lib/api';
+import api, { getAccessToken } from '@/lib/api';
 import { registerServiceWorker, subscribeToPush, isPushSupported } from '@/lib/pushManager';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
@@ -49,7 +49,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refresh();
 
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (!token) return;
 
     const ns = io(`${API_URL}/notifications`, {

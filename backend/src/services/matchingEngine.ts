@@ -11,6 +11,8 @@ export interface OppFilters {
   isAbroad?: boolean;
   englishLevels?: string[];
   deadline?: string;
+  types?: string[];
+  tags?: string[];
 }
 
 function applyOppFilters(items: any[], f: OppFilters): any[] {
@@ -24,6 +26,8 @@ function applyOppFilters(items: any[], f: OppFilters): any[] {
     if (f.isRemote !== undefined && Boolean(opp.isRemote) !== f.isRemote) return false;
     if (f.isAbroad !== undefined && Boolean(opp.isAbroad) !== f.isAbroad) return false;
     if (f.englishLevels?.length && (!opp.requiredEnglishLevel || !f.englishLevels.includes(opp.requiredEnglishLevel))) return false;
+    if (f.types?.length && !f.types.includes(opp.type)) return false;
+    if (f.tags?.length && !f.tags.some((tag) => (opp.tags || []).includes(tag))) return false;
     if (f.deadline && opp.deadline) {
       const now = new Date(); now.setHours(0, 0, 0, 0);
       const d = new Date(opp.deadline); d.setHours(0, 0, 0, 0);

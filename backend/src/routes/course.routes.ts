@@ -6,14 +6,44 @@ import { trackInteraction } from '../services/interaction.service';
 
 const router = Router();
 
-// GET /courses — list all courses
-router.get('/', async (_req: Request, res: Response) => {
+// GET /courses — list courses with optional search and filters
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const courses = await prisma.course.findMany({
-      include: { university: { select: { id: true, name: true, city: true } } },
-      orderBy: { name: 'asc' },
-    });
-    res.json(courses);
+    const search = (req.query.search as string || '').trim();
+    const field = (req.query.field as string || '').trim();
+    const type = (req.query.type as string || '').trim();
+    const university = (req.query.university as string || '').trim();
+    const city = (req.query.city as string || '').trim();
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const skip = (page - 1) * limit;
+
+    const where: any = { isActive: true };
+
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { field: { contains: search, mode: 'insensitive' } },
+        { university: { name: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+    if (field) where.field = { contains: field, mode: 'insensitive' };
+    if (type) where.type = type;
+    if (university) where.university = { name: { contains: university, mode: 'insensitive' } };
+    if (city) where.university = { ...where.university, city: { contains: city, mode: 'insensitive' } };
+
+    const [courses, total] = await Promise.all([
+      prisma.course.findMany({
+        where,
+        include: { university: { select: { id: true, name: true, city: true } } },
+        orderBy: { name: 'asc' },
+        take: limit,
+        skip,
+      }),
+      prisma.course.count({ where }),
+    ]);
+
+    res.json({ data: courses, total, page, totalPages: Math.ceil(total / limit) });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

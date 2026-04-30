@@ -25,16 +25,47 @@ const router = Router();
 // Get friends list
 router.get('/', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const cacheKey = `cache:friends:${req.user!.userId}`;
-    const cached = await cacheGet(cacheKey);
-    if (cached) { res.json(cached); return; }
+    const search = (req.query.search as string || '').trim();
 
+    // Only use cache for unfiltered requests
+    if (!search) {
+      const cacheKey = `cache:friends:${req.user!.userId}`;
+      const cached = await cacheGet(cacheKey);
+      if (cached) { res.json(cached); return; }
+
+      const friends = await prisma.friendRequest.findMany({
+        where: {
+          status: 'ACCEPTED',
+          OR: [
+            { fromUserId: req.user!.userId },
+            { toUserId: req.user!.userId },
+          ],
+        },
+        include: {
+          fromUser: { select: { id: true, name: true, avatar: true, avatarBgColor: true, courseOfStudy: true, university: { select: { name: true } } } },
+          toUser: { select: { id: true, name: true, avatar: true, avatarBgColor: true, courseOfStudy: true, university: { select: { name: true } } } },
+        },
+      });
+
+      const friendUsers = friends.map((f) => f.fromUserId === req.user!.userId ? f.toUser : f.fromUser);
+      await cacheSet(cacheKey, friendUsers, FRIENDS_TTL);
+      res.json(friendUsers);
+      return;
+    }
+
+    // Searched: query with name filter directly
     const friends = await prisma.friendRequest.findMany({
       where: {
         status: 'ACCEPTED',
         OR: [
-          { fromUserId: req.user!.userId },
-          { toUserId: req.user!.userId },
+          {
+            fromUserId: req.user!.userId,
+            toUser: { name: { contains: search, mode: 'insensitive' } },
+          },
+          {
+            toUserId: req.user!.userId,
+            fromUser: { name: { contains: search, mode: 'insensitive' } },
+          },
         ],
       },
       include: {
@@ -43,11 +74,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       },
     });
 
-    const friendUsers = friends.map((f) => {
-      return f.fromUserId === req.user!.userId ? f.toUser : f.fromUser;
-    });
-
-    await cacheSet(cacheKey, friendUsers, FRIENDS_TTL);
+    const friendUsers = friends.map((f) => f.fromUserId === req.user!.userId ? f.toUser : f.fromUser);
     res.json(friendUsers);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
