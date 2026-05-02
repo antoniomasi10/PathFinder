@@ -15,7 +15,7 @@ export default function ProgressBar({ currentStep }: Props) {
       <span className="text-base text-[#595e78]" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
         Step {currentStep + 1} di {TOTAL_STEPS}
       </span>
-      <div className="h-2 bg-[#ecedff] rounded-full overflow-hidden">
+      <div className="h-2 bg-[#d8daf7] rounded-full overflow-hidden">
         <motion.div
           className="h-full bg-[#615fe2] rounded-full"
           initial={false}

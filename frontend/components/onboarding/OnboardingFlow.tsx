@@ -111,10 +111,12 @@ export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps
   // ---------- Avatar Selection Screen (after interests) ----------
   if (currentStep === TOTAL_STEPS + 1) {
     return (
-      <>
-        <AmbientBackground />
-        <AvatarSelection onContinue={handleAvatarContinue} />
-      </>
+      <div
+        className="fixed inset-0 font-jakarta overflow-hidden"
+        style={{ background: '#eef0ff' }}
+      >
+        <AvatarSelection onContinue={handleAvatarContinue} onBack={handleBack} />
+      </div>
     );
   }
 
@@ -123,14 +125,24 @@ export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps
   const phase = currentStep < TOTAL_STEPS ? 'questions' : 'interests';
 
   return (
-    <div className="min-h-screen relative font-jakarta" style={{ background: '#fbf8ff' }}>
+    <div
+      className="fixed inset-0 font-jakarta overflow-hidden"
+      style={{ background: '#eef0ff' }}
+    >
       {/* Watermark decorativo */}
       <img
         src="/logo-coha-watermark.svg"
         alt=""
         aria-hidden
         className="absolute pointer-events-none select-none"
-        style={{ left: -440, top: 71, width: 1070, height: 782, opacity: 1 }}
+        style={{
+          top: '-5%',
+          left: '30%',
+          transform: 'translateX(-50%)',
+          width: '300%',
+          height: 'auto',
+          maxWidth: 'none',
+        }}
       />
 
       <AnimatePresence mode="wait">
@@ -141,6 +153,7 @@ export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="h-full"
           >
             <InterestSelection
               onContinue={handleInterestsContinue}
@@ -154,11 +167,7 @@ export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps
             initial={false}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="relative z-10 flex flex-col min-h-screen"
-            style={{
-              border: '8px solid white',
-              boxShadow: '0px 0px 0px 1px rgba(172,176,206,0.3), 0px 25px 50px -12px rgba(0,0,0,0.25)',
-            }}
+            className="relative z-10 flex flex-col h-full"
           >
             {/* Contenuto scrollabile */}
             <div className="flex-1 overflow-y-auto pt-6 px-6 pb-32">
@@ -210,8 +219,10 @@ export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps
                         }}
                         className="w-full rounded-[24px] px-[18px] py-[14px] border-2 transition-colors duration-200"
                         style={{
-                          backgroundColor: isOtherSelected ? 'rgba(243,242,255,0.75)' : 'rgba(255,255,255,0.75)',
+                          backgroundColor: isOtherSelected ? 'rgba(243,242,255,0.85)' : 'rgba(255,255,255,0.85)',
                           borderColor: isOtherSelected ? '#4a4bd7' : 'rgba(172,176,206,0.4)',
+                          backdropFilter: 'blur(6px)',
+                          WebkitBackdropFilter: 'blur(6px)',
                         }}
                       >
                         <button
@@ -266,7 +277,7 @@ export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps
             <div
               className="fixed bottom-0 left-0 right-0 z-20 px-6 pb-6 pt-12"
               style={{
-                background: 'linear-gradient(to top, #fbf8ff 60%, rgba(251,248,255,0.9) 80%, transparent 100%)',
+                background: 'linear-gradient(to top, #eef0ff 60%, rgba(238,240,255,0.9) 80%, transparent 100%)',
               }}
             >
               <NextButton disabled={!canGoNext} onClick={handleNext} />

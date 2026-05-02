@@ -14,6 +14,7 @@ import ChangePasswordModal from '@/components/ChangePasswordModal';
 import { isValidImageUrl, isValidExternalUrl } from '@/lib/urlValidation';
 import { isPushSupported, subscribeToPush, unsubscribeFromPush, getPushPermissionState } from '@/lib/pushManager';
 import { parseDeadlineDate } from '@/lib/dateUtils';
+import { getOpportunityTypeColor } from '@/lib/opportunityColors';
 import {
   Pencil, EyeOff, Plus, Bookmark, ChevronDown, ChevronRight, MapPin, CalendarIcon,
   Gear, UsersGroup, Bell, Moon, Globe, ShieldCheck, CircleHelp, Info, Search,
@@ -658,7 +659,7 @@ export default function ProfilePage() {
                             ? opp.deadline
                               ? <DeadlineBadge deadline={opp.deadline} />
                               : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#1E293B] text-[#64748B]">Non indicata</span>
-                            : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#4F46E5]/20 text-[#4F46E5] uppercase">{opp.type}</span>
+                            : <span className="inline-flex items-center px-[10px] py-[4px] rounded-full text-[10px] font-medium" style={{ backgroundColor: getOpportunityTypeColor(opp.type), color: '#4f5160' }}>{opp.type}</span>
                           }
                         </button>
 

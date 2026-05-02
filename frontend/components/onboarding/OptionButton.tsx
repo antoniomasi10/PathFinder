@@ -42,6 +42,8 @@ export default function OptionButton({ label, isSelected, onSelect }: Props) {
       style={{
         backgroundColor: isSelected ? 'rgba(243,242,255,0.75)' : 'rgba(255,255,255,0.75)',
         borderColor: isSelected ? '#4a4bd7' : 'rgba(172,176,206,0.4)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
       }}
     >
       <CheckboxIcon checked={isSelected} />

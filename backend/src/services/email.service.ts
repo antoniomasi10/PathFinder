@@ -55,6 +55,10 @@ function baseTemplate(title: string, body: string): string {
 }
 
 export async function sendVerificationEmail(to: string, name: string, code: string): Promise<void> {
+  logger.warn(`[OTP] Verification code for ${to}: ${code}`);
+
+  if (!transporter) return;
+
   const html = baseTemplate('Verifica la tua email', `
     <h2 class="title">Verifica la tua email</h2>
     <p class="text">Ciao <strong style="color:#fff">${name}</strong>, inserisci questo codice per verificare il tuo account:</p>
@@ -63,11 +67,6 @@ export async function sendVerificationEmail(to: string, name: string, code: stri
     </div>
     <p class="warning">Il codice scade tra 10 minuti. Se non hai richiesto questa verifica, ignora questa email.</p>
   `);
-
-  if (!transporter) {
-    logger.warn(`[DEV] SMTP not configured — verification code for ${to}: ${code}`);
-    return;
-  }
 
   try {
     await transporter.sendMail({
@@ -78,12 +77,15 @@ export async function sendVerificationEmail(to: string, name: string, code: stri
     });
     logger.info('Verification email sent', { to });
   } catch (error) {
-    logger.error('Failed to send verification email', { to, error: String(error) });
-    throw new Error('Impossibile inviare l\'email di verifica');
+    logger.error('Failed to send verification email (OTP already logged above)', { to, error: String(error) });
   }
 }
 
 export async function sendPasswordResetEmail(to: string, name: string, code: string): Promise<void> {
+  logger.warn(`[OTP] Password reset code for ${to}: ${code}`);
+
+  if (!transporter) return;
+
   const html = baseTemplate('Reimposta la tua password', `
     <h2 class="title">Reimposta la tua password</h2>
     <p class="text">Ciao <strong style="color:#fff">${name}</strong>, hai richiesto il reset della password. Usa questo codice:</p>
@@ -92,11 +94,6 @@ export async function sendPasswordResetEmail(to: string, name: string, code: str
     </div>
     <p class="warning">Il codice scade tra 10 minuti. Se non hai richiesto il reset, ignora questa email e la tua password rimarrà invariata.</p>
   `);
-
-  if (!transporter) {
-    logger.warn(`[DEV] SMTP not configured — password reset code for ${to}: ${code}`);
-    return;
-  }
 
   try {
     await transporter.sendMail({
@@ -107,8 +104,7 @@ export async function sendPasswordResetEmail(to: string, name: string, code: str
     });
     logger.info('Password reset email sent', { to });
   } catch (error) {
-    logger.error('Failed to send password reset email', { to, error: String(error) });
-    throw new Error('Impossibile inviare l\'email di reset password');
+    logger.error('Failed to send password reset email (OTP already logged above)', { to, error: String(error) });
   }
 }
 

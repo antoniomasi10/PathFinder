@@ -91,7 +91,7 @@ const FULLSCREEN_ROUTES = ['/profile/skills'];
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isFullscreen = FULLSCREEN_ROUTES.includes(pathname);
+  const isFullscreen = FULLSCREEN_ROUTES.includes(pathname) || pathname.startsWith('/opportunities/');
 
   return (
     <ToastProvider>
@@ -99,7 +99,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <SavedOpportunitiesProvider>
         <SavedCoursesProvider>
         <SkillsPromptProvider>
-        <div className="min-h-screen" style={{ backgroundColor: '#0D1117' }}>
+        <div className="min-h-screen" style={{ backgroundColor: '#fbf8ff' }}>
           {!isFullscreen && <TopBar />}
           <main className={`${isFullscreen ? '' : 'pb-20'} max-w-lg mx-auto`}>
             <ErrorBoundary FallbackComponent={ErrorFallback}>{children}</ErrorBoundary>

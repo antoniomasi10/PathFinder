@@ -11,19 +11,20 @@ export default function BottomNav() {
   const { t } = useLanguage();
   const { badgeCounts } = useNotifications();
 
+  // Order per Figma: Home | Uni | Chat | Profile
   const navItems = [
-    {
-      href: '/universities',
-      label: t.nav.uni,
-      icon: (active: boolean) => (
-        <GraduationCap size={24} strokeWidth={active ? 2 : 1.5} />
-      ),
-    },
     {
       href: '/home',
       label: t.nav.home,
       icon: (active: boolean) => (
         <House size={24} filled={active} strokeWidth={active ? 2 : 1.5} />
+      ),
+    },
+    {
+      href: '/universities',
+      label: t.nav.uni,
+      icon: (active: boolean) => (
+        <GraduationCap size={24} strokeWidth={active ? 2 : 1.5} />
       ),
     },
     {
@@ -49,10 +50,18 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-[#1a1b2e] border-t border-indigo-900/20 z-50"
-      style={{ boxShadow: '0 -4px 24px rgba(0, 0, 0, 0.5)' }}
+      className="fixed bottom-0 left-0 right-0 z-50"
+      style={{
+        backgroundColor: 'white',
+        borderTop: '1px solid #ecedff',
+        boxShadow: '0px -4px 6px rgba(0,0,0,0.05)',
+        height: 64,
+      }}
     >
-      <div className="max-w-lg mx-auto flex">
+      <div
+        className="max-w-lg mx-auto flex items-start pb-safe"
+        style={{ paddingLeft: 28.73, paddingRight: 28.75, paddingTop: 9, gap: 35 }}
+      >
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
           const badge = badgeMap[item.href] || 0;
@@ -61,32 +70,31 @@ export default function BottomNav() {
               key={item.href}
               href={item.href}
               aria-label={item.label}
-              className={`flex-1 flex flex-col items-center py-3 transition-colors relative ${
-                isActive ? 'text-indigo-400' : 'text-gray-500 hover:text-gray-400'
-              }`}
+              className="flex-1 flex flex-col items-center"
             >
-              {/* Active top bar indicator */}
-              {isActive && (
-                <div
-                  className="absolute top-0 w-12 h-1 bg-indigo-500 rounded-b-full"
-                  style={{ boxShadow: '0 2px 15px rgba(99,102,241,0.6)' }}
-                />
-              )}
-
-              {/* Active glow background */}
-              {isActive && (
-                <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background: 'radial-gradient(circle at 50% 30%, rgba(99,102,241,0.2) 0%, transparent 70%)',
-                  }}
-                />
-              )}
-
-              <span className="relative z-10">
-                {item.icon(isActive)}
+              <span className="relative">
+                {isActive ? (
+                  <span
+                    className="flex items-center justify-center rounded-full"
+                    style={{
+                      width: 43,
+                      height: 43,
+                      backgroundColor: '#615fe2',
+                      color: 'white',
+                    }}
+                  >
+                    {item.icon(true)}
+                  </span>
+                ) : (
+                  <span
+                    className="flex items-center justify-center"
+                    style={{ width: 43, height: 43, color: '#acb0ce' }}
+                  >
+                    {item.icon(false)}
+                  </span>
+                )}
                 {badge > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                  <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
                     {badge > 9 ? '9+' : badge}
                   </span>
                 )}
