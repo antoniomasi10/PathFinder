@@ -287,9 +287,13 @@ export default function RegisterPage() {
               </div>
               <label htmlFor="terms" className="text-sm text-[#464554] leading-[1.5] cursor-pointer">
                 Accetto i{' '}
-                <span className="font-medium text-[#615fe2]">Termini di Servizio</span>
+                <Link href="/terms" target="_blank" rel="noopener noreferrer" className="font-medium text-[#615fe2] underline hover:text-[#4f4cc0]">
+                  Termini di Servizio
+                </Link>
                 {' '}e confermo di aver letto l&apos;
-                <span className="font-medium text-[#615fe2]">Informativa sulla Privacy</span>.
+                <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-[#615fe2] underline hover:text-[#4f4cc0]">
+                  Informativa sulla Privacy
+                </Link>.
               </label>
             </div>
 
