@@ -2,20 +2,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-// Validate required environment variables at startup
-const REQUIRED_ENV_VARS = ['JWT_SECRET', 'JWT_REFRESH_SECRET', 'DATABASE_URL'];
-const MIN_SECRET_LENGTH = process.env.NODE_ENV === 'production' ? 32 : 8;
-
-for (const key of REQUIRED_ENV_VARS) {
-  if (!process.env[key]) {
-    console.error(`FATAL: env var ${key} is missing. Generate with: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"`);
-    process.exit(1);
-  }
-  if (process.env[key]!.length < MIN_SECRET_LENGTH) {
-    console.error(`FATAL: env var ${key} is too short (min ${MIN_SECRET_LENGTH} chars in ${process.env.NODE_ENV || 'development'})`);
-    process.exit(1);
-  }
-}
+import { validateEnv } from './lib/validateEnv';
+validateEnv();
 
 import express from 'express';
 import helmet from 'helmet';

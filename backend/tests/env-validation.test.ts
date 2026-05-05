@@ -1,19 +1,5 @@
 import { describe, it, expect } from 'vitest';
-
-const REQUIRED_VARS = ['JWT_SECRET', 'JWT_REFRESH_SECRET', 'DATABASE_URL'];
-
-function validateEnv(env: Record<string, string | undefined>, nodeEnv: string = 'development') {
-  const MIN_SECRET_LENGTH = nodeEnv === 'production' ? 32 : 8;
-
-  for (const key of REQUIRED_VARS) {
-    if (!env[key]) {
-      throw new Error(`Env var ${key} is missing`);
-    }
-    if (env[key]!.length < MIN_SECRET_LENGTH) {
-      throw new Error(`Env var ${key} is too short (min ${MIN_SECRET_LENGTH} chars in ${nodeEnv})`);
-    }
-  }
-}
+import { validateEnv } from '../src/lib/validateEnv';
 
 describe('validateEnv', () => {
   describe('development mode', () => {
@@ -35,17 +21,25 @@ describe('validateEnv', () => {
       }, 'development')).not.toThrow();
     });
 
-    it('passes with 30 char secrets (current dev values)', () => {
+    it('passes with current dev values', () => {
       expect(() => validateEnv({
         JWT_SECRET: 'pathfinder-jwt-secret-dev-only',
         JWT_REFRESH_SECRET: 'pathfinder-refresh-secret-dev-only',
         DATABASE_URL: 'postgresql://pathfinder:pathfinder@localhost:5432/pathfinder',
       }, 'development')).not.toThrow();
     });
+
+    it('passes DATABASE_URL that is shorter than 32 chars', () => {
+      expect(() => validateEnv({
+        JWT_SECRET: 'a'.repeat(8),
+        JWT_REFRESH_SECRET: 'b'.repeat(8),
+        DATABASE_URL: 'pg://x',
+      }, 'development')).not.toThrow();
+    });
   });
 
   describe('production mode', () => {
-    it('throws if JWT_SECRET is less than 32 chars in production', () => {
+    it('throws if JWT_SECRET is less than 32 chars', () => {
       expect(() => validateEnv({ JWT_SECRET: 'a'.repeat(20), JWT_REFRESH_SECRET: 'b'.repeat(32), DATABASE_URL: 'postgres://x' }, 'production'))
         .toThrow('too short');
     });
@@ -57,15 +51,23 @@ describe('validateEnv', () => {
         DATABASE_URL: 'postgresql://user:pass@localhost/db',
       }, 'production')).not.toThrow();
     });
+
+    it('accepts short DATABASE_URL in production (not a secret)', () => {
+      expect(() => validateEnv({
+        JWT_SECRET: 'a'.repeat(32),
+        JWT_REFRESH_SECRET: 'b'.repeat(32),
+        DATABASE_URL: 'pg://x',
+      }, 'production')).not.toThrow();
+    });
   });
 
   it('throws if JWT_REFRESH_SECRET is missing', () => {
-    expect(() => validateEnv({ JWT_SECRET: 'a'.repeat(32), JWT_REFRESH_SECRET: undefined, DATABASE_URL: 'postgres://x' }, 'development'))
+    expect(() => validateEnv({ JWT_SECRET: 'a'.repeat(32), JWT_REFRESH_SECRET: undefined, DATABASE_URL: 'postgres://x' }))
       .toThrow('JWT_REFRESH_SECRET is missing');
   });
 
   it('throws if DATABASE_URL is missing', () => {
-    expect(() => validateEnv({ JWT_SECRET: 'a'.repeat(32), JWT_REFRESH_SECRET: 'b'.repeat(32), DATABASE_URL: undefined }, 'production'))
+    expect(() => validateEnv({ JWT_SECRET: 'a'.repeat(32), JWT_REFRESH_SECRET: 'b'.repeat(32), DATABASE_URL: undefined }))
       .toThrow('DATABASE_URL is missing');
   });
 });
