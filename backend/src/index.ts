@@ -71,6 +71,14 @@ const io = new Server(httpServer, {
 
 app.set('trust proxy', 1); // trust first proxy (nginx/caddy)
 app.use(helmet());
+
+if (process.env.NODE_ENV === 'production') {
+  app.use((_req, res, next) => {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    next();
+  });
+}
+
 app.use(cors({
   origin: corsOrigin,
   credentials: true,
