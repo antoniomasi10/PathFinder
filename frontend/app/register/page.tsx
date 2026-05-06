@@ -84,6 +84,7 @@ export default function RegisterPage() {
   const [universityId, setUniversityId] = useState('');
   const [courseOfStudy, setCourseOfStudy] = useState('');
   const [accepted, setAccepted] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const [birthDate, setBirthDate] = useState('');
   const [birthDateError, setBirthDateError] = useState('');
   const [universities, setUniversities] = useState<University[]>([]);
@@ -135,6 +136,8 @@ export default function RegisterPage() {
         name, surname, email, password,
         phone: phone || undefined,
         universityId, courseOfStudy, birthDate,
+        tosConsent: true,
+        marketingConsent,
       });
       localStorage.setItem('accessToken', data.accessToken);
       setUser(data.user);
@@ -328,6 +331,22 @@ export default function RegisterPage() {
                 <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-[#615fe2] underline hover:text-[#4f4cc0]">
                   Informativa sulla Privacy
                 </Link>.
+              </label>
+            </div>
+            {/* Marketing consent - optional */}
+            <div className="flex items-start gap-3 py-1">
+              <div className="pt-0.5">
+                <input
+                  id="marketing"
+                  type="checkbox"
+                  checked={marketingConsent}
+                  onChange={(e) => setMarketingConsent(e.target.checked)}
+                  className="w-4 h-4 rounded border border-[#c7c4d6] accent-[#615fe2] cursor-pointer"
+                />
+              </div>
+              <label htmlFor="marketing" className="text-sm text-[#464554] leading-[1.5] cursor-pointer">
+                Acconsento a ricevere comunicazioni di marketing e aggiornamenti sulle opportunità{' '}
+                <span className="text-[10px] font-medium text-[#777585] tracking-[0.5px] uppercase">(opzionale)</span>
               </label>
             </div>
 

@@ -19,6 +19,8 @@ interface RegisterInput {
   universityId?: string;
   courseOfStudy?: string;
   birthDate?: string;
+  tosConsent?: boolean;
+  marketingConsent?: boolean;
 }
 
 interface LoginInput {
@@ -51,6 +53,8 @@ export async function registerUser(input: RegisterInput) {
     ? parseAndValidateBirthDate(input.birthDate)
     : undefined;
 
+  const consentAt = new Date();
+
   const passwordHash = await hashPassword(input.password);
 
   // Generate OTP before creating user
@@ -71,6 +75,9 @@ export async function registerUser(input: RegisterInput) {
       universityId: input.universityId || null,
       courseOfStudy: input.courseOfStudy || null,
       birthDate: parsedBirthDate || null,
+      tosConsentAt: input.tosConsent ? consentAt : null,
+      privacyConsentAt: input.tosConsent ? consentAt : null,
+      marketingConsent: input.marketingConsent ?? false,
     },
     include: { university: true },
   });
@@ -306,6 +313,7 @@ export async function googleAuth(idToken: string) {
     }
   } else {
     // Create new user
+    const now = new Date();
     user = await prisma.user.create({
       data: {
         email: email!,
@@ -314,6 +322,8 @@ export async function googleAuth(idToken: string) {
         provider: 'GOOGLE',
         emailVerified: true,
         avatar: picture || null,
+        tosConsentAt: now,
+        privacyConsentAt: now,
       },
       include: { university: true },
     });

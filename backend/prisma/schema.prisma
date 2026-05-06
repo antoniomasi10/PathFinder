@@ -142,15 +142,18 @@ model User {
   englishLevel      EnglishLevel?
   willingToRelocate WillingnessToRelocate?
   profileCompleted    Boolean   @default(false)
-  publicProfile       Boolean   @default(true)
+  publicProfile       Boolean   @default(false)
   privacySavedOpps    String    @default("Pathmates")
-  privacyPathmates    String    @default("Tutti")
+  privacyPathmates    String    @default("Pathmates")
   messagePrivacy      String    @default("Pathmates")
-  privacySkills       String    @default("Tutti")
-  privacyUniversity   String    @default("Tutti")
+  privacySkills       String    @default("Pathmates")
+  privacyUniversity   String    @default("Pathmates")
   skills              Json      @default("{\"core\":null,\"side\":[],\"promptShownAt\":null,\"promptDismissedAt\":null,\"definedAt\":null,\"lastUpdatedAt\":null}")
   passwordResetToken  String?
   passwordResetExpiry DateTime?
+  tosConsentAt        DateTime?
+  privacyConsentAt    DateTime?
+  marketingConsent    Boolean   @default(false)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
