@@ -1,174 +1,260 @@
 /**
- * EU Youth Portal + European Solidarity Corps + Erasmus+ Import
+ * European Youth Portal — Opportunity Import via REST/Elasticsearch API
+ * Source: https://youth.europa.eu/go-abroad/volunteering/opportunities_en
  *
- * Sources:
- * - European Youth Portal RSS: https://youth.europa.eu/
- * - Eurodesk Opportunity Finder: https://programmes.eurodesk.eu
- * - Erasmus+ project results: https://erasmus-plus.ec.europa.eu
+ * The European Youth Portal (EYP) hosts opportunities from the European
+ * Solidarity Corps (ESC) — volunteering, traineeships, and solidarity projects.
  *
- * These portals have RSS feeds that can be parsed for opportunities.
+ * API: GET https://youth.europa.eu/api/rest/eyp/v1/search_en
+ *   ?type=Opportunity&size=N&from=OFFSET
+ *   &filters[status]=open
+ *   &filters[date_end][operator]=>=&filters[date_end][value]=YYYY-MM-DD
+ *   &sort[created]=desc
+ *
+ * Data is published under CC BY 4.0 — attribution required.
+ *
+ * Runs weekly on Monday at 03:30 via scheduler.ts.
  */
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { OpportunityType } from '@prisma/client';
+import { validateOpportunity } from './validation';
 
-// RSS/Atom feeds from EU portals
-const FEEDS = [
-  {
-    name: 'EU Youth Portal',
-    url: 'https://youth.europa.eu/api/feed/rss',
-    fallbackUrl: 'https://youth.europa.eu/eu-youth-programmes_en',
-    source: 'eu-youth',
-  },
-  {
-    name: 'Eurodesk Opportunities',
-    url: 'https://programmes.eurodesk.eu/rss/opportunities',
-    fallbackUrl: 'https://programmes.eurodesk.eu/en',
-    source: 'eurodesk',
-  },
-];
+// ---------------------------------------------------------------------------
+// Configuration
+// ---------------------------------------------------------------------------
 
-// Simple XML tag extractor (no external dep needed)
-function extractTag(xml: string, tag: string): string {
-  const regex = new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]></${tag}>|<${tag}[^>]*>([\\s\\S]*?)</${tag}>`);
-  const match = xml.match(regex);
-  return (match?.[1] || match?.[2] || '').trim();
-}
+const API_BASE = 'https://youth.europa.eu/api/rest/eyp/v1/search_en';
+const PAGE_SIZE = 50;
+const MAX_RESULTS = 1200;
+const FETCH_DELAY_MS = 500;
 
-function extractAllItems(xml: string): string[] {
-  const items: string[] = [];
-  let pos = 0;
-  while (true) {
-    const start = xml.indexOf('<item', pos);
-    if (start === -1) break;
-    const end = xml.indexOf('</item>', start);
-    if (end === -1) break;
-    items.push(xml.slice(start, end + 7));
-    pos = end + 7;
-  }
-  // Also try <entry> for Atom feeds
-  pos = 0;
-  while (true) {
-    const start = xml.indexOf('<entry', pos);
-    if (start === -1) break;
-    const end = xml.indexOf('</entry>', start);
-    if (end === -1) break;
-    items.push(xml.slice(start, end + 8));
-    pos = end + 8;
-  }
-  return items;
-}
+// Funding programme IDs (1-8 cover ESC + Erasmus+ volunteering/solidarity)
+const FUNDING_IDS = ['5', '4', '3', '2', '1', '8', '6', '7'];
 
-function mapType(title: string, description: string): OpportunityType {
-  const text = `${title} ${description}`.toLowerCase();
-  if (text.includes('volontariato') || text.includes('volunteer') || text.includes('solidarity')) return 'EXTRACURRICULAR';
-  if (text.includes('tirocinio') || text.includes('traineeship') || text.includes('stage')) return 'STAGE';
-  if (text.includes('borsa') || text.includes('scholarship') || text.includes('fellowship')) return 'FELLOWSHIP';
-  if (text.includes('evento') || text.includes('event') || text.includes('conference')) return 'EVENT';
-  if (text.includes('erasmus') || text.includes('exchange')) return 'EXTRACURRICULAR';
-  return 'INTERNSHIP';
-}
+// ---------------------------------------------------------------------------
+// API helpers
+// ---------------------------------------------------------------------------
 
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
-}
+function buildSearchUrl(from: number, size: number): string {
+  const today = new Date().toISOString().slice(0, 10);
+  const params = new URLSearchParams();
 
-async function logImport(source: string, fn: () => Promise<number>): Promise<number> {
-  const log = await prisma.importLog.create({
-    data: { source, type: 'opportunities', status: 'running', startedAt: new Date() },
+  params.set('type', 'Opportunity');
+  params.set('size', String(size));
+  params.set('from', String(from));
+
+  // Only open opportunities with end date >= today
+  params.set('filters[status]', 'open');
+  params.set('filters[date_end][operator]', '>=');
+  params.set('filters[date_end][value]', today);
+  params.set('filters[date_end][type]', 'must');
+
+  // Funding programmes
+  FUNDING_IDS.forEach((id, i) => {
+    params.set(`filters[funding_programme][id][${i}]`, id);
   });
-  try {
-    const count = await fn();
-    await prisma.importLog.update({
-      where: { id: log.id },
-      data: { status: count > 0 ? 'success' : 'partial', count, finishedAt: new Date() },
-    });
-    return count;
-  } catch (err: any) {
-    await prisma.importLog.update({
-      where: { id: log.id },
-      data: { status: 'failed', error: String(err).slice(0, 500), finishedAt: new Date() },
-    });
-    throw err;
-  }
+
+  // Deadline filter: include opportunities where deadline >= today OR no deadline
+  params.set('filters[date_application_end][operator]', '>=');
+  params.set('filters[date_application_end][value]', today);
+  params.set('filters[date_application_end][type]', 'must');
+  params.set('filters[date_application_end][group]', 'deadline');
+  params.set('filters[has_no_deadline][value]', 'true');
+  params.set('filters[has_no_deadline][type]', 'must');
+  params.set('filters[has_no_deadline][group]', 'deadline');
+
+  // Sort by newest first
+  params.set('sort[created]', 'desc');
+
+  return `${API_BASE}?${params.toString()}`;
 }
 
-async function fetchFeed(feedUrl: string): Promise<string | null> {
-  try {
-    const res = await fetch(feedUrl, {
-      signal: AbortSignal.timeout(15000),
-      headers: { 'Accept': 'application/rss+xml, application/xml, text/xml, application/atom+xml' },
-    });
-    if (!res.ok) return null;
-    return await res.text();
-  } catch {
-    return null;
-  }
+interface EYPHit {
+  _id: string;
+  _source: {
+    opid: number;
+    title: string;
+    description?: string;
+    organisation_name?: string;
+    town?: string;
+    country?: string;
+    date_start?: string;
+    date_end?: string;
+    date_application_end?: string;
+    has_no_deadline?: boolean;
+    duration?: number;
+    volunteer_activity_type?: string;
+    participant_profile?: string;
+    boarding_arrangements?: string;
+    training?: string;
+    contact_person_email?: string;
+    status?: string;
+    created?: string;
+    esc_topics?: string[];
+    funding_programme?: {
+      id: number;
+      activity_types?: string[];
+    };
+  };
 }
 
-export async function importEUOpportunities(): Promise<{ imported: number; sources: string[] }> {
-  logger.info('[EU Youth] Starting import from EU portals...');
+// ---------------------------------------------------------------------------
+// Type mapping
+// ---------------------------------------------------------------------------
+
+function mapType(hit: EYPHit['_source']): OpportunityType {
+  const activityTypes = hit.funding_programme?.activity_types || [];
+  const title = (hit.title || '').toLowerCase();
+
+  if (activityTypes.includes('volunteering') || title.includes('volunt')) return 'EXTRACURRICULAR';
+  if (activityTypes.includes('traineeship') || title.includes('trainee') || title.includes('stage')) return 'STAGE';
+  if (activityTypes.includes('solidarity') || title.includes('solidarity')) return 'EXTRACURRICULAR';
+  if (title.includes('internship') || title.includes('tirocinio')) return 'INTERNSHIP';
+  return 'EXTRACURRICULAR'; // ESC is primarily volunteering/solidarity
+}
+
+function cleanText(text: string | undefined): string {
+  if (!text) return '';
+  return text
+    .replace(/\\r\\n|\\r|\\n/g, '\n')
+    .replace(/\r\n|\r/g, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// ---------------------------------------------------------------------------
+// Import orchestration
+// ---------------------------------------------------------------------------
+
+export async function importEUOpportunities(options?: {
+  maxResults?: number;
+}): Promise<{ imported: number; skipped: number; sources: string[] }> {
+  logger.info('[EU Youth] Starting import from European Youth Portal API...');
   const now = new Date();
-  let totalImported = 0;
-  const activeSources: string[] = [];
+  const maxResults = options?.maxResults || MAX_RESULTS;
 
-  for (const feed of FEEDS) {
-    try {
-      const count = await logImport(feed.source, async () => {
-        // Try primary RSS URL
-        let xml = await fetchFeed(feed.url);
+  const log = await prisma.importLog.create({
+    data: { source: 'eu-youth', type: 'opportunities', status: 'running', startedAt: now },
+  });
 
-        // Try fallback
-        if (!xml) {
-          xml = await fetchFeed(feed.fallbackUrl);
+  try {
+    let imported = 0;
+    let skipped = 0;
+    let from = 0;
+    let totalAvailable = 0;
+
+    while (from < maxResults) {
+      const size = Math.min(PAGE_SIZE, maxResults - from);
+      const url = buildSearchUrl(from, size);
+      logger.info(`[EU Youth] Fetching opportunities ${from + 1}-${from + size}...`);
+
+      try {
+        const res = await fetch(url, {
+          signal: AbortSignal.timeout(20000),
+          headers: { 'Accept': 'application/json' },
+        });
+
+        if (!res.ok) {
+          logger.warn(`[EU Youth] API returned ${res.status}`);
+          break;
         }
 
-        if (!xml) {
-          logger.warn(`[EU Youth] No data from ${feed.name}`);
-          return 0;
+        const data = await res.json() as {
+          hits: { total: { value: number }; hits: EYPHit[] };
+        };
+
+        totalAvailable = data.hits.total.value;
+        const hits = data.hits.hits;
+
+        if (hits.length === 0) {
+          logger.info(`[EU Youth] No more results at offset ${from}`);
+          break;
         }
 
-        const items = extractAllItems(xml);
-        let imported = 0;
+        for (const hit of hits) {
+          const s = hit._source;
+          const sid = `eyp-${s.opid}`;
 
-        for (const item of items) {
-          const title = stripHtml(extractTag(item, 'title'));
-          if (!title) continue;
+          // Build description from available fields
+          const descParts = [
+            cleanText(s.description),
+            s.participant_profile ? `\nProfilo richiesto:\n${cleanText(s.participant_profile)}` : '',
+            s.boarding_arrangements ? `\nAlloggio:\n${cleanText(s.boarding_arrangements)}` : '',
+            s.training ? `\nFormazione:\n${cleanText(s.training)}` : '',
+          ].filter(Boolean);
+          const fullDescription = descParts.join('\n') || s.title;
 
-          const description = stripHtml(extractTag(item, 'description') || extractTag(item, 'summary') || extractTag(item, 'content'));
-          const link = extractTag(item, 'link') || extractTag(item, 'guid');
-          const pubDate = extractTag(item, 'pubDate') || extractTag(item, 'published') || extractTag(item, 'updated');
+          const location = [s.town, s.country].filter(Boolean).join(', ');
+          const isAbroad = s.country !== 'IT';
 
-          // Generate stable ID from link or title hash
-          const handle = link
-            ? Buffer.from(link).toString('base64url').slice(0, 40)
-            : Buffer.from(title).toString('base64url').slice(0, 40);
+          // Parse deadline
+          let deadline: Date | null = null;
+          if (s.date_application_end && !s.has_no_deadline) {
+            const d = new Date(s.date_application_end);
+            if (!isNaN(d.getTime())) deadline = d;
+          }
 
-          const sid = `${feed.source}-${handle}`;
+          // Parse expiry (end date of the opportunity)
+          let expiresAt: Date | null = null;
+          if (s.date_end) {
+            const d = new Date(s.date_end);
+            if (!isNaN(d.getTime())) expiresAt = d;
+          }
+
+          const detailUrl = `https://youth.europa.eu/solidarity/placement/${s.opid}_en`;
+
+          const validated = validateOpportunity({
+            title: s.title,
+            description: fullDescription,
+            company: s.organisation_name || null,
+            url: detailUrl,
+            location,
+            isAbroad,
+            isRemote: false,
+            expiresAt,
+          }, 'eu-youth');
+
+          if (!validated) { skipped++; continue; }
+
+          // Tags from ESC topics
+          const tags = (s.esc_topics || []).slice(0, 5);
+          if (s.volunteer_activity_type) tags.push(s.volunteer_activity_type);
 
           await prisma.opportunity.upsert({
             where: { id: sid },
             update: {
-              title: title.slice(0, 200),
-              description: description.slice(0, 5000) || title,
-              url: link || null,
-              isAbroad: true,
-              type: mapType(title, description),
-              tags: [feed.source, 'eu-programme'],
+              title: validated.title,
+              description: validated.description,
+              company: validated.company,
+              url: validated.url,
+              location: validated.location,
+              isAbroad: validated.isAbroad,
+              isRemote: false,
+              type: mapType(s),
+              tags,
+              deadline,
+              expiresAt,
+              source: 'Portale Europeo Giovani',
               sourceId: sid,
               lastSyncedAt: now,
             },
             create: {
               id: sid,
-              title: title.slice(0, 200),
-              description: description.slice(0, 5000) || title,
-              url: link || null,
-              location: 'Europa',
-              isAbroad: true,
+              title: validated.title,
+              description: validated.description,
+              company: validated.company,
+              url: validated.url,
+              location: validated.location,
+              isAbroad: validated.isAbroad,
               isRemote: false,
-              type: mapType(title, description),
-              tags: [feed.source, 'eu-programme'],
-              postedAt: pubDate ? new Date(pubDate) : now,
+              type: mapType(s),
+              tags,
+              deadline,
+              expiresAt,
+              postedAt: s.created ? new Date(s.created) : now,
+              source: 'Portale Europeo Giovani',
               sourceId: sid,
               lastSyncedAt: now,
             },
@@ -176,17 +262,32 @@ export async function importEUOpportunities(): Promise<{ imported: number; sourc
           imported++;
         }
 
-        return imported;
-      });
-
-      if (count > 0) activeSources.push(feed.name);
-      totalImported += count;
-      logger.info(`[EU Youth] ${feed.name}: ${count} opportunities`);
-    } catch (err) {
-      logger.warn(`[EU Youth] ${feed.name} failed: ${err}`);
+        from += hits.length;
+        await new Promise(r => setTimeout(r, FETCH_DELAY_MS));
+      } catch (err) {
+        logger.warn(`[EU Youth] Fetch failed at offset ${from}: ${err}`);
+        break;
+      }
     }
-  }
 
-  logger.info(`[EU Youth] Total imported: ${totalImported} from ${activeSources.length} sources`);
-  return { imported: totalImported, sources: activeSources };
+    await prisma.importLog.update({
+      where: { id: log.id },
+      data: {
+        status: 'success',
+        count: imported,
+        finishedAt: new Date(),
+        metadata: { skipped, totalAvailable, fetched: from },
+      },
+    });
+
+    logger.info(`[EU Youth] Imported ${imported}, skipped ${skipped} (${totalAvailable} available)`);
+    return { imported, skipped, sources: ['European Youth Portal'] };
+  } catch (err: any) {
+    await prisma.importLog.update({
+      where: { id: log.id },
+      data: { status: 'failed', error: String(err).slice(0, 500), finishedAt: new Date() },
+    });
+    logger.error(`[EU Youth] Import failed: ${err}`);
+    return { imported: 0, skipped: 0, sources: [] };
+  }
 }

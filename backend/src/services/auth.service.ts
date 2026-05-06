@@ -12,7 +12,6 @@ const googleClient = process.env.GOOGLE_CLIENT_ID
 interface RegisterInput {
   name: string;
   surname: string;
-  username: string;
   email: string;
   password: string;
   phone?: string;
@@ -30,9 +29,9 @@ function userResponse(user: any) {
     id: user.id,
     name: user.name,
     surname: user.surname,
-    username: user.username,
     phone: user.phone,
     email: user.email,
+    role: user.role,
     profileCompleted: user.profileCompleted,
     emailVerified: user.emailVerified,
     provider: user.provider,
@@ -44,11 +43,6 @@ export async function registerUser(input: RegisterInput) {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) {
     throw new Error('Email già registrata');
-  }
-
-  const existingUsername = await prisma.user.findUnique({ where: { username: input.username } });
-  if (existingUsername) {
-    throw new Error('Username già in uso');
   }
 
   const passwordHash = await hashPassword(input.password);
@@ -63,7 +57,6 @@ export async function registerUser(input: RegisterInput) {
     data: {
       name: input.name,
       surname: input.surname,
-      username: input.username,
       phone: input.phone || null,
       email: input.email,
       passwordHash,
@@ -84,7 +77,7 @@ export async function registerUser(input: RegisterInput) {
     },
   });
 
-  const payload: JwtPayload = { userId: user.id, email: user.email };
+  const payload: JwtPayload = { userId: user.id, email: user.email, role: user.role };
   return {
     user: userResponse(user),
     accessToken: generateAccessToken(payload),
@@ -119,7 +112,7 @@ export async function loginUser(input: LoginInput) {
     throw new Error('Credenziali non valide');
   }
 
-  const payload: JwtPayload = { userId: user.id, email: user.email };
+  const payload: JwtPayload = { userId: user.id, email: user.email, role: user.role };
   return {
     user: userResponse(user),
     accessToken: generateAccessToken(payload),
@@ -320,7 +313,7 @@ export async function googleAuth(idToken: string) {
     logger.info('New user created via Google OAuth', { userId: user.id });
   }
 
-  const payload: JwtPayload = { userId: user.id, email: user.email };
+  const payload: JwtPayload = { userId: user.id, email: user.email, role: user.role };
   return {
     user: userResponse(user),
     accessToken: generateAccessToken(payload),

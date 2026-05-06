@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronDown, Clock, GraduationCap, Globe, Briefcase, Target } from 'lucide-react';
+import { CloseLg as X, ChevronLeft, ChevronDown as ChevronDownIcon, ClockIcon as Clock, GraduationCap, Globe, Briefcase, Target, CircleCheck, CircleWarning, Check } from '@/components/icons';
 import { MockCourse } from '@/lib/mockCourses';
 
 // ── Types ──
@@ -250,7 +250,7 @@ export default function AdmissionSimulator({ course, onClose }: Props) {
           <div className="flex items-center gap-3">
             {step > 0 && step < 5 && (
               <button onClick={() => setStep(step - 1)}>
-                <ChevronLeft className="w-5 h-5 text-white" />
+                <ChevronLeft size={20} className="text-white" />
               </button>
             )}
             <span className="text-white font-semibold text-base">
@@ -258,7 +258,7 @@ export default function AdmissionSimulator({ course, onClose }: Props) {
             </span>
           </div>
           <button onClick={handleClose}>
-            <X className="w-5 h-5" style={{ color: '#8B8FA8' }} />
+            <X size={20} color="#8B8FA8" />
           </button>
         </div>
 
@@ -314,7 +314,7 @@ function StepIntro({ course, onStart }: { course: MockCourse; onStart: () => voi
         className="w-20 h-20 rounded-2xl mx-auto mb-5 flex items-center justify-center"
         style={{ background: 'linear-gradient(135deg, #1C2F43, #4A9EFF)' }}
       >
-        <GraduationCap className="w-10 h-10 text-white" />
+        <GraduationCap size={40} className="text-white" />
       </div>
       <h2 className="text-xl font-bold text-white mb-2">Simula la tua ammissione</h2>
       <p className="text-sm mb-1" style={{ color: '#D0D4DC' }}>
@@ -323,7 +323,7 @@ function StepIntro({ course, onStart }: { course: MockCourse; onStart: () => voi
       <p className="text-base font-semibold text-white mt-3">{course.title}</p>
       <p className="text-sm" style={{ color: '#8B8FA8' }}>{course.university}</p>
       <div className="flex items-center justify-center gap-2 mt-5" style={{ color: '#8B8FA8' }}>
-        <Clock className="w-4 h-4" />
+        <Clock size={16} />
         <span className="text-sm">Tempo stimato: 2 minuti</span>
       </div>
       <button
@@ -341,7 +341,7 @@ function Step1Academic({ input, setInput }: { input: SimulatorInput; setInput: (
   return (
     <div>
       <div className="flex items-center gap-2 mb-5">
-        <GraduationCap className="w-5 h-5" style={{ color: '#4A9EFF' }} />
+        <GraduationCap size={20} color="#4A9EFF" />
         <h3 className="text-lg font-bold text-white">Dati accademici</h3>
       </div>
 
@@ -416,7 +416,7 @@ function Step2Language({
   return (
     <div>
       <div className="flex items-center gap-2 mb-5">
-        <Globe className="w-5 h-5" style={{ color: '#4A9EFF' }} />
+        <Globe size={20} color="#4A9EFF" />
         <h3 className="text-lg font-bold text-white">Competenze linguistiche</h3>
       </div>
 
@@ -437,7 +437,7 @@ function Step2Language({
           <option value="C1">C1 - Advanced</option>
           <option value="C2">C2 - Proficient</option>
         </select>
-        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none" style={{ color: '#8B8FA8' }} />
+        <ChevronDownIcon size={20} color="#8B8FA8" className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
       </div>
 
       {meetsReq !== null && (
@@ -448,7 +448,7 @@ function Step2Language({
             border: `1px solid ${meetsReq ? '#22C55E30' : '#EF444430'}`,
           }}
         >
-          <span className="text-lg mt-0.5">{meetsReq ? '✅' : '⚠️'}</span>
+          <span className="mt-0.5">{meetsReq ? <CircleCheck size={20} color="#22C55E" /> : <CircleWarning size={20} color="#F59E0B" />}</span>
           <div>
             <p className="text-sm font-medium" style={{ color: meetsReq ? '#22C55E' : '#F59E0B' }}>
               Requisito corso: {reqLevel}
@@ -479,7 +479,7 @@ function Step3Experience({
   return (
     <div>
       <div className="flex items-center gap-2 mb-5">
-        <Briefcase className="w-5 h-5" style={{ color: '#4A9EFF' }} />
+        <Briefcase size={20} color="#4A9EFF" />
         <h3 className="text-lg font-bold text-white">Esperienze rilevanti</h3>
       </div>
       <p className="text-sm mb-4" style={{ color: '#8B8FA8' }}>
@@ -579,9 +579,7 @@ function ExpCheckbox({
           style={{ borderColor: checked ? '#4A9EFF' : '#2A3F54', backgroundColor: checked ? '#4A9EFF' : 'transparent' }}
         >
           {checked && (
-            <svg className="w-3 h-3 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
-              <path d="M5 13l4 4L19 7" />
-            </svg>
+            <Check size={12} color="white" strokeWidth={3} />
           )}
         </div>
         <input type="checkbox" checked={checked} onChange={() => onChange(!checked)} className="sr-only" />
@@ -598,7 +596,7 @@ function Step4Coherence({ input, setInput, course }: { input: SimulatorInput; se
   return (
     <div>
       <div className="flex items-center gap-2 mb-5">
-        <Target className="w-5 h-5" style={{ color: '#4A9EFF' }} />
+        <Target size={20} color="#4A9EFF" />
         <h3 className="text-lg font-bold text-white">Allineamento del percorso</h3>
       </div>
 
@@ -621,7 +619,7 @@ function Step4Coherence({ input, setInput, course }: { input: SimulatorInput; se
           <option value="Comunicazione">Comunicazione / Lingue</option>
           <option value="Altro">Altro</option>
         </select>
-        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none" style={{ color: '#8B8FA8' }} />
+        <ChevronDownIcon size={20} color="#8B8FA8" className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
       </div>
 
       {matchAuto !== null && (

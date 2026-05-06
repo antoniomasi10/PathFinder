@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Search, ArrowRight } from 'lucide-react';
+import { CloseLg as X, Search, ArrowRight } from '@/components/icons';
 import { MockCourse, MOCK_COURSES } from '@/lib/mockCourses';
 import Link from 'next/link';
 
@@ -127,7 +127,7 @@ export default function CourseComparison({ course, onClose }: Props) {
               className="w-8 h-8 rounded-full flex items-center justify-center"
               style={{ backgroundColor: '#1C2F43' }}
             >
-              <X className="w-4 h-4 text-white" />
+              <X size={16} className="text-white" />
             </button>
           </div>
         </div>
@@ -210,7 +210,7 @@ export default function CourseComparison({ course, onClose }: Props) {
                   className="flex items-center gap-2 px-4 py-3 rounded-xl"
                   style={{ backgroundColor: '#1C2F43', border: '1px solid #2A3F54' }}
                 >
-                  <Search className="w-4 h-4" style={{ color: '#8B8FA8' }} />
+                  <Search size={16} color="#8B8FA8" />
                   <input
                     type="text"
                     value={searchQuery}
@@ -388,7 +388,7 @@ export default function CourseComparison({ course, onClose }: Props) {
                 style={{ backgroundColor: '#4A9EFF', color: 'white' }}
               >
                 Vai al dettaglio di {truncate(courseB.title, 30)}
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight size={16} />
               </Link>
             </div>
           )}

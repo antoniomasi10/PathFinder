@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { registerServiceWorker, subscribeToPush, isPushSupported } from '@/lib/pushManager';
 
@@ -33,6 +34,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [badgeCounts, setBadgeCounts] = useState<BadgeCounts>({ networking: 0, opportunities: 0, chat: 0 });
   const [socket, setSocket] = useState<Socket | null>(null);
+  const queryClient = useQueryClient();
 
   const refresh = useCallback(() => {
     api.get('/notifications/unread-count')
@@ -41,7 +43,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     api.get('/notifications/badge-counts')
       .then(({ data }) => setBadgeCounts(data))
       .catch(() => {});
-  }, []);
+    queryClient.invalidateQueries({ queryKey: ['notifications'] });
+  }, [queryClient]);
 
   useEffect(() => {
     refresh();
@@ -56,10 +59,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     ns.on('new_notification', (data: { unreadCount: number }) => {
       setUnreadCount(data.unreadCount);
-      // Refresh badge counts when a new notification arrives
       api.get('/notifications/badge-counts')
         .then(({ data }) => setBadgeCounts(data))
         .catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     });
 
     setSocket(ns);

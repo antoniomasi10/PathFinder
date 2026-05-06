@@ -13,6 +13,8 @@ import ActionMenu from '@/components/ActionMenu';
 import NewChatModal from '@/components/NewChatModal';
 import ImageLightbox from '@/components/ImageLightbox';
 import { isValidImageUrl } from '@/lib/urlValidation';
+import { checkWarn } from '@/lib/moderation';
+import { Plus, UserIcon, ChatDots, CloseSm, CloseMd, ImageIcon, PaperPlane, Check, Heart, Chat, Send, Flag, MoreHorizontal, Trash, Search, Filter } from '@/components/icons';
 
 interface Conversation {
   user: { id: string; name: string; avatar?: string };
@@ -110,7 +112,7 @@ export default function NetworkingPage() {
   const postFileInputRef = useRef<HTMLInputElement>(null);
   const [lightbox, setLightbox] = useState<{ images: string[]; index: number } | null>(null);
   const [connectionStatuses, setConnectionStatuses] = useState<
-    Record<string, { status: string | null; requestId: string | null; fromUserId: string | null }>
+    Record<string, { status: string | null; requestId: string | null; direction: 'sent' | 'received' | null }>
   >({});
   const [chatImages, setChatImages] = useState<string[]>([]);
   const chatFileInputRef = useRef<HTMLInputElement>(null);
@@ -126,6 +128,52 @@ export default function NetworkingPage() {
   const [postPage, setPostPage] = useState(1);
   const [hasMorePosts, setHasMorePosts] = useState(true);
   const [loadingMorePosts, setLoadingMorePosts] = useState(false);
+  const [openPostMenu, setOpenPostMenu] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'post'; postId: string } | { type: 'comment'; postId: string; commentId: string } | null>(null);
+  const [reportModal, setReportModal] = useState<{ type: 'post' | 'comment'; id: string; postId?: string } | null>(null);
+  const [reportReason, setReportReason] = useState('');
+  const [reportedItems, setReportedItems] = useState<Set<string>>(new Set());
+  const [reportSending, setReportSending] = useState(false);
+  const [reportSuccess, setReportSuccess] = useState(false);
+  const [warnPending, setWarnPending] = useState<'post' | 'comment' | null>(null);
+  const [blockedToast, setBlockedToast] = useState(false);
+  const [highlightPostId, setHighlightPostId] = useState<string | null>(null);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTab, setSearchTab] = useState<'post' | 'profili'>('post');
+  const [searchPostResults, setSearchPostResults] = useState<Post[]>([]);
+  const [searchProfileResults, setSearchProfileResults] = useState<{
+    id: string; name: string; avatar?: string; courseOfStudy?: string; yearOfStudy?: number;
+    university?: { name: string }; profile?: { clusterTag?: string };
+  }[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedClusterTag, setSelectedClusterTag] = useState<string | null>(null);
+  const [postSortBy, setPostSortBy] = useState<'recent' | 'likes'>('recent');
+  const [profileYearFilter, setProfileYearFilter] = useState<number | null>(null);
+  const [coreSkillArea, setCoreSkillArea] = useState<string | null>(null);
+  const [showFilterSheet, setShowFilterSheet] = useState(false);
+  const [suggestedProfiles, setSuggestedProfiles] = useState<{
+    id: string; name: string; avatar?: string; courseOfStudy?: string; yearOfStudy?: number;
+    university?: { name: string }; profile?: { clusterTag?: string };
+  }[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+
+  const MACRO_AREAS = [
+    { id: 'ai', label: 'AI & ML' },
+    { id: 'web', label: 'Web Dev' },
+    { id: 'data', label: 'Data Science' },
+    { id: 'mobile', label: 'Mobile' },
+    { id: 'research', label: 'Ricerca' },
+    { id: 'business', label: 'Business' },
+    { id: 'finance', label: 'Finance' },
+    { id: 'design', label: 'Design' },
+    { id: 'sustainability', label: 'Sustainability' },
+    { id: 'marketing', label: 'Marketing' },
+    { id: 'law', label: 'Law & Policy' },
+    { id: 'healthcare', label: 'Healthcare' },
+  ];
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function compressImage(file: File, maxSize = 800): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -196,6 +244,15 @@ export default function NetworkingPage() {
       setSelectedUser({ id: openChatId, name: decodeURIComponent(openChatName), avatar: openChatAvatar ? decodeURIComponent(openChatAvatar) || undefined : undefined });
       router.replace('/networking');
     }
+  }, [searchParams]);
+
+  // Navigate to a specific post from notification
+  useEffect(() => {
+    const postId = searchParams.get('post');
+    if (!postId) return;
+    setTab('esplora');
+    setHighlightPostId(postId);
+    router.replace('/networking');
   }, [searchParams]);
 
   const buildUnifiedList = useCallback((conversations: Conversation[], groups: Group[], pinned: Set<string>): UnifiedConversation[] => {
@@ -560,6 +617,16 @@ export default function NetworkingPage() {
     } finally { setLoading(false); }
   };
 
+  useEffect(() => {
+    if (!highlightPostId || posts.length === 0) return;
+    const el = document.getElementById(`post-${highlightPostId}`);
+    if (el) {
+      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+      const timer = setTimeout(() => setHighlightPostId(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightPostId, posts]);
+
   const loadMorePosts = async () => {
     if (loadingMorePosts || !hasMorePosts) return;
     setLoadingMorePosts(true);
@@ -576,15 +643,24 @@ export default function NetworkingPage() {
     }
   };
 
-  const submitPost = async () => {
+  const submitPost = async (force = false) => {
     if (!newPost.trim() && postImages.length === 0) return;
+    if (!force && checkWarn(newPost)) {
+      setWarnPending('post');
+      return;
+    }
     try {
       const { data } = await api.post('/posts', { content: newPost, images: postImages });
       setPosts((prev) => [data, ...prev]);
       setNewPost('');
       setPostImages([]);
-    } catch (err) {
-      console.error('Failed to submit post:', err);
+    } catch (err: any) {
+      if (err.response?.data?.code === 'CONTENT_BLOCKED') {
+        setBlockedToast(true);
+        setTimeout(() => setBlockedToast(false), 4000);
+      } else {
+        console.error('Failed to submit post:', err);
+      }
     }
   };
 
@@ -617,8 +693,12 @@ export default function NetworkingPage() {
     }
   };
 
-  const submitComment = async () => {
+  const submitComment = async (force = false) => {
     if (!newComment.trim() || !commentPost || commentSending) return;
+    if (!force && checkWarn(newComment)) {
+      setWarnPending('comment');
+      return;
+    }
     setCommentSending(true);
     try {
       const { data } = await api.post(`/posts/${commentPost.id}/comments`, { content: newComment });
@@ -628,8 +708,13 @@ export default function NetworkingPage() {
         p.id === commentPost.id ? { ...p, _count: { ...p._count, comments: p._count.comments + 1 } } : p
       ));
       setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-    } catch (err) {
-      console.error('Failed to submit comment:', err);
+    } catch (err: any) {
+      if (err.response?.data?.code === 'CONTENT_BLOCKED') {
+        setBlockedToast(true);
+        setTimeout(() => setBlockedToast(false), 4000);
+      } else {
+        console.error('Failed to submit comment:', err);
+      }
     } finally {
       setCommentSending(false);
     }
@@ -640,13 +725,141 @@ export default function NetworkingPage() {
       await api.post('/friends/request', { toUserId });
       setConnectionStatuses(prev => ({
         ...prev,
-        [toUserId]: { status: 'PENDING', requestId: null, fromUserId: user!.id },
+        [toUserId]: { status: 'PENDING', requestId: null, direction: 'sent' },
       }));
     } catch (err) {
       console.error('Failed to send friend request:', err);
     }
   };
 
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
+    try {
+      if (deleteConfirm.type === 'post') {
+        await api.delete(`/posts/${deleteConfirm.postId}`);
+        setPosts((prev) => prev.filter((p) => p.id !== deleteConfirm.postId));
+        if (commentPost?.id === deleteConfirm.postId) setCommentPost(null);
+      } else {
+        await api.delete(`/posts/${deleteConfirm.postId}/comments/${deleteConfirm.commentId}`);
+        setComments((prev) => prev.filter((c) => c.id !== deleteConfirm.commentId));
+        setPosts((prev) => prev.map((p) =>
+          p.id === deleteConfirm.postId ? { ...p, _count: { ...p._count, comments: p._count.comments - 1 } } : p
+        ));
+      }
+    } catch (err) {
+      console.error('Failed to delete:', err);
+    } finally {
+      setDeleteConfirm(null);
+    }
+  };
+
+  const submitReport = async () => {
+    if (!reportReason || !reportModal || reportSending) return;
+    setReportSending(true);
+    try {
+      if (reportModal.type === 'post') {
+        await api.post(`/posts/${reportModal.id}/report`, { reason: reportReason });
+      } else {
+        await api.post(`/posts/${reportModal.postId}/comments/${reportModal.id}/report`, { reason: reportReason });
+      }
+      setReportedItems(prev => new Set([...prev, reportModal.id]));
+      setReportSuccess(true);
+      setTimeout(() => {
+        setReportModal(null);
+        setReportReason('');
+        setReportSuccess(false);
+      }, 2000);
+    } catch (err: any) {
+      console.error('Failed to report:', err);
+      setReportModal(null);
+      setReportReason('');
+    } finally {
+      setReportSending(false);
+    }
+  };
+
+
+  const CLUSTER_TAGS = ['Analista', 'Creativo', 'Leader', 'Imprenditore', 'Sociale', 'Explorer'];
+
+  const loadSuggestions = async () => {
+    setSuggestionsLoading(true);
+    try {
+      const { data } = await api.get('/profile/suggestions');
+      setSuggestedProfiles(data);
+      const ids = data.map((u: { id: string }) => u.id);
+      if (ids.length > 0) {
+        const { data: statuses } = await api.post('/friends/status/batch', { userIds: ids });
+        setConnectionStatuses(prev => ({ ...prev, ...statuses }));
+      }
+    } catch (err) {
+      console.error('Failed to load suggestions:', err);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
+
+  const hasProfileFilters = (clusterTag: string | null, yearOfStudy: number | null, skillArea: string | null) =>
+    !!(clusterTag || yearOfStudy || skillArea);
+
+  const runSearch = async (
+    q: string,
+    clusterTag: string | null,
+    sortBy: 'recent' | 'likes',
+    yearOfStudy: number | null,
+    skillArea: string | null,
+  ) => {
+    const hasQuery = q.trim().length > 0;
+    const hasFilters = hasProfileFilters(clusterTag, yearOfStudy, skillArea);
+    if (!hasQuery && !hasFilters) {
+      setSearchPostResults([]);
+      setSearchProfileResults([]);
+      return;
+    }
+    setSearchLoading(true);
+    try {
+      const profileParams = new URLSearchParams();
+      if (hasQuery) profileParams.set('q', q);
+      if (clusterTag) profileParams.set('clusterTag', clusterTag);
+      if (yearOfStudy) profileParams.set('yearOfStudy', String(yearOfStudy));
+      if (skillArea) profileParams.set('coreSkillArea', skillArea);
+
+      const requests: Promise<any>[] = [];
+      if (hasQuery) requests.push(api.get(`/posts?q=${encodeURIComponent(q)}&sortBy=${sortBy}`));
+      else requests.push(Promise.resolve({ data: [] }));
+      requests.push(api.get(`/profile/search?${profileParams.toString()}`));
+
+      const [postsRes, profilesRes] = await Promise.all(requests);
+      setSearchPostResults(postsRes.data);
+      setSearchProfileResults(profilesRes.data);
+      const authorIds = [...new Set(postsRes.data.map((p: Post) => p.author.id).filter((id: string) => id !== user?.id))] as string[];
+      if (authorIds.length > 0) {
+        const { data: statuses } = await api.post('/friends/status/batch', { userIds: authorIds });
+        setConnectionStatuses(prev => ({ ...prev, ...statuses }));
+      }
+    } catch (err) {
+      console.error('Search failed:', err);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    const hasQuery = searchQuery.trim().length > 0;
+    const hasFilters = hasProfileFilters(selectedClusterTag, profileYearFilter, coreSkillArea);
+    if (!hasQuery && !hasFilters) { setSearchPostResults([]); setSearchProfileResults([]); return; }
+    searchDebounceRef.current = setTimeout(() => {
+      runSearch(searchQuery, selectedClusterTag, postSortBy, profileYearFilter, coreSkillArea);
+    }, 400);
+    return () => { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); };
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const hasQuery = searchQuery.trim().length > 0;
+    const hasFilters = hasProfileFilters(selectedClusterTag, profileYearFilter, coreSkillArea);
+    if (!hasQuery && !hasFilters) return;
+    runSearch(searchQuery, selectedClusterTag, postSortBy, profileYearFilter, coreSkillArea);
+  }, [selectedClusterTag, postSortBy, profileYearFilter, coreSkillArea]);
 
   const togglePin = (convId: string) => {
     setPinnedIds((prev) => {
@@ -738,9 +951,7 @@ export default function NetworkingPage() {
               style={{ boxShadow: '0 4px 20px rgba(99,102,241,0.5)' }}
               title={t.networking.createGroup}
             >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-              </svg>
+              <Plus size={24} strokeWidth={2.5} />
             </button>
           </div>
 
@@ -815,9 +1026,7 @@ export default function NetworkingPage() {
                     {conv.avatar && isValidImageUrl(conv.avatar) ? (
                       <img src={conv.avatar} alt={conv.name} className="w-14 h-14 rounded-full object-cover" />
                     ) : !conv.name ? (
-                      <svg className="w-7 h-7 text-[#475569]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
+                      <UserIcon size={28} className="text-[#475569]" />
                     ) : (
                       <span className="text-white text-lg font-medium">{conv.name[0]}</span>
                     )}
@@ -879,9 +1088,7 @@ export default function NetworkingPage() {
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-full text-center gap-2 py-12">
                 <div className="w-14 h-14 rounded-full bg-indigo-500/10 flex items-center justify-center mb-1">
-                  <svg className="w-7 h-7 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
+                  <ChatDots size={28} className="text-indigo-400" />
                 </div>
                 <p className="text-gray-400 text-sm">
                   {selectedUser.name
@@ -931,9 +1138,7 @@ export default function NetworkingPage() {
                       onClick={() => removeChatImage(i)}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white"
                     >
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                      <CloseSm size={12} strokeWidth={3} />
                     </button>
                   </div>
                 ))}
@@ -950,9 +1155,7 @@ export default function NetworkingPage() {
                 disabled={chatImages.length >= 5}
                 className="w-12 h-12 bg-[#1a1b2e] border border-indigo-900/30 rounded-full flex items-center justify-center text-gray-400 hover:text-indigo-400 shrink-0 disabled:opacity-40 transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+                <ImageIcon size={20} strokeWidth={2} />
               </button>
               <input
                 ref={chatFileInputRef}
@@ -975,9 +1178,7 @@ export default function NetworkingPage() {
                 className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white shrink-0 hover:scale-105 transition-transform disabled:opacity-40"
                 style={{ boxShadow: '0 4px 20px rgba(99,102,241,0.5)' }}
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
+                <Send size={20} strokeWidth={2} />
               </button>
             </div>
             )}
@@ -1041,9 +1242,7 @@ export default function NetworkingPage() {
                       onClick={() => removeChatImage(i)}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white"
                     >
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                      <CloseSm size={12} strokeWidth={3} />
                     </button>
                   </div>
                 ))}
@@ -1055,9 +1254,7 @@ export default function NetworkingPage() {
                 disabled={chatImages.length >= 5}
                 className="w-12 h-12 bg-[#1a1b2e] border border-indigo-900/30 rounded-full flex items-center justify-center text-gray-400 hover:text-indigo-400 shrink-0 disabled:opacity-40 transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+                <ImageIcon size={20} />
               </button>
               <input
                 ref={chatFileInputRef}
@@ -1080,9 +1277,7 @@ export default function NetworkingPage() {
                 className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white shrink-0 hover:scale-105 transition-transform disabled:opacity-40"
                 style={{ boxShadow: '0 4px 20px rgba(99,102,241,0.5)' }}
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
+                <Send size={20} />
               </button>
             </div>
           </div>
@@ -1092,6 +1287,194 @@ export default function NetworkingPage() {
       {/* Explore Tab - Social Feed */}
       {tab === 'esplora' && (
         <div className="space-y-4">
+
+          {/* Search bar */}
+          <div className="relative">
+            <Search size={16} strokeWidth={2} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t.networking.searchPlaceholder}
+              className="w-full bg-[#161B22] rounded-xl pl-9 pr-12 py-3 text-white placeholder-gray-500 text-sm outline-none"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => { setSearchQuery(''); setSelectedClusterTag(null); setProfileYearFilter(null); setCoreSkillArea(null); setPostSortBy('recent'); }}
+                className="absolute right-10 top-1/2 -translate-y-1/2 text-gray-500 active:opacity-70 w-6 h-6 flex items-center justify-center"
+              >
+                <CloseSm size={14} />
+              </button>
+            )}
+            <button
+              onClick={() => setShowFilterSheet(true)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg"
+            >
+              <Filter size={20} strokeWidth={2} className={`transition-colors ${(selectedClusterTag || profileYearFilter || coreSkillArea || postSortBy !== 'recent' || searchTab !== 'post') ? 'text-primary' : 'text-gray-400'}`} />
+              {(selectedClusterTag || profileYearFilter || coreSkillArea || postSortBy !== 'recent' || searchTab !== 'post') && (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary pointer-events-none" />
+              )}
+            </button>
+          </div>
+
+          {/* Search mode: sub-tabs + results */}
+          {(searchQuery.trim() || hasProfileFilters(selectedClusterTag, profileYearFilter, coreSkillArea) || (searchTab === 'profili' && suggestedProfiles.length > 0)) && (
+            <>
+              {/* Suggested profiles (no query, no filters, profili tab) */}
+              {searchTab === 'profili' && !searchQuery.trim() && !hasProfileFilters(selectedClusterTag, profileYearFilter, coreSkillArea) ? (
+                suggestionsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs text-gray-500 font-medium">Profili suggeriti <span className="text-gray-600">({suggestedProfiles.length})</span></p>
+                    <div className="space-y-3">
+                      {suggestedProfiles.map((u) => {
+                        const cs = connectionStatuses[u.id];
+                        return (
+                          <div key={u.id} className="bg-[#1a1b2e] rounded-2xl p-4 flex items-center gap-3" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
+                            <button onClick={() => router.push(`/profile/${u.id}`)} className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 shrink-0 overflow-hidden">
+                              {u.avatar ? <img src={u.avatar} alt={u.name} className="w-full h-full object-cover" /> : <span className="text-white text-lg font-medium">{u.name[0]}</span>}
+                            </button>
+                            <button className="flex-1 min-w-0 text-left" onClick={() => router.push(`/profile/${u.id}`)}>
+                              <p className="text-white font-medium text-sm truncate">{u.name}</p>
+                              <p className="text-gray-400 text-xs truncate">{u.university?.name}{u.courseOfStudy && ` · ${u.courseOfStudy}`}</p>
+                              {u.profile?.clusterTag && <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300">{u.profile.clusterTag}</span>}
+                            </button>
+                            {cs?.status === 'ACCEPTED' ? (
+                              <span className="text-xs text-green-400 border border-green-400/30 px-3 py-1 rounded-full flex items-center gap-1 shrink-0"><Check size={12} strokeWidth={2.5} />{t.userProfile.connected}</span>
+                            ) : cs?.status === 'PENDING' ? (
+                              <span className="text-xs text-gray-500 border border-gray-600 px-3 py-1 rounded-full shrink-0">{t.userProfile.requestSent}</span>
+                            ) : (
+                              <button
+                                onClick={async () => {
+                                  await sendFriendRequest(u.id);
+                                  const { data: statuses } = await api.post('/friends/status/batch', { userIds: [u.id] });
+                                  setConnectionStatuses(prev => ({ ...prev, ...statuses }));
+                                }}
+                                className="text-xs text-primary border border-primary/30 px-3 py-1 rounded-full hover:bg-primary/10 transition-colors shrink-0"
+                              >
+                                {t.userProfile.connect}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )
+              ) : (
+              <>
+              {/* Results label */}
+              <p className="text-xs text-gray-500 font-medium">
+                {searchTab === 'post' ? t.networking.searchPosts : t.networking.searchProfiles}
+                {!searchLoading && (
+                  <span className="ml-1.5 text-gray-600">
+                    ({searchTab === 'post' ? searchPostResults.length : searchProfileResults.length})
+                  </span>
+                )}
+              </p>
+
+              {searchLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : searchTab === 'post' ? (
+                searchPostResults.length === 0 ? (
+                  <div className="text-center py-10 text-gray-500 text-sm">{t.networking.noPostsFound}</div>
+                ) : (
+                  <div className="space-y-4">
+                    {searchPostResults.map((post) => (
+                      <div key={post.id} id={`post-${post.id}`} className={`card${post.author?.id === user?.id ? ' border-l-2 border-l-primary/60' : ''}`}>
+                        <div className="flex items-center justify-between mb-3">
+                          <button
+                            className="flex items-center gap-3 text-left"
+                            onClick={() => post.author?.id && post.author.id !== user?.id && router.push(`/profile/${post.author.id}`)}
+                          >
+                            {(() => {
+                              const isDeleted = !post.author?.name;
+                              const avatar = isDeleted ? null : (post.author.id === user?.id ? (user?.avatar ?? post.author.avatar) : post.author.avatar);
+                              return (
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold overflow-hidden shrink-0 ${isDeleted ? 'bg-[#1E293B]' : 'bg-primary/20 text-primary'}`}>
+                                  {isDeleted ? <UserIcon size={20} color="#475569" strokeWidth={1.5} /> : avatar ? <img src={avatar} alt={post.author.name} className="w-full h-full object-cover" /> : post.author.name[0]}
+                                </div>
+                              );
+                            })()}
+                            <div>
+                              <p className={`font-medium text-sm ${!post.author?.name ? 'text-[#64748B] italic' : 'text-text-primary'}`}>{post.author?.name || 'Utente eliminato'}</p>
+                              {post.author?.name && <p className="text-[10px] text-text-muted">{post.author.university?.name}{post.author.courseOfStudy && ` · ${post.author.courseOfStudy}`}</p>}
+                            </div>
+                          </button>
+                          {post.author?.id && post.author.id !== user?.id && (() => {
+                            const cs = connectionStatuses[post.author.id];
+                            if (cs?.status === 'ACCEPTED') return <span className="text-xs text-green-400 border border-green-400/30 px-3 py-1 rounded-full flex items-center gap-1"><Check size={12} strokeWidth={2.5} />{t.userProfile.connected}</span>;
+                            if (cs?.status === 'PENDING') return null;
+                            return <button onClick={() => sendFriendRequest(post.author.id)} className="text-xs text-primary border border-primary/30 px-3 py-1 rounded-full hover:bg-primary/10 transition-colors">{t.userProfile.connect}</button>;
+                          })()}
+                        </div>
+                        {post.content && <p className="text-sm text-text-primary mb-3 whitespace-pre-wrap">{post.content}</p>}
+                        <div className="flex items-center gap-4 text-text-muted text-sm">
+                          <button onClick={() => toggleLike(post.id, !!post.liked)} className={`flex items-center gap-1.5 transition-colors ${post.liked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}>
+                            <Heart size={20} filled={!!post.liked} /><span className="text-sm">{post._count.likes}</span>
+                          </button>
+                          <button onClick={() => openComments(post)} className="flex items-center gap-1.5 text-gray-400 hover:text-indigo-400 transition-colors">
+                            <Chat size={20} /><span className="text-sm">{post._count.comments}</span>
+                          </button>
+                          <span className="text-[10px] ml-auto">{new Date(post.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : (
+                searchProfileResults.length === 0 ? (
+                  <div className="text-center py-10 text-gray-500 text-sm">{t.networking.noProfilesFound}</div>
+                ) : (
+                  <div className="space-y-3">
+                    {searchProfileResults.map((u) => {
+                      const cs = connectionStatuses[u.id];
+                      return (
+                        <div key={u.id} className="bg-[#1a1b2e] rounded-2xl p-4 flex items-center gap-3" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
+                          <button onClick={() => router.push(`/profile/${u.id}`)} className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 shrink-0 overflow-hidden">
+                            {u.avatar ? <img src={u.avatar} alt={u.name} className="w-full h-full object-cover" /> : <span className="text-white text-lg font-medium">{u.name[0]}</span>}
+                          </button>
+                          <button className="flex-1 min-w-0 text-left" onClick={() => router.push(`/profile/${u.id}`)}>
+                            <p className="text-white font-medium text-sm truncate">{u.name}</p>
+                            <p className="text-gray-400 text-xs truncate">{u.university?.name}{u.courseOfStudy && ` · ${u.courseOfStudy}`}</p>
+                            {u.profile?.clusterTag && (
+                              <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300">{u.profile.clusterTag}</span>
+                            )}
+                          </button>
+                          {cs?.status === 'ACCEPTED' ? (
+                            <span className="text-xs text-green-400 border border-green-400/30 px-3 py-1 rounded-full flex items-center gap-1 shrink-0"><Check size={12} strokeWidth={2.5} />{t.userProfile.connected}</span>
+                          ) : cs?.status === 'PENDING' ? (
+                            <span className="text-xs text-gray-500 border border-gray-600 px-3 py-1 rounded-full shrink-0">{t.userProfile.requestSent}</span>
+                          ) : (
+                            <button
+                              onClick={async () => {
+                                await sendFriendRequest(u.id);
+                                const { data: statuses } = await api.post('/friends/status/batch', { userIds: [u.id] });
+                                setConnectionStatuses(prev => ({ ...prev, ...statuses }));
+                              }}
+                              className="text-xs text-primary border border-primary/30 px-3 py-1 rounded-full hover:bg-primary/10 transition-colors shrink-0"
+                            >
+                              {t.userProfile.connect}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              )}
+              </>
+              )}
+            </>
+          )}
+
+          {/* Normal feed (hidden when searching) */}
+          {!searchQuery.trim() && !hasProfileFilters(selectedClusterTag, profileYearFilter, coreSkillArea) && !(searchTab === 'profili' && suggestedProfiles.length > 0) && (
+          <>
           {/* New post input */}
           <div className="card">
             <textarea
@@ -1112,9 +1495,7 @@ export default function NetworkingPage() {
                       onClick={() => removePostImage(i)}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white"
                     >
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
+                      <CloseSm size={12} strokeWidth={3} />
                     </button>
                   </div>
                 ))}
@@ -1127,9 +1508,7 @@ export default function NetworkingPage() {
                 disabled={postImages.length >= 5}
                 className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+                <ImageIcon size={20} />
                 {t.networking.addPhoto} ({postImages.length}/5)
               </button>
               <input
@@ -1141,7 +1520,7 @@ export default function NetworkingPage() {
                 className="hidden"
               />
               <button
-                onClick={submitPost}
+                onClick={() => submitPost()}
                 disabled={!newPost.trim() && postImages.length === 0}
                 className="btn-primary text-sm disabled:opacity-50"
               >
@@ -1162,7 +1541,7 @@ export default function NetworkingPage() {
             ))
           ) : (
             posts.map((post) => (
-              <div key={post.id} className="card">
+              <div key={post.id} id={`post-${post.id}`} className={`card${post.author?.id === user?.id ? ' border-l-2 border-l-primary/60' : ''}${highlightPostId === post.id ? ' ring-2 ring-primary/60' : ''}`}>
                 <div className="flex items-center justify-between mb-3">
                   <button
                     className="flex items-center gap-3 text-left"
@@ -1176,9 +1555,7 @@ export default function NetworkingPage() {
                       return (
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold overflow-hidden shrink-0 ${isDeleted ? 'bg-[#1E293B]' : 'bg-primary/20 text-primary'}`}>
                           {isDeleted ? (
-                            <svg className="w-5 h-5 text-[#475569]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
+                            <UserIcon size={20} color="#475569" strokeWidth={1.5} />
                           ) : avatar ? (
                             <img src={avatar} alt={post.author.name} className="w-full h-full object-cover" />
                           ) : (
@@ -1188,9 +1565,14 @@ export default function NetworkingPage() {
                       );
                     })()}
                     <div>
-                      <p className={`font-medium text-sm ${post.author?.id && post.author.id !== user?.id ? 'hover:underline text-text-primary' : 'text-text-primary'} ${!post.author?.name ? 'text-[#64748B] italic' : ''}`}>
-                        {post.author?.name || 'Utente eliminato'}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <p className={`font-medium text-sm ${post.author?.id && post.author.id !== user?.id ? 'hover:underline text-text-primary' : 'text-text-primary'} ${!post.author?.name ? 'text-[#64748B] italic' : ''}`}>
+                          {post.author?.name || 'Utente eliminato'}
+                        </p>
+                        {post.author?.id === user?.id && (
+                          <span className="text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full font-medium leading-none">Tu</span>
+                        )}
+                      </div>
                       {post.author?.name && (
                         <p className="text-[10px] text-text-muted">
                           {post.author.university?.name} {post.author.courseOfStudy && `· ${post.author.courseOfStudy}`}
@@ -1198,32 +1580,66 @@ export default function NetworkingPage() {
                       )}
                     </div>
                   </button>
-                  {post.author?.id && post.author.id !== user?.id && (() => {
-                    const cs = connectionStatuses[post.author.id];
-                    const status = cs?.status || null;
+                  <div className="flex items-center gap-2">
+                    {post.author?.id && post.author.id !== user?.id && (() => {
+                      const cs = connectionStatuses[post.author.id];
+                      const status = cs?.status || null;
 
-                    if (status === 'ACCEPTED') {
+                      if (status === 'ACCEPTED') {
+                        return (
+                          <span className="text-xs text-green-400 border border-green-400/30 px-3 py-1 rounded-full flex items-center gap-1">
+                            <Check size={12} strokeWidth={2.5} />
+                            {t.userProfile.connected}
+                          </span>
+                        );
+                      }
+                      if (status === 'PENDING') {
+                        return null;
+                      }
                       return (
-                        <span className="text-xs text-green-400 border border-green-400/30 px-3 py-1 rounded-full flex items-center gap-1">
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                          </svg>
-                          {t.userProfile.connected}
-                        </span>
+                        <button
+                          onClick={() => sendFriendRequest(post.author.id)}
+                          className="text-xs text-primary border border-primary/30 px-3 py-1 rounded-full hover:bg-primary/10 transition-colors"
+                        >
+                          {t.userProfile.connect}
+                        </button>
                       );
-                    }
-                    if (status === 'PENDING') {
-                      return null;
-                    }
-                    return (
-                      <button
-                        onClick={() => sendFriendRequest(post.author.id)}
-                        className="text-xs text-primary border border-primary/30 px-3 py-1 rounded-full hover:bg-primary/10 transition-colors"
-                      >
-                        {t.userProfile.connect}
-                      </button>
-                    );
-                  })()}
+                    })()}
+                    {post.author?.id && (post.author.id === user?.id || !reportedItems.has(post.id)) && (
+                      <div className="relative">
+                        <button
+                          onClick={() => setOpenPostMenu(openPostMenu === post.id ? null : post.id)}
+                          className="p-1 text-gray-500 hover:text-gray-300 transition-colors rounded-lg hover:bg-white/5"
+                        >
+                          <MoreHorizontal size={16} />
+                        </button>
+                        {openPostMenu === post.id && (
+                          <div className="absolute right-0 top-full mt-1 bg-card border border-white/10 rounded-xl shadow-lg py-1 z-10 min-w-[140px]">
+                            {post.author.id === user?.id ? (
+                              <button
+                                onClick={() => { setDeleteConfirm({ type: 'post', postId: post.id }); setOpenPostMenu(null); }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-white/5 transition-colors"
+                              >
+                                <Trash size={14} color="currentColor" />
+                                Elimina post
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => { setReportModal({ type: 'post', id: post.id }); setOpenPostMenu(null); }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-white/5 transition-colors"
+                              >
+                                <Flag size={14} color="currentColor" />
+                                Segnala post
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {post.author?.id && post.author.id !== user?.id && reportedItems.has(post.id) && (
+                      <span className="text-[10px] text-gray-500 italic">Segnalato</span>
+                    )}
+                  </div>
                 </div>
 
                 {post.content && <p className="text-sm text-text-primary mb-3 whitespace-pre-wrap">{post.content}</p>}
@@ -1291,18 +1707,14 @@ export default function NetworkingPage() {
                     onClick={() => toggleLike(post.id, !!post.liked)}
                     className={`flex items-center gap-1.5 transition-colors ${post.liked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
                   >
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill={post.liked ? 'currentColor' : 'none'}>
-                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                    </svg>
+                    <Heart size={20} filled={!!post.liked} />
                     <span className="text-sm">{post._count.likes}</span>
                   </button>
                   <button
                     onClick={() => openComments(post)}
                     className="flex items-center gap-1.5 text-gray-400 hover:text-indigo-400 transition-colors"
                   >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
+                    <Chat size={20} />
                     <span className="text-sm">{post._count.comments}</span>
                   </button>
                   <span className="text-[10px] ml-auto">
@@ -1320,6 +1732,8 @@ export default function NetworkingPage() {
             >
               {loadingMorePosts ? 'Caricamento...' : 'Carica altro'}
             </button>
+          )}
+          </>
           )}
         </div>
       )}
@@ -1387,9 +1801,7 @@ export default function NetworkingPage() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
               <h3 className="text-white font-semibold text-lg">Commenti ({comments.length})</h3>
               <button onClick={() => { setCommentPost(null); setNewComment(''); }} className="text-gray-400 hover:text-white p-1">
-                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <CloseMd size={24} />
               </button>
             </div>
 
@@ -1401,23 +1813,19 @@ export default function NetworkingPage() {
                 </div>
               ) : comments.length === 0 ? (
                 <div className="text-center py-12">
-                  <svg className="w-12 h-12 mx-auto text-gray-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
+                  <div className="flex justify-center mb-3"><Chat size={48} color="#4B5563" strokeWidth={1.5} /></div>
                   <p className="text-gray-500 text-sm">{t.networking.noComments}</p>
                   <p className="text-gray-600 text-xs mt-1">Sii il primo a commentare!</p>
                 </div>
               ) : (
                 comments.map((c) => (
-                  <div key={c.id} className="flex gap-3">
+                  <div key={c.id} className="flex gap-3 group">
                     <button
                       onClick={() => c.author?.id && c.author.id !== user?.id && router.push(`/profile/${c.author.id}`)}
                       className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden ${c.author?.name ? 'bg-primary/20' : 'bg-[#1E293B]'}`}
                     >
                       {!c.author?.name ? (
-                        <svg className="w-4 h-4 text-[#475569]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
+                        <UserIcon size={16} color="#475569" strokeWidth={1.5} />
                       ) : c.author.avatar ? (
                         <img src={c.author.avatar} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -1425,7 +1833,7 @@ export default function NetworkingPage() {
                       )}
                     </button>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => c.author?.id && c.author.id !== user?.id && router.push(`/profile/${c.author.id}`)}
                           className={`text-sm font-semibold ${c.author?.name ? 'text-white hover:underline' : 'text-[#64748B] italic'}`}
@@ -1435,6 +1843,29 @@ export default function NetworkingPage() {
                         <span className="text-gray-500 text-xs">
                           {new Date(c.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
                         </span>
+                        {/* Delete: comment author or post owner */}
+                        {(c.author?.id === user?.id || commentPost?.author?.id === user?.id) && (
+                          <button
+                            onClick={() => setDeleteConfirm({ type: 'comment', postId: commentPost!.id, commentId: c.id })}
+                            className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 text-gray-600 hover:text-red-400 transition-all"
+                            title="Elimina commento"
+                          >
+                            <Trash size={12} color="currentColor" />
+                          </button>
+                        )}
+                        {/* Report: only for non-own comments when user is not post owner */}
+                        {c.author?.id && c.author.id !== user?.id && commentPost?.author?.id !== user?.id && !reportedItems.has(c.id) && (
+                          <button
+                            onClick={() => setReportModal({ type: 'comment', id: c.id, postId: commentPost!.id })}
+                            className="opacity-0 group-hover:opacity-100 ml-auto p-0.5 text-gray-600 hover:text-red-400 transition-all"
+                            title="Segnala commento"
+                          >
+                            <Flag size={12} color="currentColor" />
+                          </button>
+                        )}
+                        {reportedItems.has(c.id) && (
+                          <span className="text-[10px] text-gray-600 italic ml-auto">Segnalato</span>
+                        )}
                       </div>
                       <p className="text-gray-300 text-sm mt-0.5 break-words">{c.content}</p>
                     </div>
@@ -1456,19 +1887,299 @@ export default function NetworkingPage() {
                 maxLength={500}
               />
               <button
-                onClick={submitComment}
+                onClick={() => submitComment()}
                 disabled={!newComment.trim() || commentSending}
                 className="w-9 h-9 rounded-full bg-primary flex items-center justify-center disabled:opacity-40 transition-opacity"
               >
                 {commentSending ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-                  </svg>
+                  <Send size={16} color="white" />
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay to close post context menu */}
+      {openPostMenu && (
+        <div className="fixed inset-0 z-[5]" onClick={() => setOpenPostMenu(null)} />
+      )}
+
+      {/* Search Filter Sheet */}
+      <div
+        className={`fixed inset-0 z-[60] bg-black/60 transition-opacity duration-300 ${showFilterSheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        onClick={() => setShowFilterSheet(false)}
+      />
+      <div className={`fixed bottom-0 left-0 right-0 z-[60] max-w-lg mx-auto bg-[#161B22] rounded-t-3xl transition-transform duration-300 ease-out ${showFilterSheet ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-[#2D3748]" /></div>
+
+        <div className="flex items-center justify-between px-5 pt-3 pb-4">
+          <h2 className="text-white font-bold text-lg">Filtri</h2>
+          <button
+            onClick={() => { setSearchTab('post'); setSelectedClusterTag(null); setProfileYearFilter(null); setCoreSkillArea(null); setPostSortBy('recent'); }}
+            className="text-primary text-sm font-semibold active:opacity-70 transition-opacity"
+          >
+            Reset
+          </button>
+        </div>
+
+        <div className="px-5 pb-4 space-y-6 max-h-[60vh] overflow-y-auto no-scrollbar">
+
+          {/* Tipo di ricerca */}
+          <div>
+            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Tipo di ricerca</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setSearchTab('post'); setSelectedClusterTag(null); setProfileYearFilter(null); setCoreSkillArea(null); }}
+                className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 ${searchTab === 'post' ? 'bg-primary text-white' : 'bg-[#0D1117] text-gray-400'}`}
+              >
+                {t.networking.searchPosts}
+              </button>
+              <button
+                onClick={() => setSearchTab('profili')}
+                className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 ${searchTab === 'profili' ? 'bg-primary text-white' : 'bg-[#0D1117] text-gray-400'}`}
+              >
+                {t.networking.searchProfiles}
+              </button>
+            </div>
+          </div>
+
+          <div className="h-px bg-[#1E293B]" />
+
+          {/* Post filters */}
+          {searchTab === 'post' && (
+            <div>
+              <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Ordina per</p>
+              <div className="flex flex-wrap gap-2">
+                {[{ val: 'recent', label: 'Più recenti' }, { val: 'likes', label: 'Più apprezzati' }].map(({ val, label }) => (
+                  <button
+                    key={val}
+                    onClick={() => setPostSortBy(val as 'recent' | 'likes')}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 ${postSortBy === val ? 'bg-primary text-white' : 'bg-[#0D1117] text-gray-400'}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Profile filters */}
+          {searchTab === 'profili' && (
+            <>
+              <div>
+                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Cluster</p>
+                <div className="flex flex-wrap gap-2">
+                  {CLUSTER_TAGS.map((tag) => (
+                    <button
+                      key={tag}
+                      onClick={() => setSelectedClusterTag(selectedClusterTag === tag ? null : tag)}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 ${selectedClusterTag === tag ? 'bg-primary text-white' : 'bg-[#0D1117] text-gray-400'}`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="h-px bg-[#1E293B]" />
+
+              <div>
+                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Anno di studio</p>
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2, 3, 4, 5].map((yr) => (
+                    <button
+                      key={yr}
+                      onClick={() => setProfileYearFilter(profileYearFilter === yr ? null : yr)}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 ${profileYearFilter === yr ? 'bg-primary text-white' : 'bg-[#0D1117] text-gray-400'}`}
+                    >
+                      {yr}° anno
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="h-px bg-[#1E293B]" />
+
+              <div>
+                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Competenza core</p>
+                <div className="flex flex-wrap gap-2">
+                  {MACRO_AREAS.map((area) => (
+                    <button
+                      key={area.id}
+                      onClick={() => setCoreSkillArea(coreSkillArea === area.id ? null : area.id)}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 ${coreSkillArea === area.id ? 'bg-primary text-white' : 'bg-[#0D1117] text-gray-400'}`}
+                    >
+                      {area.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="px-5 pt-4 pb-8 border-t border-[#1E293B]">
+          <button
+            onClick={() => {
+              setShowFilterSheet(false);
+              if (searchTab === 'profili' && !searchQuery.trim() && !hasProfileFilters(selectedClusterTag, profileYearFilter, coreSkillArea)) {
+                loadSuggestions();
+              }
+            }}
+            className="w-full bg-primary text-white py-4 rounded-2xl font-semibold text-[15px] active:opacity-90 transition-opacity"
+          >
+            Mostra risultati
+          </button>
+        </div>
+      </div>
+
+      {/* Content Blocked Toast */}
+      {blockedToast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[80] w-[calc(100%-2rem)] max-w-sm animate-fade-in">
+          <div className="bg-[#1E1215] border border-red-500/30 rounded-2xl px-4 py-3.5 flex items-start gap-3 shadow-xl">
+            <div className="w-7 h-7 rounded-full bg-red-500/20 flex items-center justify-center shrink-0 mt-0.5">
+              <span className="text-red-400 text-sm leading-none">✕</span>
+            </div>
+            <div>
+              <p className="text-white font-semibold text-sm">Contenuto non pubblicabile</p>
+              <p className="text-red-300/80 text-xs mt-0.5 leading-relaxed">
+                Il tuo post contiene parole che violano le linee guida della community e non può essere pubblicato.
+              </p>
+            </div>
+            <button onClick={() => setBlockedToast(false)} className="text-red-400/50 hover:text-red-400 transition-colors ml-auto shrink-0 mt-0.5">
+              <CloseSm size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Warn Modal */}
+      {warnPending && (
+        <div className="fixed inset-0 bg-black/70 z-[70] flex items-end sm:items-center justify-center" onClick={() => setWarnPending(null)}>
+          <div className="bg-surface w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-5 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-center mb-3 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-gray-600" />
+            </div>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-9 h-9 rounded-full bg-yellow-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                <span className="text-yellow-400 text-lg leading-none">⚠</span>
+              </div>
+              <div>
+                <h3 className="text-white font-semibold text-base mb-1">Linguaggio volgare rilevato</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  Il tuo {warnPending === 'post' ? 'post' : 'commento'} contiene linguaggio potenzialmente inappropriato per una community universitaria. Vuoi modificarlo o pubblicarlo comunque?
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setWarnPending(null)}
+                className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/5 transition-colors"
+              >
+                Modifica
+              </button>
+              <button
+                onClick={() => { const t = warnPending; setWarnPending(null); t === 'post' ? submitPost(true) : submitComment(true); }}
+                className="flex-1 py-2.5 rounded-xl bg-yellow-500/80 text-white text-sm font-medium hover:bg-yellow-500 transition-colors"
+              >
+                Pubblica comunque
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirm Modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/70 z-[70] flex items-end sm:items-center justify-center" onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-surface w-full sm:max-w-xs sm:rounded-2xl rounded-t-2xl p-5 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-center mb-3 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-gray-600" />
+            </div>
+            <h3 className="text-white font-semibold text-base mb-1">
+              {deleteConfirm.type === 'post' ? 'Elimina post' : 'Elimina commento'}
+            </h3>
+            <p className="text-gray-400 text-sm mb-5">
+              {deleteConfirm.type === 'post'
+                ? 'Il post verrà eliminato definitivamente. Sei sicuro?'
+                : 'Il commento verrà eliminato definitivamente. Sei sicuro?'}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 text-sm hover:bg-white/5 transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 py-2.5 rounded-xl bg-red-500/80 text-white text-sm font-medium hover:bg-red-500 transition-colors"
+              >
+                Elimina
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Modal */}
+      {reportModal && (
+        <div className="fixed inset-0 bg-black/70 z-[70] flex items-end sm:items-center justify-center" onClick={() => { setReportModal(null); setReportReason(''); }}>
+          <div
+            className="bg-surface w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-5 animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Handle bar (mobile only) */}
+            <div className="flex justify-center mb-3 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-gray-600" />
+            </div>
+            {reportSuccess ? (
+              <div className="text-center py-4">
+                <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-3">
+                  <Check size={24} color="#4ade80" strokeWidth={2.5} />
+                </div>
+                <p className="text-white font-semibold">Segnalazione inviata</p>
+                <p className="text-gray-400 text-sm mt-1">Grazie per aver contribuito alla sicurezza della community.</p>
+              </div>
+            ) : (
+              <>
+                <h3 className="text-white font-semibold text-lg mb-1">Segnala contenuto</h3>
+                <p className="text-gray-400 text-sm mb-4">Perché vuoi segnalare questo contenuto?</p>
+                <div className="space-y-2 mb-5">
+                  {['Spam', 'Contenuto inappropriato', 'Molestie o bullismo', 'Disinformazione', 'Altro'].map((reason) => (
+                    <button
+                      key={reason}
+                      onClick={() => setReportReason(reason)}
+                      className={`w-full text-left px-4 py-2.5 rounded-xl text-sm transition-colors ${
+                        reportReason === reason
+                          ? 'bg-primary/20 text-primary border border-primary/40'
+                          : 'bg-card text-gray-300 hover:bg-white/5'
+                      }`}
+                    >
+                      {reason}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setReportModal(null); setReportReason(''); }}
+                    className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 text-sm hover:bg-white/5 transition-colors"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    onClick={submitReport}
+                    disabled={!reportReason || reportSending}
+                    className="flex-1 py-2.5 rounded-xl bg-red-500/80 text-white text-sm font-medium disabled:opacity-40 hover:bg-red-500 transition-colors"
+                  >
+                    {reportSending ? 'Invio...' : 'Segnala'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

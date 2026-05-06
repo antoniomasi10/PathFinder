@@ -1,10 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/language';
 import { useNotifications } from '@/lib/notificationContext';
+import {
+  UsersGroup, Handshake, Briefcase, Alarm, BookOpen, Star,
+  Trophy, Heart, ChatDots, Reply, Gear, Bell,
+} from '@/components/icons';
 
 interface Notification {
   id: string;
@@ -14,22 +19,39 @@ interface Notification {
   linkTo?: string;
   icon?: string;
   createdAt: string;
+  data?: Record<string, any>;
 }
 
-const TYPE_ICONS: Record<string, string> = {
-  FRIEND_REQUEST: '\u{1F465}',
-  FRIEND_ACCEPTED: '\u{1F91D}',
-  NEW_OPPORTUNITY: '\u{1F4BC}',
-  OPPORTUNITY_DEADLINE: '\u{23F0}',
-  COURSE_DEADLINE: '\u{1F4DA}',
-  COURSE_RECOMMENDED: '\u{2B50}',
-  BADGE_UNLOCKED: '\u{1F3C6}',
-  POST_LIKE: '\u{2764}\u{FE0F}',
-  POST_COMMENT: '\u{1F4AC}',
-  COMMENT_REPLY: '\u{21A9}\u{FE0F}',
-  GROUP_UPDATE: '\u{1F465}',
-  SYSTEM: '\u{2699}\u{FE0F}',
-  GENERAL: '\u{1F514}',
+function resolveNavTarget(notif: Notification): string | null {
+  const { type, data, linkTo } = notif;
+  if (type === 'OPPORTUNITY_DEADLINE' || type === 'NEW_OPPORTUNITY') {
+    const id = data?.opportunityId;
+    if (id) {
+      sessionStorage.setItem('openSavedOpp', id);
+      return '/profile';
+    }
+  }
+  if (type === 'POST_LIKE' || type === 'POST_COMMENT' || type === 'COMMENT_REPLY') {
+    const id = data?.postId;
+    if (id) return `/networking?post=${id}`;
+  }
+  return linkTo ?? null;
+}
+
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  FRIEND_REQUEST: <UsersGroup size={22} color="#4A9EFF" />,
+  FRIEND_ACCEPTED: <Handshake size={22} color="#22C55E" />,
+  NEW_OPPORTUNITY: <Briefcase size={22} color="#F59E0B" />,
+  OPPORTUNITY_DEADLINE: <Alarm size={22} color="#EF4444" />,
+  COURSE_DEADLINE: <BookOpen size={22} color="#EF4444" />,
+  COURSE_RECOMMENDED: <Star size={22} color="#F59E0B" filled />,
+  BADGE_UNLOCKED: <Trophy size={22} color="#FFD700" />,
+  POST_LIKE: <Heart size={22} color="#EF4444" filled />,
+  POST_COMMENT: <ChatDots size={22} color="#4A9EFF" />,
+  COMMENT_REPLY: <Reply size={22} color="#8B8FA8" />,
+  GROUP_UPDATE: <UsersGroup size={22} color="#4A9EFF" />,
+  SYSTEM: <Gear size={22} color="#8B8FA8" />,
+  GENERAL: <Bell size={22} color="#8B8FA8" />,
 };
 
 function formatTimeAgo(dateStr: string): string {
@@ -52,59 +74,79 @@ function formatTimeAgo(dateStr: string): string {
 }
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const router = useRouter();
   const { t } = useLanguage();
   const { refresh } = useNotifications();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    api.get('/notifications?page=1&limit=20')
-      .then(({ data }) => {
-        const items = data.data || data;
-        setNotifications(Array.isArray(items) ? items : []);
-        if (data.totalPages) setTotalPages(data.totalPages);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, isLoading: loading } = useQuery<{ notifications: Notification[]; totalPages: number }>({
+    queryKey: ['notifications'],
+    queryFn: async () => {
+      const { data } = await api.get('/notifications?page=1&limit=20');
+      const items = data.data || data;
+      return { notifications: Array.isArray(items) ? items : [], totalPages: data.totalPages ?? 1 };
+    },
+  });
+
+  const notifications = data?.notifications ?? [];
+  const totalPages = data?.totalPages ?? 1;
 
   const loadMore = async () => {
     if (loadingMore || page >= totalPages) return;
     setLoadingMore(true);
     try {
       const nextPage = page + 1;
-      const { data } = await api.get(`/notifications?page=${nextPage}&limit=20`);
-      const items = data.data || data;
-      setNotifications((prev) => [...prev, ...(Array.isArray(items) ? items : [])]);
+      const { data: res } = await api.get(`/notifications?page=${nextPage}&limit=20`);
+      const items = res.data || res;
+      queryClient.setQueryData<{ notifications: Notification[]; totalPages: number }>(
+        ['notifications'],
+        (prev) => prev
+          ? { ...prev, notifications: [...prev.notifications, ...(Array.isArray(items) ? items : [])] }
+          : prev!
+      );
       setPage(nextPage);
-      if (data.totalPages) setTotalPages(data.totalPages);
-    } catch (err) {
-      console.error('Failed to load more notifications:', err);
+    } catch {
+      // ignore
     } finally {
       setLoadingMore(false);
     }
   };
 
-  const markAsRead = async (notif: Notification) => {
-    if (!notif.isRead) {
-      await api.patch(`/notifications/${notif.id}/read`);
-      setNotifications((prev) => prev.map((n) => n.id === notif.id ? { ...n, isRead: true } : n));
+  const markReadMutation = useMutation({
+    mutationFn: (id: string) => api.patch(`/notifications/${id}/read`),
+    onSuccess: (_, id) => {
+      queryClient.setQueryData<{ notifications: Notification[]; totalPages: number }>(
+        ['notifications'],
+        (prev) => prev
+          ? { ...prev, notifications: prev.notifications.map((n) => n.id === id ? { ...n, isRead: true } : n) }
+          : prev!
+      );
       refresh();
-    }
-    if (notif.linkTo) {
-      router.push(notif.linkTo);
-    }
+    },
+  });
+
+  const markAllReadMutation = useMutation({
+    mutationFn: () => api.patch('/notifications/read-all'),
+    onSuccess: () => {
+      queryClient.setQueryData<{ notifications: Notification[]; totalPages: number }>(
+        ['notifications'],
+        (prev) => prev
+          ? { ...prev, notifications: prev.notifications.map((n) => ({ ...n, isRead: true })) }
+          : prev!
+      );
+      refresh();
+    },
+  });
+
+  const markAsRead = async (notif: Notification) => {
+    if (!notif.isRead) markReadMutation.mutate(notif.id);
+    const target = resolveNavTarget(notif);
+    if (target) router.push(target);
   };
 
-  const markAllRead = async () => {
-    await api.patch('/notifications/read-all');
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    refresh();
-  };
+  const markAllRead = () => markAllReadMutation.mutate();
 
   const hasUnread = notifications.some((n) => !n.isRead);
 
@@ -131,8 +173,8 @@ export default function NotificationsPage() {
               onClick={() => markAsRead(notif)}
               className={`w-full text-left card flex items-start gap-3 transition-opacity active:opacity-75 ${notif.isRead ? 'opacity-60' : ''}`}
             >
-              <span className="text-2xl flex-shrink-0 mt-0.5">
-                {notif.icon || TYPE_ICONS[notif.type] || TYPE_ICONS.GENERAL}
+              <span className="flex-shrink-0 mt-0.5 w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(74,158,255,0.1)' }}>
+                {TYPE_ICONS[notif.type] || TYPE_ICONS.GENERAL}
               </span>
               <div className="flex-1 min-w-0">
                 <p className={`text-sm leading-snug ${notif.isRead ? 'text-text-muted' : 'text-white font-medium'}`}>
@@ -181,7 +223,7 @@ export default function NotificationsPage() {
       {/* Notification list */}
       {notifications.length === 0 ? (
         <div className="text-center py-12 text-text-muted">
-          <p className="text-3xl mb-2">🔔</p>
+          <div className="flex justify-center mb-2"><Bell size={32} color="#8B8FA8" /></div>
           <p>{t.notifications.empty}</p>
         </div>
       ) : (

@@ -129,6 +129,16 @@ router.get('/group/:groupId', authMiddleware, async (req: Request, res: Response
       },
     });
 
+    // Mark group messages from others as read
+    await prisma.pathMatesMessage.updateMany({
+      where: {
+        groupId,
+        senderId: { not: userId },
+        readAt: null,
+      },
+      data: { readAt: new Date() },
+    });
+
     res.json(messages);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

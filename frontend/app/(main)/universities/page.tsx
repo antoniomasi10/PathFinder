@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { MOCK_COURSES } from '@/lib/mockCourses';
 import api from '@/lib/api';
+import { Search, CloseMd, CloseSm, Filter, ChevronDown } from '@/components/icons';
 
 const STORAGE_KEY_FILTERS = 'pf-uni-filters';
 const STORAGE_KEY_QUERY = 'pf-uni-query';
@@ -286,10 +287,7 @@ export default function UniversitiesPage() {
         }}
       >
         {/* Search icon */}
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-          <circle cx="11" cy="11" r="7" stroke="#8B8FA8" strokeWidth="2" />
-          <path d="M16.5 16.5L21 21" stroke="#8B8FA8" strokeWidth="2" strokeLinecap="round" />
-        </svg>
+        <Search size={20} color="#8B8FA8" strokeWidth={2} className="flex-shrink-0" />
         <input
           type="text"
           value={searchQuery}
@@ -320,9 +318,7 @@ export default function UniversitiesPage() {
               flexShrink: 0,
             }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M18 6L6 18M6 6l12 12" stroke="#8B8FA8" strokeWidth="2" strokeLinecap="round" />
-            </svg>
+            <CloseSm size={18} color="#8B8FA8" strokeWidth={2} />
           </button>
         )}
         {/* Filter button (funnel icon) */}
@@ -340,15 +336,7 @@ export default function UniversitiesPage() {
             flexShrink: 0,
           }}
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path
-              d="M3 4h18l-7 8.5V18l-4 2v-7.5L3 4z"
-              stroke={activeFilterCount > 0 ? '#6C63FF' : '#8B8FA8'}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <Filter size={24} color={activeFilterCount > 0 ? '#6C63FF' : '#8B8FA8'} strokeWidth={2} />
           {activeFilterCount > 0 && (
             <span
               style={{
@@ -412,9 +400,7 @@ export default function UniversitiesPage() {
               }}
             >
               {chip.value}
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                <path d="M18 6L6 18M6 6l12 12" stroke="#6C63FF" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+              <CloseSm size={14} color="#6C63FF" strokeWidth={2} />
             </button>
           ))}
           {activeFilterChips.length > 2 && (
@@ -502,10 +488,7 @@ export default function UniversitiesPage() {
             textAlign: 'center',
           }}
         >
-          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" style={{ marginBottom: '20px', opacity: 0.4 }}>
-            <circle cx="11" cy="11" r="7" stroke="#8B8FA8" strokeWidth="2" />
-            <path d="M16.5 16.5L21 21" stroke="#8B8FA8" strokeWidth="2" strokeLinecap="round" />
-          </svg>
+          <Search size={64} color="#8B8FA8" strokeWidth={2} className="mb-5 opacity-40" />
           <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'white', marginBottom: '8px' }}>
             Nessun corso trovato
           </h3>
@@ -599,9 +582,7 @@ export default function UniversitiesPage() {
                   alignItems: 'center',
                 }}
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M18 6L6 18M6 6l12 12" stroke="#8B8FA8" strokeWidth="2" strokeLinecap="round" />
-                </svg>
+                <CloseMd size={24} color="#8B8FA8" strokeWidth={2} />
               </button>
             </div>
 
@@ -643,18 +624,12 @@ export default function UniversitiesPage() {
                           </span>
                         )}
                       </div>
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 20 20"
-                        fill="none"
-                        style={{
-                          transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                          transition: 'transform 0.3s ease',
-                        }}
-                      >
-                        <path d="M5 7.5L10 12.5L15 7.5" stroke="#8B8FA8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+                      <ChevronDown
+                        size={20}
+                        color="#8B8FA8"
+                        strokeWidth={2}
+                        className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : 'rotate-0'}`}
+                      />
                     </button>
                     {/* Accordion content */}
                     <div

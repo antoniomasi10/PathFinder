@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import prisma from '../lib/prisma';
 import {
   register,
   login,
@@ -14,6 +13,7 @@ import {
 import { validate } from '../middleware/validate';
 import { authMiddleware } from '../middleware/auth';
 import { registerSchema, loginSchema, verifyEmailSchema, resetPasswordSchema, forgotPasswordSchema, changePasswordSchema } from '../schemas';
+import { blacklistToken } from '../utils/tokenBlacklist';
 
 const router = Router();
 
@@ -22,6 +22,11 @@ router.post('/register', validate(registerSchema), register);
 router.post('/login', validate(loginSchema), login);
 router.post('/refresh', refresh);
 router.post('/logout', (req: Request, res: Response) => {
+  const token = req.cookies?.refreshToken;
+  if (token) {
+    // Blacklist the refresh token so it can't be reused
+    blacklistToken(token, 7 * 24 * 60 * 60).catch(() => {});
+  }
   const isProduction = process.env.NODE_ENV === 'production';
   res.clearCookie('refreshToken', {
     httpOnly: true,
@@ -39,17 +44,6 @@ router.post('/resend-otp', authMiddleware, resendOTPHandler);
 // Password reset (public)
 router.post('/forgot-password', validate(forgotPasswordSchema), forgotPasswordHandler);
 router.post('/reset-password', validate(resetPasswordSchema), resetPasswordHandler);
-
-// Username availability check (public)
-router.get('/check-username', async (req: Request, res: Response) => {
-  const username = req.query.username as string;
-  if (!username || username.length < 3) {
-    res.json({ available: false });
-    return;
-  }
-  const existing = await prisma.user.findUnique({ where: { username } });
-  res.json({ available: !existing });
-});
 
 // Google OAuth
 router.post('/google', googleAuthHandler);

@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma';
+import { sanitizeText } from '../utils/sanitize';
 
 const AUTHOR_SELECT = {
   id: true, name: true, avatar: true, avatarBgColor: true,
@@ -130,15 +131,33 @@ export async function getPersonalizedPosts(
   return scored.slice(skip, skip + limit);
 }
 
-export async function createPost(authorId: string, content: string, images: string[] = []) {
+export async function createPost(authorId: string, content: string, images: string[] = [], autoFlagged = false) {
   const post = await prisma.post.create({
-    data: { authorId, content, images },
+    data: { authorId, content: sanitizeText(content), images, autoFlagged },
     include: {
       author: { select: AUTHOR_SELECT },
       _count: { select: { likes: true, comments: true } },
     },
   });
   return { ...post, liked: false };
+}
+
+export async function updatePost(postId: string, authorId: string, content: string, images?: string[]) {
+  const post = await prisma.post.findUnique({ where: { id: postId }, select: { authorId: true } });
+  if (!post) throw new Error('Post non trovato');
+  if (post.authorId !== authorId) throw new Error('Non puoi modificare il post di un altro utente');
+
+  const data: any = { content: sanitizeText(content) };
+  if (images !== undefined) data.images = images;
+
+  return prisma.post.update({
+    where: { id: postId },
+    data,
+    include: {
+      author: { select: AUTHOR_SELECT },
+      _count: { select: { likes: true, comments: true } },
+    },
+  });
 }
 
 export async function likePost(postId: string, userId: string) {
@@ -178,11 +197,71 @@ export async function getPostById(postId: string) {
   });
 }
 
-export async function createComment(postId: string, authorId: string, content: string) {
+export async function createComment(postId: string, authorId: string, content: string, autoFlagged = false) {
   return prisma.postComment.create({
-    data: { postId, authorId, content },
+    data: { postId, authorId, content: sanitizeText(content), autoFlagged },
     include: {
       author: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
     },
   });
+}
+
+export async function reportPost(postId: string, userId: string, reason: string) {
+  const post = await prisma.post.findUnique({ where: { id: postId }, select: { authorId: true } });
+  if (!post) throw new Error('Post non trovato');
+  if (post.authorId === userId) throw new Error('Non puoi segnalare il tuo stesso post');
+  try {
+    return await prisma.postReport.create({ data: { postId, userId, reason } });
+  } catch (err: any) {
+    if (err.code === 'P2002') throw new Error('Hai già segnalato questo post');
+    throw err;
+  }
+}
+
+export async function reportComment(commentId: string, userId: string, reason: string) {
+  const comment = await prisma.postComment.findUnique({ where: { id: commentId }, select: { authorId: true } });
+  if (!comment) throw new Error('Commento non trovato');
+  if (comment.authorId === userId) throw new Error('Non puoi segnalare il tuo stesso commento');
+  try {
+    return await prisma.commentReport.create({ data: { commentId, userId, reason } });
+  } catch (err: any) {
+    if (err.code === 'P2002') throw new Error('Hai già segnalato questo commento');
+    throw err;
+  }
+}
+
+export async function searchPosts(
+  q: string,
+  page: number = 1,
+  limit: number = 20,
+  currentUserId?: string,
+  sortBy: 'recent' | 'likes' = 'recent',
+) {
+  const fetchLimit = sortBy === 'likes' ? 200 : limit;
+  const fetchSkip = sortBy === 'likes' ? 0 : (page - 1) * limit;
+
+  const posts = await prisma.post.findMany({
+    skip: fetchSkip,
+    take: fetchLimit,
+    where: { content: { contains: q, mode: 'insensitive' } },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      author: { select: AUTHOR_SELECT },
+      _count: { select: { likes: true, comments: true } },
+      likes: currentUserId ? { where: { userId: currentUserId }, select: { userId: true } } : false,
+    },
+  });
+
+  const mapped = posts.map(({ likes, ...post }) => ({
+    ...post,
+    liked: Array.isArray(likes) && likes.length > 0,
+  }));
+
+  if (sortBy === 'likes') {
+    mapped.sort((a, b) => b._count.likes - a._count.likes);
+    const skip = (page - 1) * limit;
+    return mapped.slice(skip, skip + limit);
+  }
+
+  return mapped;
 }

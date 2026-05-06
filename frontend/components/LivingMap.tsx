@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { MapPin, X, ExternalLink, Bus } from 'lucide-react';
+import { MapPin, CloseLg as X, ExternalLink, Bus } from '@/components/icons';
 import { getCityData, LivingZone } from '@/lib/cityData';
 
 interface Props {
@@ -67,7 +67,7 @@ const LeafletMap = dynamic(() => import('./LeafletMapInner'), {
       style={{ background: 'linear-gradient(135deg, #162232, #1C2F43, #2A3F54)' }}
     >
       <div className="text-center">
-        <MapPin className="w-8 h-8 mx-auto mb-2" style={{ color: '#4A9EFF' }} />
+        <MapPin size={32} color="#4A9EFF" className="mx-auto mb-2" />
         <p className="text-xs" style={{ color: '#8B8FA8' }}>Caricamento mappa...</p>
       </div>
     </div>
@@ -116,7 +116,7 @@ function ZoneDetail({ zone, onClose }: { zone: LivingZone; onClose: () => void }
             </div>
           </div>
           <button onClick={handleClose}>
-            <X className="w-5 h-5" style={{ color: '#8B8FA8' }} />
+            <X size={20} color="#8B8FA8" />
           </button>
         </div>
 
@@ -138,7 +138,7 @@ function ZoneDetail({ zone, onClose }: { zone: LivingZone; onClose: () => void }
             <div className="space-y-1.5">
               {zone.transport.map((t, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <Bus className="w-3.5 h-3.5" style={{ color: '#4A9EFF' }} />
+                  <Bus size={14} color="#4A9EFF" />
                   <span className="text-xs" style={{ color: '#D0D4DC' }}>{t}</span>
                 </div>
               ))}
@@ -166,7 +166,7 @@ function ZoneDetail({ zone, onClose }: { zone: LivingZone; onClose: () => void }
             className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold transition-colors"
             style={{ backgroundColor: '#4A9EFF', color: 'white' }}
           >
-            <ExternalLink className="w-4 h-4" />
+            <ExternalLink size={16} />
             Cerca alloggi su Immobiliare.it
           </a>
         </div>

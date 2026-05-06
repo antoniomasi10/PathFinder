@@ -129,7 +129,7 @@ router.patch('/:id/read', authMiddleware, async (req: Request, res: Response) =>
       return;
     }
 
-    const updated = await notificationService.markAsRead(req.params.id);
+    const updated = await notificationService.markAsRead(req.params.id, req.user!.userId);
     res.json(updated);
   } catch (err: any) {
     res.status(400).json({ error: err.message });

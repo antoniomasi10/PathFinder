@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { isValidImageUrl } from '@/lib/urlValidation';
+import { CloseLg, ChevronLeft, ChevronRight } from '@/components/icons';
 
 interface ImageLightboxProps {
   images: string[];
@@ -36,9 +37,7 @@ export default function ImageLightbox({ images, initialIndex, onClose }: ImageLi
         onClick={onClose}
         className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
       >
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
+        <CloseLg size={24} strokeWidth={2} />
       </button>
 
       {/* Previous arrow */}
@@ -47,9 +46,7 @@ export default function ImageLightbox({ images, initialIndex, onClose }: ImageLi
           onClick={(e) => { e.stopPropagation(); prev(); }}
           className="absolute left-3 z-10 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
         >
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
+          <ChevronLeft size={24} strokeWidth={2} />
         </button>
       )}
 
@@ -59,9 +56,7 @@ export default function ImageLightbox({ images, initialIndex, onClose }: ImageLi
           onClick={(e) => { e.stopPropagation(); next(); }}
           className="absolute right-3 z-10 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
         >
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
+          <ChevronRight size={24} strokeWidth={2} />
         </button>
       )}
 

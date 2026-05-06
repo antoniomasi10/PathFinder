@@ -1,4 +1,4 @@
-import { PrismaClient, GpaRange, EnglishLevel, WillingnessToRelocate, OpportunityType, CourseType } from '@prisma/client';
+import { PrismaClient, GpaRange, EnglishLevel, WillingnessToRelocate, CourseType } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 if (process.env.NODE_ENV === 'production') {
@@ -19,7 +19,9 @@ async function main() {
   await prisma.friendRequest.deleteMany();
   await prisma.userProfile.deleteMany();
   await prisma.user.deleteMany();
-  await prisma.opportunity.deleteMany();
+  // NOTE: Opportunities are NOT deleted here — they come from real sources
+  // (EURES, FashionUnited, Greenhouse, etc.) via the import scheduler.
+  // Only seed data (users, universities, courses, posts) is reset.
   await prisma.course.deleteMany();
   await prisma.university.deleteMany();
 
@@ -150,54 +152,8 @@ async function main() {
 
   await prisma.course.createMany({ data: coursesData });
 
-  // ============ OPPORTUNITIES ============
-  const opportunities = [
-    // INTERNSHIPS
-    { title: 'Software Engineer Intern', description: 'Unisciti al team di sviluppo di una delle startup più innovative d\'Italia. Lavorerai su progetti React e Node.js in un ambiente dinamico e collaborativo.', type: OpportunityType.INTERNSHIP, company: 'Satispay', location: 'Milano', tags: ['tech', 'startup', 'react', 'nodejs'], requiredEnglishLevel: EnglishLevel.B1_B2, minGpa: GpaRange.GPA_25_27, universityId: polimi.id },
-    { title: 'Data Science Intern', description: 'Analizza grandi volumi di dati per estrarre insight strategici. Utilizzerai Python, SQL e strumenti di machine learning per risolvere problemi reali.', type: OpportunityType.INTERNSHIP, company: 'Enel', location: 'Roma', tags: ['data', 'python', 'ml'], requiredEnglishLevel: EnglishLevel.B1_B2, minGpa: GpaRange.GPA_25_27 },
-    { title: 'Marketing Intern', description: 'Supporta il team marketing nella creazione di campagne digitali, analisi di mercato e gestione dei social media per brand internazionali.', type: OpportunityType.INTERNSHIP, company: 'Barilla', location: 'Parma', tags: ['marketing', 'social', 'digital'], minGpa: GpaRange.GPA_21_24 },
-    { title: 'UX Design Intern', description: 'Collabora con designer senior per creare esperienze utente intuitive. Prototipazione in Figma, ricerca utente e test di usabilità.', type: OpportunityType.INTERNSHIP, company: 'Bending Spoons', location: 'Milano', isRemote: true, tags: ['design', 'ux', 'figma'], requiredEnglishLevel: EnglishLevel.C1, minGpa: GpaRange.GPA_25_27 },
-    { title: 'Business Analyst Intern', description: 'Supporta il team di consulenza strategica in progetti di trasformazione digitale per grandi aziende italiane ed europee.', type: OpportunityType.INTERNSHIP, company: 'McKinsey & Company', location: 'Milano', tags: ['consulting', 'strategy', 'business'], requiredEnglishLevel: EnglishLevel.C1, minGpa: GpaRange.GPA_28_30 },
-    { title: 'Frontend Developer Intern', description: 'Sviluppa interfacce web moderne con React e TypeScript. Ambiente giovane con code review e mentoring dedicato.', type: OpportunityType.INTERNSHIP, company: 'Subito.it', location: 'Milano', isRemote: true, tags: ['tech', 'frontend', 'react', 'typescript'], requiredEnglishLevel: EnglishLevel.B1_B2, minGpa: GpaRange.GPA_21_24 },
-    // STAGES
-    { title: 'Stage in Revisione Contabile', description: 'Partecipa a progetti di revisione per aziende quotate. Formazione continua e possibilità di crescita in un ambiente internazionale.', type: OpportunityType.STAGE, company: 'PwC', location: 'Roma', tags: ['finance', 'audit', 'consulting'], requiredEnglishLevel: EnglishLevel.B1_B2, minGpa: GpaRange.GPA_25_27 },
-    { title: 'Stage in Ricerca e Sviluppo', description: 'Contribuisci alla ricerca su materiali innovativi e processi produttivi sostenibili nel settore automotive.', type: OpportunityType.STAGE, company: 'Ferrari', location: 'Maranello', tags: ['engineering', 'r&d', 'automotive'], requiredEnglishLevel: EnglishLevel.B1_B2, minGpa: GpaRange.GPA_28_30 },
-    { title: 'Stage in Comunicazione Aziendale', description: 'Supporta il team comunicazione nella creazione di contenuti, gestione PR e organizzazione eventi corporate.', type: OpportunityType.STAGE, company: 'Luxottica', location: 'Milano', tags: ['communication', 'pr', 'events'], minGpa: GpaRange.GPA_21_24 },
-    { title: 'Stage in Cybersecurity', description: 'Entra nel team di sicurezza informatica. Vulnerability assessment, penetration testing e incident response su infrastrutture critiche.', type: OpportunityType.STAGE, company: 'Leonardo', location: 'Roma', tags: ['tech', 'security', 'cybersecurity'], requiredEnglishLevel: EnglishLevel.C1, minGpa: GpaRange.GPA_25_27 },
-    { title: 'Stage in Supply Chain', description: 'Ottimizza i processi logistici e di approvvigionamento per uno dei leader mondiali della moda.', type: OpportunityType.STAGE, company: 'Gucci', location: 'Firenze', tags: ['logistics', 'fashion', 'operations'], requiredEnglishLevel: EnglishLevel.B1_B2, minGpa: GpaRange.GPA_21_24, universityId: firenze.id },
-    // EXTRACURRICULAR
-    { title: 'TEDxPolimi Speaker Program', description: 'Partecipa come speaker al prossimo evento TEDx del Politecnico. Formazione su public speaking e storytelling inclusa.', type: OpportunityType.EXTRACURRICULAR, location: 'Milano', tags: ['speaking', 'leadership', 'community'], universityId: polimi.id },
-    { title: 'JEBologna - Junior Enterprise', description: 'Entra nella Junior Enterprise di Bologna. Lavora su progetti di consulenza per PMI, sviluppa competenze manageriali e imprenditoriali.', type: OpportunityType.EXTRACURRICULAR, location: 'Bologna', tags: ['consulting', 'entrepreneurship', 'teamwork'], universityId: bologna.id },
-    { title: 'Hackathon IoT & Smart Cities', description: '48 ore di hackathon sulle smart cities. Premi in palio, mentoring da esperti del settore e networking con aziende tech.', type: OpportunityType.EXTRACURRICULAR, location: 'Torino', tags: ['tech', 'iot', 'hackathon', 'innovation'] },
-    { title: 'Orchestra Universitaria di Padova', description: 'Unisciti all\'orchestra universitaria. Prove settimanali, concerti in teatro e tournée in Italia ed Europa.', type: OpportunityType.EXTRACURRICULAR, location: 'Padova', tags: ['music', 'culture', 'performance'], universityId: padova.id },
-    { title: 'Volontariato Tutoring Migranti', description: 'Insegna italiano e competenze digitali a rifugiati e migranti. Formazione pedagogica inclusa e certificato di volontariato.', type: OpportunityType.EXTRACURRICULAR, location: 'Roma', tags: ['social', 'teaching', 'volunteering'] },
-    { title: 'Club di Dibattito UniTo', description: 'Migliora le tue capacità argomentative e di public speaking. Partecipazione a tornei nazionali e internazionali.', type: OpportunityType.EXTRACURRICULAR, location: 'Torino', tags: ['debate', 'speaking', 'critical_thinking'], universityId: torino.id },
-    // EVENTS
-    { title: 'Career Day Polimi 2024', description: 'Incontra oltre 100 aziende in cerca di talenti. Porta il tuo CV, partecipa a workshop e colloqui sul posto.', type: OpportunityType.EVENT, location: 'Milano', tags: ['career', 'networking', 'recruitment'], universityId: polimi.id },
-    { title: 'Startup Weekend Bologna', description: 'Un weekend per trasformare un\'idea in un progetto concreto. Team multidisciplinari, mentoring e pitch finale davanti a investitori.', type: OpportunityType.EVENT, location: 'Bologna', tags: ['startup', 'entrepreneurship', 'pitching'] },
-    { title: 'Festival della Scienza', description: 'Il più grande evento di divulgazione scientifica in Italia. Workshop, laboratori e talk con ricercatori di fama mondiale.', type: OpportunityType.EVENT, location: 'Genova', tags: ['science', 'research', 'education'] },
-    { title: 'Salone del Libro - Programma Giovani', description: 'Partecipa al programma speciale per studenti universitari al Salone del Libro di Torino. Incontri con autori e laboratori.', type: OpportunityType.EVENT, location: 'Torino', tags: ['culture', 'literature', 'events'] },
-    // FELLOWSHIPS
-    { title: 'Fondazione CRT - Fellowship Innovazione', description: 'Fellowship di 6 mesi per progetti di innovazione sociale. Borsa di studio, mentoring e accesso a un network di imprenditori sociali.', type: OpportunityType.FELLOWSHIP, location: 'Torino', isAbroad: false, tags: ['innovation', 'social', 'fellowship'], requiredEnglishLevel: EnglishLevel.B1_B2, minGpa: GpaRange.GPA_25_27 },
-    { title: 'CERN Summer Student Programme', description: 'Trascorri l\'estate al CERN di Ginevra. Lavora con fisici e ingegneri di fama mondiale su esperimenti all\'avanguardia.', type: OpportunityType.FELLOWSHIP, company: 'CERN', location: 'Ginevra', isAbroad: true, tags: ['research', 'physics', 'international'], requiredEnglishLevel: EnglishLevel.C1, minGpa: GpaRange.GPA_28_30 },
-    { title: 'EIT Digital Master School', description: 'Programma di doppia laurea con mobilità europea in innovazione e imprenditorialità digitale. Borsa di studio completa.', type: OpportunityType.FELLOWSHIP, location: 'Milano / Europa', isAbroad: true, tags: ['tech', 'entrepreneurship', 'international'], requiredEnglishLevel: EnglishLevel.C1, minGpa: GpaRange.GPA_25_27, universityId: polimi.id },
-    { title: 'Google STEP Internship', description: 'Programma di stage per studenti del primo e secondo anno. Mentoring, progetti reali e immersione nella cultura Google.', type: OpportunityType.INTERNSHIP, company: 'Google', location: 'Milano', tags: ['tech', 'google', 'mentoring'], requiredEnglishLevel: EnglishLevel.C1, minGpa: GpaRange.GPA_25_27 },
-    { title: 'Erasmus+ Traineeship', description: 'Programma di tirocinio all\'estero con borsa di studio UE. Destinazioni in tutta Europa, durata 2-12 mesi.', type: OpportunityType.STAGE, location: 'Europa', isAbroad: true, tags: ['international', 'erasmus', 'experience'], requiredEnglishLevel: EnglishLevel.B1_B2 },
-    { title: 'Amazon Future Engineer', description: 'Programma di mentoring e stage per studenti STEM. Formazione in cloud computing, AI e software development.', type: OpportunityType.INTERNSHIP, company: 'Amazon', location: 'Milano', isRemote: true, tags: ['tech', 'cloud', 'ai'], requiredEnglishLevel: EnglishLevel.C1, minGpa: GpaRange.GPA_25_27 },
-    { title: 'Stage in Sostenibilità Ambientale', description: 'Contribuisci ai progetti di sostenibilità e economia circolare di uno dei leader energetici italiani.', type: OpportunityType.STAGE, company: 'Eni', location: 'Milano', tags: ['sustainability', 'environment', 'energy'], requiredEnglishLevel: EnglishLevel.B1_B2, minGpa: GpaRange.GPA_21_24 },
-    { title: 'UniCredit Graduate Program', description: 'Programma rotazionale di 18 mesi nelle diverse aree della banca. Formazione intensiva, mentoring e percorso di carriera accelerato.', type: OpportunityType.FELLOWSHIP, company: 'UniCredit', location: 'Milano', tags: ['finance', 'banking', 'graduate'], requiredEnglishLevel: EnglishLevel.C1, minGpa: GpaRange.GPA_28_30 },
-    { title: 'Design Week Volunteer', description: 'Diventa volontario alla Milano Design Week. Accesso esclusivo agli eventi, networking con designer internazionali.', type: OpportunityType.EVENT, location: 'Milano', tags: ['design', 'events', 'networking'] },
-    { title: 'Progetto AIESEC - Global Volunteer', description: 'Esperienza di volontariato internazionale di 6-8 settimane. Progetti in educazione, ambiente e sviluppo sostenibile in paesi emergenti.', type: OpportunityType.EXTRACURRICULAR, location: 'Internazionale', isAbroad: true, tags: ['volunteering', 'international', 'social'], requiredEnglishLevel: EnglishLevel.B1_B2 },
-  ];
-
-  const createdOpps = [];
-  for (const opp of opportunities) {
-    const deadline = new Date();
-    deadline.setMonth(deadline.getMonth() + Math.floor(Math.random() * 6) + 1);
-    createdOpps.push(await prisma.opportunity.create({
-      data: { ...opp, deadline },
-    }));
-  }
+  // Opportunities are imported from real sources (EURES, FashionUnited, Greenhouse, etc.)
+  // via the import scheduler — no mock data needed.
 
   // ============ DEMO USERS ============
   const passwordHash = await bcrypt.hash('Password123', 10);
@@ -431,7 +387,6 @@ async function main() {
   console.log('Seed completed successfully!');
   console.log(`- ${universities.length} universities`);
   console.log(`- ${coursesData.length} courses`);
-  console.log(`- ${createdOpps.length} opportunities`);
   console.log(`- 5 demo users (password: Password123)`);
 }
 

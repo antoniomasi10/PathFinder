@@ -33,6 +33,39 @@ enum OpportunityType {
   EXTRACURRICULAR
   EVENT
   FELLOWSHIP
+  SUMMER_PROGRAM
+  HACKATHON
+  COMPETITION
+  EXCHANGE
+  VOLUNTEERING
+  CONFERENCE
+  BOOTCAMP
+  RESEARCH
+}
+
+enum OpportunityFormat {
+  ONLINE
+  IN_PERSON
+  HYBRID
+}
+
+enum FieldOfStudy {
+  COMPUTER_SCIENCE
+  ENGINEERING
+  MEDICINE
+  LIFE_SCIENCES
+  PHYSICAL_SCIENCES
+  MATHEMATICS
+  ECONOMICS
+  BUSINESS
+  LAW
+  POLITICAL_SCIENCE
+  HUMANITIES
+  DESIGN
+  ARCHITECTURE
+  PSYCHOLOGY
+  EDUCATION
+  ANY
 }
 
 enum CourseType {
@@ -79,16 +112,23 @@ enum GroupMemberRole {
   MEMBER
 }
 
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
 model User {
   id                String                 @id @default(uuid())
   email             String                 @unique
   passwordHash      String?
   name              String
   surname           String                 @default("")
-  username          String?                @unique
+
   phone             String?
   googleId          String?                @unique
   provider          AuthProvider           @default(LOCAL)
+  role              Role                   @default(USER)
   emailVerified     Boolean                @default(false)
   avatar            String?
   avatarBgColor     String?
@@ -107,6 +147,7 @@ model User {
   messagePrivacy      String    @default("Pathmates")
   privacySkills       String    @default("Tutti")
   privacyUniversity   String    @default("Tutti")
+  skills              Json      @default("{\"core\":null,\"side\":[],\"promptShownAt\":null,\"promptDismissedAt\":null,\"definedAt\":null,\"lastUpdatedAt\":null}")
   passwordResetToken  String?
   passwordResetExpiry DateTime?
   createdAt      DateTime  @default(now())
@@ -123,6 +164,10 @@ model User {
   posts                  Post[]
   postLikes              PostLike[]
   postComments           PostComment[]
+  postReports            PostReport[]
+  commentReports         CommentReport[]
+  userReports            UserReport[]    @relation("UserReportReporter")
+  reportedBy             UserReport[]    @relation("UserReportTarget")
   savedOpportunities     Opportunity[]      @relation("SavedOpportunities")
   savedCourses           Course[]           @relation("SavedCourses")
   notificationPreference NotificationPreference?
@@ -146,6 +191,7 @@ model UserProfile {
   freeTimeActivity    String?
   problemSolvingStyle String?
   riskTolerance     String?
+  coreValue         String?
   careerVision      String?
   professionalGoal  String?
   passions          String[]
@@ -169,20 +215,56 @@ model Opportunity {
   isAbroad             Boolean         @default(false)
   requiredEnglishLevel EnglishLevel?
   minGpa               GpaRange?
+  requiredSkills       String?
+  recommendedSkills    String?
   tags                 String[]
   deadline             DateTime?
   postedAt             DateTime        @default(now())
   expiresAt            DateTime?
   savedBy              User[]          @relation("SavedOpportunities")
+  source               String?         // e.g. "EURES", "Stage4eu" — CC BY 4.0 attribution
   sourceId             String?         // e.g. "eures-12345" — null = manual/seed
   lastSyncedAt         DateTime?       // last time this record was refreshed by import
+  dedupKey             String?         // normalized hash of title+company/organizer — used to skip cross-source duplicates
   embedding            Unsupported("vector(384)")?
+
+  // --- Time / duration (events, summer school, hackathons) ---
+  startDate            DateTime?
+  endDate              DateTime?
+  durationDays         Int?
+
+  // --- Format + location detail ---
+  format               OpportunityFormat?
+  city                 String?
+  country              String?         // ISO-3166-1 alpha-2 (e.g. "IT", "DE")
+
+  // --- Cost / compensation ---
+  cost                 Int?            // EUR; 0 = free, null = unknown
+  hasScholarship       Boolean         @default(false)
+  scholarshipDetails   String?
+  stipend              Int?            // EUR/month offered to participant
+
+  // --- Structured prerequisites ---
+  eligibleFields       FieldOfStudy[]  @default([])  // empty = any field
+  minYearOfStudy       Int?
+  maxYearOfStudy       Int?
+  requiredLanguages    Json            @default("[]") // [{lang:"en",level:"B2"}]
+
+  // --- Provenance ---
+  organizer            String?         // for non-company events: "TEDxMilano", "IFMSA Italy"
+  verified             Boolean         @default(false) // manually curated/verified
 
   @@index([universityId])
   @@index([type])
   @@index([deadline])
   @@index([sourceId])
   @@index([lastSyncedAt])
+  @@index([dedupKey])
+  @@index([startDate])
+  @@index([format])
+  @@index([country])
+  @@index([type, deadline])
+  @@index([type, startDate])
 }
 
 model University {
@@ -304,17 +386,20 @@ model FriendRequest {
 }
 
 model Post {
-  id        String        @id @default(uuid())
-  authorId  String
-  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  content   String
-  images    String[]      @default([])
-  createdAt DateTime      @default(now())
-  likes     PostLike[]
-  comments  PostComment[]
+  id          String        @id @default(uuid())
+  authorId    String
+  author      User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content     String
+  images      String[]      @default([])
+  autoFlagged Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  likes       PostLike[]
+  comments    PostComment[]
+  reports     PostReport[]
 
   @@index([authorId])
   @@index([createdAt])
+  @@index([autoFlagged])
 }
 
 model PostLike {
@@ -330,15 +415,56 @@ model PostLike {
 }
 
 model PostComment {
+  id          String          @id @default(uuid())
+  postId      String
+  post        Post            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content     String
+  autoFlagged Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  reports     CommentReport[]
+
+  @@index([postId])
+}
+
+model PostReport {
   id        String   @id @default(uuid())
   postId    String
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  content   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason    String
   createdAt DateTime @default(now())
 
+  @@unique([postId, userId])
   @@index([postId])
+}
+
+model CommentReport {
+  id        String      @id @default(uuid())
+  commentId String
+  comment   PostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason    String
+  createdAt DateTime    @default(now())
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+}
+
+model UserReport {
+  id           String   @id @default(uuid())
+  targetUserId String
+  targetUser   User     @relation("UserReportTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  reporterId   String
+  reporter     User     @relation("UserReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reason       String
+  createdAt    DateTime @default(now())
+
+  @@unique([targetUserId, reporterId])
+  @@index([targetUserId])
 }
 
 model NotificationPreference {

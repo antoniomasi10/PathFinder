@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import api from '@/lib/api';
 
 export interface SavedCourse {
@@ -16,6 +16,22 @@ interface SavedCoursesContextType {
   toggleSave: (course: SavedCourse) => void;
 }
 
+const STORAGE_KEY = 'pathfinder_saved_courses';
+
+function loadFromStorage(): SavedCourse[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw) as SavedCourse[];
+  } catch {}
+  return [];
+}
+
+function persistToStorage(courses: SavedCourse[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(courses));
+  } catch {}
+}
+
 const SavedCoursesContext = createContext<SavedCoursesContextType>({
   savedIds: new Set(),
   savedCourses: [],
@@ -23,11 +39,18 @@ const SavedCoursesContext = createContext<SavedCoursesContextType>({
 });
 
 export function SavedCoursesProvider({ children }: { children: ReactNode }) {
-  const [savedCourses, setSavedCourses] = useState<SavedCourse[]>([]);
-  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  // Lazy init: read localStorage synchronously so UI is correct on first render
+  const [savedCourses, setSavedCourses] = useState<SavedCourse[]>(loadFromStorage);
+  const [savedIds, setSavedIds] = useState<Set<string>>(
+    () => new Set(loadFromStorage().map((c) => c.id))
+  );
+  const savedIdsRef = useRef<Set<string>>(savedIds);
+  savedIdsRef.current = savedIds;
 
   useEffect(() => {
-    api.get('/courses/saved/list')
+    // Sync from DB — server is the source of truth for persistence across devices
+    api
+      .get('/courses/saved/list')
       .then((res) => {
         const courses: SavedCourse[] = (res.data || []).map((c: any) => ({
           id: c.id,
@@ -35,36 +58,35 @@ export function SavedCoursesProvider({ children }: { children: ReactNode }) {
           university: c.university,
           type: c.type,
         }));
-        setSavedCourses(courses);
-        setSavedIds(new Set(courses.map((c) => c.id)));
+        const serverIds = new Set(courses.map((c) => c.id));
+        const localOnly = loadFromStorage().filter((c) => !serverIds.has(c.id));
+        const merged = [...courses, ...localOnly];
+        setSavedCourses(merged);
+        setSavedIds(new Set(merged.map((c) => c.id)));
+        persistToStorage(merged);
       })
-      .catch((err) => {
-        console.error('Failed to load saved courses:', err.response?.status, err.response?.data || err.message);
+      .catch(() => {
+        // Server unreachable — keep localStorage data already loaded above
       });
   }, []);
 
-  const toggleSave = useCallback((course: SavedCourse) => {
-    const isSaved = savedIds.has(course.id);
+  function toggleSave(course: SavedCourse) {
+    const isSaved = savedIdsRef.current.has(course.id);
 
-    // Optimistic update
-    const previousCourses = savedCourses;
-    const previousIds = savedIds;
-
+    // Optimistic update + immediate localStorage persist
     if (isSaved) {
-      setSavedCourses((prev) => prev.filter((c) => c.id !== course.id));
       setSavedIds((prev) => { const next = new Set(prev); next.delete(course.id); return next; });
+      setSavedCourses((prev) => { const next = prev.filter((c) => c.id !== course.id); persistToStorage(next); return next; });
     } else {
-      setSavedCourses((prev) => [...prev, course]);
-      setSavedIds((prev) => new Set(prev).add(course.id));
+      setSavedIds((prev) => new Set([...prev, course.id]));
+      setSavedCourses((prev) => { const next = [...prev, course]; persistToStorage(next); return next; });
     }
 
+    // Persist to DB — if this fails, localStorage still has the correct state
     api.post(`/courses/${course.id}/save`).catch((err) => {
-      console.error('Failed to save course:', err.response?.status, err.response?.data || err.message);
-      // Revert on error
-      setSavedCourses(previousCourses);
-      setSavedIds(previousIds);
+      console.error('Failed to sync course save with server:', err);
     });
-  }, [savedCourses, savedIds]);
+  }
 
   return (
     <SavedCoursesContext.Provider value={{ savedIds, savedCourses, toggleSave }}>

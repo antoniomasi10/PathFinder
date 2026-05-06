@@ -50,7 +50,7 @@ async function checkOpportunityDeadlines() {
         user.id,
         'OPPORTUNITY_DEADLINE',
         `"${opp.title}" scade tra 7 giorni`,
-        `/home`,
+        `/profile`,
         '\u{23F0}',
         { opportunityId: opp.id, daysLeft: 7 }
       );
@@ -63,7 +63,7 @@ async function checkOpportunityDeadlines() {
         user.id,
         'OPPORTUNITY_DEADLINE',
         `"${opp.title}" scade tra 24 ore!`,
-        `/home`,
+        `/profile`,
         '\u{23F0}',
         { opportunityId: opp.id, daysLeft: 1 }
       );

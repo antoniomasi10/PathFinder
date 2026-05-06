@@ -11,10 +11,6 @@ export const registerSchema = z.object({
     .regex(/[^A-Za-z0-9]/, 'La password deve contenere almeno un carattere speciale (!@#$%...)'),
   name: z.string().min(1, 'Nome obbligatorio').max(50),
   surname: z.string().min(1, 'Cognome obbligatorio').max(50),
-  username: z.string()
-    .min(3, 'L\'username deve avere almeno 3 caratteri')
-    .max(30, 'L\'username non può superare 30 caratteri')
-    .regex(/^[a-zA-Z0-9._]+$/, 'L\'username può contenere solo lettere, numeri, punti e underscore'),
   phone: z.string().regex(/^\+?[0-9]{6,15}$/, 'Numero di telefono non valido').optional().or(z.literal('')),
 });
 
@@ -55,6 +51,12 @@ export const createCommentSchema = z.object({
   content: z.string().min(1, 'Il commento non può essere vuoto').max(2000),
 });
 
+export const reportSchema = z.object({
+  reason: z.enum(['Spam', 'Contenuto inappropriato', 'Molestie o bullismo', 'Disinformazione', 'Altro'], {
+    error: 'Motivo non valido',
+  }),
+});
+
 export const friendRequestSchema = z.object({
   toUserId: z.string().uuid('ID utente non valido'),
 });
@@ -72,12 +74,40 @@ export const batchStatusSchema = z.object({
 
 const privacyOption = z.enum(['Tutti', 'Pathmates', 'Nessuno']);
 
+// ─── Skills Schemas ─────────────────────────────────────────────────
+
+const skillIdPattern = /^[a-z][a-z0-9_]*$/;
+
+const skillEntry = z.object({
+  id: z.string().min(1).max(100).regex(skillIdPattern, 'L\'id deve essere in snake_case'),
+  name: z.string().min(1).max(100),
+});
+
+export const coreSkillsSchema = z.object({
+  coreSkills: z.array(skillEntry).length(3, 'Le core skills devono essere esattamente 3'),
+});
+
+export const sideSkillSchema = z.object({
+  skillId: z.string().min(1).max(100).regex(skillIdPattern, 'L\'id deve essere in snake_case'),
+  name: z.string().min(1).max(100),
+});
+
+export const promptActionSchema = z.object({
+  action: z.enum(['shown', 'dismissed']),
+});
+
 export const updateProfileSchema = z.object({
   name: z.string().min(1).max(100).optional(),
+  surname: z.string().min(1).max(100).optional(),
   bio: z.string().max(500).optional(),
   avatar: z.string().optional(),
   courseOfStudy: z.string().max(200).optional(),
   passions: z.array(z.string().max(50)).max(20).optional(),
+  interests: z.array(z.object({
+    id: z.string().min(1).max(100),
+    name: z.string().min(1).max(100),
+    selectedAt: z.string(),
+  })).max(3).optional(),
   publicProfile: z.boolean().optional(),
   privacySkills: privacyOption.optional(),
   privacyUniversity: privacyOption.optional(),

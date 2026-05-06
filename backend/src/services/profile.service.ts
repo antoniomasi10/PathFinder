@@ -1,6 +1,19 @@
 import prisma from '../lib/prisma';
 import { GpaRange, EnglishLevel, WillingnessToRelocate } from '@prisma/client';
+import { normalizeFieldToEnum } from './import/utils';
 import { uploadImage } from '../utils/imageUpload';
+
+/** Select all User scalar fields except `embedding` (Unsupported vector type) and `passwordHash`. */
+const safeUserSelect = {
+  id: true, email: true, name: true, surname: true, phone: true,
+  googleId: true, provider: true, emailVerified: true, avatar: true, avatarBgColor: true,
+  bio: true, universityId: true, courseOfStudy: true, yearOfStudy: true, gpa: true,
+  englishLevel: true, willingToRelocate: true, profileCompleted: true, publicProfile: true,
+  privacySavedOpps: true, privacyPathmates: true, messagePrivacy: true, privacySkills: true,
+  privacyUniversity: true, passwordResetToken: true, passwordResetExpiry: true,
+  skills: true,
+  createdAt: true, updatedAt: true,
+} as const;
 
 interface ProfileData {
   answers: {
@@ -13,10 +26,11 @@ interface ProfileData {
     freeTimeActivity: string;
     problemSolvingStyle: string;
     riskTolerance: string;
+    coreValue: string;
     careerPreference: string;
     professionalIdentity: string;
   };
-  cluster: 'INNOVATOR' | 'ANALYST' | 'LEADER' | 'HELPER';
+  cluster: 'Analista' | 'Creativo' | 'Leader' | 'Imprenditore' | 'Sociale' | 'Explorer';
   languages: Array<{ lingua: string; peso: number; valoreLibero?: string }>;
   filters: {
     yearOfStudy: string;
@@ -24,6 +38,7 @@ interface ProfileData {
     englishLevel: string;
     mobility: string;
   };
+  interests?: Array<{ id: string; name: string; selectedAt: string }>;
   avatarId?: string;
   avatarBgColor?: string;
 }
@@ -59,18 +74,30 @@ function extractYearOfStudy(s: string): number {
   return year;
 }
 
-function derivePrimaryInterest(cluster: ProfileData['cluster']): string {
-  switch (cluster) {
-    case 'INNOVATOR': return 'tech';
-    case 'ANALYST': return 'tech';
-    case 'LEADER': return 'business';
-    case 'HELPER': return 'general';
+async function derivePrimaryInterest(userId: string): Promise<string> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { courseOfStudy: true } });
+  const course = user?.courseOfStudy;
+  if (!course) return 'general';
+  switch (normalizeFieldToEnum(course)) {
+    case 'COMPUTER_SCIENCE': return 'tech';
+    case 'ENGINEERING':      return 'tech';
+    case 'MATHEMATICS':      return 'tech';
+    case 'MEDICINE':         return 'healthcare';
+    case 'LIFE_SCIENCES':    return 'healthcare';
+    case 'PHYSICAL_SCIENCES':return 'ricerca_scientifica';
+    case 'ECONOMICS':        return 'finance';
+    case 'BUSINESS':         return 'business';
+    case 'LAW':              return 'law_policy';
+    case 'POLITICAL_SCIENCE':return 'law_policy';
+    case 'DESIGN':           return 'creative';
+    case 'ARCHITECTURE':     return 'creative';
+    default:                 return 'general';
   }
 }
 
 export async function saveQuestionnaire(userId: string, input: ProfileData) {
   const { answers, cluster } = input;
-  const primaryInterest = derivePrimaryInterest(cluster);
+  const primaryInterest = await derivePrimaryInterest(userId);
 
   const profileFields = {
     primaryInterest,
@@ -78,6 +105,7 @@ export async function saveQuestionnaire(userId: string, input: ProfileData) {
     freeTimeActivity: answers.freeTimeActivity,
     problemSolvingStyle: answers.problemSolvingStyle,
     riskTolerance: answers.riskTolerance,
+    coreValue: answers.coreValue,
     careerVision: answers.careerPreference,
     professionalGoal: answers.professionalIdentity,
     languages: input.languages || [],
@@ -91,6 +119,28 @@ export async function saveQuestionnaire(userId: string, input: ProfileData) {
       create: { userId, ...profileFields, completedAt: new Date() },
     });
 
+    // Build skills JSON with onboarding interests if provided
+    const skillsUpdate: Record<string, unknown> = {};
+    if (input.interests && input.interests.length > 0) {
+      const existing = await tx.user.findUnique({
+        where: { id: userId },
+        select: { skills: true },
+      });
+      const currentSkills = (existing?.skills as Record<string, unknown>) || {};
+      Object.assign(skillsUpdate, {
+        skills: {
+          ...currentSkills,
+          core: currentSkills.core ?? null,
+          side: currentSkills.side ?? [],
+          promptShownAt: currentSkills.promptShownAt ?? null,
+          promptDismissedAt: currentSkills.promptDismissedAt ?? null,
+          definedAt: currentSkills.definedAt ?? null,
+          lastUpdatedAt: currentSkills.lastUpdatedAt ?? null,
+          interests: input.interests,
+        },
+      });
+    }
+
     await tx.user.update({
       where: { id: userId },
       data: {
@@ -101,6 +151,7 @@ export async function saveQuestionnaire(userId: string, input: ProfileData) {
         profileCompleted: true,
         ...(input.avatarId && { avatar: input.avatarId }),
         ...(input.avatarBgColor && { avatarBgColor: input.avatarBgColor }),
+        ...skillsUpdate,
       },
     });
 
@@ -109,24 +160,17 @@ export async function saveQuestionnaire(userId: string, input: ProfileData) {
 }
 
 export async function getProfile(userId: string) {
-  const user = await prisma.user.findUnique({
+  return prisma.user.findUnique({
     where: { id: userId },
-    include: {
-      profile: true,
-      university: true,
-    },
+    select: { ...safeUserSelect, profile: true, university: true },
   });
-  if (user) {
-    const { passwordHash, ...safeUser } = user;
-    return safeUser;
-  }
-  return user;
 }
 
 export async function getProfileForViewer(ownerId: string, viewerId: string) {
   const user = await prisma.user.findUnique({
     where: { id: ownerId },
-    include: {
+    select: {
+      ...safeUserSelect,
       profile: true,
       university: true,
       savedOpportunities: {
@@ -198,6 +242,7 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
     return {
       id: user.id,
       name: user.name,
+      surname: user.surname,
       avatar: user.avatar ?? null,
       university: canSeeUniversity && user.university ? { name: user.university.name } : null,
       publicProfile: false,
@@ -221,6 +266,7 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
   return {
     id: user.id,
     name: user.name,
+    surname: user.surname,
     avatar: user.avatar ?? null,
     bio: user.bio ?? null,
     courseOfStudy: user.courseOfStudy ?? null,
@@ -247,10 +293,12 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
 
 interface UpdateProfileData {
   name?: string;
+  surname?: string;
   bio?: string;
   avatar?: string;
   courseOfStudy?: string;
   passions?: string[];
+  interests?: Array<{ id: string; name: string; selectedAt: string }>;
   publicProfile?: boolean;
   privacySkills?: string;
   privacyUniversity?: string;
@@ -260,13 +308,13 @@ interface UpdateProfileData {
 }
 
 const ALLOWED_USER_FIELDS = [
-  'name', 'bio', 'avatar', 'courseOfStudy',
+  'name', 'surname', 'bio', 'avatar', 'courseOfStudy',
   'publicProfile', 'privacySkills', 'privacyUniversity',
   'privacySavedOpps', 'privacyPathmates', 'messagePrivacy',
 ] as const;
 
 export async function updateProfile(userId: string, data: UpdateProfileData) {
-  const { passions, ...rawFields } = data;
+  const { passions, interests, ...rawFields } = data;
 
   // Whitelist only allowed fields to prevent mass assignment
   const userFields: Record<string, unknown> = {};
@@ -288,17 +336,27 @@ export async function updateProfile(userId: string, data: UpdateProfileData) {
     });
   }
 
+  // Store interests in user's skills JSON
+  if (interests !== undefined) {
+    const existing = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { skills: true },
+    });
+    const currentSkills = (existing?.skills as Record<string, unknown>) || {};
+    userFields.skills = { ...currentSkills, interests };
+  }
+
   if (Object.keys(userFields).length > 0) {
     return prisma.user.update({
       where: { id: userId },
       data: userFields,
-      include: { profile: true, university: true },
+      select: { ...safeUserSelect, profile: true, university: true },
     });
   }
 
   return prisma.user.findUnique({
     where: { id: userId },
-    include: { profile: true, university: true },
+    select: { ...safeUserSelect, profile: true, university: true },
   });
 }
 
@@ -338,4 +396,92 @@ export async function deleteAccount(userId: string) {
   // 5. Delete the user — remaining relations have onDelete: Cascade
   //    (UserProfile, Notification, Post, PostLike, PostComment)
   await prisma.user.delete({ where: { id: userId } });
+}
+
+export async function getSuggestedUsers(currentUserId: string, limit = 20) {
+  const friendRelations = await prisma.friendRequest.findMany({
+    where: {
+      status: 'ACCEPTED',
+      OR: [{ fromUserId: currentUserId }, { toUserId: currentUserId }],
+    },
+    select: { fromUserId: true, toUserId: true },
+  });
+
+  const excludeIds = new Set<string>([currentUserId]);
+  friendRelations.forEach((r) => {
+    excludeIds.add(r.fromUserId);
+    excludeIds.add(r.toUserId);
+  });
+
+  return prisma.user.findMany({
+    where: {
+      id: { notIn: Array.from(excludeIds) },
+      profileCompleted: true,
+    },
+    take: limit,
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true, name: true, avatar: true, courseOfStudy: true, yearOfStudy: true,
+      university: { select: { name: true } },
+      profile: { select: { clusterTag: true } },
+    },
+  });
+}
+
+const SKILL_AREA_MAP: Record<string, string[]> = {
+  ai: ['python_base','machine_learning','reti_neurali','data_analysis','numpy_pandas','matematica_applicata','statistica','computer_science_base'],
+  web: ['html_css','javascript_base','react_base','sql_base','git','logica_di_programmazione','ui_base','no_code_tools'],
+  data: ['excel','statistica_ds','python_base_ds','sql_base_ds','r_base','data_visualization','analisi_dei_dati','google_sheets'],
+  mobile: ['swift_base','kotlin_base','react_native_base','flutter_base','ui_mobile','logica_di_programmazione_mobile','figma_base','no_code_tools_mobile'],
+  research: ['metodologia_della_ricerca','scrittura_accademica','statistica_ricerca','laboratorio_base','revisione_della_letteratura','r_base_ricerca','presentazione_dati'],
+  business: ['problem_solving','powerpoint','analisi_di_mercato','project_management_base','public_speaking','business_writing','teamwork'],
+  finance: ['contabilita_base','analisi_finanziaria_base','matematica_finanziaria','economia_aziendale','powerpoint_finance','bloomberg_base','python_base_finance'],
+  design: ['figma','canva','ui_design_base','ux_research_base','adobe_suite_base','prototipazione','graphic_design_base','branding_base'],
+  sustainability: ['analisi_ambientale_base','esg','economia_circolare','policy_analysis_base','ricerca_accademica','gis_base','redazione_report'],
+  marketing: ['social_media_base','copywriting','google_analytics_base','content_creation','seo_base','canva_marketing','email_marketing_base','storytelling'],
+  law: ['ricerca_giuridica','diritto_privato','diritto_pubblico','diritto_ue_base','legal_writing','policy_analysis','argomentazione','diritto_internazionale_base'],
+  healthcare: ['biologia_base','statistica_healthcare','ricerca_clinica_base','public_health_base','scrittura_scientifica','epidemiologia_base','python_base_healthcare'],
+};
+
+export async function searchUsers(
+  q: string | undefined,
+  clusterTag?: string,
+  currentUserId?: string,
+  yearOfStudy?: number,
+  coreSkillArea?: string,
+) {
+  const users = await prisma.user.findMany({
+    where: {
+      AND: [
+        q ? { name: { contains: q, mode: 'insensitive' } } : {},
+        { profileCompleted: true },
+        currentUserId ? { NOT: { id: currentUserId } } : {},
+        clusterTag ? { profile: { clusterTag } } : {},
+        yearOfStudy ? { yearOfStudy } : {},
+      ],
+    },
+    take: coreSkillArea ? 200 : 30,
+    select: {
+      id: true,
+      name: true,
+      avatar: true,
+      courseOfStudy: true,
+      yearOfStudy: true,
+      skills: true,
+      privacySkills: true,
+      university: { select: { name: true } },
+      profile: { select: { clusterTag: true } },
+    },
+  });
+
+  if (!coreSkillArea || !SKILL_AREA_MAP[coreSkillArea]) return users;
+
+  const areaSkillIds = new Set(SKILL_AREA_MAP[coreSkillArea]);
+  return users.filter((u) => {
+    // Respect skills privacy: exclude users who don't allow public skill visibility
+    if (u.privacySkills !== 'Tutti') return false;
+    const skills = u.skills as { core?: { id: string }[] | null } | null;
+    const coreIds = skills?.core?.map((s) => s.id) ?? [];
+    return coreIds.some((id) => areaSkillIds.has(id));
+  });
 }
