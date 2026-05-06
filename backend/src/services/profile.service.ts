@@ -282,6 +282,7 @@ interface UpdateProfileData {
   bio?: string;
   avatar?: string;
   courseOfStudy?: string;
+  yearOfStudy?: number;
   passions?: string[];
   interests?: Array<{ id: string; name: string; selectedAt: string }>;
   publicProfile?: boolean;
@@ -293,7 +294,7 @@ interface UpdateProfileData {
 }
 
 const ALLOWED_USER_FIELDS = [
-  'name', 'surname', 'bio', 'avatar', 'courseOfStudy',
+  'name', 'surname', 'bio', 'avatar', 'courseOfStudy', 'yearOfStudy',
   'publicProfile', 'privacySkills', 'privacyUniversity',
   'privacySavedOpps', 'privacyPathmates', 'messagePrivacy',
 ] as const;

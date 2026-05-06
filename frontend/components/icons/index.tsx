@@ -647,13 +647,14 @@ export function Download(p: IconProps) {
   );
 }
 
-/** Filter - filter lines */
+/** Filter - sliders horizontal (two adjustable lines) */
 export function Filter(p: IconProps) {
   return (
     <svg {...svgProps(p)}>
-      <line x1="4" y1="6" x2="20" y2="6" {...strokeProps(p)} />
-      <line x1="7" y1="12" x2="17" y2="12" {...strokeProps(p)} />
-      <line x1="10" y1="18" x2="14" y2="18" {...strokeProps(p)} />
+      <line x1="3" y1="8" x2="21" y2="8" {...strokeProps(p)} />
+      <line x1="3" y1="16" x2="21" y2="16" {...strokeProps(p)} />
+      <circle cx="7" cy="8" r="2" fill={p.color ?? defaults.color} stroke="none" />
+      <circle cx="15" cy="16" r="2" fill={p.color ?? defaults.color} stroke="none" />
     </svg>
   );
 }
@@ -1109,4 +1110,15 @@ export function MapWorld(p: IconProps) {
 /** HeartGreen - green heart for engagement */
 export function HeartGreen(p: IconProps) {
   return <Heart {...p} />;
+}
+
+/** Mic - microphone */
+export function Mic(p: IconProps) {
+  return (
+    <svg {...svgProps(p)}>
+      <path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z" {...strokeProps(p)} />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2" {...strokeProps(p)} />
+      <line x1="12" x2="12" y1="19" y2="22" {...strokeProps(p)} />
+    </svg>
+  );
 }

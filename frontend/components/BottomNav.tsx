@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/lib/language';
 import { useNotifications } from '@/lib/notificationContext';
-import { GraduationCap, House, Chat, UserIcon } from '@/components/icons';
+import { GraduationCap, House, PaperPlane, UserIcon } from '@/components/icons';
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -31,7 +31,7 @@ export default function BottomNav() {
       href: '/networking',
       label: t.nav.network,
       icon: (active: boolean) => (
-        <Chat size={24} strokeWidth={active ? 2 : 1.5} />
+        <PaperPlane size={24} strokeWidth={active ? 2 : 1.5} />
       ),
     },
     {
@@ -59,8 +59,8 @@ export default function BottomNav() {
       }}
     >
       <div
-        className="max-w-lg mx-auto flex items-start pb-safe"
-        style={{ paddingLeft: 28.73, paddingRight: 28.75, paddingTop: 9, gap: 35 }}
+        className="max-w-lg mx-auto flex items-center justify-around pb-safe"
+        style={{ paddingTop: 9 }}
       >
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
