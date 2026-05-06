@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api, { setAccessToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import GoogleAuthButton from '@/components/GoogleAuthButton';
 
 
 function MailIcon() {
@@ -146,18 +145,6 @@ export default function LoginPage() {
               {error}
             </div>
           )}
-
-          {/* Google */}
-          <div className="w-full mb-2">
-            <GoogleAuthButton />
-          </div>
-
-          {/* Divider */}
-          <div className="w-full flex items-center mb-1">
-            <div className="flex-1 h-px bg-[#e4e7ff]" />
-            <span className="px-4 text-sm text-[#595e78]">oppure</span>
-            <div className="flex-1 h-px bg-[#e4e7ff]" />
-          </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="w-full space-y-[10px] mt-1 mb-4">

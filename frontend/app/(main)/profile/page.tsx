@@ -13,7 +13,6 @@ import { usePrivacy } from '@/lib/privacy';
 import ChangePasswordModal from '@/components/ChangePasswordModal';
 import { isValidImageUrl, isValidExternalUrl } from '@/lib/urlValidation';
 import { isPushSupported, subscribeToPush, unsubscribeFromPush, getPushPermissionState } from '@/lib/pushManager';
-import { parseDeadlineDate } from '@/lib/dateUtils';
 import { getOpportunityTypeColor } from '@/lib/opportunityColors';
 import {
   Pencil, EyeOff, Plus, Bookmark, ChevronDown, ChevronRight, MapPin, CalendarIcon,
@@ -73,36 +72,6 @@ function TypeIcon({ type, className = 'w-5 h-5' }: { type: string; className?: s
     case 'CORSO':        return <BookOpen {...props} />;
     default:             return <Bookmark {...props} />;
   }
-}
-
-function getDaysLeft(deadline: string): number {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const d = parseDeadlineDate(deadline);
-  if (!d) return Infinity;
-  d.setHours(0, 0, 0, 0);
-  return Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-function DeadlineBadge({ deadline }: { deadline: string }) {
-  const daysLeft = getDaysLeft(deadline);
-  const parsed = parseDeadlineDate(deadline);
-  const dateStr = parsed ? parsed.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) : deadline;
-  const label = daysLeft <= 0 ? 'Scaduta' : daysLeft === 1 ? 'Scade domani' : dateStr;
-  const colors =
-    daysLeft <= 2
-      ? 'bg-red-500/20 text-red-400'
-      : daysLeft <= 14
-      ? 'bg-amber-500/20 text-amber-400'
-      : 'bg-green-500/20 text-green-400';
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${colors}`}>
-      <svg className="w-2.5 h-2.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-      </svg>
-      {label}
-    </span>
-  );
 }
 
 export default function ProfilePage() {
@@ -687,14 +656,18 @@ export default function ProfilePage() {
             </span>
           </div>
           <div style={{ width: 1, height: 75, backgroundColor: '#acb0ce', flexShrink: 0 }} />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 17, padding: '0 9px' }}>
+          <button
+            onClick={() => router.push('/profile/saved-opportunities')}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 17, padding: '0 9px', background: 'none', border: 'none', cursor: 'pointer' }}
+            className="active:opacity-75"
+          >
             <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 700, fontSize: 24, lineHeight: '32px', color: '#4a4bd7' }}>
               {savedOpps.length}
             </span>
             <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 500, fontSize: 14, lineHeight: '20px', color: '#595e78', textTransform: 'uppercase', letterSpacing: '0.7px', textAlign: 'center' }}>
               OPPORTUNITÀ SALVATE
             </span>
-          </div>
+          </button>
         </div>
 
 

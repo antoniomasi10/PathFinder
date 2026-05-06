@@ -15,6 +15,7 @@ export interface SavedOpportunity {
   location?: string;
   isRemote?: boolean;
   deadline?: string;
+  matchScore?: number;
   tags?: string[];
   university?: { name: string };
 }
@@ -82,6 +83,9 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
     api
       .get('/opportunities/saved')
       .then((res) => {
+        const local = loadFromStorage();
+        const localById = new Map(local.map((o) => [o.id, o]));
+
         const serverOpps: SavedOpportunity[] = (res.data || []).map((o: any) => ({
           id: o.id,
           title: o.title,
@@ -95,12 +99,14 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
           deadline: o.deadline,
           tags: o.tags,
           university: o.university,
+          // Preserve matchScore from local storage — the backend doesn't return it
+          matchScore: localById.get(o.id)?.matchScore,
         }));
 
         // Merge: server items take precedence; local-only items (e.g. mock data
         // whose POST /save failed) are kept so they survive the sync.
         const serverIds = new Set(serverOpps.map((o) => o.id));
-        const localOnly = loadFromStorage().filter((o) => !serverIds.has(o.id));
+        const localOnly = local.filter((o) => !serverIds.has(o.id));
         const merged = [...serverOpps, ...localOnly];
 
         // Auto-remove opportunities expired more than 1 day ago.
@@ -149,6 +155,7 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
               location: data.location,
               isRemote: data.isRemote,
               deadline: data.deadline,
+              matchScore: data.matchScore,
               tags: data.tags,
               university: data.university,
             },

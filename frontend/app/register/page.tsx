@@ -159,19 +159,12 @@ export default function RegisterPage() {
 
           {/* Logo */}
           <div className="flex flex-col items-center">
-            <div className="relative flex items-center justify-center" style={{ width: 115, height: 69 }}>
-              <img
-                src={LOGO_SWASH}
-                alt=""
-                className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-              />
-              <span
-                className="relative z-10 font-extrabold text-[#2c3149] text-center select-none"
-                style={{ fontSize: 45, letterSpacing: '-1.13px', lineHeight: 1, fontFamily: 'var(--font-plus-jakarta)' }}
-              >
-                CO&nbsp;&nbsp;&nbsp;A
-              </span>
-            </div>
+            <img
+              src={LOGO_SWASH}
+              alt="COA"
+              style={{ width: 297, height: 85 }}
+              className="object-contain pointer-events-none"
+            />
             <h1 className="text-2xl font-semibold text-[#191b27] mt-2 leading-8">Crea il tuo account</h1>
             <p className="text-sm text-[#464554] mt-1 text-center">Unisciti alla nostra community universitaria.</p>
           </div>
