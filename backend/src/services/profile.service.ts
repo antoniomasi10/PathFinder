@@ -345,6 +345,68 @@ export async function updateProfile(userId: string, data: UpdateProfileData) {
   });
 }
 
+export async function exportUserData(userId: string) {
+  const [user, messages, posts, friendRequests, savedOpps, savedCourses, badges, interactions] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true, email: true, name: true, surname: true, phone: true,
+        provider: true, emailVerified: true, bio: true, birthDate: true,
+        courseOfStudy: true, yearOfStudy: true, gpa: true, englishLevel: true, willingToRelocate: true,
+        publicProfile: true, skills: true,
+        tosConsentAt: true, privacyConsentAt: true, marketingConsent: true,
+        createdAt: true, updatedAt: true,
+        profile: true,
+        university: { select: { id: true, name: true, city: true } },
+      },
+    }),
+    prisma.pathMatesMessage.findMany({
+      where: { senderId: userId },
+      select: { id: true, receiverId: true, groupId: true, content: true, sentAt: true },
+      orderBy: { sentAt: 'desc' },
+    }),
+    prisma.post.findMany({
+      where: { authorId: userId },
+      select: { id: true, content: true, images: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.friendRequest.findMany({
+      where: { OR: [{ fromUserId: userId }, { toUserId: userId }] },
+      select: { id: true, fromUserId: true, toUserId: true, status: true, createdAt: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { savedOpportunities: { select: { id: true, title: true, company: true } } },
+    }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { savedCourses: { select: { id: true, name: true } } },
+    }),
+    prisma.userBadge.findMany({
+      where: { userId },
+      select: { badgeId: true, progress: true, unlockedAt: true },
+    }),
+    prisma.userInteraction.findMany({
+      where: { userId },
+      select: { targetType: true, targetId: true, action: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+    }),
+  ]);
+
+  return {
+    exportedAt: new Date().toISOString(),
+    profile: user,
+    messages,
+    posts,
+    friendRequests,
+    savedOpportunities: savedOpps?.savedOpportunities ?? [],
+    savedCourses: savedCourses?.savedCourses ?? [],
+    badges,
+    interactions,
+  };
+}
+
 export async function deleteAccount(userId: string) {
   // 1. Delete friend requests (no cascade on User)
   await prisma.friendRequest.deleteMany({

@@ -394,6 +394,22 @@ export default function ProfilePage() {
     logout();
   };
 
+  async function handleExportData() {
+    try {
+      const response = await api.get('/profile/me/export', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'pathfinder-export.json');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      // silently fail — user will notice no download
+    }
+  }
+
   const filteredFriends = friends.filter((f) =>
     f.name.toLowerCase().includes(friendSearch.toLowerCase())
   );
@@ -1414,6 +1430,16 @@ export default function ProfilePage() {
           {/* Account */}
           <div className="bg-[#1E293B] rounded-2xl overflow-hidden">
             <h4 className="text-xs font-semibold text-[#64748B] uppercase tracking-wider px-4 pt-4 pb-2">Account</h4>
+            <button onClick={handleExportData} className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-[#4F46E5]/5 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/10 flex items-center justify-center flex-shrink-0">
+                  <FileText size={20} color="#4F46E5" />
+                </div>
+                <span className="text-sm text-white font-medium">Scarica i tuoi dati (GDPR Art. 20)</span>
+              </div>
+              <ChevronRight size={16} color="#64748B" />
+            </button>
+            <div className="ml-12 mr-2 h-px bg-[#334155]/50" />
             <button onClick={() => { setShowSecurityPrivacySheet(false); setShowDeleteModal(true); }} className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-[#EF4444]/5 transition-colors">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-[22%] bg-[#EF4444]/10 flex items-center justify-center flex-shrink-0">
