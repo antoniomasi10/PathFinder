@@ -125,17 +125,6 @@ export default function LoginPage() {
             <GoogleAuthButton />
           </div>
 
-          {/* Apple */}
-          <div className="w-full mb-6">
-            <button
-              type="button"
-              disabled
-              className="w-full flex items-center justify-center gap-3 bg-[#fbf8ff] border border-[#acb0ce] rounded-[24px] px-[17px] py-[13px] opacity-50 cursor-not-allowed"
-            >
-<span className="text-xs font-medium text-[#2c3149] tracking-[0.5px]">Accedi con Apple</span>
-            </button>
-          </div>
-
           {/* Divider */}
           <div className="w-full flex items-center mb-1">
             <div className="flex-1 h-px bg-[#e4e7ff]" />
