@@ -1,7 +1,6 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { TOTAL_STEPS } from './onboarding-data';
 
 interface Props {
   questionNumber: number;
@@ -13,31 +12,24 @@ interface Props {
 export default function QuestionCard({ questionNumber, questionText, isMultiSelect, children }: Props) {
   return (
     <div>
-      {/* Question number with gradient text */}
-      <span className="text-sm font-bold mb-2 block text-gradient-accent">
-        Domanda {questionNumber}/{TOTAL_STEPS}
-      </span>
-
-      {/* Question text */}
-      <h2 className="text-2xl font-bold text-white font-display mb-2">
-        {questionText}
-      </h2>
+      <p
+        className="text-base text-[#2c3149] mb-8 leading-5"
+        style={{ fontFamily: 'var(--font-plus-jakarta)' }}
+      >
+        {questionNumber}. {questionText}
+      </p>
 
       {isMultiSelect && (
-        <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.5)' }}>
+        <p className="text-xs text-[#595e78] mb-4" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
           Puoi selezionare più risposte
         </p>
       )}
 
-      {/* Options container with stagger animation */}
       <motion.div
-        className="space-y-3 mt-6"
+        className="flex flex-col gap-3"
         initial="hidden"
         animate="visible"
-        variants={{
-          hidden: {},
-          visible: { transition: { staggerChildren: 0.05 } },
-        }}
+        variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }}
       >
         {children}
       </motion.div>

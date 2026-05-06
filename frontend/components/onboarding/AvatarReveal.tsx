@@ -8,7 +8,7 @@ import { getAvatar } from './avatarData';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { ProfileData } from './onboarding-data';
-import { CloseLg, ArrowRight } from '@/components/icons';
+import { ArrowRight } from '@/components/icons';
 
 interface Props {
   avatarId: string;
@@ -33,7 +33,6 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
 
   const avatar = getAvatar(avatarId);
 
-  // --- Navigate to home ---
   const navigateToHome = useCallback(() => {
     if (hasNavigated.current) return;
     hasNavigated.current = true;
@@ -41,19 +40,16 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
     router.replace('/home');
   }, [user, setUser, router]);
 
-  // --- Parallel data loading ---
   const loadAppData = useCallback(async () => {
     try {
       await api.post('/profile/questionnaire', {
         ...profileData,
         avatarId: avatar.revealed,
       });
-
       await Promise.all([
         api.get('/opportunities?matched=true&limit=20').catch(() => {}),
         api.get('/notifications/unread-count').catch(() => {}),
       ]);
-
       localStorage.setItem('selected_avatar', avatarId);
       localStorage.setItem('onboarding_step', 'complete');
       setLoadingComplete(true);
@@ -64,20 +60,13 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
     }
   }, [profileData, avatarId, avatar.revealed]);
 
-  // --- Start loading on mount ---
-  useEffect(() => {
-    loadAppData();
-  }, [loadAppData]);
+  useEffect(() => { loadAppData(); }, [loadAppData]);
 
-  // --- Entrance animation done → start playing ---
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setPhase('playing');
-    }, 2600); // after all entrance animations complete (~2.6s total)
+    const timer = setTimeout(() => setPhase('playing'), 2600);
     return () => clearTimeout(timer);
   }, []);
 
-  // --- Video handlers ---
   const handleVideoEnd = useCallback(() => {
     setVideoFinished(true);
     setPhase('waiting');
@@ -89,7 +78,6 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
     setPhase('waiting');
   }, []);
 
-  // --- Button press: exit + navigate ---
   const handleContinue = useCallback(() => {
     if (!loadingComplete || exiting) return;
     if (navigator.vibrate) navigator.vibrate([10, 50, 20]);
@@ -104,89 +92,70 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
     loadAppData();
   }, [loadAppData]);
 
-  // --- Timeout fallback ---
   useEffect(() => {
     const timeout = setTimeout(() => {
-      if (!hasNavigated.current && !showError) {
-        navigateToHome();
-      }
-    }, 30000); // 30s generous timeout since user must press button
+      if (!hasNavigated.current && !showError) navigateToHome();
+    }, 30000);
     return () => clearTimeout(timeout);
   }, [navigateToHome, showError]);
 
-  // --- Error state ---
+  const buttonReady = loadingComplete && (videoFinished || videoError);
+
+  // --- Error screen ---
   if (showError) {
     return (
       <div
-        className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden"
-        style={{ background: 'linear-gradient(180deg, #0D1117 0%, #1A1F2E 100%)' }}
+        className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6 font-jakarta"
+        style={{ background: '#eef0ff' }}
       >
-        <motion.div
-          className="flex flex-col items-center gap-4 px-6 text-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div
+          className="flex flex-col items-center gap-4 text-center p-8 rounded-[24px]"
+          style={{ backgroundColor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(8px)' }}
         >
-          <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mb-2">
-            <CloseLg size={40} color="#FF4444" strokeWidth={2} />
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(239,68,68,0.1)' }}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round">
+              <circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
           </div>
-          <p className="text-white text-lg font-semibold">Qualcosa è andato storto</p>
-          <p className="text-white/60 text-sm">{errorMsg}</p>
+          <p className="text-[#2c3149] text-lg font-bold" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
+            Qualcosa è andato storto
+          </p>
+          <p className="text-[#595e78] text-sm" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
+            {errorMsg}
+          </p>
           <button
             onClick={handleRetry}
-            className="mt-4 px-8 py-3 rounded-full text-white font-semibold"
-            style={{ backgroundColor: '#6C63FF' }}
+            className="mt-2 px-8 py-3 rounded-[24px] text-white font-semibold"
+            style={{ backgroundColor: '#615fe2', fontFamily: 'var(--font-plus-jakarta)' }}
           >
             Riprova
           </button>
-        </motion.div>
+        </div>
       </div>
     );
   }
 
-  const buttonReady = loadingComplete && (videoFinished || videoError);
-
   // --- Main reveal screen ---
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex flex-col items-center overflow-hidden"
-      style={{ background: 'linear-gradient(180deg, #0D1117 0%, #1A1F2E 100%)' }}
+      className="fixed inset-0 z-50 flex flex-col items-center overflow-hidden font-jakarta"
+      style={{ background: '#eef0ff' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: exiting ? 0 : 1 }}
       transition={{ duration: exiting ? 0.6 : 0.8, ease: [0.25, 0.1, 0.25, 1] as const }}
       aria-label="Avatar reveal animation"
     >
-      {/* Ambient blobs — CSS-only for better performance */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div
-          className="absolute w-[400px] h-[400px] rounded-full opacity-20 blur-[60px] animate-blob-1"
-          style={{
-            background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)',
-            top: '-15%',
-            left: '-15%',
-            willChange: 'transform',
-          }}
-        />
-        <div
-          className="absolute w-[350px] h-[350px] rounded-full opacity-15 blur-[60px] animate-blob-2"
-          style={{
-            background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)',
-            bottom: '-10%',
-            right: '-15%',
-            willChange: 'transform',
-          }}
-        />
-      </div>
-
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center justify-center flex-1 w-full px-6">
 
-        {/* Title section */}
+        {/* Title */}
         <div className="text-center mb-10">
           <motion.h1
-            className="text-[28px] font-bold text-white leading-tight"
-            style={{ letterSpacing: '-0.5px' }}
-            role="heading"
-            aria-level={1}
+            className="text-[28px] font-bold text-[#2c3149] leading-tight"
+            style={{ fontFamily: 'var(--font-plus-jakarta)', letterSpacing: '-0.3px' }}
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.4, duration: 0.6, ease: [0.25, 0.1, 0.25, 1] as const }}
@@ -194,8 +163,8 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
             Preparati a scoprire{'\n'}la tua strada
           </motion.h1>
           <motion.p
-            className="text-base mt-3 leading-relaxed mx-auto"
-            style={{ color: '#8B8FA8', maxWidth: '80%' }}
+            className="text-base mt-3 leading-relaxed mx-auto text-[#595e78]"
+            style={{ fontFamily: 'var(--font-plus-jakarta)', maxWidth: '80%' }}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.6, duration: 0.6, ease: [0.25, 0.1, 0.25, 1] as const }}
@@ -204,7 +173,7 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
           </motion.p>
         </div>
 
-        {/* Avatar circle with glow */}
+        {/* Avatar circle */}
         <motion.div
           className="relative"
           initial={{ opacity: 0, scale: 0.7, y: -60 }}
@@ -217,48 +186,34 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
           }}
           aria-label="Il tuo avatar personalizzato"
         >
-          {/* Pulsing glow — CSS-only */}
+          {/* Soft glow ring */}
           <div
-            className="absolute inset-0 rounded-full animate-glow-pulse"
+            className="absolute inset-0 rounded-full"
             style={{
-              background: 'radial-gradient(circle, rgba(108,99,255,0.25) 0%, transparent 70%)',
-              transform: 'scale(1.3)',
+              background: 'radial-gradient(circle, rgba(97,95,226,0.18) 0%, transparent 70%)',
+              transform: 'scale(1.35)',
             }}
           />
 
-          {/* Decorative floating dots — CSS-only */}
+          {/* Floating dots */}
           <div
             className="absolute rounded-full animate-float-dot-1"
-            style={{
-              width: 10,
-              height: 10,
-              backgroundColor: '#6C63FF',
-              opacity: 0.5,
-              top: '10%',
-              right: '-8%',
-              willChange: 'transform',
-            }}
+            style={{ width: 10, height: 10, backgroundColor: '#b0b3f0', opacity: 0.7, top: '8%', right: '-8%' }}
           />
           <div
             className="absolute rounded-full animate-float-dot-2"
-            style={{
-              width: 6,
-              height: 6,
-              backgroundColor: '#8b5cf6',
-              opacity: 0.4,
-              bottom: '15%',
-              left: '-5%',
-              willChange: 'transform',
-            }}
+            style={{ width: 6, height: 6, backgroundColor: '#615fe2', opacity: 0.4, bottom: '12%', left: '-5%' }}
           />
 
-          {/* Avatar container */}
+          {/* Video/image container */}
           <div
             className="rounded-full overflow-hidden relative"
             style={{
               width: 'min(80vw, 300px)',
               height: 'min(80vw, 300px)',
-              boxShadow: '0 0 40px rgba(108,99,255,0.2)',
+              border: '3px solid #615fe2',
+              backgroundColor: 'white',
+              boxShadow: '0 8px 40px rgba(97,95,226,0.2)',
             }}
           >
             {!videoError ? (
@@ -276,49 +231,43 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
               />
             ) : (
               <div className="w-full h-full relative bg-white">
-                <Image
-                  src={avatar.revealed}
-                  alt="Avatar rivelato"
-                  fill
-                  className="object-cover"
-                  priority
-                />
+                <Image src={avatar.revealed} alt="Avatar rivelato" fill className="object-cover" priority />
               </div>
             )}
           </div>
         </motion.div>
       </div>
 
-      {/* Bottom section — button + progress dots */}
+      {/* Bottom button */}
       <div className="relative z-10 w-full px-6 pb-10">
-        {/* Button */}
         <motion.button
           onClick={handleContinue}
           disabled={!buttonReady}
-          className="w-full flex items-center justify-center gap-2 text-white font-semibold"
+          className="w-full flex items-center justify-center gap-2 font-bold text-white text-base"
           style={{
             height: 56,
             borderRadius: 28,
-            fontSize: 17,
-            background: buttonReady ? '#6C63FF' : 'rgba(108,99,255,0.4)',
-            boxShadow: buttonReady ? '0 4px 20px rgba(108,99,255,0.3)' : 'none',
+            fontFamily: 'var(--font-plus-jakarta)',
+            backgroundColor: '#615fe2',
+            opacity: buttonReady ? 1 : 0.5,
+            filter: buttonReady ? 'drop-shadow(0px 4px 7px rgba(74,75,215,0.39))' : 'none',
             cursor: buttonReady ? 'pointer' : 'default',
-            transition: 'background 0.3s, box-shadow 0.3s',
+            transition: 'opacity 0.3s, filter 0.3s',
           }}
           initial={{ opacity: 0, y: 120 }}
-          animate={{ opacity: 1, y: 0 }}
+          animate={{ opacity: buttonReady ? 1 : 0.5, y: 0 }}
           transition={{ delay: 1.8, duration: 0.6, ease: [0.25, 0.1, 0.25, 1] as const }}
-          whileHover={buttonReady ? { scale: 1.02, boxShadow: '0 6px 28px rgba(108,99,255,0.45)' } : {}}
-          whileTap={buttonReady ? { scale: 0.95 } : {}}
+          whileHover={buttonReady ? { scale: 1.01 } : {}}
+          whileTap={buttonReady ? { scale: 0.97 } : {}}
           aria-label="Inizia l'esplorazione"
           aria-disabled={!buttonReady}
         >
           {!buttonReady ? (
-            <motion.div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-              <div className="w-2 h-2 rounded-full bg-white animate-pulse" style={{ animationDelay: '0.2s' }} />
-              <div className="w-2 h-2 rounded-full bg-white animate-pulse" style={{ animationDelay: '0.4s' }} />
-            </motion.div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-white/70 animate-pulse" />
+              <div className="w-2 h-2 rounded-full bg-white/70 animate-pulse" style={{ animationDelay: '0.2s' }} />
+              <div className="w-2 h-2 rounded-full bg-white/70 animate-pulse" style={{ animationDelay: '0.4s' }} />
+            </div>
           ) : (
             <>
               Inizia l&apos;esplorazione
@@ -326,7 +275,6 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
             </>
           )}
         </motion.button>
-
       </div>
     </motion.div>
   );

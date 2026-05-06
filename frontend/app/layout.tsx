@@ -1,6 +1,6 @@
 'use client';
 
-import { Sora, DM_Sans } from 'next/font/google';
+import { Sora, DM_Sans, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import AuthProvider from '@/components/AuthProvider';
 import QueryProvider from '@/components/QueryProvider';
@@ -17,6 +17,12 @@ const sora = Sora({
 const dmSans = DM_Sans({
   subsets: ['latin'],
   variable: '--font-dm-sans',
+  display: 'swap',
+});
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-plus-jakarta',
   display: 'swap',
 });
 
@@ -43,7 +49,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="PathFinder" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
-      <body className={`${sora.variable} ${dmSans.variable} font-body antialiased`}>
+      <body className={`${sora.variable} ${dmSans.variable} ${plusJakartaSans.variable} font-body antialiased`}>
         <QueryProvider>
           <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
             <LanguageProvider>

@@ -61,23 +61,23 @@ function PushPromptModal() {
     <>
       <div className="fixed inset-0 z-[70] bg-black/60" onClick={handleDismiss} />
       <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
-        <div className="bg-[#161B22] rounded-2xl p-6 max-w-sm w-full pointer-events-auto shadow-xl">
-          <div className="w-14 h-14 rounded-2xl bg-[#4F46E5]/20 flex items-center justify-center mx-auto mb-4">
-            <Bell size={28} strokeWidth={2} className="text-[#4F46E5]" />
+        <div className="bg-white rounded-2xl p-6 max-w-sm w-full pointer-events-auto shadow-xl border border-[rgba(172,176,206,0.3)]">
+          <div className="w-14 h-14 rounded-2xl bg-[rgba(97,95,226,0.1)] flex items-center justify-center mx-auto mb-4">
+            <Bell size={28} strokeWidth={2} className="text-[#615fe2]" />
           </div>
-          <h3 className="text-white font-bold text-lg text-center mb-2">Resta aggiornato</h3>
-          <p className="text-[#94A3B8] text-sm text-center mb-6">
+          <h3 className="text-[#2c3149] font-bold text-lg text-center mb-2">Resta aggiornato</h3>
+          <p className="text-[#595e78] text-sm text-center mb-6">
             Attiva le notifiche per non perdere nuove opportunit&agrave;, scadenze importanti e aggiornamenti dalla community.
           </p>
           <button
             onClick={handleEnable}
-            className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-[#4F46E5] hover:bg-[#4338CA] transition-colors mb-3"
+            className="w-full py-3 rounded-xl text-sm font-semibold text-white bg-[#615fe2] hover:bg-[#4f4dc0] transition-colors mb-3"
           >
             Attiva notifiche
           </button>
           <button
             onClick={handleDismiss}
-            className="w-full py-3 rounded-xl text-sm font-medium text-[#94A3B8] hover:text-white transition-colors"
+            className="w-full py-3 rounded-xl text-sm font-medium text-[#747995] hover:text-[#595e78] transition-colors"
           >
             Non ora
           </button>
@@ -87,11 +87,14 @@ function PushPromptModal() {
   );
 }
 
-const FULLSCREEN_ROUTES = ['/profile/skills'];
+const FULLSCREEN_ROUTES: string[] = [];
+// Routes that manage their own header (TopBar hidden, BottomNav still shown by layout)
+const CUSTOM_HEADER_ROUTES = ['/networking', '/profile', '/notifications', '/profile/skills'];
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isFullscreen = FULLSCREEN_ROUTES.includes(pathname);
+  const isFullscreen = FULLSCREEN_ROUTES.includes(pathname) || pathname.startsWith('/opportunities/');
+  const hasCustomHeader = CUSTOM_HEADER_ROUTES.some(r => pathname.startsWith(r));
 
   return (
     <ToastProvider>
@@ -99,8 +102,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <SavedOpportunitiesProvider>
         <SavedCoursesProvider>
         <SkillsPromptProvider>
-        <div className="min-h-screen" style={{ backgroundColor: '#0D1117' }}>
-          {!isFullscreen && <TopBar />}
+        <div className="min-h-screen" style={{ backgroundColor: '#fbf8ff' }}>
+          {!isFullscreen && !hasCustomHeader && <TopBar />}
           <main className={`${isFullscreen ? '' : 'pb-20'} max-w-lg mx-auto`}>
             <ErrorBoundary FallbackComponent={ErrorFallback}>{children}</ErrorBoundary>
           </main>

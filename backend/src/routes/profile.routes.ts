@@ -2,9 +2,10 @@ import { Router, Request, Response } from 'express';
 import { authMiddleware, verifiedMiddleware } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { updateProfileSchema } from '../schemas';
-import { saveQuestionnaire, getProfile, getProfileForViewer, updateProfile, deleteAccount, searchUsers, getSuggestedUsers } from '../services/profile.service';
+import { saveQuestionnaire, getProfile, getProfileForViewer, updateProfile, deleteAccount, searchUsers } from '../services/profile.service';
 import { updateUserEmbedding } from '../services/embedding.service';
-import { cacheDel } from '../lib/cache';
+import { getSmartFriendSuggestions } from '../services/similarity.service';
+import { cacheGet, cacheSet, cacheDel } from '../lib/cache';
 
 const router = Router();
 
@@ -21,7 +22,11 @@ router.post('/questionnaire', verifiedMiddleware, async (req: Request, res: Resp
 
 router.get('/suggestions', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const users = await getSuggestedUsers(req.user!.userId);
+    const cacheKey = `cache:profile-suggestions:${req.user!.userId}`;
+    const cached = await cacheGet<object[]>(cacheKey);
+    if (cached) { res.json(cached); return; }
+    const users = await getSmartFriendSuggestions(req.user!.userId, 6);
+    await cacheSet(cacheKey, users, 600);
     res.json(users);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

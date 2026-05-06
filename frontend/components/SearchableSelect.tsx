@@ -16,6 +16,10 @@ interface SearchableSelectProps {
   disabled?: boolean;
   allowCustom?: boolean;
   onSearchChange?: (search: string) => void;
+  inputClassName?: string;
+  dropdownClassName?: string;
+  optionClassName?: string;
+  optionActiveClassName?: string;
 }
 
 export default function SearchableSelect({
@@ -26,6 +30,10 @@ export default function SearchableSelect({
   required = false,
   disabled = false,
   allowCustom = false,
+  inputClassName,
+  dropdownClassName,
+  optionClassName,
+  optionActiveClassName,
 }: SearchableSelectProps) {
   const [search, setSearch] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -107,7 +115,7 @@ export default function SearchableSelect({
       <input
         ref={inputRef}
         type="text"
-        className="input-field w-full"
+        className={inputClassName ?? 'input-field w-full'}
         placeholder={placeholder}
         value={search}
         onChange={(e) => {
@@ -145,17 +153,17 @@ export default function SearchableSelect({
       {isOpen && filtered.length > 0 && (
         <ul
           ref={listRef}
-          className="absolute z-50 mt-1 w-full max-h-48 overflow-auto rounded-xl bg-card border border-border shadow-xl shadow-black/40"
+          className={dropdownClassName ?? 'absolute z-50 mt-1 w-full max-h-48 overflow-auto rounded-xl bg-card border border-border shadow-xl shadow-black/40'}
         >
           {filtered.slice(0, 100).map((option, i) => (
             <li
               key={option.value}
               className={`px-3 py-2 cursor-pointer text-sm transition-colors ${
                 i === highlightIndex
-                  ? 'bg-primary/20 text-text-primary'
+                  ? (optionActiveClassName ?? 'bg-primary/20 text-text-primary')
                   : option.value === value
-                  ? 'bg-white/5 text-text-primary'
-                  : 'text-text-secondary hover:bg-white/5'
+                  ? (optionClassName ?? 'bg-white/5 text-text-primary')
+                  : (optionClassName ?? 'text-text-secondary hover:bg-white/5')
               }`}
               onMouseDown={(e) => {
                 e.preventDefault();
@@ -170,7 +178,7 @@ export default function SearchableSelect({
       )}
 
       {isOpen && search && filtered.length === 0 && (
-        <div className="absolute z-50 mt-1 w-full rounded-xl bg-card border border-border shadow-xl shadow-black/40 px-3 py-2 text-sm text-text-secondary">
+        <div className={`absolute z-50 mt-1 w-full rounded-xl px-3 py-2 text-sm ${dropdownClassName ?? 'bg-card border border-border shadow-xl shadow-black/40 text-text-secondary'}`}>
           Nessun risultato
         </div>
       )}

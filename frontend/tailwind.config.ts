@@ -33,6 +33,7 @@ const config: Config = {
       fontFamily: {
         display: ['var(--font-sora)', 'sans-serif'],
         body: ['var(--font-dm-sans)', 'sans-serif'],
+        jakarta: ['var(--font-plus-jakarta)', 'sans-serif'],
       },
       borderRadius: {
         '2xl': '1rem',

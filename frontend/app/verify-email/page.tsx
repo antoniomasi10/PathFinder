@@ -28,7 +28,6 @@ export default function VerifyEmailPage() {
     }
   }, [resendCooldown]);
 
-  // Focus first input on mount
   useEffect(() => {
     inputRefs.current[0]?.focus();
   }, []);
@@ -40,12 +39,10 @@ export default function VerifyEmailPage() {
     newCode[index] = value.slice(-1);
     setCode(newCode);
 
-    // Auto-advance to next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
 
-    // Auto-submit when all 6 digits are entered
     if (newCode.every(d => d !== '') && value) {
       handleSubmit(newCode.join(''));
     }
@@ -103,77 +100,88 @@ export default function VerifyEmailPage() {
       setError('');
       setTimeout(() => setResendMessage(''), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Errore durante l\'invio del codice');
+      setError(err.response?.data?.error || "Errore durante l'invio del codice");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-display font-bold text-text-primary mb-2">
+    <div
+      className="min-h-screen flex items-center justify-center px-6"
+      style={{ background: 'linear-gradient(90deg, #fbf8ff 0%, #fbf8ff 100%)' }}
+    >
+      <div
+        className="w-full max-w-[342px] bg-white rounded-3xl p-6 flex flex-col items-center"
+        style={{ boxShadow: '0px 3.054px 9.161px rgba(97, 95, 226, 0.06)' }}
+      >
+        {/* Heading */}
+        <div className="flex flex-col items-center gap-1.5 w-full mb-6">
+          <p className="font-[var(--font-plus-jakarta)] text-[#191b27] text-sm text-center">
             Verifica la tua email
-          </h1>
-          <p className="text-text-secondary">
-            Abbiamo inviato un codice a 6 cifre a{' '}
-            <span className="text-primary font-medium">{user?.email}</span>
           </p>
+          <div className="flex flex-col items-center text-sm font-[var(--font-plus-jakarta)] text-[#464554] text-center">
+            <span>Abbiamo inviato un codice a 6 cifre a</span>
+            <span className="font-medium text-[#615fe2]">{user?.email}</span>
+          </div>
         </div>
 
-        <div className="card space-y-6">
-          {error && (
-            <div className="bg-error/10 text-error rounded-xl px-4 py-3 text-sm">
-              {error}
-            </div>
-          )}
-
-          {resendMessage && (
-            <div className="bg-green-500/10 text-green-400 rounded-xl px-4 py-3 text-sm">
-              {resendMessage}
-            </div>
-          )}
-
-          {/* OTP Input */}
-          <div className="flex justify-center gap-3" onPaste={handlePaste}>
-            {code.map((digit, index) => (
-              <input
-                key={index}
-                ref={(el) => { inputRefs.current[index] = el; }}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onChange={(e) => handleChange(index, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(index, e)}
-                className="w-12 h-14 text-center text-2xl font-bold bg-surface border-2 border-white/10 rounded-xl text-text-primary focus:border-primary focus:outline-none transition-colors"
-                disabled={loading}
-              />
-            ))}
+        {/* Error / success messages */}
+        {error && (
+          <div className="w-full mb-4 bg-red-50 text-red-500 rounded-xl px-4 py-2 text-xs text-center">
+            {error}
           </div>
+        )}
+        {resendMessage && (
+          <div className="w-full mb-4 bg-green-50 text-green-600 rounded-xl px-4 py-2 text-xs text-center">
+            {resendMessage}
+          </div>
+        )}
 
+        {/* OTP Input */}
+        <div className="flex gap-1.5 justify-center w-full mb-6" onPaste={handlePaste}>
+          {code.map((digit, index) => (
+            <input
+              key={index}
+              ref={(el) => { inputRefs.current[index] = el; }}
+              type="text"
+              inputMode="numeric"
+              maxLength={1}
+              value={digit}
+              onChange={(e) => handleChange(index, e.target.value)}
+              onKeyDown={(e) => handleKeyDown(index, e)}
+              disabled={loading}
+              className="w-9 h-[42px] text-center text-sm font-[var(--font-plus-jakarta)] text-[#191b27] rounded-[6px] outline-none transition-colors"
+              style={{
+                background: '#e1e1f2',
+                border: '0.763px solid #c7c4d6',
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Primary Button */}
+        <button
+          onClick={() => handleSubmit()}
+          disabled={loading || code.some(d => d === '')}
+          className="w-full py-3 rounded-3xl text-white text-sm font-[var(--font-plus-jakarta)] mb-6 transition-opacity disabled:opacity-50"
+          style={{
+            background: '#615fe2',
+            boxShadow: '0px 0.763px 0.763px rgba(0,0,0,0.05)',
+          }}
+        >
+          {loading ? 'Verifica in corso...' : 'Verifica'}
+        </button>
+
+        {/* Resend */}
+        <p className="text-sm font-[var(--font-plus-jakarta)] text-[#464554] text-center">
+          Non hai ricevuto il codice?{' '}
           <button
-            onClick={() => handleSubmit()}
-            disabled={loading || code.some(d => d === '')}
-            className="btn-primary w-full disabled:opacity-50"
+            onClick={handleResend}
+            disabled={resendCooldown > 0}
+            className="font-medium text-[#615fe2] disabled:opacity-50"
           >
-            {loading ? 'Verifica in corso...' : 'Verifica'}
+            {resendCooldown > 0 ? `Invia di nuovo tra ${resendCooldown}s` : 'Invia di nuovo'}
           </button>
-
-          <div className="text-center">
-            <p className="text-sm text-text-secondary mb-2">
-              Non hai ricevuto il codice?
-            </p>
-            <button
-              onClick={handleResend}
-              disabled={resendCooldown > 0}
-              className="text-primary hover:underline text-sm disabled:text-text-secondary disabled:no-underline"
-            >
-              {resendCooldown > 0
-                ? `Invia di nuovo tra ${resendCooldown}s`
-                : 'Invia di nuovo'}
-            </button>
-          </div>
-        </div>
+        </p>
       </div>
     </div>
   );

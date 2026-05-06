@@ -30,6 +30,11 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Single in-flight refresh promise shared across all concurrent 401 responses.
+// Without this, multiple expired requests would each try to refresh simultaneously,
+// causing all but the first to fail because the refresh token is single-use.
+let refreshPromise: Promise<string> | null = null;
+
 api.interceptors.response.use(
   (response) => {
     // Store ETag for future conditional requests
@@ -58,17 +63,32 @@ api.interceptors.response.use(
       return api(originalRequest);
     }
 
-    // Token expired — refresh and retry
+    // Token expired — refresh and retry (all concurrent 401s share one refresh call)
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
+
+      if (!refreshPromise) {
+        refreshPromise = axios
+          .post(`${API_URL}/api/auth/refresh`, {}, { withCredentials: true })
+          .then(({ data }) => {
+            localStorage.setItem('accessToken', data.accessToken);
+            reauthenticateSockets();
+            return data.accessToken as string;
+          })
+          .catch((err) => {
+            localStorage.removeItem('accessToken');
+            throw err;
+          })
+          .finally(() => {
+            refreshPromise = null;
+          });
+      }
+
       try {
-        const { data } = await axios.post(`${API_URL}/api/auth/refresh`, {}, { withCredentials: true });
-        localStorage.setItem('accessToken', data.accessToken);
-        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
-        reauthenticateSockets();
+        const newToken = await refreshPromise;
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return api(originalRequest);
       } catch {
-        localStorage.removeItem('accessToken');
         return Promise.reject(error);
       }
     }

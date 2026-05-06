@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/language';
 import { isValidImageUrl } from '@/lib/urlValidation';
-import { CloseLg, Search } from '@/components/icons';
+import { Search } from '@/components/icons';
 
 interface User {
   id: string;
@@ -37,17 +37,10 @@ export default function NewChatModal({ isOpen, onClose, onUserSelected }: NewCha
 
   useEffect(() => {
     if (!isOpen) return;
-
     window.history.pushState({ modal: 'newChat' }, '');
-
-    const handlePopState = () => {
-      handleClose(true);
-    };
-
+    const handlePopState = () => handleClose(true);
     window.addEventListener('popstate', handlePopState);
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
+    return () => window.removeEventListener('popstate', handlePopState);
   }, [isOpen, handleClose]);
 
   useEffect(() => {
@@ -74,19 +67,14 @@ export default function NewChatModal({ isOpen, onClose, onUserSelected }: NewCha
   useEffect(() => {
     if (!isOpen) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      searchUsers(searchQuery);
-    }, 300);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
+    debounceRef.current = setTimeout(() => searchUsers(searchQuery), 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [searchQuery, isOpen]);
 
   const handleStart = () => {
     if (!selectedUserId) return;
     const selected = users.find((u) => u.id === selectedUserId);
     if (selected) {
-      // Pop the modal history entry
       window.history.back();
       onUserSelected({ id: selected.id, name: selected.name, avatar: selected.avatar });
     }
@@ -95,42 +83,66 @@ export default function NewChatModal({ isOpen, onClose, onUserSelected }: NewCha
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: '#0D1117' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', backgroundColor: '#fbf8ff', fontFamily: 'var(--font-plus-jakarta)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-4 border-b border-border">
-        <h2 className="text-lg font-display font-bold text-text-primary">{t.group.newChat}</h2>
-        <button onClick={() => handleClose()} className="text-text-muted hover:text-text-primary transition-colors">
-          <CloseLg size={24} strokeWidth={2} />
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 10,
+        height: 64, display: 'flex', alignItems: 'center', padding: '0 16px',
+        backgroundColor: 'rgba(255,255,255,0.92)',
+        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+        borderBottom: '1px solid rgba(172,176,206,0.2)',
+        flexShrink: 0,
+      }}>
+        <button
+          onClick={() => handleClose()}
+          style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M10 3L5 8L10 13" stroke="#595e78" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </button>
-      </div>
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <span style={{ fontWeight: 700, fontSize: 17, color: '#2c3149' }}>{t.group.newChat}</span>
+        </div>
+        <div style={{ width: 40, flexShrink: 0 }} />
+      </header>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        {/* Search */}
-        <div className="relative">
-          <Search size={16} strokeWidth={2} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+      {/* Scrollable content */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 160px' }}>
+        {/* Search input */}
+        <div style={{ position: 'relative', marginBottom: 16 }}>
+          <div style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+            <Search size={16} color="#acb0ce" strokeWidth={2} />
+          </div>
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t.group.searchUsers}
-            className="input-field w-full pl-10"
             autoFocus
+            style={{
+              width: '100%', height: 48, paddingLeft: 44, paddingRight: 16,
+              backgroundColor: 'white', border: '1px solid rgba(172,176,206,0.4)',
+              borderRadius: 24, fontSize: 14, color: '#2c3149',
+              fontFamily: 'var(--font-plus-jakarta)', outline: 'none',
+              boxSizing: 'border-box',
+            }}
           />
         </div>
 
-        {/* Users List */}
-        <div className="space-y-1 pb-24">
+        {/* Users list */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {loading ? (
-            [1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-3 p-3 animate-pulse">
-                <div className="w-10 h-10 bg-border rounded-full" />
-                <div className="flex-1">
-                  <div className="h-4 bg-border rounded w-1/2 mb-1" />
-                  <div className="h-3 bg-border rounded w-1/3" />
+            [1, 2, 3, 4].map((i) => (
+              <div key={i} className="animate-pulse" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 8px', borderRadius: 16 }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: '#e4e7ff', flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ height: 14, backgroundColor: '#e4e7ff', borderRadius: 7, width: '50%', marginBottom: 6 }} />
+                  <div style={{ height: 11, backgroundColor: '#e4e7ff', borderRadius: 6, width: '70%' }} />
                 </div>
               </div>
             ))
           ) : users.length === 0 ? (
-            <p className="text-center text-text-muted text-sm py-6">
+            <p style={{ textAlign: 'center', color: '#acb0ce', fontSize: 14, padding: '32px 0' }}>
               {searchQuery ? t.group.noUsersFound : t.group.noUsersAvailable}
             </p>
           ) : (
@@ -140,40 +152,42 @@ export default function NewChatModal({ isOpen, onClose, onUserSelected }: NewCha
                 <button
                   key={u.id}
                   onClick={() => setSelectedUserId(u.id)}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-card transition-colors"
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '12px 8px', borderRadius: 16, border: 'none', cursor: 'pointer', textAlign: 'left',
+                    backgroundColor: isSelected ? 'rgba(97,95,226,0.06)' : 'transparent',
+                    transition: 'background-color 0.15s',
+                  }}
                 >
                   {/* Avatar */}
-                  <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0 overflow-hidden">
+                  <div style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0, overflow: 'hidden', backgroundColor: 'rgba(97,95,226,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {u.avatar && isValidImageUrl(u.avatar) ? (
-                      <img src={u.avatar} alt={u.name} className="w-10 h-10 rounded-full object-cover" />
+                      <img src={u.avatar} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      u.name[0]
+                      <span style={{ fontSize: 16, fontWeight: 700, color: '#615fe2' }}>{u.name[0]}</span>
                     )}
                   </div>
 
                   {/* Info */}
-                  <div className="flex-1 text-left min-w-0">
-                    <p className="font-medium text-sm text-text-primary">{u.name}</p>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontWeight: 600, fontSize: 14, color: '#2c3149', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</p>
                     {u.university?.name && (
-                      <p className="text-[11px] text-text-muted truncate">
-                        {u.university.name} {u.courseOfStudy && `· ${u.courseOfStudy}`}
+                      <p style={{ fontSize: 11, color: '#747995', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {u.university.name}{u.courseOfStudy ? ` · ${u.courseOfStudy}` : ''}
                       </p>
                     )}
                   </div>
 
-                  {/* Radio button */}
-                  <div
-                    className="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors"
-                    style={{
-                      borderColor: isSelected ? '#6C63FF' : '#334155',
-                      backgroundColor: 'transparent',
-                    }}
-                  >
+                  {/* Radio */}
+                  <div style={{
+                    width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                    border: `2px solid ${isSelected ? '#615fe2' : '#acb0ce'}`,
+                    backgroundColor: 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'border-color 0.15s',
+                  }}>
                     {isSelected && (
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: '#6C63FF' }}
-                      />
+                      <div style={{ width: 11, height: 11, borderRadius: '50%', backgroundColor: '#615fe2' }} />
                     )}
                   </div>
                 </button>
@@ -183,18 +197,23 @@ export default function NewChatModal({ isOpen, onClose, onUserSelected }: NewCha
         </div>
       </div>
 
-      {/* Footer — Avvia chat button */}
-      <div className="px-4 pb-[calc(env(safe-area-inset-bottom,0px)+80px)] pt-4 border-t border-border">
+      {/* Footer */}
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        padding: '12px 16px calc(env(safe-area-inset-bottom, 0px) + 80px)',
+        backgroundColor: 'rgba(251,248,255,0.95)',
+        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+        borderTop: '1px solid rgba(172,176,206,0.2)',
+      }}>
         <button
           onClick={handleStart}
           disabled={!selectedUserId}
-          className="w-full flex items-center justify-center font-medium text-white transition-colors"
           style={{
-            height: '56px',
-            borderRadius: '12px',
-            fontSize: '16px',
-            backgroundColor: selectedUserId ? '#6C63FF' : '#4A4A6A',
-            cursor: selectedUserId ? 'pointer' : 'not-allowed',
+            width: '100%', height: 52, borderRadius: 24, border: 'none', cursor: selectedUserId ? 'pointer' : 'not-allowed',
+            backgroundColor: selectedUserId ? '#615fe2' : 'rgba(97,95,226,0.3)',
+            color: 'white', fontFamily: 'var(--font-plus-jakarta)', fontWeight: 600, fontSize: 16,
+            boxShadow: selectedUserId ? '0 2px 12px rgba(97,95,226,0.3)' : 'none',
+            transition: 'background-color 0.2s, box-shadow 0.2s',
           }}
         >
           {t.group.startChat}

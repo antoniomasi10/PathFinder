@@ -40,12 +40,12 @@ function PasswordInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         autoFocus={autoFocus}
-        className="w-full bg-[#0D1117] border border-[#334155] rounded-xl px-4 py-3 pr-11 text-white text-sm placeholder:text-[#475569] focus:outline-none focus:border-[#4F46E5] transition-colors"
+        className="w-full bg-[#fbf8ff] border border-[rgba(172,176,206,0.4)] rounded-xl px-4 py-3 pr-11 text-[#2c3149] text-sm placeholder:text-[#b0b4cb] focus:outline-none focus:border-[#615fe2] transition-colors"
       />
       <button
         type="button"
         onClick={() => setShow(!show)}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748B] hover:text-white transition-colors"
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#747995] hover:text-[#615fe2] transition-colors"
       >
         <EyeIcon visible={show} />
       </button>
@@ -158,26 +158,26 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
       {/* Modal */}
       <div className="fixed inset-0 z-[70] flex items-end justify-center pointer-events-none">
         <div
-          className="pointer-events-auto w-full max-w-lg bg-[#161B22] rounded-t-3xl animate-slide-up"
+          className="pointer-events-auto w-full max-w-lg bg-white rounded-t-3xl animate-slide-up"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Handle */}
           <div className="flex justify-center pt-3 pb-1">
-            <div className="w-10 h-1 rounded-full bg-[#334155]" />
+            <div className="w-10 h-1 rounded-full bg-[rgba(172,176,206,0.3)]" />
           </div>
 
           {/* Header */}
-          <div className="flex items-center justify-between px-5 pt-3 pb-4 border-b border-[#1E293B]">
-            <h2 className="text-white font-bold text-lg">
+          <div className="flex items-center justify-between px-5 pt-3 pb-4 border-b border-[rgba(172,176,206,0.3)]">
+            <h2 className="text-[#2c3149] font-bold text-lg">
               {screen === 'forgot-email' || screen === 'forgot-code'
                 ? t.security.forgotPasswordTitle
                 : t.security.changePasswordTitle}
             </h2>
             <button
               onClick={handleClose}
-              className="p-1 rounded-full hover:bg-[#334155] transition-colors"
+              className="p-1 rounded-full hover:bg-[rgba(172,176,206,0.08)] transition-colors"
             >
-              <CloseMd size={20} strokeWidth={2} className="text-[#94A3B8]" />
+              <CloseMd size={20} strokeWidth={2} className="text-[#595e78]" />
             </button>
           </div>
 
@@ -186,13 +186,13 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
             {/* ── SUCCESS ── */}
             {screen === 'success' && (
               <div className="flex flex-col items-center text-center py-6 gap-4">
-                <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <Check size={32} strokeWidth={2} className="text-green-400" />
+                <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center">
+                  <Check size={32} strokeWidth={2} className="text-green-500" />
                 </div>
-                <p className="text-white font-semibold text-base">{t.security.passwordUpdated}</p>
+                <p className="text-[#2c3149] font-semibold text-base">{t.security.passwordUpdated}</p>
                 <button
                   onClick={handleClose}
-                  className="w-full py-3 rounded-xl text-sm font-medium text-white bg-[#4F46E5] hover:bg-[#4338CA] transition-colors"
+                  className="w-full py-3 rounded-xl text-sm font-medium text-white bg-[#615fe2] hover:bg-[#4f4dc0] transition-colors"
                 >
                   {t.profile.done}
                 </button>
@@ -204,7 +204,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
               <>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.security.currentPassword}</label>
+                    <label className="block text-xs font-medium text-[#747995] mb-1.5">{t.security.currentPassword}</label>
                     <PasswordInput
                       value={oldPassword}
                       onChange={setOldPassword}
@@ -213,7 +213,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.security.newPassword}</label>
+                    <label className="block text-xs font-medium text-[#747995] mb-1.5">{t.security.newPassword}</label>
                     <PasswordInput
                       value={newPassword}
                       onChange={setNewPassword}
@@ -221,7 +221,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.security.confirmPassword}</label>
+                    <label className="block text-xs font-medium text-[#747995] mb-1.5">{t.security.confirmPassword}</label>
                     <PasswordInput
                       value={confirmPassword}
                       onChange={setConfirmPassword}
@@ -230,19 +230,19 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
                   </div>
                 </div>
 
-                {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+                {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
                 <button
                   onClick={handleChangePassword}
                   disabled={loading || !oldPassword || !newPassword || !confirmPassword}
-                  className="w-full py-3 rounded-xl text-sm font-medium text-white bg-[#4F46E5] hover:bg-[#4338CA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-3 rounded-xl text-sm font-medium text-white bg-[#615fe2] hover:bg-[#4f4dc0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : t.security.updatePassword}
                 </button>
 
                 <button
                   onClick={() => { setError(''); setScreen('forgot-email'); }}
-                  className="w-full text-center text-sm text-[#4F46E5] hover:text-[#6366F1] transition-colors py-1"
+                  className="w-full text-center text-sm text-[#615fe2] hover:text-[#7073ff] transition-colors py-1"
                 >
                   {t.security.forgotPassword}
                 </button>
@@ -252,33 +252,33 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
             {/* ── FORGOT — inserisci email ── */}
             {screen === 'forgot-email' && (
               <>
-                <p className="text-sm text-[#94A3B8]">{t.security.forgotPasswordDesc}</p>
+                <p className="text-sm text-[#595e78]">{t.security.forgotPasswordDesc}</p>
 
                 <div>
-                  <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.security.emailLabel}</label>
+                  <label className="block text-xs font-medium text-[#747995] mb-1.5">{t.security.emailLabel}</label>
                   <input
                     type="email"
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
                     placeholder={t.security.emailPlaceholder}
                     autoFocus
-                    className="w-full bg-[#0D1117] border border-[#334155] rounded-xl px-4 py-3 text-white text-sm placeholder:text-[#475569] focus:outline-none focus:border-[#4F46E5] transition-colors"
+                    className="w-full bg-[#fbf8ff] border border-[rgba(172,176,206,0.4)] rounded-xl px-4 py-3 text-[#2c3149] text-sm placeholder:text-[#b0b4cb] focus:outline-none focus:border-[#615fe2] transition-colors"
                   />
                 </div>
 
-                {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+                {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
                 <button
                   onClick={handleSendCode}
                   disabled={loading || !resetEmail.trim()}
-                  className="w-full py-3 rounded-xl text-sm font-medium text-white bg-[#4F46E5] hover:bg-[#4338CA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-3 rounded-xl text-sm font-medium text-white bg-[#615fe2] hover:bg-[#4f4dc0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : t.security.sendCode}
                 </button>
 
                 <button
                   onClick={() => { setError(''); setScreen('change'); }}
-                  className="w-full text-center text-sm text-[#64748B] hover:text-[#94A3B8] transition-colors py-1"
+                  className="w-full text-center text-sm text-[#747995] hover:text-[#595e78] transition-colors py-1"
                 >
                   {t.security.backToLogin}
                 </button>
@@ -288,13 +288,13 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
             {/* ── FORGOT — inserisci codice + nuova password ── */}
             {screen === 'forgot-code' && (
               <>
-                <p className="text-sm text-[#94A3B8]">
+                <p className="text-sm text-[#595e78]">
                   {t.security.codeSentDesc.replace('{email}', resetEmail)}
                 </p>
 
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.security.verificationCode}</label>
+                    <label className="block text-xs font-medium text-[#747995] mb-1.5">{t.security.verificationCode}</label>
                     <input
                       type="text"
                       value={resetCode}
@@ -302,11 +302,11 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
                       placeholder={t.security.codePlaceholder}
                       autoFocus
                       maxLength={6}
-                      className="w-full bg-[#0D1117] border border-[#334155] rounded-xl px-4 py-3 text-white text-sm text-center tracking-[0.5em] font-mono placeholder:text-[#475569] placeholder:tracking-normal focus:outline-none focus:border-[#4F46E5] transition-colors"
+                      className="w-full bg-[#fbf8ff] border border-[rgba(172,176,206,0.4)] rounded-xl px-4 py-3 text-[#2c3149] text-sm text-center tracking-[0.5em] font-mono placeholder:text-[#b0b4cb] placeholder:tracking-normal focus:outline-none focus:border-[#615fe2] transition-colors"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.security.newPassword}</label>
+                    <label className="block text-xs font-medium text-[#747995] mb-1.5">{t.security.newPassword}</label>
                     <PasswordInput
                       value={resetNewPassword}
                       onChange={setResetNewPassword}
@@ -314,7 +314,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-[#94A3B8] mb-1.5">{t.security.confirmPassword}</label>
+                    <label className="block text-xs font-medium text-[#747995] mb-1.5">{t.security.confirmPassword}</label>
                     <PasswordInput
                       value={resetConfirmPassword}
                       onChange={setResetConfirmPassword}
@@ -323,12 +323,12 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
                   </div>
                 </div>
 
-                {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+                {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
                 <button
                   onClick={handleResetPassword}
                   disabled={loading || !resetCode || !resetNewPassword || !resetConfirmPassword}
-                  className="w-full py-3 rounded-xl text-sm font-medium text-white bg-[#4F46E5] hover:bg-[#4338CA] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-3 rounded-xl text-sm font-medium text-white bg-[#615fe2] hover:bg-[#4f4dc0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : t.security.resetPassword}
                 </button>
@@ -340,7 +340,6 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
                     try {
                       await api.post('/auth/forgot-password', { email: resetEmail.trim() });
                       setError('');
-                      // brief toast-like feedback via error slot
                       setTimeout(() => {}, 0);
                     } catch {
                       setError(t.common.error);
@@ -349,7 +348,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
                     }
                   }}
                   disabled={loading}
-                  className="w-full text-center text-sm text-[#64748B] hover:text-[#94A3B8] transition-colors py-1"
+                  className="w-full text-center text-sm text-[#747995] hover:text-[#595e78] transition-colors py-1"
                 >
                   {t.security.resendCode}
                 </button>
