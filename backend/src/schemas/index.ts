@@ -102,6 +102,7 @@ export const updateProfileSchema = z.object({
   bio: z.string().max(500).optional(),
   avatar: z.string().optional(),
   courseOfStudy: z.string().max(200).optional(),
+  yearOfStudy: z.number().int().min(1).max(8).optional(),
   passions: z.array(z.string().max(50)).max(20).optional(),
   interests: z.array(z.object({
     id: z.string().min(1).max(100),

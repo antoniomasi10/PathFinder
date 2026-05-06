@@ -283,20 +283,52 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
       <div className="pb-36">
 
         {/* Hero */}
-        <div className="relative overflow-hidden" style={{ height: 170 }}>
+        <div className="relative overflow-hidden" style={{ height: 170, width: '100%' }}>
+          {/* Background photo */}
           <div
             className="absolute inset-0"
-            style={{ backgroundColor: '#6b6cf5' }}
+            style={{
+              backgroundImage: 'url(/hero-opportunity-bg.png)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          />
+          {/* SVG layers: purple rect + decorative path + gradient */}
+          <svg
+            className="absolute inset-0"
+            width="390"
+            height="170"
+            viewBox="0 0 390 170"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            preserveAspectRatio="xMidYMid slice"
+            style={{ width: '100%', height: '100%' }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo-coha-watermark.svg"
-              alt=""
-              aria-hidden
-              className="absolute pointer-events-none select-none"
-              style={{ width: 460, height: 'auto', right: -40, top: -60, opacity: 1 }}
-            />
-          </div>
+            <defs>
+              <linearGradient id="hero_grad" x1="195" y1="170" x2="195" y2="0" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#4A4BD7" stopOpacity="0.8" />
+                <stop offset="1" stopColor="#4A4BD7" stopOpacity="0" />
+              </linearGradient>
+              <clipPath id="hero_clip">
+                <rect width="390" height="170" />
+              </clipPath>
+            </defs>
+            <g clipPath="url(#hero_clip)">
+              {/* Purple rounded rect overlay */}
+              <rect x="-22.6515" y="-52" width="412.652" height="276" rx="26" fill="#615FE2" />
+              {/* Decorative abstract white path */}
+              <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M-23 88.8632C-16.6339 100.315 -14.137 103.61 -5.73335 111.195C-5.73335 111.195 2.94759 117.494 15.1009 124.365C27.2542 131.237 30.1479 132.382 42.8799 135.818C55.612 139.253 60.8205 140.398 71.8164 140.971C71.8164 140.971 84.5484 142.116 101.91 141.544C119.272 140.971 130.3 138.707 147.051 134.1C163.803 129.492 167.577 128.305 177.724 123.793C187.871 119.28 192.886 115.865 200.294 107.759L193.35 76.8382C190.3 59.423 190.268 49.482 191.613 31.6017C195.702 13.0571 200.393 2.96958 215.341 -14.2073C230.967 -27.9501 248.908 -25.087 255.852 -3.32771C260.482 19.0042 259.782 30.2561 247.75 53.3611C234.72 76.4571 225.859 88.7394 207.239 109.477C210.46 123.982 213.609 132.072 218.814 144.979C220.125 139.635 220.936 137.109 226.916 133.527C234.128 131.147 237.959 130.019 246.593 130.664C258.167 132.954 265.78 136.336 276.687 141.544C294.334 151.621 304.615 156.345 323.564 163.303C337.197 168.178 344.936 169.134 358.866 168.457C373.716 168.311 382.762 166.203 395.905 158.15V197.66C394.854 203.912 393.433 207.311 388.96 213.12C382.931 219.691 378.585 222.182 368.705 224H360.024C360.024 224 331.984 206.385 316.04 192.506L282.474 165.593C267.814 154.227 260.847 148.645 244.278 140.398C238 137.845 230.967 135.245 226.337 138.108C221.707 142.689 220.909 144.936 221.129 151.278C227.913 170.452 233.174 179.517 244.278 197.087C251.802 208.68 258.641 215.166 270.321 224H250.065H229.81C223.181 208.82 219.651 199.292 215.341 182.772L201.452 113.486C189.173 123.857 180.879 129.754 166.149 138.681C148.925 148.267 138.71 153.08 119.272 160.44C100.652 167.857 89.2417 170.617 68.344 174.755C47.0091 179.34 35.6368 180.118 16.2584 178.764C-1.31579 176.634 -8.56088 172.99 -23 163.303V126.083V88.8632ZM197.979 53.3611C197.212 72.9559 198.663 83.8718 205.503 103.179C219.256 88.7777 225.763 79.8678 234.439 61.9503C241.779 48.7046 243.12 41.9089 241.963 27.5935C237.912 14.4234 233.132 10.0375 215.341 16.7138C204.59 22.8009 200.266 29.7434 197.979 53.3611Z"
+                fill="#ECEDFF"
+                fillOpacity="0.17"
+              />
+            </g>
+            {/* Gradient overlay */}
+            <rect width="390" height="170" fill="url(#hero_grad)" />
+          </svg>
+          {/* Bookmark button */}
           <button
             onClick={handleSave}
             className="absolute top-4 right-4 flex items-center justify-center rounded-full active:opacity-70"

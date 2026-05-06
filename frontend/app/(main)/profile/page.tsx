@@ -1338,14 +1338,14 @@ export default function ProfilePage() {
           {/* Account */}
           <div className="bg-white rounded-2xl overflow-hidden border border-[rgba(172,176,206,0.3)]">
             <h4 className="text-xs font-semibold text-[#747995] uppercase tracking-wider px-4 pt-4 pb-2">Account</h4>
-            <button onClick={handleExportData} className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-[#4F46E5]/5 transition-colors">
+            <button onClick={handleExportData} className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-[rgba(79,70,229,0.05)] transition-colors">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-[22%] bg-[#4F46E5]/10 flex items-center justify-center flex-shrink-0">
-                  <FileText size={20} color="#4F46E5" />
+                <div className="w-9 h-9 rounded-[22%] bg-[rgba(79,70,229,0.08)] flex items-center justify-center flex-shrink-0">
+                  <FileText size={20} color="#615fe2" />
                 </div>
                 <span className="text-sm text-[#2c3149] font-medium">Scarica i tuoi dati (GDPR Art. 20)</span>
               </div>
-              <ChevronRight size={16} color="#747995" />
+              <ChevronRight size={16} color="#acb0ce" />
             </button>
             <div className="ml-12 mr-2 h-px bg-[rgba(172,176,206,0.3)]" />
             <button onClick={() => { setShowSecurityPrivacySheet(false); setShowDeleteModal(true); }} className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-[rgba(239,68,68,0.05)] transition-colors">

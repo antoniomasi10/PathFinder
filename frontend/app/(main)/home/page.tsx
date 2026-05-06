@@ -296,7 +296,6 @@ function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => 
       onClick={onOpen}
       className="w-full text-left relative overflow-hidden rounded-[24px]"
       style={{
-        height: 220,
         backgroundColor: '#6B6CF5',
         boxShadow: '0 0 48px 18px rgba(220,218,255,0.60), 0 4px 24px rgba(107,108,245,0.35)',
       }}
@@ -308,9 +307,9 @@ function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => 
         style={{ right: '0%', top: '-5%', width: '100%', height: 'auto', opacity: 0.65 }}
       />
 
-      <div className="relative z-10 p-[27px] flex flex-col h-full">
+      <div className="relative z-10 p-[27px] flex flex-col">
         {/* Label */}
-        <div className="flex items-center gap-[8px] mb-auto">
+        <div className="flex items-center gap-[8px] mb-[12px]">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)" stroke="none">
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
           </svg>

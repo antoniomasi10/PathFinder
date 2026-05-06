@@ -13,6 +13,7 @@ interface ActionMenuProps {
 
 export default function ActionMenu({ isOpen, onClose, onNewChat, onCreateGroup }: ActionMenuProps) {
   const { t } = useLanguage();
+
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -25,63 +26,82 @@ export default function ActionMenu({ isOpen, onClose, onNewChat, onCreateGroup }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col justify-end">
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
       {/* Backdrop */}
       <div
-        className="absolute inset-0"
-        style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(44,49,73,0.35)' }}
         onClick={onClose}
       />
 
       {/* Sheet */}
       <div
-        className="relative animate-slide-up"
+        className="animate-slide-up"
         style={{
-          backgroundColor: '#1C2333',
-          borderTopLeftRadius: '24px',
-          borderTopRightRadius: '24px',
+          position: 'relative',
+          backgroundColor: '#ffffff',
+          borderTopLeftRadius: 28,
+          borderTopRightRadius: 28,
+          boxShadow: '0 -4px 32px rgba(44,49,73,0.12)',
         }}
       >
         {/* Handle bar */}
-        <div className="flex justify-center pt-3 pb-2">
-          <div className="w-10 h-1 rounded-full bg-gray-600" />
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 12, paddingBottom: 4 }}>
+          <div style={{ width: 40, height: 4, borderRadius: 9999, backgroundColor: '#acb0ce' }} />
         </div>
 
-        <div className="px-4 pb-[calc(env(safe-area-inset-bottom,0px)+16px)]">
+        <div style={{ padding: '8px 16px calc(env(safe-area-inset-bottom, 0px) + 24px)' }}>
           {/* Nuova chat */}
           <button
             onClick={() => { onClose(); onNewChat(); }}
-            className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-white/5 transition-colors"
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 16,
+              padding: '14px 8px', borderRadius: 16, border: 'none',
+              backgroundColor: 'transparent', cursor: 'pointer', textAlign: 'left',
+            }}
           >
-            <div
-              className="w-11 h-11 rounded-full flex items-center justify-center text-indigo-400"
-              style={{ backgroundColor: 'rgba(99,102,241,0.2)' }}
-            >
-              <ChatDots size={24} />
+            <div style={{
+              width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backgroundColor: 'rgba(97,95,226,0.1)',
+            }}>
+              <ChatDots size={24} color="#615fe2" />
             </div>
-            <div className="text-left">
-              <p className="text-white font-medium text-[15px]">{t.group.newChat}</p>
-              <p className="text-gray-400 text-xs">{t.group.newChatDesc}</p>
+            <div>
+              <p style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 600, fontSize: 15, color: '#2c3149', margin: 0 }}>
+                {t.group.newChat}
+              </p>
+              <p style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 400, fontSize: 12, color: '#747995', margin: '2px 0 0' }}>
+                {t.group.newChatDesc}
+              </p>
             </div>
           </button>
 
           {/* Separator */}
-          <div className="border-t border-gray-700/50 mx-4" />
+          <div style={{ height: 1, backgroundColor: 'rgba(172,176,206,0.3)', margin: '0 8px' }} />
 
           {/* Crea gruppo */}
           <button
             onClick={() => { onClose(); onCreateGroup(); }}
-            className="w-full flex items-center gap-4 p-4 rounded-xl hover:bg-white/5 transition-colors"
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 16,
+              padding: '14px 8px', borderRadius: 16, border: 'none',
+              backgroundColor: 'transparent', cursor: 'pointer', textAlign: 'left',
+            }}
           >
-            <div
-              className="w-11 h-11 rounded-full flex items-center justify-center text-purple-400"
-              style={{ backgroundColor: 'rgba(139,92,246,0.2)' }}
-            >
-              <UsersGroup size={24} />
+            <div style={{
+              width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backgroundColor: 'rgba(97,95,226,0.1)',
+            }}>
+              <UsersGroup size={24} color="#615fe2" />
             </div>
-            <div className="text-left">
-              <p className="text-white font-medium text-[15px]">{t.networking.createGroup}</p>
-              <p className="text-gray-400 text-xs">{t.group.createGroupDesc}</p>
+            <div>
+              <p style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 600, fontSize: 15, color: '#2c3149', margin: 0 }}>
+                {t.networking.createGroup}
+              </p>
+              <p style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 400, fontSize: 12, color: '#747995', margin: '2px 0 0' }}>
+                {t.group.createGroupDesc}
+              </p>
             </div>
           </button>
         </div>

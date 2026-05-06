@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/language';
-import { CloseLg, CloseSm, Pencil, Plus, Search, Check, Spinner } from '@/components/icons';
+import { CloseSm, Pencil, Plus, Search, Check, Spinner } from '@/components/icons';
+import { isValidImageUrl } from '@/lib/urlValidation';
 
 interface Friend {
   id: string;
@@ -28,15 +29,9 @@ function compressImage(file: File, maxSize = 200): Promise<string> {
         const canvas = document.createElement('canvas');
         let { width, height } = img;
         if (width > height) {
-          if (width > maxSize) {
-            height = (height * maxSize) / width;
-            width = maxSize;
-          }
+          if (width > maxSize) { height = (height * maxSize) / width; width = maxSize; }
         } else {
-          if (height > maxSize) {
-            width = (width * maxSize) / height;
-            height = maxSize;
-          }
+          if (height > maxSize) { width = (width * maxSize) / height; height = maxSize; }
         }
         canvas.width = width;
         canvas.height = height;
@@ -69,12 +64,9 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
 
   const handleClose = useCallback((fromPopState = false) => {
     const close = () => {
-      if (!fromPopState) {
-        window.history.back();
-      }
+      if (!fromPopState) window.history.back();
       onClose();
     };
-
     if (hasUnsavedChanges) {
       if (window.confirm(t.group.unsavedChanges)) {
         close();
@@ -84,32 +76,21 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
     } else {
       close();
     }
-  }, [hasUnsavedChanges, onClose]);
+  }, [hasUnsavedChanges, onClose, t]);
 
   useEffect(() => {
     if (!isOpen) return;
-
     window.history.pushState({ modal: 'createGroup' }, '');
-
-    const handlePopState = () => {
-      handleClose(true);
-    };
-
+    const handlePopState = () => handleClose(true);
     window.addEventListener('popstate', handlePopState);
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
+    return () => window.removeEventListener('popstate', handlePopState);
   }, [isOpen, handleClose]);
 
   useEffect(() => {
     if (isOpen) {
       loadFriends();
-      setName('');
-      setDescription('');
-      setImage(null);
-      setSelectedFriends(new Set());
-      setSearchQuery('');
-      setError('');
+      setName(''); setDescription(''); setImage(null);
+      setSelectedFriends(new Set()); setSearchQuery(''); setError('');
     }
   }, [isOpen]);
 
@@ -128,66 +109,41 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
   const toggleFriend = (id: string) => {
     setSelectedFriends((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };
 
   const removeFriend = (id: string) => {
-    setSelectedFriends((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
+    setSelectedFriends((prev) => { const next = new Set(prev); next.delete(id); return next; });
   };
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const compressed = await compressImage(file);
-      setImage(compressed);
+      setImage(await compressImage(file));
     } catch {
       setError(t.group.errorLoadImage);
     }
-    // Reset input so the same file can be re-selected
     e.target.value = '';
   };
 
-  const filteredFriends = friends.filter((f) =>
-    f.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
+  const filteredFriends = friends.filter((f) => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
   const canCreate = selectedFriends.size >= 2;
 
   const generateAutoName = (): string => {
-    const selectedNames = Array.from(selectedFriends)
-      .map((id) => friends.find((f) => f.id === id)?.name)
-      .filter(Boolean);
-    if (selectedNames.length <= 3) {
-      return `${t.group.autoNameWith} ${selectedNames.join(', ')}`;
-    }
+    const selectedNames = Array.from(selectedFriends).map((id) => friends.find((f) => f.id === id)?.name).filter(Boolean);
+    if (selectedNames.length <= 3) return `${t.group.autoNameWith} ${selectedNames.join(', ')}`;
     return `${t.group.autoNameWith} ${selectedNames.slice(0, 2).join(', ')} ${t.group.autoNameOthers} ${selectedNames.length - 2}`;
   };
 
   const handleCreate = async () => {
     if (!canCreate) return;
-    setCreating(true);
-    setError('');
-
+    setCreating(true); setError('');
     const groupName = name.trim() || generateAutoName();
-
     try {
-      await api.post('/groups', {
-        name: groupName,
-        memberIds: Array.from(selectedFriends),
-        description: description.trim() || undefined,
-        image: image || undefined,
-      });
+      await api.post('/groups', { name: groupName, memberIds: Array.from(selectedFriends), description: description.trim() || undefined, image: image || undefined });
       onGroupCreated();
       onClose();
     } catch (err: any) {
@@ -199,88 +155,108 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
 
   if (!isOpen) return null;
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%', height: 44, padding: '0 14px',
+    backgroundColor: 'white', border: '1px solid rgba(172,176,206,0.4)',
+    borderRadius: 16, fontSize: 14, color: '#2c3149',
+    fontFamily: 'var(--font-plus-jakarta)', outline: 'none', boxSizing: 'border-box',
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: '#0D1117' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', backgroundColor: '#fbf8ff', fontFamily: 'var(--font-plus-jakarta)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-4 border-b border-border">
-        <h2 className="text-lg font-display font-bold text-text-primary">{t.group.newGroup}</h2>
-        <button onClick={() => handleClose()} className="text-text-muted hover:text-text-primary transition-colors">
-          <CloseLg size={24} strokeWidth={2} />
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 10,
+        height: 64, display: 'flex', alignItems: 'center', padding: '0 16px',
+        backgroundColor: 'rgba(255,255,255,0.92)',
+        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+        borderBottom: '1px solid rgba(172,176,206,0.2)',
+        flexShrink: 0,
+      }}>
+        <button
+          onClick={() => handleClose()}
+          style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M10 3L5 8L10 13" stroke="#595e78" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </button>
-      </div>
+        <div style={{ flex: 1, textAlign: 'center' }}>
+          <span style={{ fontWeight: 700, fontSize: 17, color: '#2c3149' }}>{t.group.newGroup}</span>
+        </div>
+        <div style={{ width: 40, flexShrink: 0 }} />
+      </header>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
-        {/* Group Photo + Name */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-4">
-            {/* Image Picker */}
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-20 h-20 rounded-full shrink-0 flex flex-col items-center justify-center relative overflow-hidden transition-colors"
-              style={{
-                border: '2px dashed #6C63FF',
-                backgroundColor: image ? 'transparent' : 'rgba(108, 99, 255, 0.1)',
-              }}
-            >
-              {image ? (
-                <>
-                  <img src={image} alt="Foto gruppo" className="w-full h-full object-cover" />
-                  {/* Edit overlay */}
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <Pencil size={20} strokeWidth={2} className="text-white" />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <Plus size={24} strokeWidth={2} color="#6C63FF" />
-                  <span className="text-[10px] mt-0.5" style={{ color: '#6C63FF' }}>{t.networking.addPhoto}</span>
-                </>
-              )}
-            </button>
+      {/* Scrollable content */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px 160px' }}>
+
+        {/* Group photo + name/description */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 20 }}>
+          {/* Image picker */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              width: 76, height: 76, borderRadius: '50%', flexShrink: 0,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              border: '2px dashed #615fe2', cursor: 'pointer', overflow: 'hidden', position: 'relative',
+              backgroundColor: image ? 'transparent' : 'rgba(97,95,226,0.08)',
+            }}
+          >
+            {image ? (
+              <>
+                <img src={image} alt="Foto gruppo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(44,49,73,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0 }}
+                  className="hover:opacity-100 transition-opacity">
+                  <Pencil size={20} color="white" />
+                </div>
+              </>
+            ) : (
+              <>
+                <Plus size={22} strokeWidth={2} color="#615fe2" />
+                <span style={{ fontSize: 9, color: '#615fe2', marginTop: 3, fontWeight: 500 }}>{t.networking.addPhoto}</span>
+              </>
+            )}
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} style={{ display: 'none' }} />
+
+          {/* Name + description */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageSelect}
-              className="hidden"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t.group.groupName}
+              maxLength={50}
+              style={inputStyle}
             />
-
-            <div className="flex-1 space-y-2">
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t.group.groupName}
-                className="input-field w-full"
-                maxLength={50}
-                style={{ backgroundColor: '#1C2333', borderRadius: '12px', padding: '12px' }}
-              />
-              <input
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder={t.group.description}
-                className="input-field w-full"
-                maxLength={200}
-                style={{ backgroundColor: '#1C2333', borderRadius: '12px', padding: '12px' }}
-              />
-            </div>
+            <input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={t.group.description}
+              maxLength={200}
+              style={inputStyle}
+            />
           </div>
         </div>
 
-        {/* Selected Friends Chips */}
+        {/* Selected friends chips */}
         {selectedFriends.size > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
             {Array.from(selectedFriends).map((id) => {
               const friend = friends.find((f) => f.id === id);
               if (!friend) return null;
               return (
                 <span
                   key={id}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full"
-                  style={{ backgroundColor: 'rgba(108, 99, 255, 0.2)', color: '#6C63FF' }}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '5px 12px', borderRadius: 9999,
+                    backgroundColor: 'rgba(97,95,226,0.12)', color: '#615fe2',
+                    fontSize: 12, fontWeight: 500,
+                  }}
                 >
                   {friend.name}
-                  <button onClick={() => removeFriend(id)} className="hover:opacity-70">
+                  <button onClick={() => removeFriend(id)} style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#615fe2' }}>
                     <CloseSm size={14} strokeWidth={2.5} />
                   </button>
                 </span>
@@ -290,37 +266,37 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
         )}
 
         {/* Counter */}
-        <div className="flex items-center justify-between">
-          <p className={`text-sm font-medium ${selectedFriends.size < 2 ? 'text-error' : 'text-text-secondary'}`}>
-            {t.group.selectedCount.replace('{count}', String(selectedFriends.size))} {selectedFriends.size < 2 && t.group.minTwo}
-          </p>
-        </div>
+        <p style={{ fontSize: 13, fontWeight: 500, color: selectedFriends.size < 2 ? '#ef4444' : '#595e78', marginBottom: 12 }}>
+          {t.group.selectedCount.replace('{count}', String(selectedFriends.size))}{selectedFriends.size < 2 ? ` ${t.group.minTwo}` : ''}
+        </p>
 
         {/* Search */}
-        <div className="relative">
-          <Search size={16} strokeWidth={2} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+        <div style={{ position: 'relative', marginBottom: 12 }}>
+          <div style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+            <Search size={16} color="#acb0ce" strokeWidth={2} />
+          </div>
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t.group.searchFriends}
-            className="input-field w-full pl-10"
+            style={{ ...inputStyle, paddingLeft: 44, height: 48, borderRadius: 24 }}
           />
         </div>
 
-        {/* Friends List */}
-        <div className="space-y-1 pb-24">
+        {/* Friends list */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {loading ? (
-            [1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-3 p-3 animate-pulse">
-                <div className="w-10 h-10 bg-border rounded-full" />
-                <div className="flex-1">
-                  <div className="h-4 bg-border rounded w-1/2 mb-1" />
-                  <div className="h-3 bg-border rounded w-1/3" />
+            [1, 2, 3, 4].map((i) => (
+              <div key={i} className="animate-pulse" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 8px', borderRadius: 16 }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: '#e4e7ff', flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ height: 14, backgroundColor: '#e4e7ff', borderRadius: 7, width: '50%', marginBottom: 6 }} />
+                  <div style={{ height: 11, backgroundColor: '#e4e7ff', borderRadius: 6, width: '70%' }} />
                 </div>
               </div>
             ))
           ) : filteredFriends.length === 0 ? (
-            <p className="text-center text-text-muted text-sm py-6">
+            <p style={{ textAlign: 'center', color: '#acb0ce', fontSize: 14, padding: '32px 0' }}>
               {friends.length === 0 ? t.group.noFriendsFound : t.profile.noResults}
             </p>
           ) : (
@@ -330,29 +306,41 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
                 <button
                   key={friend.id}
                   onClick={() => toggleFriend(friend.id)}
-                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-card transition-colors"
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '12px 8px', borderRadius: 16, border: 'none', cursor: 'pointer', textAlign: 'left',
+                    backgroundColor: isSelected ? 'rgba(97,95,226,0.06)' : 'transparent',
+                    transition: 'background-color 0.15s',
+                  }}
                 >
-                  <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center text-sm font-bold text-primary shrink-0">
-                    {friend.name[0]}
+                  {/* Avatar */}
+                  <div style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0, overflow: 'hidden', backgroundColor: 'rgba(97,95,226,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {friend.avatar && isValidImageUrl(friend.avatar) ? (
+                      <img src={friend.avatar} alt={friend.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ fontSize: 16, fontWeight: 700, color: '#615fe2' }}>{friend.name[0]}</span>
+                    )}
                   </div>
-                  <div className="flex-1 text-left min-w-0">
-                    <p className="font-medium text-sm text-text-primary">{friend.name}</p>
+
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontWeight: 600, fontSize: 14, color: '#2c3149', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{friend.name}</p>
                     {friend.university?.name && (
-                      <p className="text-[11px] text-text-muted truncate">
-                        {friend.university.name} {friend.courseOfStudy && `· ${friend.courseOfStudy}`}
+                      <p style={{ fontSize: 11, color: '#747995', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {friend.university.name}{friend.courseOfStudy ? ` · ${friend.courseOfStudy}` : ''}
                       </p>
                     )}
                   </div>
-                  <div
-                    className="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors"
-                    style={{
-                      backgroundColor: isSelected ? '#6C63FF' : 'transparent',
-                      borderColor: isSelected ? '#6C63FF' : '#334155',
-                    }}
-                  >
-                    {isSelected && (
-                      <Check size={14} strokeWidth={3} className="text-white" />
-                    )}
+
+                  {/* Checkbox */}
+                  <div style={{
+                    width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+                    border: `2px solid ${isSelected ? '#615fe2' : '#acb0ce'}`,
+                    backgroundColor: isSelected ? '#615fe2' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'background-color 0.15s, border-color 0.15s',
+                  }}>
+                    {isSelected && <Check size={13} strokeWidth={3} color="white" />}
                   </div>
                 </button>
               );
@@ -363,30 +351,33 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
 
       {/* Error */}
       {error && (
-        <div className="px-4 py-2 bg-error/10 text-error text-sm text-center">
-          {error}
+        <div style={{ padding: '10px 16px', backgroundColor: 'rgba(239,68,68,0.08)', borderTop: '1px solid rgba(239,68,68,0.2)' }}>
+          <p style={{ fontSize: 13, color: '#ef4444', textAlign: 'center', margin: 0 }}>{error}</p>
         </div>
       )}
 
-      {/* Footer — Crea Gruppo button */}
-      <div className="px-4 pb-[calc(env(safe-area-inset-bottom,0px)+80px)] pt-4 border-t border-border">
+      {/* Footer */}
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        padding: '12px 16px calc(env(safe-area-inset-bottom, 0px) + 80px)',
+        backgroundColor: 'rgba(251,248,255,0.95)',
+        backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+        borderTop: '1px solid rgba(172,176,206,0.2)',
+      }}>
         <button
           onClick={handleCreate}
           disabled={!canCreate || creating}
-          className="w-full flex items-center justify-center font-medium text-white transition-colors"
           style={{
-            height: '56px',
-            borderRadius: '12px',
-            fontSize: '16px',
-            backgroundColor: canCreate && !creating ? '#6C63FF' : '#4A4A6A',
+            width: '100%', height: 52, borderRadius: 24, border: 'none',
             cursor: canCreate && !creating ? 'pointer' : 'not-allowed',
+            backgroundColor: canCreate && !creating ? '#615fe2' : 'rgba(97,95,226,0.3)',
+            color: 'white', fontFamily: 'var(--font-plus-jakarta)', fontWeight: 600, fontSize: 16,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: canCreate && !creating ? '0 2px 12px rgba(97,95,226,0.3)' : 'none',
+            transition: 'background-color 0.2s, box-shadow 0.2s',
           }}
         >
-          {creating ? (
-            <Spinner size={20} className="text-white" />
-          ) : (
-            t.networking.createGroup
-          )}
+          {creating ? <Spinner size={20} color="white" /> : t.networking.createGroup}
         </button>
       </div>
     </div>
