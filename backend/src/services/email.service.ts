@@ -55,8 +55,6 @@ function baseTemplate(title: string, body: string): string {
 }
 
 export async function sendVerificationEmail(to: string, name: string, code: string): Promise<void> {
-  logger.warn(`[OTP] Verification code for ${to}: ${code}`);
-
   if (!transporter) return;
 
   const html = baseTemplate('Verifica la tua email', `
