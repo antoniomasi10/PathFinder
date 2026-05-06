@@ -2,6 +2,9 @@ import dotenv from 'dotenv';
 import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
+import { validateEnv } from './lib/validateEnv';
+validateEnv();
+
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -34,6 +37,7 @@ import { setIO } from './socketManager';
 import { startDeadlineChecker } from './services/deadlineChecker';
 import { startImportScheduler } from './services/import/scheduler';
 import { bulkGenerateEmbeddings } from './services/embedding.service';
+import { startRetentionCleanupJob } from './services/cleanup.service';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
 if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
@@ -68,6 +72,14 @@ const io = new Server(httpServer, {
 
 app.set('trust proxy', 1); // trust first proxy (nginx/caddy)
 app.use(helmet());
+
+if (process.env.NODE_ENV === 'production') {
+  app.use((_req, res, next) => {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    next();
+  });
+}
+
 app.use(cors({
   origin: corsOrigin,
   credentials: true,
@@ -159,6 +171,7 @@ httpServer.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
   startDeadlineChecker();
   startImportScheduler();
+  startRetentionCleanupJob();
   // Backfill embeddings for records that don't have one yet (runs in background)
   bulkGenerateEmbeddings().catch((err) => {
     logger.error('Embedding backfill failed:', err);

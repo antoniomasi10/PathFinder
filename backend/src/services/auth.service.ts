@@ -4,6 +4,7 @@ import { generateAccessToken, generateRefreshToken, JwtPayload } from '../utils/
 import { sendVerificationEmail, sendPasswordResetEmail, generateOTP } from './email.service';
 import { OAuth2Client } from 'google-auth-library';
 import { logger } from '../utils/logger';
+import { parseAndValidateBirthDate } from '../utils/age';
 
 const googleClient = process.env.GOOGLE_CLIENT_ID
   ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
@@ -17,6 +18,9 @@ interface RegisterInput {
   phone?: string;
   universityId?: string;
   courseOfStudy?: string;
+  birthDate?: string;
+  tosConsent?: boolean;
+  marketingConsent?: boolean;
 }
 
 interface LoginInput {
@@ -45,6 +49,12 @@ export async function registerUser(input: RegisterInput) {
     throw new Error('Email già registrata');
   }
 
+  const parsedBirthDate = input.birthDate
+    ? parseAndValidateBirthDate(input.birthDate)
+    : undefined;
+
+  const consentAt = new Date();
+
   const passwordHash = await hashPassword(input.password);
 
   // Generate OTP before creating user
@@ -64,6 +74,10 @@ export async function registerUser(input: RegisterInput) {
       emailVerified: false,
       universityId: input.universityId || null,
       courseOfStudy: input.courseOfStudy || null,
+      birthDate: parsedBirthDate || null,
+      tosConsentAt: input.tosConsent ? consentAt : null,
+      privacyConsentAt: input.tosConsent ? consentAt : null,
+      marketingConsent: input.marketingConsent ?? false,
     },
     include: { university: true },
   });
@@ -299,6 +313,7 @@ export async function googleAuth(idToken: string) {
     }
   } else {
     // Create new user
+    const now = new Date();
     user = await prisma.user.create({
       data: {
         email: email!,
@@ -307,6 +322,8 @@ export async function googleAuth(idToken: string) {
         provider: 'GOOGLE',
         emailVerified: true,
         avatar: picture || null,
+        tosConsentAt: now,
+        privacyConsentAt: now,
       },
       include: { university: true },
     });

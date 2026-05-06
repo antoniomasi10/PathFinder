@@ -2,13 +2,14 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { getAccessToken } from '@/lib/api';
 
 export default function RootPage() {
   const router = useRouter();
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      const token = localStorage.getItem('accessToken');
+      const token = getAccessToken();
       router.replace(token ? '/home' : '/login');
     }, 1500);
     return () => clearTimeout(timer);

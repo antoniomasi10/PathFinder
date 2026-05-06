@@ -1,4 +1,5 @@
 import { io, Socket } from 'socket.io-client';
+import { getAccessToken } from './api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 if (typeof window !== 'undefined' && !process.env.NEXT_PUBLIC_API_URL && window.location.hostname !== 'localhost') {
@@ -13,7 +14,7 @@ let notificationSocket: Socket | null = null;
  * Call this after a token refresh (e.g., from the Axios 401 interceptor).
  */
 export function reauthenticateSockets() {
-  const token = localStorage.getItem('accessToken');
+  const token = getAccessToken();
   if (!token) return;
   if (socket?.connected) {
     socket.emit('socket_reauthenticate', { token });
@@ -25,7 +26,7 @@ export function reauthenticateSockets() {
 
 export function getSocket(): Socket {
   if (!socket) {
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     socket = io(`${API_URL}/chat`, {
       auth: { token },
       transports: ['websocket', 'polling'],
@@ -38,7 +39,7 @@ export function getSocket(): Socket {
     // Refresh token on each reconnect attempt so we never use an expired JWT
     socket.on('reconnect_attempt', () => {
       if (socket) {
-        socket.auth = { token: localStorage.getItem('accessToken') };
+        socket.auth = { token: getAccessToken() };
       }
     });
   }
@@ -47,7 +48,7 @@ export function getSocket(): Socket {
 
 export function getNotificationSocket(): Socket {
   if (!notificationSocket) {
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     notificationSocket = io(`${API_URL}/notifications`, {
       auth: { token },
       transports: ['websocket', 'polling'],
@@ -59,7 +60,7 @@ export function getNotificationSocket(): Socket {
 
     notificationSocket.on('reconnect_attempt', () => {
       if (notificationSocket) {
-        notificationSocket.auth = { token: localStorage.getItem('accessToken') };
+        notificationSocket.auth = { token: getAccessToken() };
       }
     });
   }

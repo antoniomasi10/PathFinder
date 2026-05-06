@@ -6,6 +6,12 @@ if (typeof window !== 'undefined' && !process.env.NEXT_PUBLIC_API_URL && window.
   console.warn('NEXT_PUBLIC_API_URL is not set - using localhost fallback');
 }
 
+// In-memory access token — never written to localStorage (XSS protection)
+let _accessToken: string | null = null;
+export function setAccessToken(token: string): void { _accessToken = token; }
+export function getAccessToken(): string | null { return _accessToken; }
+export function clearAccessToken(): void { _accessToken = null; }
+
 const api = axios.create({
   baseURL: `${API_URL}/api`,
   withCredentials: true,
@@ -17,7 +23,7 @@ const api = axios.create({
 const etagStore = new Map<string, { etag: string; data: unknown }>();
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
+  const token = _accessToken;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -71,12 +77,12 @@ api.interceptors.response.use(
         refreshPromise = axios
           .post(`${API_URL}/api/auth/refresh`, {}, { withCredentials: true })
           .then(({ data }) => {
-            localStorage.setItem('accessToken', data.accessToken);
+            setAccessToken(data.accessToken);
             reauthenticateSockets();
             return data.accessToken as string;
           })
           .catch((err) => {
-            localStorage.removeItem('accessToken');
+            clearAccessToken();
             throw err;
           })
           .finally(() => {

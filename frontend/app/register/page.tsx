@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import api from '@/lib/api';
+import api, { setAccessToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import SearchableSelect from '@/components/SearchableSelect';
 import { italianCourses } from '@/data/italianCourses';
@@ -84,6 +84,9 @@ export default function RegisterPage() {
   const [universityId, setUniversityId] = useState('');
   const [courseOfStudy, setCourseOfStudy] = useState('');
   const [accepted, setAccepted] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
+  const [birthDate, setBirthDate] = useState('');
+  const [birthDateError, setBirthDateError] = useState('');
   const [universities, setUniversities] = useState<University[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -110,14 +113,33 @@ export default function RegisterPage() {
     if (!universityId) { setError('Seleziona la tua università'); return; }
     if (!courseOfStudy.trim()) { setError('Inserisci il tuo corso di studi'); return; }
     if (!accepted) { setError('Devi accettare i Termini di Servizio per continuare'); return; }
+    // Validate age
+    if (!birthDate) {
+      setBirthDateError('Inserisci la tua data di nascita');
+      return;
+    }
+    const birth = new Date(birthDate);
+    if (isNaN(birth.getTime())) {
+      setBirthDateError('Data di nascita non valida');
+      return;
+    }
+    const ageMs = Date.now() - birth.getTime();
+    const ageYears = ageMs / (365.25 * 24 * 60 * 60 * 1000);
+    if (ageYears < 18) {
+      setBirthDateError('Devi avere almeno 18 anni per registrarti');
+      return;
+    }
+    setBirthDateError('');
     setLoading(true);
     try {
       const { data } = await api.post('/auth/register', {
         name, surname, email, password,
         phone: phone || undefined,
-        universityId, courseOfStudy,
+        universityId, courseOfStudy, birthDate,
+        tosConsent: true,
+        marketingConsent,
       });
-      localStorage.setItem('accessToken', data.accessToken);
+      setAccessToken(data.accessToken);
       setUser(data.user);
       router.push('/verify-email');
     } catch (err: any) {
@@ -274,6 +296,21 @@ export default function RegisterPage() {
               />
             </InputField>
 
+            {/* Data di nascita */}
+            <InputField label="DATA DI NASCITA">
+              <input
+                type="date"
+                value={birthDate}
+                onChange={(e) => { setBirthDate(e.target.value); setBirthDateError(''); }}
+                max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
+                required
+                className="w-full bg-[#fbf8ff] border border-[#c7c4d6] rounded-[24px] px-5 py-3.5 text-sm text-[#2c3149] focus:outline-none focus:ring-2 focus:ring-[#615fe2]/30 focus:border-[#615fe2] transition-all"
+              />
+              {birthDateError && (
+                <p className="text-xs text-red-500 pl-1 mt-1">{birthDateError}</p>
+              )}
+            </InputField>
+
             {/* Terms */}
             <div className="flex items-start gap-3 py-1">
               <div className="pt-0.5">
@@ -287,9 +324,29 @@ export default function RegisterPage() {
               </div>
               <label htmlFor="terms" className="text-sm text-[#464554] leading-[1.5] cursor-pointer">
                 Accetto i{' '}
-                <span className="font-medium text-[#615fe2]">Termini di Servizio</span>
+                <Link href="/terms" target="_blank" rel="noopener noreferrer" className="font-medium text-[#615fe2] underline hover:text-[#4f4cc0]">
+                  Termini di Servizio
+                </Link>
                 {' '}e confermo di aver letto l&apos;
-                <span className="font-medium text-[#615fe2]">Informativa sulla Privacy</span>.
+                <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-[#615fe2] underline hover:text-[#4f4cc0]">
+                  Informativa sulla Privacy
+                </Link>.
+              </label>
+            </div>
+            {/* Marketing consent - optional */}
+            <div className="flex items-start gap-3 py-1">
+              <div className="pt-0.5">
+                <input
+                  id="marketing"
+                  type="checkbox"
+                  checked={marketingConsent}
+                  onChange={(e) => setMarketingConsent(e.target.checked)}
+                  className="w-4 h-4 rounded border border-[#c7c4d6] accent-[#615fe2] cursor-pointer"
+                />
+              </div>
+              <label htmlFor="marketing" className="text-sm text-[#464554] leading-[1.5] cursor-pointer">
+                Acconsento a ricevere comunicazioni di marketing e aggiornamenti sulle opportunità{' '}
+                <span className="text-[10px] font-medium text-[#777585] tracking-[0.5px] uppercase">(opzionale)</span>
               </label>
             </div>
 

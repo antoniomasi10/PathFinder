@@ -19,8 +19,8 @@ function setRefreshCookie(res: Response, token: string) {
   const isProduction = process.env.NODE_ENV === 'production';
   res.cookie('refreshToken', token, {
     httpOnly: true,
-    secure: true,
-    sameSite: isProduction ? 'none' : 'strict',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000,
     path: '/api/auth',
   });
@@ -28,12 +28,12 @@ function setRefreshCookie(res: Response, token: string) {
 
 export async function register(req: Request, res: Response) {
   try {
-    const { name, surname, email, password, phone, universityId, courseOfStudy } = req.body;
+    const { name, surname, email, password, phone, universityId, courseOfStudy, birthDate, tosConsent, marketingConsent } = req.body;
     if (!name || !surname || !email || !password) {
       res.status(400).json({ error: 'Nome, cognome, email e password sono obbligatori' });
       return;
     }
-    const result = await registerUser({ name, surname, email, password, phone, universityId, courseOfStudy });
+    const result = await registerUser({ name, surname, email, password, phone, universityId, courseOfStudy, birthDate, tosConsent, marketingConsent });
 
     setRefreshCookie(res, result.refreshToken);
     trackUserToken(result.user.id, result.refreshToken).catch(() => {});

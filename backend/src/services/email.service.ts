@@ -55,8 +55,6 @@ function baseTemplate(title: string, body: string): string {
 }
 
 export async function sendVerificationEmail(to: string, name: string, code: string): Promise<void> {
-  logger.warn(`[OTP] Verification code for ${to}: ${code}`);
-
   if (!transporter) return;
 
   const html = baseTemplate('Verifica la tua email', `
@@ -77,13 +75,11 @@ export async function sendVerificationEmail(to: string, name: string, code: stri
     });
     logger.info('Verification email sent', { to });
   } catch (error) {
-    logger.error('Failed to send verification email (OTP already logged above)', { to, error: String(error) });
+    logger.error('Failed to send verification email', { to, error: String(error) });
   }
 }
 
 export async function sendPasswordResetEmail(to: string, name: string, code: string): Promise<void> {
-  logger.warn(`[OTP] Password reset code for ${to}: ${code}`);
-
   if (!transporter) return;
 
   const html = baseTemplate('Reimposta la tua password', `
@@ -104,7 +100,7 @@ export async function sendPasswordResetEmail(to: string, name: string, code: str
     });
     logger.info('Password reset email sent', { to });
   } catch (error) {
-    logger.error('Failed to send password reset email (OTP already logged above)', { to, error: String(error) });
+    logger.error('Failed to send password reset email', { to, error: String(error) });
   }
 }
 
