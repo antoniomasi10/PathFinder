@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import api from '@/lib/api';
+import api, { setAccessToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
 
@@ -69,7 +69,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const { data } = await api.post('/auth/login', { email, password });
-      localStorage.setItem('accessToken', data.accessToken);
+      setAccessToken(data.accessToken);
       setUser(data.user);
       if (!data.user.emailVerified) {
         router.push('/verify-email');

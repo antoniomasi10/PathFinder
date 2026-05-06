@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import api from '@/lib/api';
+import api, { setAccessToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import SearchableSelect from '@/components/SearchableSelect';
 import { italianCourses } from '@/data/italianCourses';
@@ -139,7 +139,7 @@ export default function RegisterPage() {
         tosConsent: true,
         marketingConsent,
       });
-      localStorage.setItem('accessToken', data.accessToken);
+      setAccessToken(data.accessToken);
       setUser(data.user);
       router.push('/verify-email');
     } catch (err: any) {

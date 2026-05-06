@@ -3,7 +3,7 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { AuthContext, AuthUser } from '@/lib/auth';
-import api from '@/lib/api';
+import api, { clearAccessToken } from '@/lib/api';
 import { useLanguage } from '@/lib/language';
 
 const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
@@ -16,15 +16,9 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      setLoading(false);
-      if (!publicPaths.includes(pathname)) {
-        router.replace('/login');
-      }
-      return;
-    }
-
+    // No localStorage check — the httpOnly refresh cookie is the session source of truth.
+    // api.get('/profile/me') will auto-refresh via the 401 interceptor if the in-memory
+    // access token is missing (e.g., after a page reload).
     api.get('/profile/me')
       .then(({ data }) => {
         setUser({
@@ -50,8 +44,8 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch(() => {
-        // Token invalid or expired — clean up and redirect
-        localStorage.removeItem('accessToken');
+        // Refresh cookie also invalid — user is logged out
+        clearAccessToken();
         if (!publicPaths.includes(pathname)) {
           router.replace('/login');
         }
@@ -61,7 +55,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     api.post('/auth/logout').catch(() => {});
-    localStorage.removeItem('accessToken');
+    clearAccessToken();
     setUser(null);
     router.replace('/login');
   };

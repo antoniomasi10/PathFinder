@@ -3,7 +3,7 @@
 import { GoogleLogin } from '@react-oauth/google';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import api from '@/lib/api';
+import api, { setAccessToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
 export default function GoogleAuthButton() {
@@ -17,7 +17,7 @@ export default function GoogleAuthButton() {
       const { data } = await api.post('/auth/google', {
         idToken: credentialResponse.credential,
       });
-      localStorage.setItem('accessToken', data.accessToken);
+      setAccessToken(data.accessToken);
       setUser(data.user);
 
       if (!data.user.profileCompleted) {
