@@ -8,7 +8,6 @@ import { useAuth } from '@/lib/auth';
 import GoogleAuthButton from '@/components/GoogleAuthButton';
 
 const LOGO_SWASH = '/logo-coha-swash.svg';
-const APPLE_ICON = '/icon-apple.svg';
 
 function MailIcon() {
   return (
@@ -133,8 +132,7 @@ export default function LoginPage() {
               disabled
               className="w-full flex items-center justify-center gap-3 bg-[#fbf8ff] border border-[#acb0ce] rounded-[24px] px-[17px] py-[13px] opacity-50 cursor-not-allowed"
             >
-              <img src={APPLE_ICON} alt="" className="w-5 h-5" />
-              <span className="text-xs font-medium text-[#2c3149] tracking-[0.5px]">Accedi con Apple</span>
+<span className="text-xs font-medium text-[#2c3149] tracking-[0.5px]">Accedi con Apple</span>
             </button>
           </div>
 
