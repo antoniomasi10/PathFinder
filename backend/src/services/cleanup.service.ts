@@ -36,7 +36,7 @@ export async function runRetentionCleanup(): Promise<void> {
     ]);
     logger.info(`Retention cleanup complete: deleted ${friendRequests} rejected friend requests, ${messages} old messages`);
   } catch (err) {
-    logger.error('Retention cleanup failed', err);
+    logger.error('Retention cleanup failed', { error: String(err) });
   }
 }
 
