@@ -1,5 +1,6 @@
 import prisma from '../lib/prisma';
 import { GpaRange, EnglishLevel, WillingnessToRelocate } from '@prisma/client';
+import { normalizeFieldToEnum } from './import/utils';
 import { uploadImage } from '../utils/imageUpload';
 
 /** Select all User scalar fields except `embedding` (Unsupported vector type) and `passwordHash`. */
@@ -25,10 +26,11 @@ interface ProfileData {
     freeTimeActivity: string;
     problemSolvingStyle: string;
     riskTolerance: string;
+    coreValue: string;
     careerPreference: string;
     professionalIdentity: string;
   };
-  cluster: 'INNOVATOR' | 'ANALYST' | 'LEADER' | 'HELPER';
+  cluster: 'Analista' | 'Creativo' | 'Leader' | 'Imprenditore' | 'Sociale' | 'Explorer';
   languages: Array<{ lingua: string; peso: number; valoreLibero?: string }>;
   filters: {
     yearOfStudy: string;
@@ -72,18 +74,30 @@ function extractYearOfStudy(s: string): number {
   return year;
 }
 
-function derivePrimaryInterest(cluster: ProfileData['cluster']): string {
-  switch (cluster) {
-    case 'INNOVATOR': return 'tech';
-    case 'ANALYST': return 'tech';
-    case 'LEADER': return 'business';
-    case 'HELPER': return 'general';
+async function derivePrimaryInterest(userId: string): Promise<string> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { courseOfStudy: true } });
+  const course = user?.courseOfStudy;
+  if (!course) return 'general';
+  switch (normalizeFieldToEnum(course)) {
+    case 'COMPUTER_SCIENCE': return 'tech';
+    case 'ENGINEERING':      return 'tech';
+    case 'MATHEMATICS':      return 'tech';
+    case 'MEDICINE':         return 'healthcare';
+    case 'LIFE_SCIENCES':    return 'healthcare';
+    case 'PHYSICAL_SCIENCES':return 'ricerca_scientifica';
+    case 'ECONOMICS':        return 'finance';
+    case 'BUSINESS':         return 'business';
+    case 'LAW':              return 'law_policy';
+    case 'POLITICAL_SCIENCE':return 'law_policy';
+    case 'DESIGN':           return 'creative';
+    case 'ARCHITECTURE':     return 'creative';
+    default:                 return 'general';
   }
 }
 
 export async function saveQuestionnaire(userId: string, input: ProfileData) {
   const { answers, cluster } = input;
-  const primaryInterest = derivePrimaryInterest(cluster);
+  const primaryInterest = await derivePrimaryInterest(userId);
 
   const profileFields = {
     primaryInterest,
@@ -91,6 +105,7 @@ export async function saveQuestionnaire(userId: string, input: ProfileData) {
     freeTimeActivity: answers.freeTimeActivity,
     problemSolvingStyle: answers.problemSolvingStyle,
     riskTolerance: answers.riskTolerance,
+    coreValue: answers.coreValue,
     careerVision: answers.careerPreference,
     professionalGoal: answers.professionalIdentity,
     languages: input.languages || [],

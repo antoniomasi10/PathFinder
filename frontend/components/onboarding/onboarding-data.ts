@@ -31,11 +31,12 @@ export interface ProfileData {
     freeTimeActivity: string;
     problemSolvingStyle: string;
     riskTolerance: string;
+    coreValue: string;
     careerPreference: string;
     professionalIdentity: string;
   };
   interests: InterestEntry[];
-  cluster: 'INNOVATOR' | 'ANALYST' | 'LEADER' | 'HELPER';
+  cluster: 'Analista' | 'Creativo' | 'Leader' | 'Imprenditore' | 'Sociale' | 'Explorer';
   languages: LanguageEntry[];
   filters: {
     yearOfStudy: string;
@@ -97,40 +98,41 @@ export const QUESTIONS: Question[] = [
     id: 6,
     question: 'In un progetto di gruppo, quale ruolo ti ritrovi a fare anche senza che te lo chiedano?',
     options: [
-      'Analizzare dati e numeri',
-      'Creare qualcosa di nuovo',
-      'Guidare un gruppo',
-      'Risolvere problemi tecnici',
-      'Aiutare direttamente le persone',
-      'Insegnare o formare altri',
-      'Comunicare e persuadere',
+      'Analizzare dati e trovare pattern',
+      'Ideare soluzioni creative o visive',
+      'Guidare il team verso l\'obiettivo',
+      'Proporre idee e possibilità nuove',
+      'Supportare e motivare le persone',
+      'Portare esperienze e prospettive esterne',
+      'Risolvere problemi tecnici nel dettaglio',
     ],
     hasOtherField: true,
     selectionType: 'single',
   },
   {
     id: 7,
-    question: 'Se avessi un pomeriggio libero, cosa faresti?',
+    question: 'Cosa ti motiva di più in quello che fai?',
     options: [
-      'Leggo o mi informo su un settore specifico',
-      'Lavoro a un progetto personale',
-      'Studio qualcosa di nuovo',
-      'Faccio sport o attività pratica',
-      'Seguo un corso online',
-      'Ascolto podcast o contenuti formativi',
-      'Esco con amici',
+      'Creare qualcosa che prima non esisteva',
+      'Raggiungere risultati concreti e misurabili',
+      'Fare la differenza nella vita delle persone',
+      'Esplorare contesti e culture nuove',
+      'Costruire qualcosa di mio, con autonomia',
+      'Approfondire una materia fino in fondo',
     ],
     hasOtherField: true,
     selectionType: 'single',
   },
   {
     id: 8,
-    question: 'Quando affronti un problema, di solito...',
+    question: 'Come preferisci affrontare una sfida nuova?',
     options: [
-      'Provo diverse soluzioni',
-      'Lo scompongo in parti più piccole',
-      'Cerco qualcuno più esperto',
-      'Seguo il mio istinto',
+      'Con metodo: analizzo prima di agire',
+      'Con creatività: cerco approcci originali',
+      'Coordinando le persone giuste',
+      'Sperimentando: accetto di sbagliare',
+      'Costruendo consenso e supporto',
+      'Traendo ispirazione da contesti diversi',
     ],
     hasOtherField: false,
     selectionType: 'single',
@@ -144,24 +146,42 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 10,
-    question: 'Quale percorso ti attira di più?',
+    question: 'Nel tuo percorso professionale, cosa conta di più per te?',
     options: [
-      'Costruire qualcosa di tuo',
-      'Percorso competitivo',
-      'Percorso stabile',
-      'Fare ricerca e innovazione',
+      'La crescita personale e il riconoscimento dei risultati',
+      'L\'impatto positivo sulla vita degli altri',
+      'La libertà di esplorare, creare e sperimentare',
+      'La stabilità e la profondità in un settore specifico',
     ],
     hasOtherField: false,
     selectionType: 'single',
   },
   {
     id: 11,
-    question: 'Come ti identifichi professionalmente?',
+    question: 'Tra 5 anni ti vedi...',
     options: [
-      'Imprenditore/fondatore',
-      'Specialista',
-      'Manager/leader',
-      'Ricercatore/accademico',
+      'A fondare o co-fondare un\'azienda',
+      'Come esperto/specialista nel mio campo',
+      'In un ruolo di leadership in una grande organizzazione',
+      'A fare ricerca o innovazione avanzata',
+      'A lavorare per un impatto sociale o ambientale',
+      'In contesti internazionali sempre diversi',
+      'A esprimere la mia creatività (arte, design, comunicazione...)',
+    ],
+    hasOtherField: false,
+    selectionType: 'single',
+  },
+  {
+    id: 12,
+    question: 'Che tipo di opportunità stai cercando principalmente?',
+    options: [
+      'Evento breve (hackathon, conferenza, workshop)',
+      'Stage o internship (1–12 mesi)',
+      'Programma estivo o bootcamp',
+      'Fellowship o programma lungo (6+ mesi)',
+      'Scambio universitario / Erasmus',
+      'Volontariato o extracurriculare',
+      'Sono aperto a tutto',
     ],
     hasOtherField: false,
     selectionType: 'single',
@@ -212,78 +232,119 @@ function computeCluster(
   multiAnswers: Record<number, string[]>,
   otherTexts: Record<number, string>,
 ): ProfileData['cluster'] {
-  const scores = { INNOVATOR: 0, ANALYST: 0, LEADER: 0, HELPER: 0 };
+  const scores: Record<ProfileData['cluster'], number> = {
+    Analista: 0, Creativo: 0, Leader: 0, Imprenditore: 0, Sociale: 0, Explorer: 0,
+  };
+
   const languages = multiAnswers[4] || [];
   const hasOtherLang = (otherTexts[4] ?? '').trim() !== '';
 
+  // Base language bonus (distributed equally across all clusters)
   let totalLangWeight = 0;
   for (const lang of languages) totalLangWeight += getLanguageWeight(lang);
   if (hasOtherLang) totalLangWeight += OTHER_LANGUAGE_WEIGHT;
   const baseLangBonus = Math.min(totalLangWeight, LANGUAGE_CAP);
-  scores.INNOVATOR += baseLangBonus;
-  scores.ANALYST += baseLangBonus;
-  scores.LEADER += baseLangBonus;
-  scores.HELPER += baseLangBonus;
+  for (const c of Object.keys(scores) as ProfileData['cluster'][]) scores[c] += baseLangBonus;
 
-  if (languages.includes('Cinese')) { scores.INNOVATOR += 1.5; scores.ANALYST += 1.5; }
-  if (languages.includes('Giapponese')) { scores.INNOVATOR += 1.5; scores.ANALYST += 1.5; }
-  if (languages.includes('Coreano')) { scores.INNOVATOR += 1.5; scores.ANALYST += 1.5; }
-  if (languages.includes('Arabo')) { scores.INNOVATOR += 1.5; scores.LEADER += 1.5; }
-  if (languages.includes('Francese')) { scores.LEADER += 1.0; scores.HELPER += 1.0; }
-  if (languages.includes('Spagnolo')) { scores.LEADER += 1.0; scores.HELPER += 1.0; }
-  if (languages.includes('Tedesco')) { scores.ANALYST += 1.0; }
-  if (languages.includes('Russo')) { scores.ANALYST += 1.0; scores.INNOVATOR += 1.0; }
+  // Language-specific cluster bonuses
+  if (languages.includes('Cinese'))    { scores.Analista += 1.5; scores.Explorer += 1.5; }
+  if (languages.includes('Giapponese')){ scores.Analista += 1.5; scores.Explorer += 1.5; }
+  if (languages.includes('Coreano'))   { scores.Analista += 1.5; scores.Explorer += 1.5; }
+  if (languages.includes('Arabo'))     { scores.Leader += 1.0; scores.Imprenditore += 1.0; scores.Explorer += 1.5; }
+  if (languages.includes('Francese'))  { scores.Leader += 1.0; scores.Explorer += 1.0; scores.Sociale += 0.5; }
+  if (languages.includes('Spagnolo'))  { scores.Explorer += 1.0; scores.Sociale += 0.5; }
+  if (languages.includes('Tedesco'))   { scores.Analista += 1.0; scores.Leader += 0.5; }
+  if (languages.includes('Russo'))     { scores.Analista += 1.0; scores.Explorer += 0.5; }
   if (hasOtherLang) {
-    scores.INNOVATOR += 0.7 / 4;
-    scores.ANALYST += 0.7 / 4;
-    scores.LEADER += 0.7 / 4;
-    scores.HELPER += 0.7 / 4;
+    for (const c of Object.keys(scores) as ProfileData['cluster'][]) scores[c] += OTHER_LANGUAGE_WEIGHT / 6;
   }
 
-  if (answers[6] === 'Creare qualcosa di nuovo') scores.INNOVATOR += 1;
-  if (answers[6] === 'Analizzare dati e numeri') scores.ANALYST += 1;
-  if (answers[6] === 'Guidare un gruppo') scores.LEADER += 1;
-  if (answers[6] === 'Comunicare e persuadere') scores.LEADER += 1;
-  if (answers[6] === 'Aiutare direttamente le persone') scores.HELPER += 1;
-  if (answers[6] === 'Insegnare o formare altri') scores.HELPER += 1;
-  if (answers[6] === 'Risolvere problemi tecnici') {
-    scores.INNOVATOR += 0.5;
-    scores.ANALYST += 0.5;
+  // Q6 — ruolo in un gruppo
+  switch (answers[6]) {
+    case 'Analizzare dati e trovare pattern':        scores.Analista += 2; break;
+    case 'Ideare soluzioni creative o visive':       scores.Creativo += 2; break;
+    case 'Guidare il team verso l\'obiettivo':       scores.Leader += 2; break;
+    case 'Proporre idee e possibilità nuove':        scores.Imprenditore += 2; break;
+    case 'Supportare e motivare le persone':         scores.Sociale += 2; break;
+    case 'Portare esperienze e prospettive esterne': scores.Explorer += 2; break;
+    case 'Risolvere problemi tecnici nel dettaglio': scores.Analista += 2; break;
   }
 
-  if (answers[7] === 'Lavoro a un progetto personale') scores.INNOVATOR += 1;
-  if (answers[7] === 'Leggo o mi informo su un settore specifico') scores.ANALYST += 1;
-  if (answers[7] === 'Studio qualcosa di nuovo') scores.ANALYST += 0.5;
-  if (answers[7] === 'Seguo un corso online') scores.ANALYST += 0.5;
-  if (answers[7] === 'Ascolto podcast o contenuti formativi') scores.INNOVATOR += 0.5;
-
-  if (answers[8] === 'Provo diverse soluzioni') scores.INNOVATOR += 1;
-  if (answers[8] === 'Lo scompongo in parti più piccole') scores.ANALYST += 1;
-  if (answers[8] === 'Cerco qualcuno più esperto') scores.HELPER += 1;
-
-  if (answers[9] === 'Molto') {
-    scores.INNOVATOR += 1;
-    scores.LEADER += 1;
+  // Q7 — motivazione
+  switch (answers[7]) {
+    case 'Creare qualcosa che prima non esisteva':      scores.Creativo += 1; scores.Imprenditore += 1; break;
+    case 'Raggiungere risultati concreti e misurabili': scores.Analista += 1; scores.Leader += 1; break;
+    case 'Fare la differenza nella vita delle persone': scores.Sociale += 2; break;
+    case 'Esplorare contesti e culture nuove':          scores.Explorer += 2; break;
+    case 'Costruire qualcosa di mio, con autonomia':    scores.Imprenditore += 2; break;
+    case 'Approfondire una materia fino in fondo':      scores.Analista += 2; break;
   }
 
-  if (answers[2] === '18-21') scores.ANALYST += 0.25;
-  if (answers[2] === '21-24') scores.ANALYST += 0.5;
-  if (answers[2] === '24-27') scores.ANALYST += 0.75;
-  if (answers[2] === '27-30+') scores.ANALYST += 1;
+  // Q8 — approccio sfide
+  switch (answers[8]) {
+    case 'Con metodo: analizzo prima di agire':       scores.Analista += 2; break;
+    case 'Con creatività: cerco approcci originali':  scores.Creativo += 2; break;
+    case 'Coordinando le persone giuste':             scores.Leader += 2; break;
+    case 'Sperimentando: accetto di sbagliare':       scores.Imprenditore += 2; break;
+    case 'Costruendo consenso e supporto':            scores.Sociale += 2; break;
+    case 'Traendo ispirazione da contesti diversi':   scores.Explorer += 2; break;
+  }
 
-  if ((answers[1] || '').startsWith('Magistrale')) scores.LEADER += 1;
+  // Q9 — risk tolerance
+  switch (answers[9]) {
+    case 'Molto':
+      scores.Imprenditore += 1; scores.Explorer += 0.5; scores.Leader += 0.5;
+      break;
+    case 'Abbastanza':
+      scores.Leader += 0.5; scores.Imprenditore += 0.5;
+      break;
+    case 'Poco':
+      scores.Analista += 0.5;
+      break;
+  }
 
-  if (answers[10] === 'Costruire qualcosa di tuo') scores.INNOVATOR += 1;
-  if (answers[10] === 'Percorso competitivo') scores.LEADER += 1;
-  if (answers[10] === 'Percorso stabile') scores.HELPER += 1;
-  if (answers[10] === 'Fare ricerca e innovazione') scores.ANALYST += 1;
+  // Q10 — Schwartz: valore dominante (Self-Enhancement / Self-Transcendence / Openness / Conservation)
+  switch (answers[10]) {
+    case 'La crescita personale e il riconoscimento dei risultati':
+      scores.Analista += 1.5; scores.Leader += 1.5; break;
+    case 'L\'impatto positivo sulla vita degli altri':
+      scores.Sociale += 3; break;
+    case 'La libertà di esplorare, creare e sperimentare':
+      scores.Creativo += 1; scores.Imprenditore += 1; scores.Explorer += 1; break;
+    case 'La stabilità e la profondità in un settore specifico':
+      scores.Analista += 1.5; break;
+  }
 
-  if (answers[11] === 'Imprenditore/fondatore') scores.INNOVATOR += 1;
-  if (answers[11] === 'Specialista') scores.ANALYST += 1;
-  if (answers[11] === 'Manager/leader') scores.LEADER += 1;
-  if (answers[11] === 'Ricercatore/accademico') scores.HELPER += 1;
+  // Q11 — visione 5 anni
+  switch (answers[11]) {
+    case 'A fondare o co-fondare un\'azienda':                    scores.Imprenditore += 2; break;
+    case 'Come esperto/specialista nel mio campo':                scores.Analista += 2; break;
+    case 'In un ruolo di leadership in una grande organizzazione':scores.Leader += 2; break;
+    case 'A fare ricerca o innovazione avanzata':                 scores.Analista += 1; scores.Explorer += 1; break;
+    case 'A lavorare per un impatto sociale o ambientale':        scores.Sociale += 2; break;
+    case 'In contesti internazionali sempre diversi':             scores.Explorer += 2; break;
+    case 'A esprimere la mia creatività (arte, design, comunicazione...)': scores.Creativo += 2; break;
+  }
 
-  const order: ProfileData['cluster'][] = ['INNOVATOR', 'ANALYST', 'LEADER', 'HELPER'];
+  // Q1 — anno di corso
+  if ((answers[1] || '').startsWith('Magistrale')) {
+    scores.Leader += 1; scores.Explorer += 0.5;
+  }
+
+  // Q2 — media voti (segnale Analista)
+  switch (answers[2]) {
+    case '27-30+': scores.Analista += 1;    break;
+    case '24-27':  scores.Analista += 0.75; break;
+    case '21-24':  scores.Analista += 0.5;  break;
+    case '18-21':  scores.Analista += 0.25; break;
+  }
+
+  // Q5 — mobilità
+  if (answers[5] === 'Sì, ovunque') {
+    scores.Explorer += 1; scores.Imprenditore += 0.5;
+  }
+
+  const order: ProfileData['cluster'][] = ['Analista', 'Creativo', 'Leader', 'Imprenditore', 'Sociale', 'Explorer'];
   let best = order[0];
   for (const c of order) {
     if (scores[c] > scores[best]) best = c;
@@ -312,8 +373,9 @@ export function buildProfileData(
       freeTimeActivity: answers[7] ?? '',
       problemSolvingStyle: answers[8] ?? '',
       riskTolerance: answers[9] ?? '',
-      careerPreference: answers[10] ?? '',
-      professionalIdentity: answers[11] ?? '',
+      coreValue: answers[10] ?? '',
+      careerPreference: answers[11] ?? '',
+      professionalIdentity: answers[12] ?? '',
     },
     interests,
     cluster,
