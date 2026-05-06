@@ -37,6 +37,7 @@ import { setIO } from './socketManager';
 import { startDeadlineChecker } from './services/deadlineChecker';
 import { startImportScheduler } from './services/import/scheduler';
 import { bulkGenerateEmbeddings } from './services/embedding.service';
+import { startRetentionCleanupJob } from './services/cleanup.service';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
 if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
@@ -170,6 +171,7 @@ httpServer.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
   startDeadlineChecker();
   startImportScheduler();
+  startRetentionCleanupJob();
   // Backfill embeddings for records that don't have one yet (runs in background)
   bulkGenerateEmbeddings().catch((err) => {
     logger.error('Embedding backfill failed:', err);
