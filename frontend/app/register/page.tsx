@@ -84,6 +84,8 @@ export default function RegisterPage() {
   const [universityId, setUniversityId] = useState('');
   const [courseOfStudy, setCourseOfStudy] = useState('');
   const [accepted, setAccepted] = useState(false);
+  const [birthDate, setBirthDate] = useState('');
+  const [birthDateError, setBirthDateError] = useState('');
   const [universities, setUniversities] = useState<University[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -110,12 +112,29 @@ export default function RegisterPage() {
     if (!universityId) { setError('Seleziona la tua università'); return; }
     if (!courseOfStudy.trim()) { setError('Inserisci il tuo corso di studi'); return; }
     if (!accepted) { setError('Devi accettare i Termini di Servizio per continuare'); return; }
+    // Validate age
+    if (!birthDate) {
+      setBirthDateError('Inserisci la tua data di nascita');
+      return;
+    }
+    const birth = new Date(birthDate);
+    if (isNaN(birth.getTime())) {
+      setBirthDateError('Data di nascita non valida');
+      return;
+    }
+    const ageMs = Date.now() - birth.getTime();
+    const ageYears = ageMs / (365.25 * 24 * 60 * 60 * 1000);
+    if (ageYears < 18) {
+      setBirthDateError('Devi avere almeno 18 anni per registrarti');
+      return;
+    }
+    setBirthDateError('');
     setLoading(true);
     try {
       const { data } = await api.post('/auth/register', {
         name, surname, email, password,
         phone: phone || undefined,
-        universityId, courseOfStudy,
+        universityId, courseOfStudy, birthDate,
       });
       localStorage.setItem('accessToken', data.accessToken);
       setUser(data.user);
@@ -272,6 +291,21 @@ export default function RegisterPage() {
                 optionClassName="text-[#464554] hover:bg-[#f3f3fd]"
                 optionActiveClassName="bg-[#615fe2]/10 text-[#615fe2]"
               />
+            </InputField>
+
+            {/* Data di nascita */}
+            <InputField label="DATA DI NASCITA">
+              <input
+                type="date"
+                value={birthDate}
+                onChange={(e) => { setBirthDate(e.target.value); setBirthDateError(''); }}
+                max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
+                required
+                className="w-full bg-[#fbf8ff] border border-[#c7c4d6] rounded-[24px] px-5 py-3.5 text-sm text-[#2c3149] focus:outline-none focus:ring-2 focus:ring-[#615fe2]/30 focus:border-[#615fe2] transition-all"
+              />
+              {birthDateError && (
+                <p className="text-xs text-red-500 pl-1 mt-1">{birthDateError}</p>
+              )}
             </InputField>
 
             {/* Terms */}
