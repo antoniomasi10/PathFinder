@@ -1,12 +1,12 @@
-#!/bin/bash
+﻿#!/bin/bash
 set -euo pipefail
 
 # =====================================================
-# PathFinder VPS Setup Script — Hetzner Ubuntu 22.04+
+# COhA VPS Setup Script — Hetzner Ubuntu 22.04+
 # Run as root: bash setup-vps.sh
 # =====================================================
 
-echo "=== PathFinder VPS Setup ==="
+echo "=== COhA VPS Setup ==="
 
 # 1. Update system
 echo "[1/7] Updating system..."
@@ -36,8 +36,8 @@ fi
 
 # 5. Create app directory
 echo "[5/7] Creating app directory..."
-mkdir -p /opt/pathfinder
-cd /opt/pathfinder
+mkdir -p /opt/COhA
+cd /opt/COhA
 
 # 6. Generate secrets
 echo "[6/7] Generating secrets..."
@@ -47,16 +47,16 @@ if [ ! -f .env ]; then
   DB_PASSWORD=$(openssl rand -hex 32)
 
   cat > .env << EOF
-# PathFinder Production Environment
+# COhA Production Environment
 # Generated on $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 
 # Database
-POSTGRES_DB=pathfinder
-POSTGRES_USER=pathfinder
+POSTGRES_DB=COhA
+POSTGRES_USER=COhA
 POSTGRES_PASSWORD=${DB_PASSWORD}
 
 # Backend
-DATABASE_URL=postgresql://pathfinder:${DB_PASSWORD}@postgres:5432/pathfinder?schema=public
+DATABASE_URL=postgresql://COhA:${DB_PASSWORD}@postgres:5432/COhA?schema=public
 JWT_SECRET=${JWT_SECRET}
 JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
 NODE_ENV=production
@@ -70,7 +70,7 @@ EOF
   chmod 600 .env
   echo "  -> .env created with random secrets"
   echo ""
-  echo "  ⚠️  IMPORTANT: Edit /opt/pathfinder/.env and set FRONTEND_URL to your Vercel URL"
+  echo "  ⚠️  IMPORTANT: Edit /opt/COhA/.env and set FRONTEND_URL to your Vercel URL"
   echo ""
 else
   echo "  -> .env already exists, skipping"
@@ -90,8 +90,8 @@ echo ""
 echo "=== Setup complete! ==="
 echo ""
 echo "Next steps:"
-echo "  1. Point your domain (e.g. api.pathfinder.it) to this server's IP"
-echo "  2. Clone the repo: git clone https://github.com/antoniomasi10/PathFinder.git /opt/pathfinder/app"
-echo "  3. Edit /opt/pathfinder/.env — set FRONTEND_URL"
-echo "  4. Run: cd /opt/pathfinder/app && bash deploy/deploy.sh"
+echo "  1. Point your domain (e.g. api.COhA.it) to this server's IP"
+echo "  2. Clone the repo: git clone https://github.com/antoniomasi10/COhA.git /opt/COhA/app"
+echo "  3. Edit /opt/COhA/.env — set FRONTEND_URL"
+echo "  4. Run: cd /opt/COhA/app && bash deploy/deploy.sh"
 echo ""

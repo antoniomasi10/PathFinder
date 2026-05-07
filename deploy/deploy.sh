@@ -1,15 +1,15 @@
-#!/bin/bash
+﻿#!/bin/bash
 set -euo pipefail
 
 # =====================================================
-# PathFinder Deploy Script
-# Run from /opt/pathfinder/app (the repo root)
+# COhA Deploy Script
+# Run from /opt/COhA/app (the repo root)
 # =====================================================
 
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-ENV_FILE="/opt/pathfinder/.env"
+ENV_FILE="/opt/COhA/.env"
 
-echo "=== PathFinder Deploy ==="
+echo "=== COhA Deploy ==="
 echo "App directory: ${APP_DIR}"
 
 # Check .env exists
