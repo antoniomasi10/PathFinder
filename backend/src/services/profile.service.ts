@@ -533,7 +533,12 @@ export async function searchUsers(
   currentUserId?: string,
   yearOfStudy?: number,
   coreSkillArea?: string,
+  page = 1,
+  limit = 20,
 ) {
+  const skip = (page - 1) * limit;
+  const takeForSkillFilter = coreSkillArea ? limit * 10 : limit;
+
   const users = await prisma.user.findMany({
     where: {
       AND: [
@@ -544,7 +549,8 @@ export async function searchUsers(
         yearOfStudy ? { yearOfStudy } : {},
       ],
     },
-    take: coreSkillArea ? 200 : 30,
+    skip: coreSkillArea ? 0 : skip,
+    take: takeForSkillFilter,
     select: {
       id: true,
       name: true,
@@ -561,11 +567,12 @@ export async function searchUsers(
   if (!coreSkillArea || !SKILL_AREA_MAP[coreSkillArea]) return users;
 
   const areaSkillIds = new Set(SKILL_AREA_MAP[coreSkillArea]);
-  return users.filter((u) => {
+  const filtered = users.filter((u) => {
     // Respect skills privacy: exclude users who don't allow public skill visibility
     if (u.privacySkills !== 'Tutti') return false;
     const skills = u.skills as { core?: { id: string }[] | null } | null;
     const coreIds = skills?.core?.map((s) => s.id) ?? [];
     return coreIds.some((id) => areaSkillIds.has(id));
   });
+  return filtered.slice(skip, skip + limit);
 }
