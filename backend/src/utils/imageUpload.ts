@@ -1,4 +1,4 @@
-import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 import r2Client, { R2_BUCKET, R2_CONFIGURED } from '../lib/r2';
 import cloudinary from '../lib/cloudinary';
@@ -111,4 +111,39 @@ export async function uploadImage(dataUri: string, folder: string): Promise<stri
 export async function uploadImages(dataUris: string[], folder: string): Promise<string[]> {
   if (dataUris.length === 0) return [];
   return Promise.all(dataUris.map((uri) => uploadImage(uri, folder)));
+}
+
+/**
+ * Delete a single image from Cloudinary or R2 by its public URL.
+ * Silently ignores URLs from external providers (e.g. Google avatars).
+ */
+export async function deleteImage(url: string): Promise<void> {
+  if (!url) return;
+
+  if (url.startsWith('https://res.cloudinary.com/') && CLOUDINARY_CONFIGURED) {
+    try {
+      // Extract public_id: everything between /upload/ and the file extension
+      const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.[a-z]+$/);
+      if (match) await cloudinary.uploader.destroy(match[1]);
+    } catch (err) {
+      logger.error('Cloudinary delete failed', { url, error: String(err) });
+    }
+    return;
+  }
+
+  if (R2_CONFIGURED && process.env.R2_PUBLIC_URL && url.startsWith(process.env.R2_PUBLIC_URL)) {
+    try {
+      const key = url.replace(`${process.env.R2_PUBLIC_URL.replace(/\/$/, '')}/`, '');
+      await r2Client.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: key }));
+    } catch (err) {
+      logger.error('R2 delete failed', { url, error: String(err) });
+    }
+  }
+}
+
+/**
+ * Delete multiple images. Errors are logged but do not throw.
+ */
+export async function deleteImages(urls: string[]): Promise<void> {
+  await Promise.allSettled(urls.map(deleteImage));
 }

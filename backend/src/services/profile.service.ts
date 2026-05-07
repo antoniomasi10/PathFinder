@@ -1,7 +1,7 @@
 import prisma from '../lib/prisma';
 import { GpaRange, EnglishLevel, WillingnessToRelocate } from '@prisma/client';
 import { normalizeFieldToEnum } from './import/utils';
-import { uploadImage } from '../utils/imageUpload';
+import { uploadImage, deleteImages } from '../utils/imageUpload';
 
 /** Select all User scalar fields except `embedding` (Unsupported vector type) and `passwordHash`. */
 const safeUserSelect = {
@@ -425,6 +425,23 @@ export async function exportUserData(userId: string) {
 }
 
 export async function deleteAccount(userId: string) {
+  // 0. Collect all user-uploaded image URLs before deleting DB records
+  const [user, posts, messages, groupMessages] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { avatar: true } }),
+    prisma.post.findMany({ where: { authorId: userId }, select: { images: true } }),
+    prisma.pathMatesMessage.findMany({ where: { senderId: userId }, select: { images: true } }),
+    prisma.pathMatesMessage.findMany({
+      where: { group: { createdById: userId } },
+      select: { images: true },
+    }),
+  ]);
+  const imageUrls: string[] = [
+    user?.avatar,
+    ...posts.flatMap((p) => (p.images as string[]) ?? []),
+    ...messages.flatMap((m) => (m.images as string[]) ?? []),
+    ...groupMessages.flatMap((m) => (m.images as string[]) ?? []),
+  ].filter((u): u is string => !!u);
+
   // 1. Delete friend requests (no cascade on User)
   await prisma.friendRequest.deleteMany({
     where: { OR: [{ fromUserId: userId }, { toUserId: userId }] },
@@ -460,6 +477,9 @@ export async function deleteAccount(userId: string) {
   // 5. Delete the user — remaining relations have onDelete: Cascade
   //    (UserProfile, Notification, Post, PostLike, PostComment)
   await prisma.user.delete({ where: { id: userId } });
+
+  // 6. Delete uploaded images from Cloudinary/R2 (best-effort, after DB cleanup)
+  await deleteImages(imageUrls);
 }
 
 export async function getSuggestedUsers(currentUserId: string, limit = 20) {
