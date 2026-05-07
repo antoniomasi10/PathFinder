@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+﻿import nodemailer from 'nodemailer';
 import { logger } from '../utils/logger';
 
 const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
@@ -15,8 +15,8 @@ const transporter = smtpConfigured
     })
   : null;
 
-const FROM_NAME = process.env.EMAIL_FROM_NAME || 'PathFinder';
-const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'noreply@pathfinder.it';
+const FROM_NAME = process.env.EMAIL_FROM_NAME || 'COhA';
+const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'noreply@coha.app';
 
 function baseTemplate(title: string, body: string): string {
   return `
@@ -43,11 +43,11 @@ function baseTemplate(title: string, body: string): string {
 <body>
   <div class="container">
     <div class="card">
-      <div class="logo"><h1>PathFinder</h1></div>
+      <div class="logo"><h1>COhA</h1></div>
       ${body}
     </div>
     <div class="footer">
-      &copy; ${new Date().getFullYear()} PathFinder. Tutti i diritti riservati.
+      &copy; ${new Date().getFullYear()} COhA. Tutti i diritti riservati.
     </div>
   </div>
 </body>
@@ -70,7 +70,7 @@ export async function sendVerificationEmail(to: string, name: string, code: stri
     await transporter.sendMail({
       from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
       to,
-      subject: `${code} - Codice di verifica PathFinder`,
+      subject: `${code} - Codice di verifica COhA`,
       html,
     });
     logger.info('Verification email sent', { to });
@@ -95,7 +95,7 @@ export async function sendPasswordResetEmail(to: string, name: string, code: str
     await transporter.sendMail({
       from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
       to,
-      subject: 'Reimposta la tua password - PathFinder',
+      subject: 'Reimposta la tua password - COhA',
       html,
     });
     logger.info('Password reset email sent', { to });

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Shared helpers for opportunity importers.
  *
  * Factored out of 10+ importer files to eliminate drift — the per-file copies
@@ -313,7 +313,7 @@ export interface FetchRetryOptions {
 }
 
 /** Identifiable UA so upstream APIs can reach us instead of silently blocking. */
-const DEFAULT_USER_AGENT = 'PathFinder/1.0 (+https://pathfinder.example/about; university-student-platform)';
+const DEFAULT_USER_AGENT = 'COhA/1.0 (+https://coha.example/about; university-student-platform)';
 
 /**
  * fetch with:
@@ -491,7 +491,7 @@ export async function fetchMetaDescription(url: string, timeoutMs = 8000): Promi
       timeoutMs,
       headers: {
         'Accept': 'text/html',
-        'User-Agent': 'Mozilla/5.0 (compatible; PathFinder-bot/1.0; +https://pathfinder.app)',
+        'User-Agent': 'Mozilla/5.0 (compatible; COhA-bot/1.0; +https://coha.app)',
       },
       logTag: '[MetaFetch]',
       retries: 1,

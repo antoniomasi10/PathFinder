@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response } from 'express';
 import { authMiddleware, verifiedMiddleware } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { updateProfileSchema } from '../schemas';
@@ -88,7 +88,7 @@ router.patch('/me', verifiedMiddleware, validate(updateProfileSchema), async (re
 router.get('/me/export', authMiddleware, async (req: Request, res: Response) => {
   try {
     const data = await exportUserData(req.user!.userId);
-    res.setHeader('Content-Disposition', 'attachment; filename="pathfinder-export.json"');
+    res.setHeader('Content-Disposition', 'attachment; filename="coha-export.json"');
     res.setHeader('Content-Type', 'application/json');
     res.json(data);
   } catch (err: any) {

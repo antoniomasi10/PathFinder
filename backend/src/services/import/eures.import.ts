@@ -1,4 +1,4 @@
-/**
+﻿/**
  * EURES (EU Employment Services) Data Import — Playwright Scraper
  * Source: https://europa.eu/eures/portal/jv-se/search
  *
@@ -50,8 +50,8 @@ const PAGE_DELAY_MS = 5000;
  * Identifiable User-Agent so EURES operators can contact us if needed.
  * Contact email must be configurable via env (EURES_CONTACT_EMAIL).
  */
-const CONTACT_EMAIL = process.env.EURES_CONTACT_EMAIL || 'contact@pathfinder.example';
-const USER_AGENT = `PathFinderBot/1.0 (+https://pathfinder.example; ${CONTACT_EMAIL}) Chrome/120.0.0.0`;
+const CONTACT_EMAIL = process.env.EURES_CONTACT_EMAIL || 'contact@coha.example';
+const USER_AGENT = `COhABot/1.0 (+https://coha.example; ${CONTACT_EMAIL}) Chrome/120.0.0.0`;
 
 // ---------------------------------------------------------------------------
 // Helpers
