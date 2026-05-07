@@ -6,7 +6,6 @@ import AuthProvider from '@/components/AuthProvider';
 import QueryProvider from '@/components/QueryProvider';
 import { LanguageProvider } from '@/lib/language';
 import { PrivacyProvider } from '@/lib/privacy';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import CookieBanner from '@/components/CookieBanner';
 
 const sora = Sora({
@@ -26,8 +25,6 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   variable: '--font-plus-jakarta',
   display: 'swap',
 });
-
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '';
 
 export default function RootLayout({
   children,
@@ -52,13 +49,11 @@ export default function RootLayout({
       </head>
       <body className={`${sora.variable} ${dmSans.variable} ${plusJakartaSans.variable} font-body antialiased`}>
         <QueryProvider>
-          <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-            <LanguageProvider>
-              <PrivacyProvider>
-                <AuthProvider>{children}</AuthProvider>
-              </PrivacyProvider>
-            </LanguageProvider>
-          </GoogleOAuthProvider>
+          <LanguageProvider>
+            <PrivacyProvider>
+              <AuthProvider>{children}</AuthProvider>
+            </PrivacyProvider>
+          </LanguageProvider>
           <CookieBanner />
         </QueryProvider>
       </body>

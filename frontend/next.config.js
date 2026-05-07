@@ -9,7 +9,9 @@ const cspDirectives = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://*.githubusercontent.com",
   "font-src 'self' data:",
-  `connect-src 'self' ws://localhost:4000 wss: ${process.env.NEXT_PUBLIC_API_URL || ''} https://accounts.google.com`,
+  isDev
+    ? "connect-src 'self' http://localhost:4000 ws://localhost:4000 ws://localhost:3000 wss:"
+    : `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL || ''} wss: https://accounts.google.com`,
   "frame-src 'self' accounts.google.com",
   "object-src 'none'",
   "base-uri 'self'",
