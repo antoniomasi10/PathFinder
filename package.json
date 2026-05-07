@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "coha",
   "private": true,
   "workspaces": ["frontend", "backend"],

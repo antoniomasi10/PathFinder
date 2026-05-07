@@ -1,4 +1,4 @@
-﻿export const metadata = {
+export const metadata = {
   title: 'Termini di Servizio | COhA',
   description: 'Termini e Condizioni di utilizzo della piattaforma COhA',
 };

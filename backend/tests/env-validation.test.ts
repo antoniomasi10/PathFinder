@@ -1,4 +1,4 @@
-﻿import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { validateEnv } from '../src/lib/validateEnv';
 
 describe('validateEnv', () => {

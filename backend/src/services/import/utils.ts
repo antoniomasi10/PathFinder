@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Shared helpers for opportunity importers.
  *
  * Factored out of 10+ importer files to eliminate drift — the per-file copies

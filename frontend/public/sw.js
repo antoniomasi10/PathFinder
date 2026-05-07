@@ -1,4 +1,4 @@
-﻿// Service Worker for COhA
+// Service Worker for COhA
 // Handles push notifications, click routing, and offline caching
 
 const CACHE_NAME = 'coha-v1';

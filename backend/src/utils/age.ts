@@ -1,4 +1,4 @@
-﻿export function validateAge(birthDate: Date): void {
+export function validateAge(birthDate: Date): void {
   const ageMsec = Date.now() - birthDate.getTime();
   const ageYears = ageMsec / (365.25 * 24 * 60 * 60 * 1000);
   if (ageYears < 18) {

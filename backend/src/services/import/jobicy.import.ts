@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Jobicy Remote Jobs Import
  * Source: https://jobicy.com/api/v2/remote-jobs
  *

@@ -1,4 +1,4 @@
-﻿import webpush from 'web-push';
+import webpush from 'web-push';
 import prisma from '../lib/prisma';
 import { NotificationType } from '@prisma/client';
 import { logger } from '../utils/logger';

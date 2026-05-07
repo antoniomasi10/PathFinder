@@ -1,4 +1,4 @@
-﻿/**
+/**
  * EURES (EU Employment Services) Data Import — Playwright Scraper
  * Source: https://europa.eu/eures/portal/jv-se/search
  *

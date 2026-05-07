@@ -1,4 +1,4 @@
-﻿# COhA
+# COhA
 
 Web app for Italian university students — aggregates universities, internships, stages, and extracurricular opportunities with personalized matching.
 

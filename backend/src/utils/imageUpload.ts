@@ -1,4 +1,4 @@
-﻿import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 import r2Client, { R2_BUCKET, R2_CONFIGURED } from '../lib/r2';
 import cloudinary from '../lib/cloudinary';

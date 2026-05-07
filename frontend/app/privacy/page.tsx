@@ -1,4 +1,4 @@
-﻿export const metadata = {
+export const metadata = {
   title: 'Informativa sulla Privacy | COhA',
   description: 'Informativa sul trattamento dei dati personali ai sensi del GDPR',
 };

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { CloseLg as X, ChevronLeft, ChevronDown as ChevronDownIcon, ClockIcon as Clock, GraduationCap, Globe, Briefcase, Target, CircleCheck, CircleWarning, Check } from '@/components/icons';

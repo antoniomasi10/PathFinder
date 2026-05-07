@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import {
   MapWorld, Globe, Rocket, Star, Briefcase, Target,
   Dice, Brain, BookOpen, CalendarIcon, Award, Muscle,

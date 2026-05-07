@@ -1,4 +1,4 @@
-﻿import { Router, Request, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { authMiddleware, verifiedMiddleware } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { updateProfileSchema } from '../schemas';

@@ -1,4 +1,4 @@
-﻿export type BadgeRarity = 'comune' | 'non_comune' | 'rara' | 'epica' | 'leggendaria';
+export type BadgeRarity = 'comune' | 'non_comune' | 'rara' | 'epica' | 'leggendaria';
 export type BadgeCategory = 'esplorazione' | 'decisione' | 'preparazione' | 'azione' | 'engagement';
 
 export interface BadgeDefinition {
