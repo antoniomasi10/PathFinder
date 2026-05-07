@@ -104,6 +104,15 @@ router.get('/badge-counts', authMiddleware, async (req: Request, res: Response) 
   }
 });
 
+router.delete('/', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    await prisma.notification.deleteMany({ where: { userId: req.user!.userId } });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.patch('/read-all', authMiddleware, async (req: Request, res: Response) => {
   try {
     await notificationService.markAllAsRead(req.user!.userId);
@@ -133,6 +142,26 @@ router.patch('/:id/read', authMiddleware, async (req: Request, res: Response) =>
     res.json(updated);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+router.delete('/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const notification = await prisma.notification.findUnique({
+      where: { id: req.params.id },
+    });
+    if (!notification) {
+      res.status(404).json({ error: 'Notifica non trovata' });
+      return;
+    }
+    if (notification.userId !== req.user!.userId) {
+      res.status(403).json({ error: 'Non autorizzato' });
+      return;
+    }
+    await prisma.notification.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 });
 

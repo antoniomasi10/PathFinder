@@ -118,6 +118,16 @@ export const updateProfileSchema = z.object({
   marketingConsent: z.boolean().optional(),
 });
 
+export const updateGroupSchema = z.object({
+  name: z.string().min(1, 'Nome gruppo obbligatorio').max(100).optional(),
+  description: z.string().max(500).optional(),
+  image: z.string().optional(),
+});
+
+export const addGroupMemberSchema = z.object({
+  userId: z.string().uuid('ID utente non valido'),
+});
+
 export const changePasswordSchema = z.object({
   oldPassword: z.string().min(1, 'Password attuale obbligatoria'),
   newPassword: z.string()

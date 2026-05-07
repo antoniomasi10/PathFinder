@@ -149,6 +149,13 @@ app.use('/api/import', importRoutes);
 app.use('/api/v1/users', skillRoutes);
 app.use('/api/admin', adminRoutes);
 
+// Gestore globale errori — deve essere l'ultimo middleware prima dell'health check
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  logger.error('Errore non gestito', { error: String(err), stack: err?.stack });
+  const message = process.env.NODE_ENV === 'production' ? 'Internal server error' : (err?.message ?? 'Internal server error');
+  res.status(err?.status ?? 500).json({ error: message });
+});
+
 // Health check
 app.get('/api/health', async (_req, res) => {
   try {
