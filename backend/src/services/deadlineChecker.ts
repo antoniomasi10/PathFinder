@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import prisma from '../lib/prisma';
 import { createNotification } from './notification.service';
+import { logger } from '../utils/logger';
 
 export function startDeadlineChecker() {
   // Run every hour
@@ -9,11 +10,11 @@ export function startDeadlineChecker() {
       await checkOpportunityDeadlines();
       await checkCourseDeadlines();
     } catch (err) {
-      console.error('Deadline checker error:', err);
+      logger.error('Deadline checker error', { error: String(err) });
     }
   });
 
-  console.log('Deadline checker started (runs every hour)');
+  logger.info('Deadline checker started (runs every hour)');
 }
 
 async function checkOpportunityDeadlines() {

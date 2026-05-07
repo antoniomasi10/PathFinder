@@ -6,6 +6,7 @@ import { validateEnv } from './lib/validateEnv';
 validateEnv();
 
 import express from 'express';
+import prisma from './lib/prisma';
 import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -119,6 +120,18 @@ const otpLimiter = rateLimit({
 });
 app.use('/api/auth/resend-otp', otpLimiter);
 
+// Write rate limiter: prevents spam on content-creation endpoints
+const writeLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: { error: 'Stai inviando troppe richieste, riprova tra poco' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/posts', writeLimiter);
+app.use('/api/messages', writeLimiter);
+app.use('/api/friends', writeLimiter);
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
@@ -137,8 +150,13 @@ app.use('/api/v1/users', skillRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health check
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok' });
+app.get('/api/health', async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'ok', db: 'ok', uptime: Math.floor(process.uptime()) });
+  } catch {
+    res.status(503).json({ status: 'degraded', db: 'unreachable' });
+  }
 });
 
 // Socket.IO — attach Redis adapter for horizontal scaling (multi-instance)
