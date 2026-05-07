@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { CloseLg as X, ChevronLeft, ChevronDown as ChevronDownIcon, ClockIcon as Clock, GraduationCap, Globe, Briefcase, Target, CircleCheck, CircleWarning, Check } from '@/components/icons';
@@ -144,7 +144,7 @@ export interface SavedSimulation {
 }
 
 function saveSimulation(sim: SavedSimulation) {
-  const key = 'pathfinder-simulations';
+  const key = 'coha-simulations';
   const existing: SavedSimulation[] = JSON.parse(localStorage.getItem(key) || '[]');
   // Replace if same course, otherwise append
   const filtered = existing.filter((s) => s.courseId !== sim.courseId);
@@ -154,7 +154,7 @@ function saveSimulation(sim: SavedSimulation) {
 
 export function getSavedSimulations(): SavedSimulation[] {
   if (typeof window === 'undefined') return [];
-  return JSON.parse(localStorage.getItem('pathfinder-simulations') || '[]');
+  return JSON.parse(localStorage.getItem('coha-simulations') || '[]');
 }
 
 // ── Component ──

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import api from '@/lib/api';
@@ -16,7 +16,7 @@ interface SavedCoursesContextType {
   toggleSave: (course: SavedCourse) => void;
 }
 
-const STORAGE_KEY = 'pathfinder_saved_courses';
+const STORAGE_KEY = 'coha_saved_courses';
 
 function loadFromStorage(): SavedCourse[] {
   try {

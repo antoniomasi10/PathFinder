@@ -1,7 +1,7 @@
-// Service Worker for PathFinder
+﻿// Service Worker for PathFinder
 // Handles push notifications, click routing, and offline caching
 
-const CACHE_NAME = 'pathfinder-v1';
+const CACHE_NAME = 'coha-v1';
 const STATIC_ASSETS = [
   '/',
   '/icons/icon-192.png',

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
@@ -218,7 +218,7 @@ const it = {
     reportProblem: 'Segnala un problema',
     termsOfService: 'Termini di servizio',
     privacyPolicy: 'Informativa sulla privacy',
-    contactEmail: 'supporto@pathfinder.app',
+    contactEmail: 'supporto@coha.app',
     contactResponseTime: 'Rispondiamo entro 48 ore lavorative',
     contactSocialLabel: 'Seguici sui social',
     reportCategoryLabel: 'Categoria',
@@ -577,7 +577,7 @@ const en: Translations = {
     reportProblem: 'Report a problem',
     termsOfService: 'Terms of Service',
     privacyPolicy: 'Privacy Policy',
-    contactEmail: 'support@pathfinder.app',
+    contactEmail: 'support@coha.app',
     contactResponseTime: 'We respond within 48 business hours',
     contactSocialLabel: 'Follow us on social',
     reportCategoryLabel: 'Category',
@@ -931,7 +931,7 @@ const zh: Translations = {
     reportProblem: '举报问题',
     termsOfService: '服务条款',
     privacyPolicy: '隐私政策',
-    contactEmail: 'support@pathfinder.app',
+    contactEmail: 'support@coha.app',
     contactResponseTime: '我们在48个工作小时内回复',
     contactSocialLabel: '在社交媒体上关注我们',
     reportCategoryLabel: '类别',
@@ -1285,7 +1285,7 @@ const es: Translations = {
     reportProblem: 'Reportar un problema',
     termsOfService: 'Términos de servicio',
     privacyPolicy: 'Política de privacidad',
-    contactEmail: 'soporte@pathfinder.app',
+    contactEmail: 'soporte@coha.app',
     contactResponseTime: 'Respondemos en 48 horas laborables',
     contactSocialLabel: 'Síguenos en redes sociales',
     reportCategoryLabel: 'Categoría',
@@ -1639,7 +1639,7 @@ const fr: Translations = {
     reportProblem: 'Signaler un problème',
     termsOfService: "Conditions d'utilisation",
     privacyPolicy: 'Politique de confidentialité',
-    contactEmail: 'support@pathfinder.app',
+    contactEmail: 'support@coha.app',
     contactResponseTime: 'Nous répondons sous 48 heures ouvrées',
     contactSocialLabel: 'Suis-nous sur les réseaux',
     reportCategoryLabel: 'Catégorie',
@@ -1846,7 +1846,7 @@ const LanguageContext = createContext<LanguageContextType>({
   t: it,
 });
 
-const LANG_STORAGE_KEY = 'pathfinder_language';
+const LANG_STORAGE_KEY = 'coha_language';
 const VALID_LANGUAGES: Language[] = ['Italiano', 'Inglese', 'Cinese', 'Spagnolo', 'Francese'];
 
 function getStoredLanguage(): Language {

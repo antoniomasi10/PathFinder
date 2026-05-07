@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import api from '@/lib/api';
@@ -29,7 +29,7 @@ interface SavedOpportunitiesContextType {
   onSave: (listener: SaveListener) => () => void;
 }
 
-const STORAGE_KEY = 'pathfinder_saved_opps';
+const STORAGE_KEY = 'coha_saved_opps';
 
 function isExpiredOver1Day(opp: SavedOpportunity): boolean {
   if (!opp.deadline) return false;

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import api from '@/lib/api';
@@ -46,7 +46,7 @@ const PrivacyContext = createContext<PrivacyContextType>({
   togglePrivateProfile: () => {},
 });
 
-const STORAGE_KEY = 'pathfinder_privacy';
+const STORAGE_KEY = 'coha_privacy';
 
 export function PrivacyProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<PrivacySettings>(defaults);
