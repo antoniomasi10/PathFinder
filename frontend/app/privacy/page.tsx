@@ -99,7 +99,8 @@ export default function PrivacyPage() {
             Responsabili del Trattamento ai sensi dell&apos;Art. 28 GDPR:
           </p>
           <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700">
-            <li><strong>Cloudinary Inc.</strong> (USA) — archiviazione e ottimizzazione delle immagini profilo. Trasferimento verso paese terzo coperto da Clausole Contrattuali Standard (SCC).</li>
+            <li><strong>Cloudflare Inc.</strong> (USA) — archiviazione di immagini caricate dagli utenti (avatar, foto post, immagini messaggi) tramite Cloudflare R2. Trasferimento verso paese terzo coperto da Clausole Contrattuali Standard (SCC). DPA incluso nei ToS di Cloudflare.</li>
+            <li><strong>Cloudinary Inc.</strong> (USA) — ottimizzazione e trasformazione delle immagini (fallback). Trasferimento verso paese terzo coperto da Clausole Contrattuali Standard (SCC).</li>
             <li><strong>Google LLC</strong> (USA) — autenticazione OAuth. Trasferimento coperto da SCC/DPF.</li>
             <li><strong>Provider hosting</strong> — [NOME PROVIDER HOSTING] per l&apos;infrastruttura server.</li>
             <li><strong>SendGrid / Twilio</strong> (USA) — invio di e-mail transazionali. Trasferimento coperto da SCC.</li>
