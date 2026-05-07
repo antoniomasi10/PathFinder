@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+﻿import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma, setupTestUsers, cleanupTestData, TestUsers } from './setup';
 import { createNotification, getNotifications, getUnreadCount, markAsRead, markAllAsRead, getBadgeCounts } from '../src/services/notification.service';
 import { getOrCreatePreferences, updatePreferences, shouldNotify } from '../src/services/notificationPreference.service';
@@ -139,7 +139,7 @@ describe('Notification Creation', () => {
     const notif = await createNotification(
       users.userA.id,
       'SYSTEM',
-      'Aggiornamento disponibile per PathFinder',
+      'Aggiornamento disponibile per COhA',
       '/notifications',
       '\u{2699}\u{FE0F}'
     );

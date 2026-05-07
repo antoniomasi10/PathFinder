@@ -1,4 +1,4 @@
-﻿// Service Worker for PathFinder
+﻿// Service Worker for COhA
 // Handles push notifications, click routing, and offline caching
 
 const CACHE_NAME = 'coha-v1';
@@ -59,10 +59,10 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data.json();
   } catch {
-    data = { title: 'PathFinder', body: event.data.text() };
+    data = { title: 'COhA', body: event.data.text() };
   }
 
-  const title = data.title || 'PathFinder';
+  const title = data.title || 'COhA';
   const options = {
     body: data.body || '',
     icon: data.icon || '/icons/icon-192.png',

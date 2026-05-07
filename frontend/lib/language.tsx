@@ -230,7 +230,7 @@ const it = {
     reportDescriptionPlaceholder: 'Descrivi il problema nel dettaglio...',
     reportSubmit: 'Invia segnalazione',
     reportSuccess: 'Segnalazione inviata',
-    reportSuccessDetail: 'Grazie! Il tuo feedback ci aiuta a migliorare Pathfinder.',
+    reportSuccessDetail: 'Grazie! Il tuo feedback ci aiuta a migliorare COhA.',
   },
   // Info sheet
   info: {
@@ -589,7 +589,7 @@ const en: Translations = {
     reportDescriptionPlaceholder: 'Describe the problem in detail...',
     reportSubmit: 'Submit report',
     reportSuccess: 'Report submitted',
-    reportSuccessDetail: 'Thank you! Your feedback helps us improve Pathfinder.',
+    reportSuccessDetail: 'Thank you! Your feedback helps us improve COhA.',
   },
   info: {
     title: 'Info',
@@ -943,7 +943,7 @@ const zh: Translations = {
     reportDescriptionPlaceholder: '详细描述问题...',
     reportSubmit: '提交报告',
     reportSuccess: '报告已提交',
-    reportSuccessDetail: '谢谢！您的反馈帮助我们改进Pathfinder。',
+    reportSuccessDetail: '谢谢！您的反馈帮助我们改进COhA。',
   },
   info: {
     title: '信息',
@@ -1297,7 +1297,7 @@ const es: Translations = {
     reportDescriptionPlaceholder: 'Describe el problema en detalle...',
     reportSubmit: 'Enviar informe',
     reportSuccess: 'Informe enviado',
-    reportSuccessDetail: '¡Gracias! Tu feedback nos ayuda a mejorar Pathfinder.',
+    reportSuccessDetail: '¡Gracias! Tu feedback nos ayuda a mejorar COhA.',
   },
   info: {
     title: 'Información',
@@ -1651,7 +1651,7 @@ const fr: Translations = {
     reportDescriptionPlaceholder: 'Décris le problème en détail...',
     reportSubmit: 'Envoyer le rapport',
     reportSuccess: 'Rapport envoyé',
-    reportSuccessDetail: 'Merci ! Votre retour nous aide à améliorer Pathfinder.',
+    reportSuccessDetail: 'Merci ! Votre retour nous aide à améliorer COhA.',
   },
   info: {
     title: 'Info',

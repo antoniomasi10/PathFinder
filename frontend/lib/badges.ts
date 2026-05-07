@@ -1,4 +1,4 @@
-export type BadgeRarity = 'comune' | 'non_comune' | 'rara' | 'epica' | 'leggendaria';
+﻿export type BadgeRarity = 'comune' | 'non_comune' | 'rara' | 'epica' | 'leggendaria';
 export type BadgeCategory = 'esplorazione' | 'decisione' | 'preparazione' | 'azione' | 'engagement';
 
 export interface BadgeDefinition {
@@ -57,8 +57,8 @@ export const BADGES: BadgeDefinition[] = [
   { id: 'ambizioso', name: 'Ambizioso', icon: '\u{1F4AA}', description: 'Hai avviato candidature per 3 corsi diversi', rarity: 'epica', category: 'azione', target: 3, trackingKey: 'applications_clicked' },
 
   // --- ENGAGEMENT ---
-  { id: 'fedele', name: 'Fedele', icon: '\u{1F49A}', description: 'Hai usato PathFinder per 5 giorni consecutivi', rarity: 'non_comune', category: 'engagement', target: 5, trackingKey: 'login_streak' },
-  { id: 'dedicato', name: 'Dedicato', icon: '\u{1F525}', description: 'Hai usato PathFinder per 15 giorni consecutivi', rarity: 'rara', category: 'engagement', target: 15, trackingKey: 'login_streak' },
+  { id: 'fedele', name: 'Fedele', icon: '\u{1F49A}', description: 'Hai usato COhA per 5 giorni consecutivi', rarity: 'non_comune', category: 'engagement', target: 5, trackingKey: 'login_streak' },
+  { id: 'dedicato', name: 'Dedicato', icon: '\u{1F525}', description: 'Hai usato COhA per 15 giorni consecutivi', rarity: 'rara', category: 'engagement', target: 15, trackingKey: 'login_streak' },
   { id: 'completista', name: 'Completista', icon: '\u{1F3C6}', description: 'Hai sbloccato tutti gli altri 14 badge!', rarity: 'leggendaria', category: 'engagement', target: 14, trackingKey: 'total_badges' },
 ];
 
