@@ -118,6 +118,7 @@ export default function ProfilePage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
   // Privacy settings from global context (persisted to localStorage)
   const {
     publicProfile,
@@ -194,6 +195,7 @@ export default function ProfilePage() {
       setEditCourse(profileRes.data.courseOfStudy || '');
       setEditYear(profileRes.data.yearOfStudy);
       setEditSkills(normalizedPassions);
+      setMarketingConsent(profileRes.data.marketingConsent ?? false);
       setFriends(friendsRes.data);
       setSuggestedUsers(suggestionsRes.data);
       return profileData;
@@ -1305,6 +1307,32 @@ export default function ProfilePage() {
                 <span className="text-sm text-[#2c3149]">{t.privacy.whoCanMessage}</span>
               </div>
               <PrivacyDropdown value={messagePrivacy} onChange={setMessagePrivacy} allowedOptions={!publicProfile ? ['Pathmates', 'Nessuno'] : undefined} />
+            </div>
+          </div>
+
+          {/* Comunicazioni */}
+          <div className="bg-white rounded-2xl p-4 border border-[rgba(172,176,206,0.3)]">
+            <h4 className="text-xs font-semibold text-[#747995] uppercase tracking-wider mb-3">Comunicazioni</h4>
+            <div className="flex items-center justify-between py-1">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-[22%] bg-[rgba(97,95,226,0.1)] flex items-center justify-center flex-shrink-0">
+                  <Bell size={20} color="#615fe2" />
+                </div>
+                <div>
+                  <span className="text-sm text-[#2c3149] font-medium">Email promozionali</span>
+                  <p className="text-xs text-[#747995]">Novità, opportunità selezionate e aggiornamenti</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  const next = !marketingConsent;
+                  setMarketingConsent(next);
+                  api.patch('/profile/me', { marketingConsent: next }).catch(() => setMarketingConsent(!next));
+                }}
+                className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${marketingConsent ? 'bg-[#615fe2]' : 'bg-[#acb0ce]'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${marketingConsent ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
             </div>
           </div>
 
