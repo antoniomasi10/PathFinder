@@ -1,6 +1,7 @@
 import webpush from 'web-push';
 import prisma from '../lib/prisma';
 import { NotificationType } from '@prisma/client';
+import { logger } from '../utils/logger';
 
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
@@ -152,6 +153,6 @@ export async function sendPushToMultipleUsers(userIds: string[], payload: PushPa
     (r) => r.status === 'fulfilled'
   ).length;
 
-  console.log(`Push sent to ${successCount}/${userIds.length} users`);
+  logger.info('Push notifications sent', { successCount, total: userIds.length });
   return results;
 }
