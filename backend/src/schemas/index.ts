@@ -115,6 +115,7 @@ export const updateProfileSchema = z.object({
   privacySavedOpps: privacyOption.optional(),
   privacyPathmates: privacyOption.optional(),
   messagePrivacy: privacyOption.optional(),
+  marketingConsent: z.boolean().optional(),
 });
 
 export const changePasswordSchema = z.object({

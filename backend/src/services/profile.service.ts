@@ -312,6 +312,7 @@ const ALLOWED_USER_FIELDS = [
   'name', 'surname', 'bio', 'avatar', 'courseOfStudy', 'yearOfStudy',
   'publicProfile', 'privacySkills', 'privacyUniversity',
   'privacySavedOpps', 'privacyPathmates', 'messagePrivacy',
+  'marketingConsent',
 ] as const;
 
 export async function updateProfile(userId: string, data: UpdateProfileData) {
