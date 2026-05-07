@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef, useCallback, ChangeEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -305,7 +305,7 @@ export default function NetworkingPage() {
       setConvPage(1);
       setUnifiedConversations(buildUnifiedList(convData, groupRes.data, pinned));
     } catch (err) {
-      console.error('Failed to load conversations:', err);
+      // silent;
     } finally {
       setLoading(false);
     }
@@ -331,7 +331,7 @@ export default function NetworkingPage() {
       setConvPage(nextPage);
       if (convRes.data.totalPages) setConvTotalPages(convRes.data.totalPages);
     } catch (err) {
-      console.error('Failed to load more conversations:', err);
+      // silent;
     } finally {
       setLoadingMoreConv(false);
     }
@@ -475,7 +475,7 @@ export default function NetworkingPage() {
           } : prev);
         })
         .catch((err) => {
-          console.error('Failed to fetch user profile:', err);
+          // silent;
         });
     }
   }, [selectedUser?.id]);
@@ -494,7 +494,7 @@ export default function NetworkingPage() {
           });
           setTab('messaggi');
         })
-        .catch((err) => console.error('Failed to load chat user:', err));
+        .catch(() => {});
     }
   }, [searchParams]);
 
@@ -532,7 +532,7 @@ export default function NetworkingPage() {
       const { data } = await api.get(`/messages/${userId}`);
       setMessages(data.data || data);
     } catch (err) {
-      console.error('Failed to load messages:', err);
+      // silent;
     }
   };
 
@@ -554,7 +554,7 @@ export default function NetworkingPage() {
       setNewMessage('');
       setChatImages([]);
     } catch (err) {
-      console.error('Failed to send message:', err);
+      // silent;
     }
   };
 
@@ -563,7 +563,7 @@ export default function NetworkingPage() {
       const { data } = await api.get(`/messages/group/${groupId}`);
       setGroupMessages(data.data || data);
     } catch (err) {
-      console.error('Failed to load group messages:', err);
+      // silent;
     }
   };
 
@@ -585,7 +585,7 @@ export default function NetworkingPage() {
       setNewMessage('');
       setChatImages([]);
     } catch (err) {
-      console.error('Failed to send group message:', err);
+      // silent;
     }
   };
 
@@ -617,7 +617,7 @@ export default function NetworkingPage() {
         setConnectionStatuses(statuses);
       }
     } catch (err) {
-      console.error('Failed to load posts:', err);
+      // silent;
     } finally { setLoading(false); }
   };
 
@@ -641,7 +641,7 @@ export default function NetworkingPage() {
       setPostPage(nextPage);
       setHasMorePosts(data.length >= 20);
     } catch (err) {
-      console.error('Failed to load more posts:', err);
+      // silent;
     } finally {
       setLoadingMorePosts(false);
     }
@@ -663,7 +663,7 @@ export default function NetworkingPage() {
         setBlockedToast(true);
         setTimeout(() => setBlockedToast(false), 4000);
       } else {
-        console.error('Failed to submit post:', err);
+        // silent;
       }
     }
   };
@@ -679,7 +679,7 @@ export default function NetworkingPage() {
         p.id === postId ? { ...p, liked: !liked, _count: { ...p._count, likes: p._count.likes + (liked ? -1 : 1) } } : p
       ));
     } catch (err) {
-      console.error('Failed to toggle like:', err);
+      // silent;
     }
   };
 
@@ -691,7 +691,7 @@ export default function NetworkingPage() {
       const { data } = await api.get(`/posts/${post.id}/comments`);
       setComments(data);
     } catch (err) {
-      console.error('Failed to load comments:', err);
+      // silent;
     } finally {
       setCommentsLoading(false);
     }
@@ -717,7 +717,7 @@ export default function NetworkingPage() {
         setBlockedToast(true);
         setTimeout(() => setBlockedToast(false), 4000);
       } else {
-        console.error('Failed to submit comment:', err);
+        // silent;
       }
     } finally {
       setCommentSending(false);
@@ -732,7 +732,7 @@ export default function NetworkingPage() {
         [toUserId]: { status: 'PENDING', requestId: null, direction: 'sent' },
       }));
     } catch (err) {
-      console.error('Failed to send friend request:', err);
+      // silent;
     }
   };
 
@@ -751,7 +751,7 @@ export default function NetworkingPage() {
         ));
       }
     } catch (err) {
-      console.error('Failed to delete:', err);
+      // silent;
     } finally {
       setDeleteConfirm(null);
     }
@@ -774,7 +774,7 @@ export default function NetworkingPage() {
         setReportSuccess(false);
       }, 2000);
     } catch (err: any) {
-      console.error('Failed to report:', err);
+      // silent;
       setReportModal(null);
       setReportReason('');
     } finally {
@@ -796,7 +796,7 @@ export default function NetworkingPage() {
         setConnectionStatuses(prev => ({ ...prev, ...statuses }));
       }
     } catch (err) {
-      console.error('Failed to load suggestions:', err);
+      // silent;
     } finally {
       setSuggestionsLoading(false);
     }
@@ -841,7 +841,7 @@ export default function NetworkingPage() {
         setConnectionStatuses(prev => ({ ...prev, ...statuses }));
       }
     } catch (err) {
-      console.error('Search failed:', err);
+      // silent;
     } finally {
       setSearchLoading(false);
     }
@@ -905,7 +905,7 @@ export default function NetworkingPage() {
       setGroupDetails(data);
       setShowGroupOptions(true);
     } catch (err) {
-      console.error('Failed to open group options:', err);
+      // silent;
     }
   };
 
@@ -920,7 +920,7 @@ export default function NetworkingPage() {
         setGroupDetails(data);
         setShowGroupOptions(true);
       } catch (err) {
-        console.error('Failed to reload group details:', err);
+        // silent;
       }
     }
     loadConversations();

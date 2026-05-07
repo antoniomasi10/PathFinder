@@ -39,8 +39,10 @@ router.get('/search', authMiddleware, async (req: Request, res: Response) => {
     const clusterTag = (req.query.clusterTag as string | undefined) || undefined;
     const yearOfStudy = req.query.yearOfStudy ? parseInt(req.query.yearOfStudy as string) : undefined;
     const coreSkillArea = (req.query.coreSkillArea as string | undefined) || undefined;
+    const page = Math.max(1, parseInt((req.query.page as string) || '1'));
+    const limit = Math.min(50, Math.max(1, parseInt((req.query.limit as string) || '20')));
     if (!q && !clusterTag && !yearOfStudy && !coreSkillArea) { res.json([]); return; }
-    const users = await searchUsers(q || undefined, clusterTag, req.user!.userId, yearOfStudy, coreSkillArea);
+    const users = await searchUsers(q || undefined, clusterTag, req.user!.userId, yearOfStudy, coreSkillArea, page, limit);
     res.json(users);
   } catch (err: any) {
     res.status(500).json({ error: err.message });

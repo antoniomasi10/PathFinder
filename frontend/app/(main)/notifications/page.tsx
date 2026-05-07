@@ -68,47 +68,61 @@ function formatTimestamp(dateStr: string): string {
   return date.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
 }
 
-function NotificationItem({ notif, onPress }: { notif: Notification; onPress: () => void }) {
+function NotificationItem({ notif, onPress, onDelete }: { notif: Notification; onPress: () => void; onDelete: () => void }) {
   const cfg = TYPE_CONFIG[notif.type] ?? TYPE_CONFIG.GENERAL;
   return (
-    <button
-      onClick={onPress}
-      className={`w-full text-left flex gap-4 items-center bg-white border border-[rgba(199,196,214,0.3)] rounded-[24px] px-[17px] py-[13px] shadow-[0px_1px_1px_rgba(0,0,0,0.05)] transition-opacity active:opacity-70 ${notif.isRead ? 'opacity-75' : ''}`}
-    >
-      {/* Icon box */}
-      <div
-        className="shrink-0 w-12 h-12 rounded-[12px] flex items-center justify-center"
-        style={{ backgroundColor: cfg.bg }}
+    <div className={`w-full flex gap-2 items-center bg-white border border-[rgba(199,196,214,0.3)] rounded-[24px] px-[17px] py-[13px] shadow-[0px_1px_1px_rgba(0,0,0,0.05)] ${notif.isRead ? 'opacity-75' : ''}`}>
+      {/* Clickable main area */}
+      <button
+        onClick={onPress}
+        className="flex-1 min-w-0 text-left flex gap-4 items-center active:opacity-70 transition-opacity"
       >
-        {cfg.icon}
-      </div>
-
-      {/* Text */}
-      <div className="flex-1 min-w-0 flex flex-col gap-1">
-        <div className="flex items-start justify-between gap-2">
-          <span className="font-['Plus_Jakarta_Sans',sans-serif] font-semibold text-[14px] text-[#191b27] leading-[20px] line-clamp-1">
-            {notif.content.split('\n')[0]}
-          </span>
-          <span className="shrink-0 font-['Plus_Jakarta_Sans',sans-serif] font-medium text-[12px] text-[#777585] tracking-[0.5px] leading-[16px] mt-[2px]">
-            {formatTimestamp(notif.createdAt)}
-          </span>
+        {/* Icon box */}
+        <div
+          className="shrink-0 w-12 h-12 rounded-[12px] flex items-center justify-center"
+          style={{ backgroundColor: cfg.bg }}
+        >
+          {cfg.icon}
         </div>
-        <p className="font-['Plus_Jakarta_Sans',sans-serif] font-normal text-[14px] text-[#464554] leading-[20px] line-clamp-2">
-          {notif.content}
-        </p>
-      </div>
 
-      {/* Unread dot */}
-      <div className="shrink-0 w-2 self-stretch flex flex-col items-center justify-start pt-1">
-        {!notif.isRead && (
-          <span className="w-2 h-2 rounded-full bg-[#4844c8]" />
-        )}
-      </div>
-    </button>
+        {/* Text */}
+        <div className="flex-1 min-w-0 flex flex-col gap-1">
+          <div className="flex items-start justify-between gap-2">
+            <span className="font-['Plus_Jakarta_Sans',sans-serif] font-semibold text-[14px] text-[#191b27] leading-[20px] line-clamp-1">
+              {notif.content.split('\n')[0]}
+            </span>
+            <span className="shrink-0 font-['Plus_Jakarta_Sans',sans-serif] font-medium text-[12px] text-[#777585] tracking-[0.5px] leading-[16px] mt-[2px]">
+              {formatTimestamp(notif.createdAt)}
+            </span>
+          </div>
+          <p className="font-['Plus_Jakarta_Sans',sans-serif] font-normal text-[14px] text-[#464554] leading-[20px] line-clamp-2">
+            {notif.content}
+          </p>
+        </div>
+
+        {/* Unread dot */}
+        <div className="shrink-0 w-2 self-stretch flex flex-col items-center justify-start pt-1">
+          {!notif.isRead && (
+            <span className="w-2 h-2 rounded-full bg-[#4844c8]" />
+          )}
+        </div>
+      </button>
+
+      {/* Delete button */}
+      <button
+        onClick={onDelete}
+        className="shrink-0 p-1 rounded-full hover:bg-red-50 text-gray-300 hover:text-red-400 transition-colors"
+        title="Elimina notifica"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </button>
+    </div>
   );
 }
 
-function Section({ label, items, onPress }: { label: string; items: Notification[]; onPress: (n: Notification) => void }) {
+function Section({ label, items, onPress, onDelete }: { label: string; items: Notification[]; onPress: (n: Notification) => void; onDelete: (id: string) => void }) {
   if (items.length === 0) return null;
   return (
     <div className="flex flex-col gap-3 w-full">
@@ -119,7 +133,7 @@ function Section({ label, items, onPress }: { label: string; items: Notification
       </div>
       <div className="flex flex-col gap-3">
         {items.map((n) => (
-          <NotificationItem key={n.id} notif={n} onPress={() => onPress(n)} />
+          <NotificationItem key={n.id} notif={n} onPress={() => onPress(n)} onDelete={() => onDelete(n.id)} />
         ))}
       </div>
     </div>
@@ -188,6 +202,30 @@ export default function NotificationsPage() {
         (prev) => prev
           ? { ...prev, notifications: prev.notifications.map((n) => ({ ...n, isRead: true })) }
           : prev!
+      );
+      refresh();
+    },
+  });
+
+  const deleteNotifMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/notifications/${id}`),
+    onSuccess: (_, id) => {
+      queryClient.setQueryData<{ notifications: Notification[]; totalPages: number }>(
+        ['notifications'],
+        (prev) => prev
+          ? { ...prev, notifications: prev.notifications.filter((n) => n.id !== id) }
+          : prev!
+      );
+      refresh();
+    },
+  });
+
+  const deleteAllMutation = useMutation({
+    mutationFn: () => api.delete('/notifications'),
+    onSuccess: () => {
+      queryClient.setQueryData<{ notifications: Notification[]; totalPages: number }>(
+        ['notifications'],
+        (prev) => prev ? { ...prev, notifications: [] } : prev!
       );
       refresh();
     },
@@ -274,14 +312,24 @@ export default function NotificationsPage() {
           </defs>
         </svg>
 
-        {hasUnread && (
-          <button
-            onClick={() => markAllReadMutation.mutate()}
-            className="absolute right-4 text-[11px] font-medium text-[#615FE2] hover:opacity-70 transition-opacity"
-          >
-            Segna tutto letto
-          </button>
-        )}
+        <div className="absolute right-4 flex flex-col items-end gap-0.5">
+          {hasUnread && (
+            <button
+              onClick={() => markAllReadMutation.mutate()}
+              className="text-[11px] font-medium text-[#615FE2] hover:opacity-70 transition-opacity"
+            >
+              Segna tutto letto
+            </button>
+          )}
+          {notifications.length > 0 && (
+            <button
+              onClick={() => deleteAllMutation.mutate()}
+              className="text-[11px] font-medium text-red-400 hover:opacity-70 transition-opacity"
+            >
+              Elimina tutte
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Scrollable content */}
@@ -303,9 +351,9 @@ export default function NotificationsPage() {
           </div>
         ) : (
           <>
-            <Section label={t.notifications.today}     items={todayNotifs}     onPress={handleNotifPress} />
-            <Section label={t.notifications.yesterday} items={yesterdayNotifs} onPress={handleNotifPress} />
-            <Section label={t.notifications.earlier}   items={olderNotifs}     onPress={handleNotifPress} />
+            <Section label={t.notifications.today}     items={todayNotifs}     onPress={handleNotifPress} onDelete={(id) => deleteNotifMutation.mutate(id)} />
+            <Section label={t.notifications.yesterday} items={yesterdayNotifs} onPress={handleNotifPress} onDelete={(id) => deleteNotifMutation.mutate(id)} />
+            <Section label={t.notifications.earlier}   items={olderNotifs}     onPress={handleNotifPress} onDelete={(id) => deleteNotifMutation.mutate(id)} />
             {page < totalPages && (
               <button
                 onClick={loadMore}

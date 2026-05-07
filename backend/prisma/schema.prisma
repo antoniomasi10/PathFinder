@@ -184,6 +184,8 @@ model User {
 
   @@index([universityId])
   @@index([googleId])
+  @@index([emailVerified])
+  @@index([role])
 }
 
 model UserProfile {
@@ -332,6 +334,7 @@ model PathMatesMessage {
   @@index([receiverId])
   @@index([groupId])
   @@index([senderId, receiverId])
+  @@index([sentAt])
 }
 
 model PathMatesGroup {
@@ -372,6 +375,7 @@ model Notification {
   createdAt DateTime         @default(now())
 
   @@index([userId, isRead])
+  @@index([userId, createdAt])
 }
 
 model FriendRequest {

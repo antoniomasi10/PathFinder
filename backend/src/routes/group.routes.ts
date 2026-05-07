@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import { validate } from '../middleware/validate';
-import { createGroupSchema } from '../schemas';
+import { createGroupSchema, updateGroupSchema, addGroupMemberSchema } from '../schemas';
 import * as groupService from '../services/group.service';
 import { validateDataUri } from '../utils/imageValidation';
 import { uploadImage } from '../utils/imageUpload';
@@ -50,7 +50,7 @@ router.post('/', authMiddleware, validate(createGroupSchema), async (req: Reques
 });
 
 // Update group
-router.put('/:groupId', authMiddleware, async (req: Request, res: Response) => {
+router.put('/:groupId', authMiddleware, validate(updateGroupSchema), async (req: Request, res: Response) => {
   try {
     const { name, description, image } = req.body;
     const group = await groupService.updateGroup(
@@ -66,7 +66,7 @@ router.put('/:groupId', authMiddleware, async (req: Request, res: Response) => {
 });
 
 // Add member to group
-router.post('/:groupId/members', authMiddleware, async (req: Request, res: Response) => {
+router.post('/:groupId/members', authMiddleware, validate(addGroupMemberSchema), async (req: Request, res: Response) => {
   try {
     const member = await groupService.addMember(
       req.params.groupId,
