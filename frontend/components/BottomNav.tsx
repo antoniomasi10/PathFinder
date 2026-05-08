@@ -17,7 +17,7 @@ export default function BottomNav() {
       href: '/home',
       label: t.nav.home,
       icon: (active: boolean) => (
-        <House size={24} filled={active} strokeWidth={active ? 2 : 1.5} />
+        <House size={24} strokeWidth={active ? 2 : 1.5} />
       ),
     },
     {
@@ -38,7 +38,7 @@ export default function BottomNav() {
       href: '/profile',
       label: t.nav.profile,
       icon: (active: boolean) => (
-        <UserIcon size={24} filled={active} strokeWidth={active ? 2 : 1.5} />
+        <UserIcon size={24} strokeWidth={active ? 2 : 1.5} />
       ),
     },
   ];
@@ -72,7 +72,7 @@ export default function BottomNav() {
               aria-label={item.label}
               className="flex-1 flex flex-col items-center"
             >
-              <span className="relative">
+              <span className="relative inline-flex items-center justify-center" style={{ width: 43, height: 43 }}>
                 {isActive ? (
                   <span
                     className="flex items-center justify-center rounded-full"

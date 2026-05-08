@@ -2408,52 +2408,55 @@ export default function NetworkingPage() {
         className={`fixed inset-0 z-[60] bg-black/60 transition-opacity duration-300 ${showFilterSheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         onClick={() => setShowFilterSheet(false)}
       />
-      <div className={`fixed bottom-0 left-0 right-0 z-[60] max-w-lg mx-auto bg-[#161B22] rounded-t-3xl transition-transform duration-300 ease-out ${showFilterSheet ? 'translate-y-0' : 'translate-y-full'}`}>
-        <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-[#2D3748]" /></div>
+      <div className={`fixed bottom-0 left-0 right-0 z-[60] max-w-lg mx-auto bg-white rounded-t-3xl transition-transform duration-300 ease-out ${showFilterSheet ? 'translate-y-0' : 'translate-y-full'}`}>
+        <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-[rgba(172,176,206,0.3)]" /></div>
 
-        <div className="flex items-center justify-between px-5 pt-3 pb-4">
-          <h2 className="text-white font-bold text-lg">Filtri</h2>
+        <div className="flex items-center justify-between px-5 pt-3 pb-4 border-b border-[rgba(172,176,206,0.2)]">
+          <h2 className="text-[#2c3149] font-bold text-lg">Filtri</h2>
           <button
             onClick={() => { setSearchTab('post'); setSelectedClusterTag(null); setProfileYearFilter(null); setCoreSkillArea(null); setPostSortBy('recent'); }}
-            className="text-primary text-sm font-semibold active:opacity-70 transition-opacity"
+            className="text-[#615fe2] text-sm font-semibold active:opacity-70 transition-opacity"
           >
             Reset
           </button>
         </div>
 
-        <div className="px-5 pb-4 space-y-6 max-h-[60vh] overflow-y-auto no-scrollbar">
+        <div className="px-5 pb-4 space-y-6 max-h-[60vh] overflow-y-auto no-scrollbar pt-5">
 
           {/* Tipo di ricerca */}
           <div>
-            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Tipo di ricerca</p>
+            <p className="text-[#595e78] text-xs font-semibold uppercase tracking-wider mb-3">Tipo di ricerca</p>
             <div className="flex gap-2">
               <button
                 onClick={() => { setSearchTab('post'); setSelectedClusterTag(null); setProfileYearFilter(null); setCoreSkillArea(null); }}
-                className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 ${searchTab === 'post' ? 'bg-primary text-white' : 'bg-[#0D1117] text-gray-400'}`}
+                className="flex-1 py-2 rounded-full text-sm font-medium transition-all active:opacity-75"
+                style={{ backgroundColor: searchTab === 'post' ? '#4a4bd7' : '#ecedff', color: searchTab === 'post' ? '#fbf7ff' : '#595e78' }}
               >
                 {t.networking.searchPosts}
               </button>
               <button
                 onClick={() => setSearchTab('profili')}
-                className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 ${searchTab === 'profili' ? 'bg-primary text-white' : 'bg-[#0D1117] text-gray-400'}`}
+                className="flex-1 py-2 rounded-full text-sm font-medium transition-all active:opacity-75"
+                style={{ backgroundColor: searchTab === 'profili' ? '#4a4bd7' : '#ecedff', color: searchTab === 'profili' ? '#fbf7ff' : '#595e78' }}
               >
                 {t.networking.searchProfiles}
               </button>
             </div>
           </div>
 
-          <div className="h-px bg-[#1E293B]" />
+          <div className="h-px bg-[rgba(172,176,206,0.2)]" />
 
           {/* Post filters */}
           {searchTab === 'post' && (
             <div>
-              <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Ordina per</p>
+              <p className="text-[#595e78] text-xs font-semibold uppercase tracking-wider mb-3">Ordina per</p>
               <div className="flex flex-wrap gap-2">
                 {[{ val: 'recent', label: 'Più recenti' }, { val: 'likes', label: 'Più apprezzati' }].map(({ val, label }) => (
                   <button
                     key={val}
                     onClick={() => setPostSortBy(val as 'recent' | 'likes')}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 ${postSortBy === val ? 'bg-primary text-white' : 'bg-[#0D1117] text-gray-400'}`}
+                    className="px-4 py-2 rounded-full text-sm font-medium transition-all active:opacity-75"
+                    style={{ backgroundColor: postSortBy === val ? '#4a4bd7' : '#ecedff', color: postSortBy === val ? '#fbf7ff' : '#595e78' }}
                   >
                     {label}
                   </button>
@@ -2466,13 +2469,14 @@ export default function NetworkingPage() {
           {searchTab === 'profili' && (
             <>
               <div>
-                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Cluster</p>
+                <p className="text-[#595e78] text-xs font-semibold uppercase tracking-wider mb-3">Cluster</p>
                 <div className="flex flex-wrap gap-2">
                   {CLUSTER_TAGS.map((tag) => (
                     <button
                       key={tag}
                       onClick={() => setSelectedClusterTag(selectedClusterTag === tag ? null : tag)}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 ${selectedClusterTag === tag ? 'bg-primary text-white' : 'bg-[#0D1117] text-gray-400'}`}
+                      className="px-4 py-2 rounded-full text-sm font-medium transition-all active:opacity-75"
+                      style={{ backgroundColor: selectedClusterTag === tag ? '#4a4bd7' : '#ecedff', color: selectedClusterTag === tag ? '#fbf7ff' : '#595e78' }}
                     >
                       {tag}
                     </button>
@@ -2480,16 +2484,17 @@ export default function NetworkingPage() {
                 </div>
               </div>
 
-              <div className="h-px bg-[#1E293B]" />
+              <div className="h-px bg-[rgba(172,176,206,0.2)]" />
 
               <div>
-                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Anno di studio</p>
+                <p className="text-[#595e78] text-xs font-semibold uppercase tracking-wider mb-3">Anno di studio</p>
                 <div className="flex flex-wrap gap-2">
                   {[1, 2, 3, 4, 5].map((yr) => (
                     <button
                       key={yr}
                       onClick={() => setProfileYearFilter(profileYearFilter === yr ? null : yr)}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 ${profileYearFilter === yr ? 'bg-primary text-white' : 'bg-[#0D1117] text-gray-400'}`}
+                      className="px-4 py-2 rounded-full text-sm font-medium transition-all active:opacity-75"
+                      style={{ backgroundColor: profileYearFilter === yr ? '#4a4bd7' : '#ecedff', color: profileYearFilter === yr ? '#fbf7ff' : '#595e78' }}
                     >
                       {yr}° anno
                     </button>
@@ -2497,16 +2502,17 @@ export default function NetworkingPage() {
                 </div>
               </div>
 
-              <div className="h-px bg-[#1E293B]" />
+              <div className="h-px bg-[rgba(172,176,206,0.2)]" />
 
               <div>
-                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Competenza core</p>
+                <p className="text-[#595e78] text-xs font-semibold uppercase tracking-wider mb-3">Competenza core</p>
                 <div className="flex flex-wrap gap-2">
                   {MACRO_AREAS.map((area) => (
                     <button
                       key={area.id}
                       onClick={() => setCoreSkillArea(coreSkillArea === area.id ? null : area.id)}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 ${coreSkillArea === area.id ? 'bg-primary text-white' : 'bg-[#0D1117] text-gray-400'}`}
+                      className="px-4 py-2 rounded-full text-sm font-medium transition-all active:opacity-75"
+                      style={{ backgroundColor: coreSkillArea === area.id ? '#4a4bd7' : '#ecedff', color: coreSkillArea === area.id ? '#fbf7ff' : '#595e78' }}
                     >
                       {area.label}
                     </button>
@@ -2517,7 +2523,7 @@ export default function NetworkingPage() {
           )}
         </div>
 
-        <div className="px-5 pt-4 pb-8 border-t border-[#1E293B]">
+        <div className="px-5 pt-4 pb-8 border-t border-[rgba(172,176,206,0.2)]">
           <button
             onClick={() => {
               setShowFilterSheet(false);
@@ -2525,7 +2531,7 @@ export default function NetworkingPage() {
                 loadSuggestions();
               }
             }}
-            className="w-full bg-primary text-white py-4 rounded-2xl font-semibold text-[15px] active:opacity-90 transition-opacity"
+            className="w-full bg-[#615fe2] hover:bg-[#4a4bd7] text-white py-4 rounded-2xl font-semibold text-[15px] active:opacity-90 transition-opacity"
           >
             Mostra risultati
           </button>

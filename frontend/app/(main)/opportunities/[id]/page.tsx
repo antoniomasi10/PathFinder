@@ -9,7 +9,7 @@ import { useSavedOpportunities } from '@/lib/savedOpportunities';
 import { getOpportunityTypeColor } from '@/lib/opportunityColors';
 import {
   ArrowLeft, Share, ClockIcon, Bookmark, Star, Users, MapPin,
-  FileText, Briefcase, Bulb, CircleCheck, ExternalLink,
+  CircleCheck, ExternalLink,
 } from '@/components/icons';
 
 interface Opportunity {
@@ -96,7 +96,7 @@ function RelatedCard({ opp, onOpen }: { opp: Opportunity; onOpen: () => void }) 
             className="rounded-full px-[10px] py-[4px]"
             style={{ backgroundColor: getOpportunityTypeColor(opp.type) }}
           >
-            <span className="text-[13px] font-medium lowercase" style={{ color: '#4f5160', fontFamily: 'var(--font-plus-jakarta)' }}>
+            <span className="text-[13px] font-medium" style={{ color: '#4f5160', fontFamily: 'var(--font-plus-jakarta)' }}>
               {opp.type}
             </span>
           </div>
@@ -191,6 +191,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
       isRemote: opportunity!.remote,
       url: opportunity!.url,
       deadline: opportunity!.deadline,
+      matchScore: opportunity!.matchScore,
     });
   }
 
@@ -345,7 +346,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
           {/* Type + time */}
           <div className="flex items-center gap-3">
             <span
-              className="px-3 py-1 rounded-full text-[13px] font-medium lowercase"
+              className="px-3 py-1 rounded-full text-[13px] font-medium"
               style={{ backgroundColor: '#e0e1f4', color: '#4f5160', fontFamily: 'var(--font-plus-jakarta)' }}
             >
               {opportunity.type || 'Opportunità'}
@@ -438,41 +439,24 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
 
           {/* Description section */}
           {(opportunity.description || opportunity.matchReason) && (
-            <div
-              className="flex flex-col gap-5 p-6 rounded-[24px]"
-              style={{ backgroundColor: 'white', border: '1px solid #dde1ff' }}
-            >
-              <div className="flex items-center gap-2">
-                <FileText size={20} strokeWidth={1.8} color="#2c3149" />
-                <h2 className="text-[20px] font-bold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
-                  Descrizione opportunità
-                </h2>
-              </div>
-              <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4">
+              <h2 className="text-[20px] font-bold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
+                Descrizione opportunità
+              </h2>
+              <div className="flex flex-col gap-3">
                 {opportunity.description && (
-                  <div className="flex items-start gap-4">
-                    <Briefcase size={20} strokeWidth={1.8} color="#acb0ce" className="flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-[16px] font-semibold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
-                        Modalità di lavoro
-                      </p>
-                      <p className="text-[16px]" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
-                        {opportunity.description}
-                      </p>
-                    </div>
-                  </div>
+                  <p className="text-[16px] leading-[26px]" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
+                    {opportunity.description}
+                  </p>
                 )}
                 {opportunity.matchReason && (
-                  <div className="flex items-start gap-4">
-                    <Bulb size={20} strokeWidth={1.8} color="#acb0ce" className="flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-[16px] font-semibold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
-                        Suggerimento
-                      </p>
-                      <p className="text-[16px]" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
-                        {opportunity.matchReason}
-                      </p>
-                    </div>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-[16px] font-semibold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
+                      Suggerimento
+                    </p>
+                    <p className="text-[16px] leading-[26px]" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
+                      {opportunity.matchReason}
+                    </p>
                   </div>
                 )}
               </div>
@@ -505,14 +489,9 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
               <h2 className="text-[20px] font-bold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
                 Descrizione dell&apos;azienda
               </h2>
-              <div
-                className="p-5 rounded-[16px]"
-                style={{ backgroundColor: 'white', border: '1px solid rgba(172,176,206,0.3)', boxShadow: '0px 1px 1px rgba(0,0,0,0.05)' }}
-              >
-                <p className="text-[16px] leading-[26px]" style={{ color: '#1e1e1e', fontFamily: 'var(--font-plus-jakarta)' }}>
-                  {opportunity.about}
-                </p>
-              </div>
+              <p className="text-[16px] leading-[26px]" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
+                {opportunity.about}
+              </p>
             </div>
           )}
 
