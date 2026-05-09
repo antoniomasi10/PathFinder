@@ -7,10 +7,17 @@ import BottomNav from '@/components/BottomNav';
 import { isValidExternalUrl } from '@/lib/urlValidation';
 import { useSavedOpportunities } from '@/lib/savedOpportunities';
 import { getOpportunityTypeColor } from '@/lib/opportunityColors';
+import DeadlineLabel from '@/components/DeadlineLabel';
 import {
   ArrowLeft, Share, ClockIcon, Bookmark, Star, Users, MapPin,
-  FileText, Briefcase, Bulb, CircleCheck, ExternalLink,
+  FileText, Briefcase, Bulb, CircleCheck, ExternalLink, Target,
 } from '@/components/icons';
+
+interface StructuredContent {
+  opportunityDescription: string | null;
+  companyDescription: string | null;
+  tasks: string[] | null;
+}
 
 interface Opportunity {
   id: string;
@@ -29,6 +36,7 @@ interface Opportunity {
   source?: string;
   savedCount?: number;
   matchReason?: string;
+  structuredContent?: StructuredContent | null;
 }
 
 function mapRaw(o: any): Opportunity {
@@ -49,6 +57,7 @@ function mapRaw(o: any): Opportunity {
     source: o.source || '',
     savedCount: o.savedCount,
     matchReason: o.matchReason || '',
+    structuredContent: o.structuredContent ?? null,
   };
 }
 
@@ -350,10 +359,14 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
             >
               {opportunity.type || 'Opportunità'}
             </span>
-            <div className="flex items-center gap-1.5">
-              <ClockIcon size={13} strokeWidth={1.8} color="#5c5e6e" />
-              <span className="text-[14px] font-medium" style={{ color: '#5c5e6e', fontFamily: 'var(--font-plus-jakarta)' }}>Recente</span>
-            </div>
+            {opportunity.deadline ? (
+              <DeadlineLabel deadline={opportunity.deadline} size="xs" />
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <ClockIcon size={13} strokeWidth={1.8} color="#5c5e6e" />
+                <span className="text-[14px] font-medium" style={{ color: '#5c5e6e', fontFamily: 'var(--font-plus-jakarta)' }}>Recente</span>
+              </div>
+            )}
           </div>
 
           {/* Title */}
@@ -436,8 +449,69 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
             </div>
           </div>
 
-          {/* Description section */}
-          {(opportunity.description || opportunity.matchReason) && (
+          {/* Description section — structured (AI) or raw fallback */}
+          {opportunity.structuredContent ? (
+            <div className="flex flex-col gap-4">
+              {/* Opportunity description */}
+              {opportunity.structuredContent.opportunityDescription && (
+                <div
+                  className="flex flex-col gap-4 p-6 rounded-[24px]"
+                  style={{ backgroundColor: 'white', border: '1px solid #dde1ff' }}
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText size={20} strokeWidth={1.8} color="#2c3149" />
+                    <h2 className="text-[20px] font-bold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
+                      Di cosa si tratta
+                    </h2>
+                  </div>
+                  <p className="text-[16px] leading-[26px]" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
+                    {opportunity.structuredContent.opportunityDescription}
+                  </p>
+                </div>
+              )}
+
+              {/* Tasks */}
+              {opportunity.structuredContent.tasks && opportunity.structuredContent.tasks.length > 0 && (
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-2 px-1">
+                    <Target size={20} strokeWidth={1.8} color="#2c3149" />
+                    <h2 className="text-[20px] font-bold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
+                      Le tue task
+                    </h2>
+                  </div>
+                  <div
+                    className="flex flex-col gap-3 p-5 rounded-[16px]"
+                    style={{ backgroundColor: '#f3f2ff', border: '1px solid #dde1ff' }}
+                  >
+                    {opportunity.structuredContent.tasks.map((task, i) => (
+                      <div key={i} className="flex items-start gap-3">
+                        <CircleCheck size={18} strokeWidth={1.8} color="#4a4bd7" className="flex-shrink-0 mt-0.5" />
+                        <p className="text-[16px] leading-[24px]" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>{task}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Match reason */}
+              {opportunity.matchReason && (
+                <div
+                  className="flex items-start gap-4 p-5 rounded-[16px]"
+                  style={{ backgroundColor: 'white', border: '1px solid #dde1ff' }}
+                >
+                  <Bulb size={20} strokeWidth={1.8} color="#acb0ce" className="flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[16px] font-semibold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
+                      Suggerimento
+                    </p>
+                    <p className="text-[16px]" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
+                      {opportunity.matchReason}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (opportunity.description || opportunity.matchReason) ? (
             <div
               className="flex flex-col gap-5 p-6 rounded-[24px]"
               style={{ backgroundColor: 'white', border: '1px solid #dde1ff' }}
@@ -477,7 +551,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
                 )}
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Requirements */}
           {requirements.length > 0 && (
@@ -499,8 +573,8 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
             </div>
           )}
 
-          {/* Company description */}
-          {opportunity.about && (
+          {/* Company description — prefer AI-extracted, fallback to raw about */}
+          {(opportunity.structuredContent?.companyDescription || opportunity.about) && (
             <div className="flex flex-col gap-4">
               <h2 className="text-[20px] font-bold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
                 Descrizione dell&apos;azienda
@@ -510,7 +584,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
                 style={{ backgroundColor: 'white', border: '1px solid rgba(172,176,206,0.3)', boxShadow: '0px 1px 1px rgba(0,0,0,0.05)' }}
               >
                 <p className="text-[16px] leading-[26px]" style={{ color: '#1e1e1e', fontFamily: 'var(--font-plus-jakarta)' }}>
-                  {opportunity.about}
+                  {opportunity.structuredContent?.companyDescription ?? opportunity.about}
                 </p>
               </div>
             </div>

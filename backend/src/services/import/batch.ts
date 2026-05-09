@@ -14,6 +14,7 @@ import { FieldOfStudy, OpportunityFormat, OpportunityType } from '@prisma/client
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { buildDedupKey } from './utils';
+import { parseOpportunityContent, parseAIDate } from '../ai/opportunityParser';
 
 export interface OpportunityRecord {
   id: string;
@@ -108,6 +109,7 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
   }
 
   if (toCreate.length > 0) {
+    // Insert new records first, then enrich with AI-parsed structured content.
     await prisma.opportunity.createMany({
       data: toCreate.map(r => ({
         id: r.id,
@@ -146,6 +148,31 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
       })),
       skipDuplicates: true,
     });
+
+    // AI-parse new records concurrently (max 5 at a time) — errors are swallowed.
+    const PARSE_CONCURRENCY = 5;
+    for (let i = 0; i < toCreate.length; i += PARSE_CONCURRENCY) {
+      const chunk = toCreate.slice(i, i + PARSE_CONCURRENCY);
+      await Promise.all(
+        chunk.map(async (r) => {
+          const structured = await parseOpportunityContent(r.title, r.description, null, r.company);
+          if (structured) {
+            const updateData: any = { structuredContent: structured };
+            if (!r.deadline && structured.deadline) {
+              const extracted = parseAIDate(structured.deadline);
+              if (extracted) updateData.deadline = extracted;
+            }
+            await prisma.opportunity.update({
+              where: { id: r.id },
+              data: updateData,
+            }).catch(() => {});
+          }
+        }),
+      );
+    }
+    if (toCreate.length > 0) {
+      logger.info(`[BatchUpsert] AI-parsed ${toCreate.length} new opportunities`);
+    }
   }
 
   for (let i = 0; i < toUpdate.length; i += UPDATE_CHUNK_SIZE) {

@@ -28,7 +28,9 @@
     "import:opportunity-desk": "ts-node --transpile-only -e \"require('./src/services/import/opportunity-desk.import').importOpportunityDeskOpportunities().then(r=>console.log(JSON.stringify(r)))\"",
     "import:hackclub": "ts-node --transpile-only -e \"require('./src/services/import/hackclub.import').importHackClubOpportunities().then(r=>console.log(JSON.stringify(r)))\"",
     "import:devpost": "ts-node --transpile-only -e \"require('./src/services/import/devpost.import').importDevpostOpportunities().then(r=>console.log(JSON.stringify(r)))\"",
-    "import:best-courses": "ts-node --transpile-only -e \"require('./src/services/import/best-courses.import').importBestCoursesOpportunities().then(r=>console.log(JSON.stringify(r)))\""
+    "import:best-courses": "ts-node --transpile-only -e \"require('./src/services/import/best-courses.import').importBestCoursesOpportunities().then(r=>console.log(JSON.stringify(r)))\"",
+    "backfill:structured-content": "ts-node --transpile-only scripts/backfill-structured-content.ts",
+    "backfill:deadlines": "ts-node --transpile-only scripts/backfill-deadlines.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -54,6 +56,7 @@
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.3",
+    "openai": "^6.37.0",
     "playwright": "^1.59.1",
     "sanitize-html": "^2.17.2",
     "socket.io": "^4.7.5",

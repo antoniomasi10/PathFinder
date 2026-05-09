@@ -260,6 +260,9 @@ model Opportunity {
   organizer            String?         // for non-company events: "TEDxMilano", "IFMSA Italy"
   verified             Boolean         @default(false) // manually curated/verified
 
+  // --- AI-extracted structured content ---
+  structuredContent    Json?           // {opportunityDescription, companyDescription, tasks}
+
   @@index([universityId])
   @@index([type])
   @@index([deadline])

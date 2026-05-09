@@ -156,6 +156,23 @@ router.get('/saved', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
+// Get single opportunity by id
+router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const opp = await prisma.opportunity.findUnique({
+      where: { id: req.params.id },
+      include: { university: true },
+    });
+    if (!opp) { res.status(404).json({ error: 'Not found' }); return; }
+    const savedCount = await prisma.user.count({
+      where: { savedOpportunities: { some: { id: opp.id } } },
+    });
+    res.json({ ...opp, savedCount });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Track view interaction
 router.post('/:id/view', authMiddleware, async (req: Request, res: Response) => {
   try {
