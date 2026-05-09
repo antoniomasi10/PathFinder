@@ -96,7 +96,7 @@ function matchesClientFilters(opp: Opportunity, f: AdvancedFilters, tab: 'per-te
   return true;
 }
 
-function buildServerParams(search: string, f: AdvancedFilters): string {
+function buildServerParams(search: string, f: AdvancedFilters, type?: string | null): string {
   const p: Record<string, string> = {};
   if (search.trim()) p.search = search.trim();
   if (f.company) p.company = f.company;
@@ -105,6 +105,7 @@ function buildServerParams(search: string, f: AdvancedFilters): string {
   if (f.onlyAbroad) p.isAbroad = 'true';
   if (f.englishLevels.length) p.englishLevel = f.englishLevels.join(',');
   if (f.deadline) p.deadline = f.deadline;
+  if (type) p.type = type;
   const qs = new URLSearchParams(p).toString();
   return qs ? `&${qs}` : '';
 }
@@ -310,29 +311,33 @@ function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => 
 
         {/* Bottom row */}
         <div
-          className="flex items-center justify-between mt-[13px] pt-[13px]"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.2)' }}
+          className="grid items-center mt-[13px] pt-[13px]"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.2)', gridTemplateColumns: '1fr 1fr 1fr' }}
         >
           <div>
             <p className="text-[10px] font-medium lowercase" style={{ color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-plus-jakarta)' }}>
-              affinità
+              Affinità
             </p>
             <p className="text-[20px] font-bold text-white leading-[28px]" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
               {opp.matchScore}%
             </p>
           </div>
-          {opp.deadline && <DeadlineLabel deadline={opp.deadline} size="xs" />}
-          <div
-            className="rounded-full px-[17px] py-[7px]"
-            style={{
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              backdropFilter: 'blur(6px)',
-            }}
-          >
-            <span className="text-[16px] font-medium text-white" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
-              {opp.type || 'Internship'}
-            </span>
+          <div className="flex justify-center">
+            {opp.deadline && <DeadlineLabel deadline={opp.deadline} size="xs" />}
+          </div>
+          <div className="flex justify-end">
+            <div
+              className="rounded-full px-[11px] py-[4px]"
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                backdropFilter: 'blur(6px)',
+              }}
+            >
+              <span className="text-[13px] font-medium text-white" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
+                {opp.type || 'Internship'}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -378,24 +383,28 @@ function OpportunityCard({ opp, isSaved, onSave, onOpen }: {
           </button>
         </div>
 
-        {/* Bottom row: affinità + deadline + type pill */}
-        <div className="flex items-center justify-between mt-[4px] pt-[5px]" style={{ borderTop: '1px solid #f3f2ff' }}>
+        {/* Bottom row: affinità | deadline (centrata) | type pill */}
+        <div className="grid items-center mt-[4px] pt-[5px]" style={{ borderTop: '1px solid #f3f2ff', gridTemplateColumns: '1fr 1fr 1fr' }}>
           <div>
-            <p className="text-[11px] font-medium lowercase" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
-              affinità
+            <p className="text-[11px] font-medium" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
+              Affinità
             </p>
             <p className="text-[16px] font-bold leading-[28px]" style={{ color: '#4a4bd7', fontFamily: 'var(--font-plus-jakarta)' }}>
               {opp.matchScore}%
             </p>
           </div>
-          {opp.deadline && <DeadlineLabel deadline={opp.deadline} size="xs" />}
-          <div
-            className="rounded-full px-[10px] py-[4px]"
-            style={{ backgroundColor: getOpportunityTypeColor(opp.type || opp.badge.split(' • ')[0]) }}
-          >
-            <span className="text-[13px] font-medium" style={{ color: '#4f5160', fontFamily: 'var(--font-plus-jakarta)' }}>
-              {opp.type || opp.badge.split(' • ')[0]}
-            </span>
+          <div className="flex justify-center">
+            {opp.deadline && <DeadlineLabel deadline={opp.deadline} size="xs" />}
+          </div>
+          <div className="flex justify-end">
+            <div
+              className="rounded-full px-[10px] py-[4px]"
+              style={{ backgroundColor: getOpportunityTypeColor(opp.type || opp.badge.split(' • ')[0]) }}
+            >
+              <span className="text-[13px] font-medium" style={{ color: '#4f5160', fontFamily: 'var(--font-plus-jakarta)' }}>
+                {opp.type || opp.badge.split(' • ')[0]}
+              </span>
+            </div>
           </div>
         </div>
       </button>
@@ -533,12 +542,10 @@ function FilterSheet({ open, draft, allTags, matchCount, filterCategories, tab, 
     <>
       <div className={`fixed inset-0 z-[60] transition-opacity duration-300 ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         style={{ backgroundColor: 'rgba(44,49,73,0.4)' }} onClick={onClose} />
-      <div className={`fixed bottom-0 left-0 right-0 z-[60] max-w-lg mx-auto rounded-t-3xl transition-transform duration-300 ease-out ${open ? 'translate-y-0' : 'translate-y-full'}`}
-        style={{ backgroundColor: 'white', boxShadow: '0 -8px 40px rgba(74,75,215,0.1)' }}>
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full" style={{ backgroundColor: '#d8daf7' }} />
-        </div>
-        <div className="flex items-center justify-between px-5 pt-3 pb-4">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 pointer-events-none">
+        <div className={`w-full max-w-lg rounded-3xl transition-all duration-300 ease-out ${open ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}
+          style={{ backgroundColor: 'white', boxShadow: '0 8px 40px rgba(74,75,215,0.15)' }}>
+        <div className="flex items-center justify-between px-5 pt-5 pb-4">
           <h2 className="font-bold text-lg" style={{ color: '#2c3149' }}>{t.home.filters}</h2>
           <button onClick={onReset} className="text-sm font-semibold" style={{ color: '#4a4bd7' }}>{t.home.reset}</button>
         </div>
@@ -618,6 +625,7 @@ function FilterSheet({ open, draft, allTags, matchCount, filterCategories, tab, 
             {`${t.home.applyFilters} (${matchCount})`}
           </button>
         </div>
+        </div>
       </div>
     </>
   );
@@ -627,7 +635,8 @@ function FilterSheet({ open, draft, allTags, matchCount, filterCategories, tab, 
 
 export default function HomePage() {
   const router = useRouter();
-  const [tab, setTab] = useState<'per-te' | 'esplora'>('per-te');
+  const [tab] = useState<'per-te' | 'esplora'>('per-te');
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
@@ -685,9 +694,9 @@ export default function HomePage() {
     };
   }
 
-  const loadPerTePage = useCallback((page: number, search: string, filters: AdvancedFilters, scrollToTop = false) => {
+  const loadPerTePage = useCallback((page: number, search: string, filters: AdvancedFilters, scrollToTop = false, type?: string | null) => {
     setLoadingOpps(true);
-    const qs = buildServerParams(search, filters);
+    const qs = buildServerParams(search, filters, type);
     api.get(`/opportunities?matched=true&page=${page}&limit=20${qs}`)
       .then(({ data }) => {
         const items = data.data || data;
@@ -701,9 +710,9 @@ export default function HomePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadEsploraPage = useCallback((page: number, search: string, filters: AdvancedFilters, scrollToTop = false) => {
+  const loadEsploraPage = useCallback((page: number, search: string, filters: AdvancedFilters, scrollToTop = false, type?: string | null) => {
     setLoadingNew(true);
-    const qs = buildServerParams(search, filters);
+    const qs = buildServerParams(search, filters, type);
     api.get(`/opportunities?new=true&page=${page}&limit=20${qs}`)
       .then(({ data }) => {
         const items = data.data || data;
@@ -717,8 +726,17 @@ export default function HomePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => { loadPerTePage(1, '', DEFAULT_FILTERS); // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    loadPerTePage(1, '', DEFAULT_FILTERS);
+    loadEsploraPage(1, '', DEFAULT_FILTERS);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    loadPerTePage(1, searchQuery, appliedFilters, false, typeFilter);
+    loadEsploraPage(1, searchQuery, appliedFilters, false, typeFilter);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typeFilter]);
 
   const allTags = useMemo(() => {
     const set = new Set<string>();
@@ -745,8 +763,8 @@ export default function HomePage() {
   useEffect(() => {
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     searchDebounceRef.current = setTimeout(() => {
-      if (tab === 'per-te') loadPerTePage(1, searchQuery, appliedFilters);
-      else loadEsploraPage(1, searchQuery, appliedFilters);
+      loadPerTePage(1, searchQuery, appliedFilters);
+      loadEsploraPage(1, searchQuery, appliedFilters);
     }, 350);
     return () => { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -755,18 +773,13 @@ export default function HomePage() {
   function applyFilters() {
     const newFilters = { ...draftFilters };
     setAppliedFilters(newFilters); setFilterOpen(false);
-    if (tab === 'per-te') loadPerTePage(1, searchQuery, newFilters);
-    else loadEsploraPage(1, searchQuery, newFilters);
+    loadPerTePage(1, searchQuery, newFilters);
+    loadEsploraPage(1, searchQuery, newFilters);
   }
 
   const hasActiveFilters = hasAnyFilter(appliedFilters);
 
-  function handleTabChange(newTab: 'per-te' | 'esplora') {
-    setTab(newTab);
-    if (newTab === 'esplora') loadEsploraPage(1, searchQuery, appliedFilters);
-  }
-
-  const viewedRef = useRef<Set<string>>(new Set());
+const viewedRef = useRef<Set<string>>(new Set());
   function handleOpen(opp: Opportunity) {
     if (!viewedRef.current.has(opp.id)) { viewedRef.current.add(opp.id); api.post(`/opportunities/${opp.id}/view`).catch(() => {}); }
     try { sessionStorage.setItem(`opp_${opp.id}`, JSON.stringify(opp)); } catch {}
@@ -800,13 +813,27 @@ export default function HomePage() {
     }
   }
 
-  const perTeFiltered = opportunities.filter((o) => matchesClientFilters(o, appliedFilters, 'per-te'));
-  const esploraFiltered = newOpportunities.filter((o) => matchesClientFilters(o, appliedFilters, 'esplora'));
-  const activeDataset = tab === 'per-te' ? opportunities : newOpportunities;
-  const draftMatchCount = activeDataset.filter((o) => matchesClientFilters(o, draftFilters, tab)).length;
-  const topOpportunity = perTeFiltered[0] ?? null;
+  // Pool unificato: perTe + esplora, senza duplicati
+  const combinedPool = useMemo(() => {
+    const seen = new Set<string>();
+    const out: Opportunity[] = [];
+    for (const o of [...opportunities, ...newOpportunities]) {
+      if (!seen.has(o.id)) { seen.add(o.id); out.push(o); }
+    }
+    return out;
+  }, [opportunities, newOpportunities]);
 
-  const isLoading = (loadingOpps && !opportunities.length) || (tab === 'esplora' && loadingNew && !newOpportunities.length);
+  const perTeFiltered = combinedPool
+    .filter((o) => matchesClientFilters(o, appliedFilters, 'per-te'))
+    .filter((o) => !typeFilter || o.type.toUpperCase() === typeFilter.toUpperCase());
+  const esploraFiltered = perTeFiltered; // alias mantenuto per compatibilità FilterSheet
+  const draftMatchCount = combinedPool
+    .filter((o) => matchesClientFilters(o, draftFilters, 'per-te'))
+    .filter((o) => !typeFilter || o.type === typeFilter).length;
+  const topOpportunity = combinedPool
+    .filter((o) => matchesClientFilters(o, appliedFilters, 'per-te'))[0] ?? null;
+
+  const isLoading = loadingOpps && !opportunities.length;
 
   return (
     <>
@@ -814,7 +841,7 @@ export default function HomePage() {
       <div className="flex flex-col gap-[10px] px-[16px] pt-[8px] pb-[24px]">
 
         {/* 1. Opportunity of the Day */}
-        {tab === 'per-te' && !searchQuery && (
+        {!searchQuery && !typeFilter && (
           loadingOpps && !opportunities.length ? (
             <div className="rounded-[24px] animate-pulse" style={{ height: 220, backgroundColor: '#dddeff' }} />
           ) : topOpportunity ? (
@@ -863,34 +890,37 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* 3. Filter chips — horizontally scrollable */}
+        {/* 3. Category chips — horizontally scrollable */}
         <div className="flex gap-[8px] overflow-x-auto no-scrollbar">
-          <button
-            onClick={() => handleTabChange('per-te')}
-            className="flex-shrink-0 rounded-full font-medium text-[16px] px-[16px] transition-all"
-            style={{
-              paddingTop: 8.5, paddingBottom: 8.5,
-              backgroundColor: tab === 'per-te' ? '#4a4bd7' : '#ecedff',
-              color: tab === 'per-te' ? '#fbf7ff' : '#595e78',
-              fontFamily: 'var(--font-plus-jakarta)',
-              boxShadow: tab === 'per-te' ? '0px 1px 1px rgba(0,0,0,0.05)' : 'none',
-            }}
-          >
-            {t.home.forYou}
-          </button>
-          <button
-            onClick={() => handleTabChange('esplora')}
-            className="flex-shrink-0 rounded-full font-medium text-[16px] px-[17px] transition-all"
-            style={{
-              paddingTop: 9, paddingBottom: 9,
-              backgroundColor: tab === 'esplora' ? '#4a4bd7' : '#ecedff',
-              color: tab === 'esplora' ? '#fbf7ff' : '#595e78',
-              fontFamily: 'var(--font-plus-jakarta)',
-              boxShadow: tab === 'esplora' ? '0px 1px 1px rgba(0,0,0,0.05)' : 'none',
-            }}
-          >
-            {t.home.explore}
-          </button>
+          {([
+            { label: 'Tutti',           value: null },
+            { label: 'Internship',       value: 'INTERNSHIP' },
+            { label: 'Borse di Studio', value: 'SCHOLARSHIP' },
+            { label: 'Erasmus',         value: 'ERASMUS' },
+            { label: 'Summer School',   value: 'SUMMER_SCHOOL' },
+            { label: 'Progetti',        value: 'PROJECT' },
+            { label: 'Eventi',          value: 'EVENT' },
+            { label: 'Corsi',           value: 'CORSO' },
+          ] as { label: string; value: string | null }[]).map((chip) => {
+            const active = typeFilter === chip.value;
+            return (
+              <button
+                key={chip.label}
+                onClick={() => setTypeFilter(chip.value)}
+                className="flex-shrink-0 rounded-full font-medium text-[12px] px-[12px] transition-all"
+                style={{
+                  paddingTop: 5, paddingBottom: 5,
+                  backgroundColor: active ? '#4a4bd7' : '#ecedff',
+                  color: active ? '#fbf7ff' : '#595e78',
+                  fontFamily: 'var(--font-plus-jakarta)',
+                  boxShadow: active ? '0px 1px 1px rgba(0,0,0,0.05)' : 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* 4. Alert scadenze */}
@@ -930,46 +960,23 @@ export default function HomePage() {
               </div>
             ))}
           </>
-        ) : tab === 'per-te' ? (
-          <>
-            <div ref={perTeTopRef} style={{ scrollMarginTop: 80 }} />
-            {perTeFiltered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20" style={{ color: '#acb0ce' }}>
-                <Search size={40} strokeWidth={1.5} color="#acb0ce" className="mb-3" />
-                <p className="text-sm font-medium">{t.home.noOpportunities}</p>
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-col gap-[16px]">
-                  {perTeFiltered.map((opp) => (
-                    <OpportunityCard key={opp.id} opp={opp}
-                      onOpen={() => handleOpen(opp)} isSaved={savedIds.has(opp.id)} onSave={() => handleSave(opp)} />
-                  ))}
-                </div>
-                {perTeTotalPages > 1 && (
-                  <Pagination currentPage={perTePage} totalPages={perTeTotalPages}
-                    onPageChange={(p) => loadPerTePage(p, searchQuery, appliedFilters, true)} disabled={loadingOpps} />
-                )}
-              </>
-            )}
-          </>
-        ) : esploraFiltered.length === 0 ? (
+        ) : perTeFiltered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20" style={{ color: '#acb0ce' }}>
             <Search size={40} strokeWidth={1.5} color="#acb0ce" className="mb-3" />
             <p className="text-sm font-medium">{t.home.noOpportunities}</p>
           </div>
         ) : (
           <>
-            <div ref={esploraTopRef} style={{ scrollMarginTop: 80 }} />
+            <div ref={perTeTopRef} style={{ scrollMarginTop: 80 }} />
             <div className="flex flex-col gap-[16px]">
-              {esploraFiltered.map((opp) => (
+              {perTeFiltered.map((opp) => (
                 <OpportunityCard key={opp.id} opp={opp}
                   onOpen={() => handleOpen(opp)} isSaved={savedIds.has(opp.id)} onSave={() => handleSave(opp)} />
               ))}
             </div>
-            {esploraTotalPages > 1 && (
-              <Pagination currentPage={esploraPage} totalPages={esploraTotalPages}
-                onPageChange={(p) => loadEsploraPage(p, searchQuery, appliedFilters, true)} disabled={loadingNew} />
+            {!typeFilter && perTeTotalPages > 1 && (
+              <Pagination currentPage={perTePage} totalPages={perTeTotalPages}
+                onPageChange={(p) => loadPerTePage(p, searchQuery, appliedFilters, true)} disabled={loadingOpps} />
             )}
           </>
         )}

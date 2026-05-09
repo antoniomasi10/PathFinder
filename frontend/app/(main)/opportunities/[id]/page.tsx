@@ -89,7 +89,7 @@ function RelatedCard({ opp, onOpen }: { opp: Opportunity; onOpen: () => void }) 
         </div>
         <div className="flex items-center justify-between pt-[5px]" style={{ borderTop: '1px solid #f3f2ff' }}>
           <div>
-            <p className="text-[11px] font-medium lowercase" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>affinità</p>
+            <p className="text-[11px] font-medium" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>Affinità</p>
             <p className="text-[16px] font-bold leading-[28px]" style={{ color: '#4a4bd7', fontFamily: 'var(--font-plus-jakarta)' }}>{opp.matchScore}%</p>
           </div>
           <div
@@ -487,7 +487,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
           {opportunity.about && (
             <div className="flex flex-col gap-4">
               <h2 className="text-[20px] font-bold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
-                Descrizione dell&apos;azienda
+                Descrizione azienda
               </h2>
               <p className="text-[16px] leading-[26px]" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
                 {opportunity.about}

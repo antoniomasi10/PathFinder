@@ -16,7 +16,7 @@ import { isPushSupported, subscribeToPush, unsubscribeFromPush, getPushPermissio
 import { getOpportunityTypeColor } from '@/lib/opportunityColors';
 import {
   Pencil, EyeOff, Plus, Bookmark, ChevronDown, ChevronRight, MapPin, CalendarIcon,
-  Gear, UsersGroup, Bell, Moon, Globe, ShieldCheck, CircleHelp, Info,
+  Gear, UsersGroup, Bell, Globe, ShieldCheck, CircleHelp, Info,
   ChatDots, CloseLg, CloseSm, Key, UserIcon, Award, Camera,
   Trash, TriangleWarning, CircleWarning, Mail, FileText, Star, Lock, Trophy,
   Heart, Briefcase, GraduationCap, Plane, Rocket, Target, TrendingUp, CloseMd, BookOpen,
@@ -381,29 +381,25 @@ export default function ProfilePage() {
             width: 128,
             height: 128,
             borderRadius: '50%',
-            backgroundColor: 'white',
-            border: '4px solid #fdfdfd',
+            border: '5px solid white',
             boxShadow: '0px 10px 15px -3px rgba(0,0,0,0.1), 0px 4px 6px -4px rgba(0,0,0,0.1)',
-            padding: 4,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
             overflow: 'hidden',
+            boxSizing: 'border-box',
           }}>
             <button
               onClick={() => fileInputRef.current?.click()}
               className="relative group"
-              style={{ width: 120, height: 120, borderRadius: '50%', overflow: 'hidden', display: 'block', padding: 0, border: 'none', background: 'none' }}
+              style={{ width: '100%', height: '100%', display: 'block', padding: 0, border: 'none', background: 'none', cursor: 'pointer' }}
               aria-label="Cambia foto profilo"
             >
               {currentAvatar && isValidImageUrl(currentAvatar) ? (
-                <img src={currentAvatar} alt={fullName} style={{ width: 120, height: 120, borderRadius: '50%', objectFit: 'cover' }} />
+                <img src={currentAvatar} alt={fullName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
               ) : (
-                <div style={{ width: 120, height: 120, borderRadius: '50%', background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <span style={{ color: 'white', fontWeight: 700, fontSize: 32, fontFamily: 'var(--font-plus-jakarta)' }}>{initials}</span>
                 </div>
               )}
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity" style={{ backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: '50%' }}>
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
                 <Camera size={26} color="white" />
               </div>
             </button>
@@ -508,7 +504,7 @@ export default function ProfilePage() {
           backgroundColor: 'white',
           border: '1px solid #acb0ce',
           borderRadius: 24,
-          padding: 21,
+          padding: '21px 0',
           boxShadow: '0px 1px 1px rgba(0,0,0,0.05)',
           display: 'flex',
           alignItems: 'center',
@@ -516,70 +512,31 @@ export default function ProfilePage() {
         }}>
           <button
             onClick={() => router.push('/profile/pathmates')}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 17, padding: '0 8px', background: 'none', border: 'none', cursor: 'pointer' }}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 17, padding: 0, background: 'none', border: 'none', cursor: 'pointer' }}
             className="active:opacity-75"
           >
             <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 700, fontSize: 24, lineHeight: '32px', color: '#4a4bd7' }}>
               {friends.length}
             </span>
-            <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 500, fontSize: 14, lineHeight: '20px', color: '#595e78', textTransform: 'uppercase', letterSpacing: '0.7px', textAlign: 'center' }}>
+            <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 500, fontSize: 14, lineHeight: '20px', color: '#595e78', textTransform: 'uppercase', letterSpacing: '0.7px', textAlign: 'center', width: '100%' }}>
               PERSONE CONNESSE
             </span>
           </button>
           <div style={{ width: 1, height: 75, backgroundColor: '#acb0ce', flexShrink: 0 }} />
           <button
             onClick={() => router.push('/profile/saved-opportunities')}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 17, padding: '0 9px', background: 'none', border: 'none', cursor: 'pointer' }}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 17, padding: 0, background: 'none', border: 'none', cursor: 'pointer' }}
             className="active:opacity-75"
           >
             <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 700, fontSize: 24, lineHeight: '32px', color: '#4a4bd7' }}>
               {savedOpps.length}
             </span>
-            <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 500, fontSize: 14, lineHeight: '20px', color: '#595e78', textTransform: 'uppercase', letterSpacing: '0.7px', textAlign: 'center' }}>
+            <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 500, fontSize: 14, lineHeight: '20px', color: '#595e78', textTransform: 'uppercase', letterSpacing: '0.7px', textAlign: 'center', width: '100%' }}>
               OPPORTUNITÀ SALVATE
             </span>
           </button>
         </div>
 
-
-        {/* Posts section */}
-        <div style={{ margin: '16px 24px 0' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h3 style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 700, fontSize: 20, lineHeight: '28px', color: '#2c3149', margin: 0 }}>
-                I tuoi posts
-              </h3>
-              <button style={{
-                width: 40,
-                height: 40,
-                backgroundColor: '#7073ff',
-                borderRadius: '50%',
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                flexShrink: 0,
-              }}>
-                <Plus size={18} color="white" strokeWidth={2.5} />
-              </button>
-            </div>
-            <div style={{
-              backgroundColor: '#f3f2ff',
-              border: '2px dashed #acb0ce',
-              borderRadius: 24,
-              height: 110,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 34,
-            }}>
-              <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 500, fontSize: 16, lineHeight: '24px', color: '#595e78', textAlign: 'center' }}>
-                Publish your first post
-              </span>
-            </div>
-          </div>
-        </div>
 
         {/* Divider before settings */}
         <div style={{ height: 1, backgroundColor: 'rgba(172,176,206,0.3)', margin: '32px 24px 0' }} />
@@ -621,16 +578,6 @@ export default function ProfilePage() {
                     </div>
                     <ChevronRight size={20} color="#747995" />
                   </button>
-                  <div className="ml-12 mr-2 h-px bg-[rgba(172,176,206,0.2)]" />
-                  <div className="flex items-center justify-between py-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-[22%] bg-[rgba(97,95,226,0.1)] flex items-center justify-center">
-                        <Moon size={20} color="#615fe2" />
-                      </div>
-                      <span className="text-sm text-[#2c3149]">{t.profile.darkMode}</span>
-                    </div>
-                    <ToggleSwitch defaultOn />
-                  </div>
                   <div className="ml-12 mr-2 h-px bg-[rgba(172,176,206,0.2)]" />
                   <div className="flex items-center justify-between py-2">
                     <div className="flex items-center gap-3">
