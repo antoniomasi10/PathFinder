@@ -155,7 +155,13 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
     } catch {}
 
     api.get(`/opportunities/${id}`)
-      .then(({ data }) => { setOpportunity(mapRaw(data)); setLoading(false); })
+      .then(({ data }) => {
+        const fresh = mapRaw(data);
+        // Preserve matchScore from sessionStorage cache (computed by hybrid engine in list view).
+        // The GET /:id route uses a simplified scorer that can return inflated values.
+        setOpportunity(prev => ({ ...fresh, matchScore: prev?.matchScore || fresh.matchScore }));
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
 
     api.get('/opportunities?matched=true&page=1&limit=5')

@@ -16,7 +16,8 @@ export interface StructuredContent {
   opportunityDescription: string | null;
   companyDescription: string | null;
   tasks: string[] | null;
-  deadline: string | null; // ISO 8601 "YYYY-MM-DD", null se non trovata nel testo
+  deadline: string | null;        // ISO 8601 "YYYY-MM-DD", null se non trovata nel testo
+  minYearsRequired: number | null; // anni di esperienza lavorativa richiesti; null se entry-level/non specificato
 }
 
 let _client: OpenAI | null = null;
@@ -43,6 +44,7 @@ Data la descrizione grezza di un'opportunità, estrai in JSON:
 - "companyDescription": 1-3 frasi su chi è l'azienda o l'organizzazione. Null se non c'è informazione sull'azienda.
 - "tasks": array di 3-7 frasi brevi (max 15 parole ciascuna) su cosa farà concretamente il partecipante. Null se non deducibile.
 - "deadline": data di scadenza per candidarsi in formato "YYYY-MM-DD". Null se non esplicitamente presente nel testo.
+- "minYearsRequired": numero intero di anni di esperienza lavorativa richiesti esplicitamente nel testo (es. "3+ years of experience", "minimum 4 anni di esperienza"). Null se il ruolo è entry-level, per studenti, o se non è specificata esperienza pregressa.
 
 Regole:
 - Mantieni la lingua dell'input (non tradurre dall'inglese all'italiano).
@@ -97,6 +99,7 @@ export async function parseOpportunityContent(
       companyDescription: typeof parsed.companyDescription === 'string' ? parsed.companyDescription : null,
       tasks: Array.isArray(parsed.tasks) ? parsed.tasks.filter((t): t is string => typeof t === 'string') : null,
       deadline: typeof parsed.deadline === 'string' ? parsed.deadline : null,
+      minYearsRequired: typeof parsed.minYearsRequired === 'number' ? Math.round(parsed.minYearsRequired) : null,
     };
   } catch (err) {
     logger.warn(`[OpportunityParser] Failed to parse opportunity "${title}": ${err}`);

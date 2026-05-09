@@ -30,7 +30,8 @@
     "import:devpost": "ts-node --transpile-only -e \"require('./src/services/import/devpost.import').importDevpostOpportunities().then(r=>console.log(JSON.stringify(r)))\"",
     "import:best-courses": "ts-node --transpile-only -e \"require('./src/services/import/best-courses.import').importBestCoursesOpportunities().then(r=>console.log(JSON.stringify(r)))\"",
     "backfill:structured-content": "ts-node --transpile-only scripts/backfill-structured-content.ts",
-    "backfill:deadlines": "ts-node --transpile-only scripts/backfill-deadlines.ts"
+    "backfill:deadlines": "ts-node --transpile-only scripts/backfill-deadlines.ts",
+    "backfill:expire-senior": "ts-node --transpile-only scripts/backfill-expire-senior.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

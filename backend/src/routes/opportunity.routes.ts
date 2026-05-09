@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import prisma from '../lib/prisma';
-import { getHybridMatchedOpportunities, getNewOpportunities, OppFilters } from '../services/matchingEngine';
+import { getHybridMatchedOpportunities, getNewOpportunities, scoreOpportunity, OppFilters } from '../services/matchingEngine';
 import { trackInteraction } from '../services/interaction.service';
 import { cacheGet, cacheSet } from '../lib/cache';
 
@@ -159,15 +159,22 @@ router.get('/saved', authMiddleware, async (req: Request, res: Response) => {
 // Get single opportunity by id
 router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const opp = await prisma.opportunity.findUnique({
-      where: { id: req.params.id },
-      include: { university: true },
-    });
+    const [opp, user, savedCount] = await Promise.all([
+      prisma.opportunity.findUnique({
+        where: { id: req.params.id },
+        include: { university: true },
+      }),
+      prisma.user.findUnique({
+        where: { id: req.user!.userId },
+        include: { profile: true },
+      }),
+      prisma.user.count({ where: { savedOpportunities: { some: { id: req.params.id } } } }),
+    ]);
     if (!opp) { res.status(404).json({ error: 'Not found' }); return; }
-    const savedCount = await prisma.user.count({
-      where: { savedOpportunities: { some: { id: opp.id } } },
-    });
-    res.json({ ...opp, savedCount });
+    const matchScore = user?.profile
+      ? Math.max(0, Math.min(100, Math.round(scoreOpportunity(user.profile, user, opp as any))))
+      : 0;
+    res.json({ ...opp, savedCount, matchScore });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
