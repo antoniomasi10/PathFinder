@@ -509,6 +509,8 @@ export async function getHybridMatchedOpportunities(
        LEFT JOIN "University" u ON o."universityId" = u."id"
        CROSS JOIN "User" usr
        WHERE usr.id = $1
+         AND (o."expiresAt" IS NULL OR o."expiresAt" > NOW())
+         AND (o."deadline" IS NULL OR o."deadline" > NOW())
        ORDER BY o."postedAt" DESC`,
       userId,
     );
@@ -524,6 +526,8 @@ export async function getHybridMatchedOpportunities(
               u."id" as "uniId", u."logoUrl" as "universityLogoUrl"
        FROM "Opportunity" o
        LEFT JOIN "University" u ON o."universityId" = u."id"
+       WHERE (o."expiresAt" IS NULL OR o."expiresAt" > NOW())
+         AND (o."deadline" IS NULL OR o."deadline" > NOW())
        ORDER BY o."postedAt" DESC`,
     );
   }
@@ -631,6 +635,13 @@ export async function getNewOpportunities(
   if (filters.isRemote !== undefined) where.isRemote = filters.isRemote;
   if (filters.isAbroad !== undefined) where.isAbroad = filters.isAbroad;
   if (filters.englishLevels?.length) where.requiredEnglishLevel = { in: filters.englishLevels as any };
+
+  // Always exclude expired listings and past-deadline opportunities
+  where.AND = [
+    { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+    { OR: [{ deadline: null }, { deadline: { gt: new Date() } }] },
+  ];
+
   if (filters.deadline) {
     const now = new Date(); now.setHours(0, 0, 0, 0);
     if (filters.deadline === '7' || filters.deadline === '30') {

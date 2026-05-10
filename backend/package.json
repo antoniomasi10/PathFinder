@@ -31,7 +31,8 @@
     "import:best-courses": "ts-node --transpile-only -e \"require('./src/services/import/best-courses.import').importBestCoursesOpportunities().then(r=>console.log(JSON.stringify(r)))\"",
     "backfill:structured-content": "ts-node --transpile-only scripts/backfill-structured-content.ts",
     "backfill:deadlines": "ts-node --transpile-only scripts/backfill-deadlines.ts",
-    "backfill:expire-senior": "ts-node --transpile-only scripts/backfill-expire-senior.ts"
+    "backfill:expire-senior": "ts-node --transpile-only scripts/backfill-expire-senior.ts",
+    "sync:deadlines-from-structured": "ts-node --transpile-only scripts/sync-deadlines-from-structured.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

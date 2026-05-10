@@ -61,7 +61,10 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     }
 
     // Plain explore: build dynamic WHERE for raw SQL (avoids Unsupported vector column)
-    const conditions: string[] = [];
+    const conditions: string[] = [
+      `(o."expiresAt" IS NULL OR o."expiresAt" > NOW())`,
+      `(o."deadline" IS NULL OR o."deadline" > NOW())`,
+    ];
     const params: any[] = [limit, skip];
     let idx = 3;
 

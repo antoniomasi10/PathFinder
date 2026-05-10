@@ -7,7 +7,7 @@ import BottomNav from '@/components/BottomNav';
 import { isValidExternalUrl } from '@/lib/urlValidation';
 import { useSavedOpportunities } from '@/lib/savedOpportunities';
 import { getOpportunityTypeColor } from '@/lib/opportunityColors';
-import DeadlineLabel from '@/components/DeadlineLabel';
+import DeadlineLabel, { OpenLabel } from '@/components/DeadlineLabel';
 import {
   ArrowLeft, Share, ClockIcon, Bookmark, Star, Users, MapPin,
   FileText, Briefcase, Bulb, CircleCheck, ExternalLink, Target,
@@ -368,10 +368,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
             {opportunity.deadline ? (
               <DeadlineLabel deadline={opportunity.deadline} size="xs" />
             ) : (
-              <div className="flex items-center gap-1.5">
-                <ClockIcon size={13} strokeWidth={1.8} color="#5c5e6e" />
-                <span className="text-[14px] font-medium" style={{ color: '#5c5e6e', fontFamily: 'var(--font-plus-jakarta)' }}>Recente</span>
-              </div>
+              <OpenLabel size="xs" />
             )}
           </div>
 

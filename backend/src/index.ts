@@ -39,6 +39,7 @@ import { startDeadlineChecker } from './services/deadlineChecker';
 import { startImportScheduler } from './services/import/scheduler';
 import { bulkGenerateEmbeddings } from './services/embedding.service';
 import { startRetentionCleanupJob } from './services/cleanup.service';
+import { cacheDel } from './lib/cache';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
 if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
@@ -194,6 +195,7 @@ setupNotificationSocket(io);
 const PORT = process.env.PORT || 4000;
 httpServer.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
+  cacheDel('cache:opps:*');
   startDeadlineChecker();
   startImportScheduler();
   startRetentionCleanupJob();

@@ -12,13 +12,13 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 import prisma from '../src/lib/prisma';
-import { parseOpportunityContent } from '../src/services/ai/opportunityParser';
+import { parseOpportunityContent, parseAIDate } from '../src/services/ai/opportunityParser';
 
 const BATCH_SIZE = 20;
 const CONCURRENCY = 3;
 const CHUNK_DELAY_MS = 700; // ~260 req/min — well within GPT-4o Mini 500 RPM limit
 
-type OppRow = { id: string; title: string; description: string; about: string | null; company: string | null };
+type OppRow = { id: string; title: string; description: string; about: string | null; company: string | null; deadline: Date | null };
 
 async function main() {
   const [{ count }] = await prisma.$queryRaw<[{ count: bigint }]>`
@@ -39,14 +39,14 @@ async function main() {
   while (processed < total) {
     const batch: OppRow[] = lastId
       ? await prisma.$queryRaw`
-          SELECT id, title, description, about, company
+          SELECT id, title, description, about, company, deadline
           FROM "Opportunity"
           WHERE "structuredContent" IS NULL AND id > ${lastId}
           ORDER BY id
           LIMIT ${BATCH_SIZE}
         `
       : await prisma.$queryRaw`
-          SELECT id, title, description, about, company
+          SELECT id, title, description, about, company, deadline
           FROM "Opportunity"
           WHERE "structuredContent" IS NULL
           ORDER BY id
@@ -61,9 +61,14 @@ async function main() {
         chunk.map(async (opp) => {
           const structured = await parseOpportunityContent(opp.title, opp.description, opp.about, opp.company);
           if (structured) {
+            const updateData: any = { structuredContent: structured };
+            if (!opp.deadline && structured.deadline) {
+              const extracted = parseAIDate(structured.deadline);
+              if (extracted) updateData.deadline = extracted;
+            }
             await prisma.opportunity.update({
               where: { id: opp.id },
-              data: { structuredContent: structured as any },
+              data: updateData,
             }).catch(() => {});
           }
         }),

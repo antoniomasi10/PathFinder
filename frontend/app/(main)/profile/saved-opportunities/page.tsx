@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useSavedOpportunities } from '@/lib/savedOpportunities';
 import { getOpportunityTypeColor } from '@/lib/opportunityColors';
 import { ChevronLeft } from '@/components/icons';
-import DeadlineLabel from '@/components/DeadlineLabel';
+import DeadlineLabel, { OpenLabel } from '@/components/DeadlineLabel';
 import BottomNav from '@/components/BottomNav';
 
 export default function SavedOpportunitiesPage() {
@@ -193,7 +193,7 @@ export default function SavedOpportunitiesPage() {
                         {opp.matchScore != null ? `${opp.matchScore}%` : '—'}
                       </p>
                     </div>
-                    {opp.deadline && <DeadlineLabel deadline={opp.deadline} size="xs" />}
+                    {opp.deadline ? <DeadlineLabel deadline={opp.deadline} size="xs" /> : <OpenLabel size="xs" />}
                     <div
                       className="rounded-full px-[10px] py-[4px]"
                       style={{ backgroundColor: getOpportunityTypeColor(opp.type) }}

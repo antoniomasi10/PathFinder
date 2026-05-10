@@ -8,7 +8,7 @@ import { isValidExternalUrl } from '@/lib/urlValidation';
 import api from '@/lib/api';
 import { getOpportunityTypeColor } from '@/lib/opportunityColors';
 import { Bookmark, MapPin, CalendarIcon, Search, Filter } from '@/components/icons';
-import DeadlineLabel, { getDaysLeft } from '@/components/DeadlineLabel';
+import DeadlineLabel, { getDaysLeft, OpenLabel } from '@/components/DeadlineLabel';
 
 /* ── Types ───────────────────────────────────────────────────────── */
 
@@ -321,7 +321,7 @@ function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => 
               {opp.matchScore}%
             </p>
           </div>
-          {opp.deadline && <DeadlineLabel deadline={opp.deadline} size="xs" />}
+          {opp.deadline ? <DeadlineLabel deadline={opp.deadline} size="xs" /> : <OpenLabel size="xs" />}
           <div
             className="rounded-full px-[17px] py-[7px]"
             style={{
@@ -388,7 +388,7 @@ function OpportunityCard({ opp, isSaved, onSave, onOpen }: {
               {opp.matchScore}%
             </p>
           </div>
-          {opp.deadline && <DeadlineLabel deadline={opp.deadline} size="xs" />}
+          {opp.deadline ? <DeadlineLabel deadline={opp.deadline} size="xs" /> : <OpenLabel size="xs" />}
           <div
             className="rounded-full px-[10px] py-[4px]"
             style={{ backgroundColor: getOpportunityTypeColor(opp.type || opp.badge.split(' • ')[0]) }}
