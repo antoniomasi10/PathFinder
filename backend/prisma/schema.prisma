@@ -154,6 +154,7 @@ model User {
   tosConsentAt        DateTime?
   privacyConsentAt    DateTime?
   marketingConsent    Boolean   @default(false)
+  oneSignalPlayerId   String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -180,6 +181,7 @@ model User {
   tracking               UserTracking[]
   verificationCodes      VerificationCode[]
   interactions           UserInteraction[]
+  emailLogs              EmailLog[]
   embedding              Unsupported("vector(384)")?
 
   @@index([universityId])
@@ -488,6 +490,8 @@ model NotificationPreference {
   chat           Boolean @default(true)
   achievements   Boolean @default(true)
   system         Boolean @default(true)
+  emailDigest    Boolean @default(true)
+  emailAlerts    Boolean @default(true)
 }
 
 model PushSubscription {
@@ -554,6 +558,19 @@ model VerificationCode {
 
   @@index([userId, type])
   @@index([code, type])
+}
+
+model EmailLog {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // "weekly_digest" | "expiring_alert"
+  sentAt      DateTime @default(now())
+  weekNumber  Int?
+  year        Int?
+
+  @@index([userId, type, weekNumber, year])
+  @@index([userId, type, sentAt])
 }
 
 model UserInteraction {

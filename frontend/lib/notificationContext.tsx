@@ -5,6 +5,7 @@ import { io, Socket } from 'socket.io-client';
 import { useQueryClient } from '@tanstack/react-query';
 import api, { getAccessToken } from '@/lib/api';
 import { registerServiceWorker, subscribeToPush, isPushSupported } from '@/lib/pushManager';
+import { initOneSignal, isOneSignalAvailable } from '@/lib/oneSignalManager';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -70,8 +71,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     // Register service worker and re-sync push subscription
     if (typeof window !== 'undefined' && isPushSupported()) {
       registerServiceWorker().then(() => {
-        // If user already granted permission, re-sync subscription with backend
-        if (Notification.permission === 'granted') {
+        if (isOneSignalAvailable()) {
+          // OneSignal handles its own re-registration on init
+          initOneSignal().catch(() => {});
+        } else if (Notification.permission === 'granted') {
+          // VAPID fallback: re-sync existing subscription with backend
           subscribeToPush().catch(() => {});
         }
       });

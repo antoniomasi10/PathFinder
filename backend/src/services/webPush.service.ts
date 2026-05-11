@@ -50,7 +50,7 @@ const HIGH_PRIORITY_TYPES: NotificationType[] = [
 ];
 
 // ── Titles per notification type ────────────────────────────
-const TYPE_TITLES: Partial<Record<NotificationType, string>> = {
+export const TYPE_TITLES: Partial<Record<NotificationType, string>> = {
   FRIEND_REQUEST: 'Nuova richiesta di connessione',
   FRIEND_ACCEPTED: 'Connessione accettata',
   NEW_MESSAGE: 'Nuovo messaggio',

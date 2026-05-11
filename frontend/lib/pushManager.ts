@@ -1,4 +1,5 @@
 import api from '@/lib/api';
+import { isOneSignalAvailable, requestOneSignalPermission } from '@/lib/oneSignalManager';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -39,7 +40,7 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
   }
 }
 
-export async function subscribeToPush(): Promise<boolean> {
+async function subscribeViaVapid(): Promise<boolean> {
   if (!isPushSupported()) return false;
 
   try {
@@ -84,6 +85,11 @@ export async function subscribeToPush(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export async function subscribeToPush(): Promise<boolean> {
+  if (isOneSignalAvailable()) return requestOneSignalPermission();
+  return subscribeViaVapid();
 }
 
 export async function unsubscribeFromPush(): Promise<boolean> {

@@ -4,6 +4,7 @@ import prisma from '../lib/prisma';
 import * as notificationService from '../services/notification.service';
 import * as prefService from '../services/notificationPreference.service';
 import * as webPushService from '../services/webPush.service';
+import * as oneSignalService from '../services/oneSignal.service';
 
 const router = Router();
 
@@ -59,15 +60,42 @@ router.delete('/push/unsubscribe', authMiddleware, async (req: Request, res: Res
   }
 });
 
+// POST /push/onesignal-register — save OneSignal player ID for the authenticated user
+router.post('/push/onesignal-register', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { playerId } = req.body;
+    if (!playerId || typeof playerId !== 'string') {
+      return res.status(400).json({ error: 'playerId required' });
+    }
+    await prisma.user.update({
+      where: { id: req.user!.userId },
+      data: { oneSignalPlayerId: playerId },
+    });
+    await oneSignalService.setExternalUserId(playerId, req.user!.userId);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /push/test — send a test push to the authenticated user
 router.post('/push/test', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const result = await webPushService.sendPushToUser(req.user!.userId, {
-      body: 'Le notifiche push funzionano correttamente!',
-      type: 'GENERAL',
-      url: '/notifications',
-    });
-    res.json({ success: true, result });
+    if (oneSignalService.isOneSignalConfigured()) {
+      await oneSignalService.sendPushToUser(req.user!.userId, {
+        title: 'PathFinder',
+        body: 'Le notifiche push funzionano correttamente!',
+        url: '/notifications',
+      });
+      res.json({ success: true });
+    } else {
+      const result = await webPushService.sendPushToUser(req.user!.userId, {
+        body: 'Le notifiche push funzionano correttamente!',
+        type: 'GENERAL',
+        url: '/notifications',
+      });
+      res.json({ success: true, result });
+    }
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
