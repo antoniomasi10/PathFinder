@@ -263,6 +263,10 @@ model Opportunity {
   // --- AI-extracted structured content ---
   structuredContent    Json?           // {opportunityDescription, companyDescription, tasks}
 
+  // --- URL health ---
+  urlStatus            String?         @default("UNCHECKED") // UNCHECKED | ACTIVE | BROKEN
+  urlCheckedAt         DateTime?
+
   @@index([universityId])
   @@index([type])
   @@index([deadline])

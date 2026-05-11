@@ -40,6 +40,7 @@ import { importConfsTechOpportunities } from './confstech.import';
 import { importAlmaLaureaStats } from './almalaurea.import';
 import { importOpportunityDeskOpportunities } from './opportunity-desk.import';
 import { runCleanup } from './cleanup.service';
+import { runUrlCheckBatch } from './urlChecker';
 import { alertImportFailure } from './alerting';
 import { resetDedupCache } from './validation';
 import { logger } from '../../utils/logger';
@@ -164,6 +165,15 @@ export function startImportScheduler() {
     } catch (err) { logger.error(`[Scheduler] Cleanup failed: ${err}`); }
   });
 
+  // Weekly Sunday: URL health check (06:00) — after cleanup
+  cron.schedule('0 6 * * 0', async () => {
+    logger.info('[Scheduler] URL check batch...');
+    try {
+      const r = await runUrlCheckBatch(300);
+      logger.info('[Scheduler] URL check done', { ...r });
+    } catch (err) { logger.error(`[Scheduler] URL check failed: ${err}`); }
+  });
+
   logger.info('[Scheduler] Import scheduler started:');
   logger.info('  EURES: disabled (static cache)');
   logger.info('  EU Youth: Mon 03:30 | SmartRecruiters: Mon 04:00 | HackClub: Mon 04:30');
@@ -173,6 +183,6 @@ export function startImportScheduler() {
   logger.info('  Greenhouse: Thu 03:30 | Jobicy: Thu 04:00');
   logger.info('  Lever: Fri 03:30 | FashionUnited: Fri 04:00');
   logger.info('  Ashby: Sat 03:30 | Workable: Sat 04:00');
-  logger.info('  Personio: Sun 03:30 | Cleanup: Sun 05:00');
+  logger.info('  Personio: Sun 03:30 | Cleanup: Sun 05:00 | URL check: Sun 06:00');
   logger.info('  BEST Courses: monthly 1st 03:30 | MUR: monthly 1st 02:00/02:30 | AlmaLaurea: quarterly');
 }

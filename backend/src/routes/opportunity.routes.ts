@@ -64,6 +64,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     const conditions: string[] = [
       `(o."expiresAt" IS NULL OR o."expiresAt" > NOW())`,
       `(o."deadline" IS NULL OR o."deadline" > NOW())`,
+      `(o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN')`,
     ];
     const params: any[] = [limit, skip];
     let idx = 3;
