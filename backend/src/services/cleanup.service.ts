@@ -27,14 +27,24 @@ async function cleanOldMessages(): Promise<number> {
   return result.count;
 }
 
+async function cleanExpiredOpportunities(): Promise<number> {
+  // Delete listings that expired more than 7 days ago (buffer before permanent deletion)
+  const cutoff = calculateRetentionCutoff(7);
+  const result = await prisma.opportunity.deleteMany({
+    where: { expiresAt: { lt: cutoff } },
+  });
+  return result.count;
+}
+
 export async function runRetentionCleanup(): Promise<void> {
   logger.info('Running data retention cleanup...');
   try {
-    const [friendRequests, messages] = await Promise.all([
+    const [friendRequests, messages, expiredOpps] = await Promise.all([
       cleanRejectedFriendRequests(),
       cleanOldMessages(),
+      cleanExpiredOpportunities(),
     ]);
-    logger.info(`Retention cleanup complete: deleted ${friendRequests} rejected friend requests, ${messages} old messages`);
+    logger.info(`Retention cleanup complete: deleted ${friendRequests} rejected friend requests, ${messages} old messages, ${expiredOpps} expired opportunities`);
   } catch (err) {
     logger.error('Retention cleanup failed', { error: String(err) });
   }
