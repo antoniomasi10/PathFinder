@@ -657,6 +657,19 @@ export default function HomePage() {
   const [esploraTotalPages, setEsploraTotalPages] = useState(1);
   const esploraTopRef = useRef<HTMLDivElement>(null);
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const isRefreshingRef = useRef(false);
+  const touchStartYRef = useRef(0);
+  const isPullingRef = useRef(false);
+  const pullDistRef = useRef(0);
+  const indicatorRef = useRef<HTMLDivElement>(null);
+  const spinnerSvgRef = useRef<SVGSVGElement>(null);
+  const refreshParamsRef = useRef<{ searchQuery: string; appliedFilters: AdvancedFilters; typeFilter: string | null }>({
+    searchQuery: '', appliedFilters: DEFAULT_FILTERS, typeFilter: null,
+  });
+  const loadPerTeRef = useRef<((page: number, search: string, filters: AdvancedFilters, scrollToTop?: boolean, type?: string | null) => Promise<unknown> | void) | null>(null);
+  const loadEsploraRef = useRef<((page: number, search: string, filters: AdvancedFilters, scrollToTop?: boolean, type?: string | null) => Promise<unknown> | void) | null>(null);
+
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   useEffect(() => { setSearchHistory(loadHistory()); }, []);
@@ -697,7 +710,7 @@ export default function HomePage() {
   const loadPerTePage = useCallback((page: number, search: string, filters: AdvancedFilters, scrollToTop = false, type?: string | null) => {
     setLoadingOpps(true);
     const qs = buildServerParams(search, filters, type);
-    api.get(`/opportunities?matched=true&page=${page}&limit=20${qs}`)
+    return api.get(`/opportunities?matched=true&page=${page}&limit=20${qs}`)
       .then(({ data }) => {
         const items = data.data || data;
         const mapped = (Array.isArray(items) ? items : []).map((o: any) => mapOpportunity(o));
@@ -713,7 +726,7 @@ export default function HomePage() {
   const loadEsploraPage = useCallback((page: number, search: string, filters: AdvancedFilters, scrollToTop = false, type?: string | null) => {
     setLoadingNew(true);
     const qs = buildServerParams(search, filters, type);
-    api.get(`/opportunities?new=true&page=${page}&limit=20${qs}`)
+    return api.get(`/opportunities?new=true&page=${page}&limit=20${qs}`)
       .then(({ data }) => {
         const items = data.data || data;
         const mapped = (Array.isArray(items) ? items : []).map((o: any) => mapOpportunity(o, { isNew: o.isNew ?? false }));
@@ -723,6 +736,80 @@ export default function HomePage() {
       })
       .catch(() => setNewOpportunities([...allOpportunities].sort((a, b) => b.matchScore - a.matchScore)))
       .finally(() => setLoadingNew(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => { loadPerTeRef.current = loadPerTePage; }, [loadPerTePage]);
+  useEffect(() => { loadEsploraRef.current = loadEsploraPage; }, [loadEsploraPage]);
+
+  function hideIndicator() {
+    if (indicatorRef.current) {
+      indicatorRef.current.style.transition = 'height 0.3s ease-out, opacity 0.3s ease-out';
+      indicatorRef.current.style.height = '0px';
+      indicatorRef.current.style.opacity = '0';
+    }
+  }
+
+  function triggerRefresh() {
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
+    setIsRefreshing(true);
+    if (indicatorRef.current) { indicatorRef.current.style.transition = 'none'; indicatorRef.current.style.height = '56px'; indicatorRef.current.style.opacity = '1'; }
+    if (spinnerSvgRef.current) spinnerSvgRef.current.style.transform = '';
+    const { searchQuery: sq, appliedFilters: af, typeFilter: tf } = refreshParamsRef.current;
+    Promise.all([
+      loadPerTeRef.current?.(1, sq, af, false, tf) ?? Promise.resolve(),
+      loadEsploraRef.current?.(1, sq, af, false, tf) ?? Promise.resolve(),
+    ]).finally(() => {
+      isRefreshingRef.current = false;
+      setIsRefreshing(false);
+      hideIndicator();
+    });
+  }
+
+  useEffect(() => {
+    const THRESHOLD = 72;
+    function onTouchStart(e: TouchEvent) {
+      if (window.scrollY === 0 && !isRefreshingRef.current) {
+        touchStartYRef.current = e.touches[0].clientY;
+        isPullingRef.current = true;
+      }
+    }
+    function onTouchMove(e: TouchEvent) {
+      if (!isPullingRef.current || isRefreshingRef.current) return;
+      const delta = e.touches[0].clientY - touchStartYRef.current;
+      if (delta <= 0) {
+        isPullingRef.current = false;
+        pullDistRef.current = 0;
+        if (indicatorRef.current) { indicatorRef.current.style.transition = 'height 0.2s ease-out, opacity 0.2s ease-out'; indicatorRef.current.style.height = '0px'; indicatorRef.current.style.opacity = '0'; }
+        return;
+      }
+      e.preventDefault();
+      const dist = Math.min(delta * 0.5, THRESHOLD + 16);
+      pullDistRef.current = dist;
+      const progress = Math.min(dist / THRESHOLD, 1);
+      if (indicatorRef.current) { indicatorRef.current.style.transition = 'none'; indicatorRef.current.style.height = `${progress * 56}px`; indicatorRef.current.style.opacity = String(Math.min(progress * 2, 1)); }
+      if (spinnerSvgRef.current) spinnerSvgRef.current.style.transform = `rotate(${progress * 270}deg)`;
+    }
+    function onTouchEnd() {
+      if (!isPullingRef.current) return;
+      isPullingRef.current = false;
+      const dist = pullDistRef.current;
+      pullDistRef.current = 0;
+      if (dist >= THRESHOLD) {
+        triggerRefresh();
+      } else {
+        if (indicatorRef.current) { indicatorRef.current.style.transition = 'height 0.2s ease-out, opacity 0.2s ease-out'; indicatorRef.current.style.height = '0px'; indicatorRef.current.style.opacity = '0'; }
+      }
+    }
+    document.addEventListener('touchstart', onTouchStart, { passive: true });
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart);
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -747,6 +834,8 @@ export default function HomePage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [draftFilters, setDraftFilters] = useState<AdvancedFilters>({ ...DEFAULT_FILTERS });
   const [appliedFilters, setAppliedFilters] = useState<AdvancedFilters>({ ...DEFAULT_FILTERS });
+
+  useEffect(() => { refreshParamsRef.current = { searchQuery, appliedFilters, typeFilter }; }, [searchQuery, appliedFilters, typeFilter]);
 
   function updateDraft(partial: Partial<AdvancedFilters>) { setDraftFilters((prev) => ({ ...prev, ...partial })); }
   function toggleDraftBadge(catId: string, value: string) {
@@ -890,24 +979,21 @@ const viewedRef = useRef<Set<string>>(new Set());
           </div>
         </div>
 
-        {/* 3. Category chips — horizontally scrollable */}
-        <div className="flex gap-[8px] overflow-x-auto no-scrollbar">
+        {/* 3. Category chips — full-width distributed */}
+        <div className="flex justify-between">
           {([
-            { label: 'Tutti',           value: null },
-            { label: 'Internship',       value: 'INTERNSHIP' },
-            { label: 'Borse di Studio', value: 'SCHOLARSHIP' },
-            { label: 'Erasmus',         value: 'ERASMUS' },
-            { label: 'Summer School',   value: 'SUMMER_SCHOOL' },
-            { label: 'Progetti',        value: 'PROJECT' },
-            { label: 'Eventi',          value: 'EVENT' },
-            { label: 'Corsi',           value: 'CORSO' },
+            { label: 'Tutti',        value: null },
+            { label: 'Internship',   value: 'INTERNSHIP' },
+            { label: 'Summer School', value: 'SUMMER_SCHOOL' },
+            { label: 'Progetti',     value: 'PROJECT' },
+            { label: 'Eventi',       value: 'EVENT' },
           ] as { label: string; value: string | null }[]).map((chip) => {
             const active = typeFilter === chip.value;
             return (
               <button
                 key={chip.label}
                 onClick={() => setTypeFilter(chip.value)}
-                className="flex-shrink-0 rounded-full font-medium text-[12px] px-[12px] transition-all"
+                className="rounded-full font-medium text-[12px] px-[12px] transition-all"
                 style={{
                   paddingTop: 5, paddingBottom: 5,
                   backgroundColor: active ? '#4a4bd7' : '#ecedff',
@@ -921,6 +1007,27 @@ const viewedRef = useRef<Set<string>>(new Set());
               </button>
             );
           })}
+        </div>
+
+        {/* Pull-to-refresh indicator */}
+        <div
+          ref={indicatorRef}
+          className="flex items-center justify-center overflow-hidden"
+          style={{ height: 0, opacity: 0 }}
+        >
+          <div
+            className="flex items-center justify-center rounded-full bg-white"
+            style={{ width: 36, height: 36, boxShadow: '0 2px 12px rgba(74,75,215,0.18)', flexShrink: 0 }}
+          >
+            <svg
+              ref={spinnerSvgRef}
+              className={isRefreshing ? 'animate-spin' : ''}
+              width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="#4a4bd7" strokeWidth={2.5} strokeLinecap="round"
+            >
+              <path d="M21 12a9 9 0 11-6.219-8.56" />
+            </svg>
+          </div>
         </div>
 
         {/* 4. Alert scadenze */}

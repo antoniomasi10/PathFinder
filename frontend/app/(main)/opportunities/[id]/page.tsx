@@ -63,7 +63,7 @@ function RelatedCard({ opp, onOpen }: { opp: Opportunity; onOpen: () => void }) 
   return (
     <button
       onClick={onOpen}
-      className="w-full text-left active:opacity-75 transition-opacity"
+      className="flex-shrink-0 w-[72vw] max-w-[280px] snap-start text-left active:opacity-75 transition-opacity"
     >
       <div
         className="flex flex-col gap-3 p-[17px] rounded-[24px]"
@@ -149,10 +149,10 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
       .then(({ data }) => { setOpportunity(mapRaw(data)); setLoading(false); })
       .catch(() => setLoading(false));
 
-    api.get('/opportunities?matched=true&page=1&limit=5')
+    api.get('/opportunities?matched=true&page=1&limit=6')
       .then(({ data }) => {
         const items = Array.isArray(data.data || data) ? (data.data || data) : [];
-        setRelatedOpps(items.filter((o: any) => String(o.id) !== String(id)).slice(0, 2).map(mapRaw));
+        setRelatedOpps(items.filter((o: any) => String(o.id) !== String(id)).slice(0, 5).map(mapRaw));
       })
       .catch(() => {});
   }, [id]);
@@ -508,7 +508,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
               <h2 className="text-[20px] font-bold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
                 Opportunità correlate
               </h2>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-row gap-3 overflow-x-auto pb-1 -mx-5 px-5 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
                 {relatedOpps.map((rel) => (
                   <RelatedCard key={rel.id} opp={rel} onOpen={() => handleOpenRelated(rel)} />
                 ))}
@@ -522,7 +522,11 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
       {/* ── Fixed CTA ─────────────────────────────────────────────── */}
       <div className="fixed z-30 left-0 right-0 max-w-lg mx-auto px-5" style={{ bottom: 80 }}>
         <button
-          onClick={() => hasUrl && window.open(opportunity.url, '_blank', 'noopener,noreferrer')}
+          onClick={() => {
+            if (!hasUrl) return;
+            api.post(`/opportunities/${opportunity.id}/click`).catch(() => {});
+            window.open(opportunity.url, '_blank', 'noopener,noreferrer');
+          }}
           disabled={!hasUrl}
           className="w-full flex items-center justify-center gap-2 rounded-[24px] font-bold text-[18px] active:opacity-80 transition-opacity"
           style={{

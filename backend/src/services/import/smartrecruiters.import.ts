@@ -97,9 +97,15 @@ function formatLocation(loc: SRLocation | undefined): string {
 /** True if the job is located or hirable from Italy */
 function isItalianLocation(loc: SRLocation | undefined): boolean {
   if (!loc) return false;
-  if (loc.country?.toLowerCase() === 'it') return true;
+  const country = (loc.country || '').toLowerCase();
+  if (country === 'it' || country === 'ita' || country === 'italy' || country === 'italia') return true;
   const full = (loc.fullLocation || '').toLowerCase();
-  return full.includes('italy') || full.includes('italia');
+  if (full.includes('italy') || full.includes('italia')) return true;
+  const city = (loc.city || '').toLowerCase();
+  return city.includes('milan') || city.includes('roma') || city.includes('rome') ||
+    city.includes('torino') || city.includes('naples') || city.includes('napoli') ||
+    city.includes('firenze') || city.includes('florence') || city.includes('bologna') ||
+    city.includes('venezia') || city.includes('venice') || city.includes('genova');
 }
 
 // ---------------------------------------------------------------------------

@@ -445,6 +445,32 @@ export function scoreOpportunityWithFeedback(
   return Math.max(0, Math.min(100, baseScore + feedbackBoost));
 }
 
+/**
+ * Sorts a pre-scored opportunity list by "freshness" using three priority buckets,
+ * while preserving matchScore ordering within each bucket.
+ *
+ * Bucket 0 — never seen:          highest priority
+ * Bucket 1 — viewed, not clicked: deprioritized
+ * Bucket 2 — external link clicked: lowest priority
+ *
+ * The matchScore field is NOT modified — this only affects display order.
+ */
+export function sortOpportunitiesByFreshness<T extends { id: string }>(
+  opps: T[],
+  viewedIds: Set<string>,
+  clickedIds: Set<string>,
+): T[] {
+  const b0: T[] = [];
+  const b1: T[] = [];
+  const b2: T[] = [];
+  for (const opp of opps) {
+    if (clickedIds.has(opp.id)) b2.push(opp);
+    else if (viewedIds.has(opp.id)) b1.push(opp);
+    else b0.push(opp);
+  }
+  return [...b0, ...b1, ...b2];
+}
+
 // ─── Hybrid Scoring (Phase 2: pgvector) ─────────────────────────────
 
 /**
@@ -592,7 +618,12 @@ export async function getHybridMatchedOpportunities(
 
   scored.sort((a, b) => b.matchScore - a.matchScore);
 
-  const filtered = Object.keys(filters).length ? applyOppFilters(scored, filters) : scored;
+  // Derive view/click sets from the already-fetched interactions (90-day window)
+  const viewedIds = new Set(interactions.filter((i) => i.action === 'view').map((i) => i.targetId));
+  const clickedIds = new Set(interactions.filter((i) => i.action === 'click').map((i) => i.targetId));
+  const ranked = sortOpportunitiesByFreshness(scored, viewedIds, clickedIds);
+
+  const filtered = Object.keys(filters).length ? applyOppFilters(ranked, filters) : ranked;
   return {
     data: filtered.slice(offset, offset + limit),
     total: filtered.length,
