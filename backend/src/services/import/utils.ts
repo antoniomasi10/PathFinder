@@ -313,7 +313,7 @@ export interface FetchRetryOptions {
 }
 
 /** Identifiable UA so upstream APIs can reach us instead of silently blocking. */
-const DEFAULT_USER_AGENT = 'PathFinder/1.0 (+https://pathfinder.example/about; university-student-platform)';
+const DEFAULT_USER_AGENT = 'COhA/1.0 (+https://coha.example/about; university-student-platform)';
 
 /**
  * fetch with:
@@ -491,7 +491,7 @@ export async function fetchMetaDescription(url: string, timeoutMs = 8000): Promi
       timeoutMs,
       headers: {
         'Accept': 'text/html',
-        'User-Agent': 'Mozilla/5.0 (compatible; PathFinder-bot/1.0; +https://pathfinder.app)',
+        'User-Agent': 'Mozilla/5.0 (compatible; COhA-bot/1.0; +https://coha.app)',
       },
       logTag: '[MetaFetch]',
       retries: 1,
@@ -528,4 +528,28 @@ export async function fetchMetaDescription(url: string, timeoutMs = 8000): Promi
   } catch {
     return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Senior role detection
+// ---------------------------------------------------------------------------
+
+const SENIOR_TITLE_PATTERNS = [
+  /\b(senior|sr\.?\s|director|head\s+of|vp\s|vice\s+president|lead\s|principal|staff\s|chief\s|cto|ceo|cmo|coo|cpo|manager|responsabile)\b/i,
+  /\d+\+?\s*(?:years?|anni?)\s*(?:of\s+)?(?:experience|esperienza)/i,
+];
+
+// Safe keywords that override senior signals (e.g. "Marketing Intern Manager", "Junior Manager")
+const SAFE_TITLE_PATTERNS = [
+  /\b(intern|internship|stage|tirocinio|trainee|junior|graduate\s+program|werkstudent|apprenti|alternance|stagiaire|praktikant|borsista)\b/i,
+];
+
+/**
+ * Returns true if the job title clearly indicates a senior/experienced role.
+ * Safe patterns (intern, junior, trainee…) take priority — if the title contains
+ * both a senior word and a safe word, the role is considered entry-level.
+ */
+export function isSeniorRole(title: string): boolean {
+  if (SAFE_TITLE_PATTERNS.some(p => p.test(title))) return false;
+  return SENIOR_TITLE_PATTERNS.some(p => p.test(title));
 }

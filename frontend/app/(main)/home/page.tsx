@@ -8,7 +8,7 @@ import { isValidExternalUrl } from '@/lib/urlValidation';
 import api from '@/lib/api';
 import { getOpportunityTypeColor } from '@/lib/opportunityColors';
 import { Bookmark, MapPin, CalendarIcon, Search, Filter } from '@/components/icons';
-import DeadlineLabel, { getDaysLeft } from '@/components/DeadlineLabel';
+import DeadlineLabel, { getDaysLeft, OpenLabel } from '@/components/DeadlineLabel';
 
 /* ── Types ───────────────────────────────────────────────────────── */
 
@@ -57,24 +57,6 @@ const DEFAULT_FILTERS: AdvancedFilters = {
   deadline: '', onlyRemote: false, onlyAbroad: false, onlyNew: false,
   englishLevels: [], tags: [],
 };
-
-/* ── Static fallback ─────────────────────────────────────────────── */
-
-type BaseOpportunity = Omit<Opportunity, 'description' | 'about' | 'location'>;
-
-const BASE_OPPORTUNITIES: BaseOpportunity[] = [
-  { id: '1', title: 'Software Engineer Intern', company: 'TechNova Solutions', badge: 'FULL-TIME • REMOTE', matchScore: 85, url: 'https://www.technova.io/careers/software-engineer-intern', type: 'Internship', remote: true, skills: [], matchReason: '', deadline: '2026-04-02' },
-  { id: '2', title: 'Product Design Workshop', company: 'Creative Hub Milan', badge: 'WORKSHOP • HYBRID', matchScore: 62, url: 'https://www.creativehubmilan.it/workshop/product-design', type: 'Event', remote: false, skills: [], matchReason: '', deadline: '2026-04-05' },
-  { id: '3', title: 'Data Analyst Junior', company: 'Fintech Alpha', badge: 'JUNIOR • IN-PERSON', matchScore: 35, type: 'Internship', remote: false, skills: [], matchReason: '', deadline: '2026-04-20' },
-  { id: '4', title: 'Master in AI Ethics', company: 'Politecnico di Milano', badge: 'EDUCATION • PART-TIME', matchScore: 92, url: 'https://www.polimi.it/formazione/master-e-corsi/master/master-in-ai-ethics', type: 'Summer school', remote: false, skills: [], matchReason: '', deadline: '2026-05-10' },
-];
-
-function getOpportunities(t: ReturnType<typeof useLanguage>['t']): Opportunity[] {
-  return BASE_OPPORTUNITIES.map((opp) => ({
-    ...opp,
-    ...t.opportunitiesContent[opp.id as keyof typeof t.opportunitiesContent],
-  }));
-}
 
 /* ── Filter logic ────────────────────────────────────────────────── */
 
@@ -323,7 +305,7 @@ function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => 
             </p>
           </div>
           <div className="flex justify-center">
-            {opp.deadline && <DeadlineLabel deadline={opp.deadline} size="xs" />}
+            {opp.deadline ? <DeadlineLabel deadline={opp.deadline} size="xs" /> : <OpenLabel size="xs" />}
           </div>
           <div className="flex justify-end">
             <div
@@ -394,7 +376,7 @@ function OpportunityCard({ opp, isSaved, onSave, onOpen }: {
             </p>
           </div>
           <div className="flex justify-center">
-            {opp.deadline && <DeadlineLabel deadline={opp.deadline} size="xs" />}
+            {opp.deadline ? <DeadlineLabel deadline={opp.deadline} size="xs" /> : <OpenLabel size="xs" />}
           </div>
           <div className="flex justify-end">
             <div
@@ -642,7 +624,6 @@ export default function HomePage() {
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
   const { savedIds, savedOpps, toggleSave } = useSavedOpportunities();
   const { t } = useLanguage();
-  const allOpportunities = getOpportunities(t);
   const filterCategories = getFilterCategories(t);
 
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -714,11 +695,11 @@ export default function HomePage() {
       .then(({ data }) => {
         const items = data.data || data;
         const mapped = (Array.isArray(items) ? items : []).map((o: any) => mapOpportunity(o));
-        setOpportunities(mapped.length > 0 ? mapped : [...allOpportunities].sort((a, b) => b.matchScore - a.matchScore));
+        setOpportunities(mapped);
         setPerTeTotalPages(data.totalPages || 1); setPerTePage(page);
         if (scrollToTop) setTimeout(() => perTeTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
       })
-      .catch(() => setOpportunities([...allOpportunities].sort((a, b) => b.matchScore - a.matchScore)))
+      .catch(() => setOpportunities([]))
       .finally(() => setLoadingOpps(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -730,11 +711,11 @@ export default function HomePage() {
       .then(({ data }) => {
         const items = data.data || data;
         const mapped = (Array.isArray(items) ? items : []).map((o: any) => mapOpportunity(o, { isNew: o.isNew ?? false }));
-        setNewOpportunities(mapped.length > 0 ? mapped : [...allOpportunities].sort((a, b) => b.matchScore - a.matchScore));
+        setNewOpportunities(mapped);
         setEsploraTotalPages(data.totalPages || 1); setEsploraPage(page);
         if (scrollToTop) setTimeout(() => esploraTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
       })
-      .catch(() => setNewOpportunities([...allOpportunities].sort((a, b) => b.matchScore - a.matchScore)))
+      .catch(() => setNewOpportunities([]))
       .finally(() => setLoadingNew(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

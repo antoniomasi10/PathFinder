@@ -197,9 +197,9 @@ export default function ProfilePage() {
     }
     // Clear all user-specific data from localStorage
     [
-      'pathfinder_privacy',
-      'pathfinder_saved_opps',
-      'pathfinder-saved-courses',
+      'coha_privacy',
+      'coha_saved_opps',
+      'coha-saved-courses',
       'openChatWith',
       'pinnedConversations',
     ].forEach((k) => localStorage.removeItem(k));
@@ -212,7 +212,7 @@ export default function ProfilePage() {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'pathfinder-export.json');
+      link.setAttribute('download', 'coha-export.json');
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -913,8 +913,8 @@ export default function ProfilePage() {
               a: 'Il punteggio di affinità è calcolato da un algoritmo che analizza diversi fattori del tuo profilo: le competenze che hai inserito, il tuo corso di laurea, l\'università che frequenti e l\'anno accademico. L\'algoritmo confronta questi dati con i requisiti dell\'opportunità e restituisce una percentuale di compatibilità. Più il tuo profilo è completo e aggiornato, più il punteggio sarà accurato e le opportunità mostrate in "Per te" saranno rilevanti per te.',
             },
             {
-              q: 'Posso candidarmi direttamente da Pathfinder?',
-              a: 'Al momento Pathfinder non gestisce direttamente le candidature. La nostra funzione è quella di metterti in contatto con le opportunità più adatte a te. Una volta trovata quella giusta, puoi accedere alla pagina ufficiale dell\'opportunità tramite il tasto "Vai all\'opportunità", dove potrai completare la candidatura secondo le modalità previste dall\'azienda o dall\'ente che la pubblica.',
+              q: 'Posso candidarmi direttamente da COhA?',
+              a: 'Al momento COhA non gestisce direttamente le candidature. La nostra funzione è quella di metterti in contatto con le opportunità più adatte a te. Una volta trovata quella giusta, puoi accedere alla pagina ufficiale dell\'opportunità tramite il tasto "Vai all\'opportunità", dove potrai completare la candidatura secondo le modalità previste dall\'azienda o dall\'ente che la pubblica.',
             },
             {
               q: 'Cosa succede alle mie conversazioni se rimuovo un Pathmate?',
@@ -984,7 +984,7 @@ export default function ProfilePage() {
           <div className="bg-white rounded-2xl overflow-hidden border border-[rgba(172,176,206,0.3)]">
             {/* Email */}
             <a
-              href="mailto:support@pathfinder.app"
+              href="mailto:support@coha.app"
               className="flex items-center gap-3 px-4 py-3.5 hover:bg-[rgba(172,176,206,0.08)] transition-colors"
             >
               <div className="w-9 h-9 rounded-[22%] bg-[rgba(97,95,226,0.1)] flex items-center justify-center flex-shrink-0">
@@ -994,7 +994,7 @@ export default function ProfilePage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-[#747995] font-medium">Email</p>
-                <p className="text-sm text-[#615fe2] font-medium truncate">support@pathfinder.app</p>
+                <p className="text-sm text-[#615fe2] font-medium truncate">support@coha.app</p>
               </div>
               <svg className="w-4 h-4 text-[#747995] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -1217,15 +1217,15 @@ export default function ProfilePage() {
           {[
             {
               title: 'Accettazione dei termini',
-              body: 'Utilizzando Pathfinder accetti integralmente i presenti Termini di Servizio. Se non accetti, ti preghiamo di non utilizzare la piattaforma. Pathfinder è riservato a studenti universitari maggiorenni residenti in Italia. La registrazione implica la piena accettazione di questi termini.',
+              body: 'Utilizzando COhA accetti integralmente i presenti Termini di Servizio. Se non accetti, ti preghiamo di non utilizzare la piattaforma. COhA è riservato a studenti universitari maggiorenni residenti in Italia. La registrazione implica la piena accettazione di questi termini.',
             },
             {
               title: 'Utilizzo del servizio',
-              body: 'Pathfinder è una piattaforma di networking universitario. Puoi utilizzarla per scoprire opportunità (tirocini, borse di studio, Erasmus, progetti, eventi), connetterti con altri studenti (Pathmates) e ricevere suggerimenti personalizzati. È vietato usare il servizio per attività illecite, per inviare spam o per raccogliere dati di altri utenti senza consenso.',
+              body: 'COhA è una piattaforma di networking universitario. Puoi utilizzarla per scoprire opportunità (tirocini, borse di studio, Erasmus, progetti, eventi), connetterti con altri studenti (Pathmates) e ricevere suggerimenti personalizzati. È vietato usare il servizio per attività illecite, per inviare spam o per raccogliere dati di altri utenti senza consenso.',
             },
             {
               title: 'Contenuti degli utenti',
-              body: 'I contenuti che pubblichi su Pathfinder (post, commenti, messaggi) restano di tua proprietà. Concedi tuttavia a Pathfinder una licenza non esclusiva per visualizzarli e distribuirli all\'interno della piattaforma. È vietato pubblicare contenuti illegali, offensivi, discriminatori o che violino diritti di terzi. Ci riserviamo il diritto di rimuovere contenuti che violino queste regole.',
+              body: 'I contenuti che pubblichi su COhA (post, commenti, messaggi) restano di tua proprietà. Concedi tuttavia a COhA una licenza non esclusiva per visualizzarli e distribuirli all\'interno della piattaforma. È vietato pubblicare contenuti illegali, offensivi, discriminatori o che violino diritti di terzi. Ci riserviamo il diritto di rimuovere contenuti che violino queste regole.',
             },
             {
               title: 'Privacy',
@@ -1233,7 +1233,7 @@ export default function ProfilePage() {
             },
             {
               title: 'Limitazioni di responsabilità',
-              body: 'Pathfinder non garantisce la disponibilità continua del servizio né l\'accuratezza delle informazioni sulle opportunità pubblicate. Non siamo responsabili per danni diretti o indiretti derivanti dall\'utilizzo della piattaforma, dalla partecipazione a opportunità trovate tramite essa, o da contenuti pubblicati da altri utenti.',
+              body: 'COhA non garantisce la disponibilità continua del servizio né l\'accuratezza delle informazioni sulle opportunità pubblicate. Non siamo responsabili per danni diretti o indiretti derivanti dall\'utilizzo della piattaforma, dalla partecipazione a opportunità trovate tramite essa, o da contenuti pubblicati da altri utenti.',
             },
             {
               title: 'Modifiche ai termini',
@@ -1284,7 +1284,7 @@ export default function ProfilePage() {
             },
             {
               title: 'Condivisione dei dati',
-              body: 'Non vendiamo i tuoi dati a terzi. Il tuo profilo è visibile ad altri utenti Pathfinder secondo le impostazioni di privacy da te scelte. Utilizziamo fornitori tecnici (hosting, analytics) vincolati da accordi di riservatezza che trattano i dati esclusivamente per conto nostro. Non condividiamo dati con le aziende che pubblicano opportunità.',
+              body: 'Non vendiamo i tuoi dati a terzi. Il tuo profilo è visibile ad altri utenti COhA secondo le impostazioni di privacy da te scelte. Utilizziamo fornitori tecnici (hosting, analytics) vincolati da accordi di riservatezza che trattano i dati esclusivamente per conto nostro. Non condividiamo dati con le aziende che pubblicano opportunità.',
             },
             {
               title: 'Sicurezza',
@@ -1292,11 +1292,11 @@ export default function ProfilePage() {
             },
             {
               title: 'I tuoi diritti',
-              body: 'Ai sensi del GDPR hai diritto di: accedere ai tuoi dati, rettificarli o cancellarli; limitare od opporti al trattamento; portabilità dei dati; revocare il consenso in qualsiasi momento. Puoi esercitare questi diritti scrivendo a support@pathfinder.app. Hai inoltre il diritto di presentare reclamo al Garante per la Protezione dei Dati Personali (www.garanteprivacy.it).',
+              body: 'Ai sensi del GDPR hai diritto di: accedere ai tuoi dati, rettificarli o cancellarli; limitare od opporti al trattamento; portabilità dei dati; revocare il consenso in qualsiasi momento. Puoi esercitare questi diritti scrivendo a support@coha.app. Hai inoltre il diritto di presentare reclamo al Garante per la Protezione dei Dati Personali (www.garanteprivacy.it).',
             },
             {
               title: 'Contatti',
-              body: 'Il titolare del trattamento è Pathfinder S.r.l. Per qualsiasi domanda sulla presente Informativa o per esercitare i tuoi diritti, contattaci a support@pathfinder.app. Risponderemo entro 30 giorni dalla ricezione della tua richiesta.',
+              body: 'Il titolare del trattamento è COhA S.r.l. Per qualsiasi domanda sulla presente Informativa o per esercitare i tuoi diritti, contattaci a support@coha.app. Risponderemo entro 30 giorni dalla ricezione della tua richiesta.',
             },
           ].map((section, i) => (
             <div key={i} className="bg-white rounded-2xl p-4 space-y-2 border border-[rgba(172,176,206,0.3)]">
@@ -1492,7 +1492,7 @@ export default function ProfilePage() {
           <div className="bg-white rounded-2xl overflow-hidden border border-[rgba(172,176,206,0.3)]">
             {/* Instagram */}
             <a
-              href="https://instagram.com/pathfinder.app"
+              href="https://instagram.com/coha.app"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 px-4 py-3.5 hover:bg-[rgba(172,176,206,0.08)] transition-colors"
@@ -1504,7 +1504,7 @@ export default function ProfilePage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-[#2c3149] font-medium">Instagram</p>
-                <p className="text-xs text-[#747995]">@pathfinder.app</p>
+                <p className="text-xs text-[#747995]">@coha.app</p>
               </div>
               <svg className="w-4 h-4 text-[#acb0ce] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -1513,7 +1513,7 @@ export default function ProfilePage() {
             <div className="mx-4 h-px bg-[rgba(172,176,206,0.2)]" />
             {/* LinkedIn */}
             <a
-              href="https://linkedin.com/company/pathfinder-app"
+              href="https://linkedin.com/company/coha-app"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 px-4 py-3.5 hover:bg-[rgba(172,176,206,0.08)] transition-colors"
@@ -1525,7 +1525,7 @@ export default function ProfilePage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-[#2c3149] font-medium">LinkedIn</p>
-                <p className="text-xs text-[#747995]">Pathfinder</p>
+                <p className="text-xs text-[#747995]">COhA</p>
               </div>
               <svg className="w-4 h-4 text-[#acb0ce] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -1534,7 +1534,7 @@ export default function ProfilePage() {
             <div className="mx-4 h-px bg-[rgba(172,176,206,0.2)]" />
             {/* TikTok */}
             <a
-              href="https://tiktok.com/@pathfinder.app"
+              href="https://tiktok.com/@coha.app"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 px-4 py-3.5 hover:bg-[rgba(172,176,206,0.08)] transition-colors"
@@ -1546,7 +1546,7 @@ export default function ProfilePage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-[#2c3149] font-medium">TikTok</p>
-                <p className="text-xs text-[#747995]">@pathfinder.app</p>
+                <p className="text-xs text-[#747995]">@coha.app</p>
               </div>
               <svg className="w-4 h-4 text-[#acb0ce] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -1555,7 +1555,7 @@ export default function ProfilePage() {
             <div className="mx-4 h-px bg-[rgba(172,176,206,0.2)]" />
             {/* X / Twitter */}
             <a
-              href="https://x.com/pathfinderapp"
+              href="https://x.com/cohaapp"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 px-4 py-3.5 hover:bg-[rgba(172,176,206,0.08)] transition-colors"
@@ -1567,7 +1567,7 @@ export default function ProfilePage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-[#2c3149] font-medium">X (Twitter)</p>
-                <p className="text-xs text-[#747995]">@pathfinderapp</p>
+                <p className="text-xs text-[#747995]">@cohaapp</p>
               </div>
               <svg className="w-4 h-4 text-[#acb0ce] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

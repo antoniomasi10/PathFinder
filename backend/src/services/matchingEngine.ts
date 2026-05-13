@@ -258,7 +258,7 @@ export function scoreOpportunity(
   } else if (preferredTypes.includes(opportunity.type)) {
     score += Math.round(p.interest * 0.65);
   } else {
-    score += Math.round(p.interest * 0.15);
+    // Fully misaligned type → no points
   }
 
   // 2. Cluster tag → opportunity type
@@ -269,7 +269,7 @@ export function scoreOpportunity(
   } else if (clusterTypes.includes(opportunity.type)) {
     score += Math.round(p.cluster * 0.60);
   } else {
-    score += Math.round(p.cluster * 0.15);
+    // Fully misaligned cluster → no points
   }
 
   // 3. GPA sufficient
@@ -296,15 +296,25 @@ export function scoreOpportunity(
 
   // 5. Relocation willingness
   if (p.relocate > 0) {
-    if (!opportunity.isAbroad && !opportunity.location) {
+    // Treat as abroad if flagged OR if location string doesn't mention Italy
+    const ITALIAN_LOCATIONS = ['italia', 'italy', 'milan', 'milano', 'roma', 'rome', 'napoli', 'torino', 'firenze', 'bologna', 'venezia', 'genova', 'palermo', 'bari', 'catania'];
+    const locationSuggestsAbroad = opportunity.location
+      ? !ITALIAN_LOCATIONS.some((it) => opportunity.location!.toLowerCase().includes(it)) && opportunity.location.trim() !== ''
+      : false;
+    const effectivelyAbroad = opportunity.isAbroad || locationSuggestsAbroad;
+
+    if (!effectivelyAbroad && !opportunity.location) {
       score += p.relocate;
     } else if (opportunity.isRemote || (opportunity as any).format === 'ONLINE') {
+      score += p.relocate;
+    } else if (!effectivelyAbroad) {
       score += p.relocate;
     } else if (user.willingToRelocate === 'YES') {
       score += p.relocate;
     } else if (user.willingToRelocate === 'MAYBE') {
       score += Math.round(p.relocate * 0.5);
     }
+    // willingToRelocate === 'NO' + effectivelyAbroad → 0 pts
   }
 
   // 6. Year of study accessibility
@@ -353,10 +363,30 @@ export function scoreOpportunity(
   // 10. Location match bonus — V2 (requires user.country, skipped for now)
 
   // 11. Tag-passion alignment bonus (additive, max +20, clamped to 100)
-  score += computeTagScore(profile, opportunity);
+  const tagScore = computeTagScore(profile, opportunity);
+  score += tagScore;
 
   // 12. Skill match bonus (additive, max +10, clamped to 100)
   score += computeSkillMatchScore(skills || null, opportunity);
+
+  // 13. Field ineligibility penalty: if eligibleFields is set and user's field not in it
+  const eligFields: FieldOfStudy[] = (opportunity as any).eligibleFields ?? [];
+  if (eligFields.length > 0 && !eligFields.includes('ANY' as FieldOfStudy)) {
+    const userField = user.courseOfStudy ? normalizeFieldToEnum(user.courseOfStudy) : ('ANY' as FieldOfStudy);
+    if (userField !== 'ANY' && !eligFields.includes(userField)) {
+      score = Math.round(score * 0.15);
+    }
+  }
+
+  // 14. Tag-incoherence penalty: opportunity has domain-specific tags with zero overlap with user
+  const oppTags = opportunity.tags || [];
+  if (tagScore === 0 && oppTags.length >= 2) {
+    const interest = profile.primaryInterest || 'general';
+    const hasDefinedInterest = PASSION_TAG_MAP[interest] || INTEREST_TAG_MAP[interest];
+    if (hasDefinedInterest) {
+      score = Math.round(score * 0.4);
+    }
+  }
 
   return Math.min(score, 100);
 }
@@ -502,11 +532,14 @@ export async function getHybridMatchedOpportunities(
                 u."id" as "uniId", u."logoUrl" as "universityLogoUrl"
          FROM "Opportunity" o
          LEFT JOIN "University" u ON o."universityId" = u."id"
+         WHERE (o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN')
          ORDER BY o."postedAt" DESC
          LIMIT $1 OFFSET $2`,
         limit, offset,
       ),
-      prisma.opportunity.count(),
+      prisma.opportunity.count({
+        where: { OR: [{ urlStatus: null }, { urlStatus: { not: 'BROKEN' } }] },
+      }),
     ]);
     return { data: opps, total };
   }
@@ -520,6 +553,19 @@ export async function getHybridMatchedOpportunities(
 
   let candidates: any[];
 
+  // Hard filter: users who explicitly don't want to relocate never see in-person abroad opportunities
+  // Also filter out opportunities where location string suggests abroad (catches bad isAbroad flag)
+  const relocFilter = user.willingToRelocate === 'NO'
+    ? `AND (o."isAbroad" = false OR o."isRemote" = true)
+       AND (o."location" IS NULL OR o."location" = '' OR lower(o."location") ~ '(italia|italy|milan|milano|roma|rome|napoli|torino|firenze|bologna|venezia|genova|palermo|bari|catania|remote|online)')`
+    : '';
+
+  // Hard filter: exclude opportunities outside user's field of study
+  const userField = user.courseOfStudy ? normalizeFieldToEnum(user.courseOfStudy) : 'ANY';
+  const fieldFilter = userField !== 'ANY'
+    ? `AND (o."eligibleFields" = '{}' OR 'ANY' = ANY(o."eligibleFields") OR '${userField}' = ANY(o."eligibleFields"))`
+    : '';
+
   if (userHasEmbedding) {
     // Stage 1: Candidate retrieval — all opportunities with vector similarity
     // Explicitly list columns to avoid selecting the Unsupported vector column
@@ -528,6 +574,7 @@ export async function getHybridMatchedOpportunities(
               o."universityId", o."company", o."location", o."isRemote", o."isAbroad",
               o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
               o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
+              o."eligibleFields",
               u."name" as "universityName", u."city" as "universityCity",
               u."id" as "uniId", u."logoUrl" as "universityLogoUrl",
               CASE WHEN o.embedding IS NOT NULL THEN 1 - (o.embedding <=> usr.embedding) ELSE 0 END AS "vectorSimilarity"
@@ -535,6 +582,11 @@ export async function getHybridMatchedOpportunities(
        LEFT JOIN "University" u ON o."universityId" = u."id"
        CROSS JOIN "User" usr
        WHERE usr.id = $1
+         AND (o."expiresAt" IS NULL OR o."expiresAt" > NOW())
+         AND (o."deadline" IS NULL OR o."deadline" > NOW())
+         AND (o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN')
+         ${relocFilter}
+         ${fieldFilter}
        ORDER BY o."postedAt" DESC`,
       userId,
     );
@@ -546,10 +598,16 @@ export async function getHybridMatchedOpportunities(
               o."universityId", o."company", o."location", o."isRemote", o."isAbroad",
               o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
               o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
+              o."eligibleFields",
               u."name" as "universityName", u."city" as "universityCity",
               u."id" as "uniId", u."logoUrl" as "universityLogoUrl"
        FROM "Opportunity" o
        LEFT JOIN "University" u ON o."universityId" = u."id"
+       WHERE (o."expiresAt" IS NULL OR o."expiresAt" > NOW())
+         AND (o."deadline" IS NULL OR o."deadline" > NOW())
+         AND (o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN')
+         ${relocFilter}
+         ${fieldFilter}
        ORDER BY o."postedAt" DESC`,
     );
   }
@@ -662,6 +720,35 @@ export async function getNewOpportunities(
   if (filters.isRemote !== undefined) where.isRemote = filters.isRemote;
   if (filters.isAbroad !== undefined) where.isAbroad = filters.isAbroad;
   if (filters.englishLevels?.length) where.requiredEnglishLevel = { in: filters.englishLevels as any };
+
+  // Always exclude expired listings, past-deadline, and broken-URL opportunities
+  where.AND = [
+    { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+    { OR: [{ deadline: null }, { deadline: { gt: new Date() } }] },
+    { OR: [{ urlStatus: null }, { urlStatus: { not: 'BROKEN' } }] },
+  ];
+
+  // Hard filter: users who explicitly don't want to relocate never see in-person abroad opportunities
+  if (user?.willingToRelocate === 'NO') {
+    (where.AND as Prisma.OpportunityWhereInput[]).push(
+      { OR: [{ isAbroad: false }, { isRemote: true }] },
+    );
+  }
+
+  // Hard filter: exclude opportunities outside user's eligible field of study
+  if (user?.courseOfStudy) {
+    const userField = normalizeFieldToEnum(user.courseOfStudy);
+    if (userField !== 'ANY') {
+      (where.AND as Prisma.OpportunityWhereInput[]).push({
+        OR: [
+          { eligibleFields: { isEmpty: true } },
+          { eligibleFields: { has: 'ANY' as FieldOfStudy } },
+          { eligibleFields: { has: userField } },
+        ],
+      });
+    }
+  }
+
   if (filters.deadline) {
     const now = new Date(); now.setHours(0, 0, 0, 0);
     if (filters.deadline === '7' || filters.deadline === '30') {
