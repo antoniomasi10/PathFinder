@@ -83,7 +83,7 @@ export async function translateBatch(texts: string[], targetLang: string): Promi
       signal: AbortSignal.timeout(10000),
     });
     if (!res.ok) return texts;
-    const data = await res.json();
+    const data = await res.json() as { translatedText?: string[] };
     return Array.isArray(data.translatedText) ? data.translatedText : texts;
   } catch {
     return texts;
