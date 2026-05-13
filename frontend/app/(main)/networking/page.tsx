@@ -116,6 +116,10 @@ export default function NetworkingPage() {
   >({});
   const [chatImages, setChatImages] = useState<string[]>([]);
   const chatFileInputRef = useRef<HTMLInputElement>(null);
+  const msgCache = useRef<Map<string, Message[]>>(new Map());
+  const groupMsgCache = useRef<Map<string, Message[]>>(new Map());
+  const currentConvIdRef = useRef<string | null>(null);
+  const currentGroupIdRef = useRef<string | null>(null);
   const [commentPost, setCommentPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -377,7 +381,9 @@ export default function NetworkingPage() {
           isChatOpen = true;
           setMessages((prev) => {
             if (prev.some((m) => m.id === msg.id)) return prev;
-            return [...prev, msg];
+            const updated = [...prev, msg];
+            msgCache.current.set(current.id, updated);
+            return updated;
           });
         }
         return current;
@@ -417,7 +423,9 @@ export default function NetworkingPage() {
         if (current && msg.groupId === current.id) {
           setGroupMessages((prev) => {
             if (prev.some((m) => m.id === msg.id)) return prev;
-            return [...prev, msg];
+            const updated = [...prev, msg];
+            groupMsgCache.current.set(current.id, updated);
+            return updated;
           });
         }
         return current;
@@ -445,17 +453,44 @@ export default function NetworkingPage() {
       }
     };
 
+    const handleMessageSent = (msg: Message) => {
+      setMessages((prev) => {
+        const idx = prev.findLastIndex((m) => m.senderId === msg.senderId && m.id.length < 20);
+        if (idx === -1) return prev;
+        const updated = [...prev];
+        updated[idx] = msg;
+        if (currentConvIdRef.current) msgCache.current.set(currentConvIdRef.current, updated);
+        return updated;
+      });
+    };
+
+    const handleGroupMessageSent = (msg: Message) => {
+      setGroupMessages((prev) => {
+        const idx = prev.findLastIndex((m) => m.senderId === msg.senderId && m.id.length < 20);
+        if (idx === -1) return prev;
+        const updated = [...prev];
+        updated[idx] = msg;
+        if (currentGroupIdRef.current) groupMsgCache.current.set(currentGroupIdRef.current, updated);
+        return updated;
+      });
+    };
+
     socket.on('new_message', handleNewMessage);
     socket.on('new_group_message', handleNewGroupMessage);
+    socket.on('message_sent', handleMessageSent);
+    socket.on('group_message_sent', handleGroupMessageSent);
 
     return () => {
       socket.off('new_message', handleNewMessage);
       socket.off('new_group_message', handleNewGroupMessage);
+      socket.off('message_sent', handleMessageSent);
+      socket.off('group_message_sent', handleGroupMessageSent);
     };
   }, [tab, loadConversations]);
 
   useEffect(() => {
     if (selectedUser) {
+      currentConvIdRef.current = selectedUser.id;
       loadMessages(selectedUser.id);
       // Reset unread counter for this conversation
       setUnifiedConversations((prev) =>
@@ -528,9 +563,13 @@ export default function NetworkingPage() {
   }, [messages]);
 
   const loadMessages = async (userId: string) => {
+    const cached = msgCache.current.get(userId);
+    if (cached) setMessages(cached);
     try {
       const { data } = await api.get(`/messages/${userId}`);
-      setMessages(data.data || data);
+      const msgs = data.data || data;
+      msgCache.current.set(userId, msgs);
+      setMessages(msgs);
     } catch (err) {
       // silent;
     }
@@ -559,9 +598,13 @@ export default function NetworkingPage() {
   };
 
   const loadGroupMessages = async (groupId: string) => {
+    const cached = groupMsgCache.current.get(groupId);
+    if (cached) setGroupMessages(cached);
     try {
       const { data } = await api.get(`/messages/group/${groupId}`);
-      setGroupMessages(data.data || data);
+      const msgs = data.data || data;
+      groupMsgCache.current.set(groupId, msgs);
+      setGroupMessages(msgs);
     } catch (err) {
       // silent;
     }
@@ -591,6 +634,7 @@ export default function NetworkingPage() {
 
   useEffect(() => {
     if (selectedGroup) {
+      currentGroupIdRef.current = selectedGroup.id;
       loadGroupMessages(selectedGroup.id);
       // Reset unread counter for this group conversation
       setUnifiedConversations((prev) =>
