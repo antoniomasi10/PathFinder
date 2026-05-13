@@ -7,7 +7,7 @@ const cspDirectives = [
     ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' accounts.google.com"
     : "script-src 'self' 'unsafe-inline' accounts.google.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://*.githubusercontent.com",
+  "img-src 'self' data: blob: https://res.cloudinary.com https://images.unsplash.com https://*.githubusercontent.com https://*.r2.dev",
   "font-src 'self' data:",
   isDev
     ? "connect-src 'self' http://localhost:4000 ws://localhost:4000 ws://localhost:3000 wss:"

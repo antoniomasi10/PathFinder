@@ -32,7 +32,7 @@ router.post('/logout', (req: Request, res: Response) => {
     httpOnly: true,
     secure: true,
     sameSite: isProduction ? 'none' : 'strict',
-    path: '/api/auth',
+    path: '/',
   });
   res.json({ message: 'Logout effettuato' });
 });
