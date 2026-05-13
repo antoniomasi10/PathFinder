@@ -59,7 +59,9 @@ function mapType(title: string, keyword: string): OpportunityType {
 }
 
 function isCountryAbroad(country: string): boolean {
-  return country.toLowerCase() !== 'italy';
+  if (!country) return false;
+  const c = country.toLowerCase();
+  return c !== 'italy' && c !== 'italia' && c !== 'it';
 }
 
 // ---------------------------------------------------------------------------

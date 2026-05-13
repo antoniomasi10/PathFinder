@@ -8,7 +8,7 @@ import api from '@/lib/api';
 import { useSavedOpportunities } from '@/lib/savedOpportunities';
 import { useSavedCourses } from '@/lib/savedCourses';
 import { getSavedSimulations, SavedSimulation } from '@/components/AdmissionSimulator';
-import { useLanguage, Language, LANGUAGE_DISPLAY_NAMES, SKILL_KEYS, getSkillLabel, normalizePassionToKey } from '@/lib/language';
+import { useLanguage, Language, LANGUAGE_DISPLAY_NAMES, getSkillLabel, normalizePassionToKey } from '@/lib/language';
 import { usePrivacy } from '@/lib/privacy';
 import ChangePasswordModal from '@/components/ChangePasswordModal';
 import { isValidImageUrl, isValidExternalUrl } from '@/lib/urlValidation';
@@ -16,8 +16,8 @@ import { isPushSupported, subscribeToPush, unsubscribeFromPush, getPushPermissio
 import { getOpportunityTypeColor } from '@/lib/opportunityColors';
 import {
   Pencil, EyeOff, Plus, Bookmark, ChevronDown, ChevronRight, MapPin, CalendarIcon,
-  Gear, UsersGroup, Bell, Moon, Globe, ShieldCheck, CircleHelp, Info, Search,
-  ChatDots, UserAdd, CloseLg, CloseSm, Camera, Check, Key, UserIcon, Award,
+  Gear, UsersGroup, Bell, Globe, ShieldCheck, CircleHelp, Info,
+  ChatDots, CloseLg, CloseSm, Key, UserIcon, Award, Camera,
   Trash, TriangleWarning, CircleWarning, Mail, FileText, Star, Lock, Trophy,
   Heart, Briefcase, GraduationCap, Plane, Rocket, Target, TrendingUp, CloseMd, BookOpen,
 } from '@/components/icons';
@@ -75,7 +75,7 @@ function TypeIcon({ type, className = 'w-5 h-5' }: { type: string; className?: s
 }
 
 export default function ProfilePage() {
-  const { user, setUser, logout } = useAuth();
+  const { logout, setUser, user } = useAuth();
   const router = useRouter();
   const { savedOpps, toggleSave } = useSavedOpportunities();
   const { savedCourses } = useSavedCourses();
@@ -84,19 +84,6 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
   const [profile, setProfile] = useState<FullProfile | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
-  const [activeTab, setActiveTab] = useState<'settings' | 'pathmates'>('settings');
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showSkillsModal, setShowSkillsModal] = useState(false);
-  const [modalSkills, setModalSkills] = useState<string[]>([]);
-  const [editName, setEditName] = useState('');
-  const [editSurname, setEditSurname] = useState('');
-  const [editBio, setEditBio] = useState('');
-  const [editCourse, setEditCourse] = useState('');
-  const [editYear, setEditYear] = useState<number | undefined>();
-  const [editSkills, setEditSkills] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [editError, setEditError] = useState('');
-  const [friendSearch, setFriendSearch] = useState('');
   const [showSecurityPrivacySheet, setShowSecurityPrivacySheet] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showHelpSheet, setShowHelpSheet] = useState(false);
@@ -143,16 +130,12 @@ export default function ProfilePage() {
   const [savedTab, setSavedTab] = useState<'opportunities' | 'universities'>('opportunities');
   const [oppSort, setOppSort] = useState<'recenti' | 'scadenza'>('recenti');
   const [expandedOppId, setExpandedOppId] = useState<string | null>(null);
-  const [suggestedUsers, setSuggestedUsers] = useState<Friend[]>([]);
-  const [sendingRequest, setSendingRequest] = useState<string | null>(null);
-  const [removingFriend, setRemovingFriend] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const expandedCardRef = useRef<HTMLDivElement | null>(null);
   const savedScrollRef = useRef<HTMLDivElement | null>(null);
   const savedSectionRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-
   useEffect(() => {
     if (!expandedOppId) return;
     const timer = setTimeout(() => {
@@ -176,10 +159,9 @@ export default function ProfilePage() {
   const { isLoading: loading } = useQuery({
     queryKey: ['profile', 'me'],
     queryFn: async () => {
-      const [profileRes, friendsRes, suggestionsRes] = await Promise.all([
+      const [profileRes, friendsRes] = await Promise.all([
         api.get('/profile/me'),
         api.get('/friends').catch(() => ({ data: [] })),
-        api.get('/friends/suggestions').catch(() => ({ data: [] })),
       ]);
       const rawPassions: string[] = profileRes.data.profile?.passions || [];
       const normalizedPassions = rawPassions.map(normalizePassionToKey);
@@ -189,15 +171,8 @@ export default function ProfilePage() {
         api.patch('/profile/me', { passions: normalizedPassions }).catch(() => {});
       }
       setProfile(profileData);
-      setEditName(profileRes.data.name || '');
-      setEditSurname(profileRes.data.surname || '');
-      setEditBio(profileRes.data.bio || '');
-      setEditCourse(profileRes.data.courseOfStudy || '');
-      setEditYear(profileRes.data.yearOfStudy);
-      setEditSkills(normalizedPassions);
       setMarketingConsent(profileRes.data.marketingConsent ?? false);
       setFriends(friendsRes.data);
-      setSuggestedUsers(suggestionsRes.data);
       return profileData;
     },
   });
@@ -206,141 +181,7 @@ export default function ProfilePage() {
     setSimulations(getSavedSimulations());
   }, []);
 
-  useEffect(() => {
-    if (showSkillsModal) {
-      setModalSkills(profile?.profile?.passions || []);
-    }
-  }, [showSkillsModal]);
-
   const loadData = () => queryClient.invalidateQueries({ queryKey: ['profile', 'me'] });
-
-  const openEditDialog = () => {
-    if (profile) {
-      setEditName(profile.name || '');
-      setEditSurname(profile.surname || '');
-      setEditBio((profile.bio || '').slice(0, 500));
-      setEditCourse(profile.courseOfStudy || '');
-      setEditYear(profile.yearOfStudy);
-      setEditSkills(profile.profile?.passions || []);
-      setAvatarPreview(null);
-      setEditError('');
-    }
-    setShowEditDialog(true);
-  };
-
-  const saveProfile = async () => {
-    const trimmedName = editName.trim();
-    const trimmedSurname = editSurname.trim();
-    if (!trimmedName || !trimmedSurname) {
-      setEditError(t.profile.nameRequired);
-      return;
-    }
-    setEditError('');
-    setSaving(true);
-    try {
-      await api.patch('/profile/me', {
-        name: editName,
-        surname: editSurname,
-        bio: editBio,
-        courseOfStudy: editCourse,
-        yearOfStudy: editYear,
-        passions: editSkills,
-        ...(avatarPreview && { avatar: avatarPreview }),
-      });
-      setShowEditDialog(false);
-      await loadData();
-      if (avatarPreview && user) {
-        setUser({ ...user, avatar: avatarPreview });
-      }
-      setAvatarPreview(null);
-    } catch (err) {
-      console.error('Failed to save profile:', err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const toggleEditSkill = (skill: string) => {
-    setEditSkills((prev) =>
-      prev.includes(skill) ? prev.filter((s) => s !== skill) : [...prev, skill]
-    );
-  };
-
-  const addSkillFromModal = async (skill: string) => {
-    const currentPassions = profile?.profile?.passions || [];
-    if (currentPassions.includes(skill)) return;
-    const newPassions = [...currentPassions, skill];
-    if (profile?.profile) {
-      setProfile({ ...profile, profile: { ...profile.profile, passions: newPassions } });
-    }
-    setModalSkills(newPassions);
-    try {
-      await api.patch('/profile/me', { passions: newPassions });
-    } catch {
-      if (profile?.profile) {
-        setProfile({ ...profile, profile: { ...profile.profile, passions: currentPassions } });
-      }
-      setModalSkills(currentPassions);
-    }
-  };
-
-  const removeSkill = async (skill: string) => {
-    const currentPassions = profile?.profile?.passions || [];
-    const newPassions = currentPassions.filter((s) => s !== skill);
-    if (profile?.profile) {
-      setProfile({ ...profile, profile: { ...profile.profile, passions: newPassions } });
-    }
-    setModalSkills(newPassions);
-    try {
-      await api.patch('/profile/me', { passions: newPassions });
-    } catch {
-      if (profile?.profile) {
-        setProfile({ ...profile, profile: { ...profile.profile, passions: currentPassions } });
-      }
-      setModalSkills(currentPassions);
-    }
-  };
-
-  const removeFriend = async (friendId: string) => {
-    setRemovingFriend(friendId);
-    try {
-      await api.delete(`/friends/${friendId}`);
-      setFriends((prev) => prev.filter((f) => f.id !== friendId));
-      // Refresh suggestions since the removed user might now appear
-      api.get('/friends/suggestions').then((res) => setSuggestedUsers(res.data)).catch((err) => {
-        console.error('Failed to refresh friend suggestions:', err);
-      });
-    } catch (err) {
-      console.error('Failed to remove friend:', err);
-    } finally {
-      setRemovingFriend(null);
-    }
-  };
-
-  const sendFriendRequest = async (userId: string) => {
-    setSendingRequest(userId);
-    try {
-      await api.post('/friends/request', { toUserId: userId });
-      setSuggestedUsers((prev) => prev.map((u) =>
-        u.id === userId ? { ...u, requestSent: true } : u
-      ));
-    } catch (err) {
-      console.error('Failed to send friend request:', err);
-    } finally {
-      setSendingRequest(null);
-    }
-  };
 
   const handleLogout = () => {
     logout();
@@ -381,10 +222,6 @@ export default function ProfilePage() {
     }
   }
 
-  const filteredFriends = friends.filter((f) =>
-    f.name.toLowerCase().includes(friendSearch.toLowerCase())
-  );
-
   if (loading) {
     return (
       <div className="px-4 py-6 space-y-6 animate-pulse">
@@ -423,6 +260,23 @@ export default function ProfilePage() {
       tags.push({ label: getSkillLabel(p, t), color: 'bg-[#334155] text-[#94A3B8]' });
     });
   }
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result as string;
+      setAvatarPreview(base64);
+      try {
+        await api.patch('/profile/me', { avatar: base64 });
+        if (user) setUser({ ...user, avatar: base64 });
+      } catch {
+        setAvatarPreview(null);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const currentAvatar = avatarPreview || profile.avatar;
 
@@ -527,22 +381,29 @@ export default function ProfilePage() {
             width: 128,
             height: 128,
             borderRadius: '50%',
-            backgroundColor: 'white',
-            border: '4px solid #fdfdfd',
+            border: '5px solid white',
             boxShadow: '0px 10px 15px -3px rgba(0,0,0,0.1), 0px 4px 6px -4px rgba(0,0,0,0.1)',
-            padding: 4,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
             overflow: 'hidden',
+            boxSizing: 'border-box',
           }}>
-            {currentAvatar && isValidImageUrl(currentAvatar) ? (
-              <img src={currentAvatar} alt={fullName} style={{ width: 120, height: 120, borderRadius: '50%', objectFit: 'cover' }} />
-            ) : (
-              <div style={{ width: 120, height: 120, borderRadius: '50%', background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ color: 'white', fontWeight: 700, fontSize: 32, fontFamily: 'var(--font-plus-jakarta)' }}>{initials}</span>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="relative group"
+              style={{ width: '100%', height: '100%', display: 'block', padding: 0, border: 'none', background: 'none', cursor: 'pointer' }}
+              aria-label="Cambia foto profilo"
+            >
+              {currentAvatar && isValidImageUrl(currentAvatar) ? (
+                <img src={currentAvatar} alt={fullName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              ) : (
+                <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ color: 'white', fontWeight: 700, fontSize: 32, fontFamily: 'var(--font-plus-jakarta)' }}>{initials}</span>
+                </div>
+              )}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+                <Camera size={26} color="white" />
               </div>
-            )}
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
           </div>
         </div>
 
@@ -612,7 +473,7 @@ export default function ProfilePage() {
 
           {/* Modifica profilo */}
           <button
-            onClick={openEditDialog}
+            onClick={() => router.push('/profile/edit')}
             style={{
               width: '100%',
               maxWidth: 320,
@@ -643,79 +504,44 @@ export default function ProfilePage() {
           backgroundColor: 'white',
           border: '1px solid #acb0ce',
           borderRadius: 24,
-          padding: 21,
+          padding: '21px 0',
           boxShadow: '0px 1px 1px rgba(0,0,0,0.05)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 17, padding: '0 8px' }}>
+          <button
+            onClick={() => router.push('/profile/pathmates')}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 17, padding: 0, background: 'none', border: 'none', cursor: 'pointer' }}
+            className="active:opacity-75"
+          >
             <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 700, fontSize: 24, lineHeight: '32px', color: '#4a4bd7' }}>
               {friends.length}
             </span>
-            <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 500, fontSize: 14, lineHeight: '20px', color: '#595e78', textTransform: 'uppercase', letterSpacing: '0.7px', textAlign: 'center' }}>
+            <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 500, fontSize: 14, lineHeight: '20px', color: '#595e78', textTransform: 'uppercase', letterSpacing: '0.7px', textAlign: 'center', width: '100%' }}>
               PERSONE CONNESSE
             </span>
-          </div>
+          </button>
           <div style={{ width: 1, height: 75, backgroundColor: '#acb0ce', flexShrink: 0 }} />
           <button
             onClick={() => router.push('/profile/saved-opportunities')}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 17, padding: '0 9px', background: 'none', border: 'none', cursor: 'pointer' }}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 17, padding: 0, background: 'none', border: 'none', cursor: 'pointer' }}
             className="active:opacity-75"
           >
             <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 700, fontSize: 24, lineHeight: '32px', color: '#4a4bd7' }}>
               {savedOpps.length}
             </span>
-            <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 500, fontSize: 14, lineHeight: '20px', color: '#595e78', textTransform: 'uppercase', letterSpacing: '0.7px', textAlign: 'center' }}>
+            <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 500, fontSize: 14, lineHeight: '20px', color: '#595e78', textTransform: 'uppercase', letterSpacing: '0.7px', textAlign: 'center', width: '100%' }}>
               OPPORTUNITÀ SALVATE
             </span>
           </button>
         </div>
 
 
-        {/* Posts section */}
-        <div style={{ margin: '16px 24px 0' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h3 style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 700, fontSize: 20, lineHeight: '28px', color: '#2c3149', margin: 0 }}>
-                I tuoi posts
-              </h3>
-              <button style={{
-                width: 40,
-                height: 40,
-                backgroundColor: '#7073ff',
-                borderRadius: '50%',
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                flexShrink: 0,
-              }}>
-                <Plus size={18} color="white" strokeWidth={2.5} />
-              </button>
-            </div>
-            <div style={{
-              backgroundColor: '#f3f2ff',
-              border: '2px dashed #acb0ce',
-              borderRadius: 24,
-              height: 110,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 34,
-            }}>
-              <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 500, fontSize: 16, lineHeight: '24px', color: '#595e78', textAlign: 'center' }}>
-                Publish your first post
-              </span>
-            </div>
-          </div>
-        </div>
-
         {/* Divider before settings */}
         <div style={{ height: 1, backgroundColor: 'rgba(172,176,206,0.3)', margin: '32px 24px 0' }} />
 
-        {/* Settings / Pathmates — keep existing section here */}
+        {/* Settings section */}
         <div className="px-4 py-6 space-y-6">
           {/* Profile visibility notice */}
           {!publicProfile && (
@@ -727,42 +553,7 @@ export default function ProfilePage() {
             </div>
           )}
 
-        {/* Tabs */}
-        <div>
-          <div className="flex bg-[#f3f2ff] rounded-xl p-1 mb-4 border border-[rgba(172,176,206,0.2)]">
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-                activeTab === 'settings'
-                  ? 'bg-[#615fe2] text-white shadow-sm'
-                  : 'text-[#595e78] hover:text-[#2c3149]'
-              }`}
-            >
-              <span className="flex items-center justify-center gap-1.5">
-                <Gear size={16} />
-                {t.profile.settings}
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveTab('pathmates')}
-              className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-                activeTab === 'pathmates'
-                  ? 'bg-[#615fe2] text-white shadow-sm'
-                  : 'text-[#595e78] hover:text-[#2c3149]'
-              }`}
-            >
-              <span className="flex items-center justify-center gap-1.5">
-                <UsersGroup size={16} />
-                Pathmates
-                {friends.length > 0 && (
-                  <span className="text-xs opacity-70">({friends.length})</span>
-                )}
-              </span>
-            </button>
-          </div>
-          {/* Settings Tab */}
-          {activeTab === 'settings' && (
-            <div className="space-y-3">
+          <div className="space-y-3">
               {/* Unified Preferences */}
               <div className="bg-white rounded-2xl p-4 border border-[rgba(172,176,206,0.3)] shadow-[0px_1px_1px_rgba(0,0,0,0.05)]">
                 <h4 className="text-sm font-semibold text-[#2c3149] mb-3">{t.profile.preferences}</h4>
@@ -787,16 +578,6 @@ export default function ProfilePage() {
                     </div>
                     <ChevronRight size={20} color="#747995" />
                   </button>
-                  <div className="ml-12 mr-2 h-px bg-[rgba(172,176,206,0.2)]" />
-                  <div className="flex items-center justify-between py-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-[22%] bg-[rgba(97,95,226,0.1)] flex items-center justify-center">
-                        <Moon size={20} color="#615fe2" />
-                      </div>
-                      <span className="text-sm text-[#2c3149]">{t.profile.darkMode}</span>
-                    </div>
-                    <ToggleSwitch defaultOn />
-                  </div>
                   <div className="ml-12 mr-2 h-px bg-[rgba(172,176,206,0.2)]" />
                   <div className="flex items-center justify-between py-2">
                     <div className="flex items-center gap-3">
@@ -845,358 +626,8 @@ export default function ProfilePage() {
                 {t.profile.logout}
               </button>
             </div>
-          )}
-
-          {/* Pathmates Tab */}
-          {activeTab === 'pathmates' && (
-            <div className="space-y-3">
-              {/* Search */}
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2"><Search size={16} color="#747995" /></span>
-                <input
-                  type="text"
-                  placeholder={t.profile.searchPathmates}
-                  value={friendSearch}
-                  onChange={(e) => setFriendSearch(e.target.value)}
-                  className="w-full bg-[#fbf8ff] border border-[rgba(172,176,206,0.3)] rounded-xl pl-10 pr-4 py-2.5 text-sm text-[#2c3149] placeholder-[#acb0ce] focus:outline-none focus:border-[#615fe2] transition-colors"
-                />
-              </div>
-
-              {/* Current Pathmates */}
-              {filteredFriends.length === 0 ? (
-                <div className="bg-white rounded-2xl p-6 text-center border border-[rgba(172,176,206,0.3)]">
-                  <p className="text-sm text-[#595e78]">
-                    {friendSearch ? t.profile.noResults : t.profile.noPathmates}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {filteredFriends.map((friend) => {
-                    const friendInitials = friend.name
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')
-                      .toUpperCase()
-                      .slice(0, 2);
-
-                    return (
-                      <div
-                        key={friend.id}
-                        className="bg-white rounded-2xl p-4 flex items-center gap-3 border border-[rgba(172,176,206,0.2)]"
-                      >
-                        <button
-                          onClick={() => router.push(`/profile/${friend.id}`)}
-                          className="w-11 h-11 rounded-full bg-gradient-to-br from-[#615fe2] to-[#7073ff] flex items-center justify-center text-sm font-bold text-white flex-shrink-0 overflow-hidden"
-                        >
-                          {friend.avatar && isValidImageUrl(friend.avatar) ? (
-                            <img src={friend.avatar} alt={friend.name} className="w-full h-full rounded-full object-cover" />
-                          ) : (
-                            friendInitials
-                          )}
-                        </button>
-                        <button
-                          onClick={() => router.push(`/profile/${friend.id}`)}
-                          className="flex-1 min-w-0 text-left"
-                        >
-                          <p className="text-sm font-semibold text-[#2c3149] truncate">{friend.name}</p>
-                          <p className="text-xs text-[#595e78] truncate">
-                            {friend.courseOfStudy || friend.university?.name || ''}
-                          </p>
-                        </button>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {messagePrivacy !== 'Nessuno' && (
-                            <button
-                              onClick={() => router.push(`/networking?openChat=${friend.id}&name=${encodeURIComponent(friend.name)}&avatar=${encodeURIComponent(friend.avatar || '')}`)}
-                              className="w-9 h-9 rounded-[22%] bg-[rgba(97,95,226,0.1)] flex items-center justify-center hover:bg-[rgba(97,95,226,0.15)] transition-colors"
-                            >
-                              <ChatDots size={20} color="#615fe2" />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => removeFriend(friend.id)}
-                            disabled={removingFriend === friend.id}
-                            className="w-9 h-9 rounded-[22%] bg-[rgba(239,68,68,0.08)] flex items-center justify-center hover:bg-[rgba(239,68,68,0.15)] transition-colors disabled:opacity-50"
-                          >
-                            <UserIcon size={16} color="#EF4444" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Suggested Pathmates */}
-              {suggestedUsers.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="text-sm font-semibold text-[#595e78] uppercase tracking-wider mb-3 px-1">
-                    {t.profile.suggestedPathmates}
-                  </h4>
-                  <div className="space-y-2">
-                    {suggestedUsers.map((suggested) => {
-                      const suggestedInitials = suggested.name
-                        .split(' ')
-                        .map((n) => n[0])
-                        .join('')
-                        .toUpperCase()
-                        .slice(0, 2);
-
-                      return (
-                        <div
-                          key={suggested.id}
-                          className="bg-white rounded-2xl p-4 flex items-center gap-3 border border-[rgba(172,176,206,0.2)]"
-                        >
-                          <button
-                            onClick={() => router.push(`/profile/${suggested.id}`)}
-                            className="w-11 h-11 rounded-full bg-gradient-to-br from-[#615fe2] to-[#7073ff] flex items-center justify-center text-sm font-bold text-white flex-shrink-0 overflow-hidden"
-                          >
-                            {suggested.avatar && isValidImageUrl(suggested.avatar) ? (
-                              <img src={suggested.avatar} alt={suggested.name} className="w-full h-full rounded-full object-cover" />
-                            ) : (
-                              suggestedInitials
-                            )}
-                          </button>
-                          <button
-                            onClick={() => router.push(`/profile/${suggested.id}`)}
-                            className="flex-1 min-w-0 text-left"
-                          >
-                            <p className="text-sm font-semibold text-[#2c3149] truncate">{suggested.name}</p>
-                            <p className="text-xs text-[#595e78] truncate">
-                              {suggested.courseOfStudy || suggested.university?.name || ''}
-                            </p>
-                          </button>
-                          {suggested.requestSent ? (
-                            <span className="text-xs text-[#615fe2] font-medium px-2 flex-shrink-0">Inviata</span>
-                          ) : (
-                            <button
-                              onClick={() => sendFriendRequest(suggested.id)}
-                              disabled={sendingRequest === suggested.id}
-                              className="w-9 h-9 rounded-[22%] bg-[rgba(97,95,226,0.1)] flex items-center justify-center hover:bg-[rgba(97,95,226,0.15)] transition-colors disabled:opacity-50 flex-shrink-0"
-                            >
-                              <UserAdd size={20} color="#615fe2" />
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
       </div>
       </div>  {/* end main scrollable */}
-
-      {/* Enhanced Edit Profile Dialog */}
-      {showEditDialog && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowEditDialog(false)}
-          />
-          <div className="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl p-6 pb-[calc(1.5rem+5rem)] sm:pb-6 space-y-5 animate-slide-up max-h-[100vh] sm:max-h-[90vh] overflow-y-auto no-scrollbar">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-[#2c3149]">{t.profile.editProfile}</h3>
-              <button
-                onClick={() => setShowEditDialog(false)}
-                className="p-1 rounded-full hover:bg-[rgba(172,176,206,0.08)] transition-colors"
-              >
-                <CloseLg size={20} color="#595e78" />
-              </button>
-            </div>
-
-            <div className="space-y-5">
-              {/* Avatar */}
-              <div className="flex flex-col items-center">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="relative group"
-                >
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#615fe2] to-[#7073ff] flex items-center justify-center text-2xl font-bold text-white overflow-hidden">
-                    {currentAvatar ? (
-                      <img src={currentAvatar} alt="Avatar" className="w-full h-full object-cover" />
-                    ) : (
-                      initials
-                    )}
-                  </div>
-                  <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Camera size={24} color="white" />
-                  </div>
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  className="hidden"
-                />
-                <p className="text-xs text-[#747995] mt-2">{t.profile.tapToChangePhoto}</p>
-              </div>
-
-              {/* Name & Surname */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-[#595e78] mb-1.5">{t.profile.name}</label>
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="w-full bg-[#fbf8ff] border border-[rgba(172,176,206,0.3)] rounded-xl px-4 py-3 text-sm text-[#2c3149] placeholder-[#acb0ce] focus:outline-none focus:border-[#615fe2] transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-[#595e78] mb-1.5">{t.profile.surname}</label>
-                  <input
-                    type="text"
-                    value={editSurname}
-                    onChange={(e) => setEditSurname(e.target.value)}
-                    className="w-full bg-[#fbf8ff] border border-[rgba(172,176,206,0.3)] rounded-xl px-4 py-3 text-sm text-[#2c3149] placeholder-[#acb0ce] focus:outline-none focus:border-[#615fe2] transition-colors"
-                  />
-                </div>
-              </div>
-
-              {/* Bio */}
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="block text-xs font-medium text-[#595e78]">{t.profile.bio}</label>
-                  <span className={`text-xs ${editBio.length > 480 ? 'text-red-400' : 'text-[#acb0ce]'}`}>{editBio.length}/500</span>
-                </div>
-                <textarea
-                  value={editBio}
-                  onChange={(e) => setEditBio(e.target.value.slice(0, 500))}
-                  rows={3}
-                  maxLength={500}
-                  placeholder={t.profile.bioPlaceholder}
-                  className="w-full bg-[#fbf8ff] border border-[rgba(172,176,206,0.3)] rounded-xl px-4 py-3 text-sm text-[#2c3149] placeholder-[#acb0ce] focus:outline-none focus:border-[#615fe2] transition-colors resize-none"
-                />
-              </div>
-
-              {/* Course & Year */}
-              <div>
-                <label className="block text-xs font-medium text-[#595e78] mb-1.5">{t.profile.course}</label>
-                <input
-                  type="text"
-                  value={editCourse}
-                  onChange={(e) => setEditCourse(e.target.value)}
-                  placeholder={t.profile.coursePlaceholder}
-                  className="w-full bg-[#fbf8ff] border border-[rgba(172,176,206,0.3)] rounded-xl px-4 py-3 text-sm text-[#2c3149] placeholder-[#acb0ce] focus:outline-none focus:border-[#615fe2] transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-[#595e78] mb-1.5">{t.profile.year}</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={5}
-                  value={editYear || ''}
-                  onChange={(e) => {
-                    const v = parseInt(e.target.value);
-                    if (!e.target.value) { setEditYear(undefined); return; }
-                    if (Number.isInteger(v) && v >= 1 && v <= 5) setEditYear(v);
-                  }}
-                  placeholder={t.profile.yearPlaceholder}
-                  className="w-full bg-[#fbf8ff] border border-[rgba(172,176,206,0.3)] rounded-xl px-4 py-3 text-sm text-[#2c3149] placeholder-[#acb0ce] focus:outline-none focus:border-[#615fe2] transition-colors"
-                />
-              </div>
-
-              {/* Core Skills link */}
-              <div>
-                <label className="block text-xs font-medium text-[#595e78] mb-1.5">{t.profile.skills}</label>
-                <button
-                  onClick={() => {
-                    setShowEditDialog(false);
-                    router.push('/profile/skills');
-                  }}
-                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-[rgba(97,95,226,0.1)] text-[#615fe2] hover:bg-[rgba(97,95,226,0.15)] transition-colors"
-                >
-                  <Plus size={12} strokeWidth={2.5} />
-                  {t.profile.add}
-                </button>
-              </div>
-            </div>
-
-            {editError && (
-              <div className="bg-error/10 text-error rounded-xl px-4 py-3 text-sm">
-                {editError}
-              </div>
-            )}
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowEditDialog(false)}
-                className="flex-1 py-3 rounded-xl text-sm font-medium text-[#595e78] bg-[rgba(172,176,206,0.2)] hover:bg-[rgba(172,176,206,0.15)] transition-colors"
-              >
-                {t.profile.cancel}
-              </button>
-              <button
-                onClick={saveProfile}
-                disabled={saving}
-                className="flex-1 py-3 rounded-xl text-sm font-medium text-white bg-[#615fe2] hover:bg-[#4a4bd7] transition-colors disabled:opacity-50"
-              >
-                {saving ? t.profile.saving : t.profile.save}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Skills Modal */}
-      {showSkillsModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowSkillsModal(false)}
-          />
-          <div className="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl p-6 space-y-4 animate-slide-up max-h-[80vh] overflow-y-auto no-scrollbar">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-[#2c3149]">{t.profile.addSkills}</h3>
-              <button
-                onClick={() => setShowSkillsModal(false)}
-                className="p-1 rounded-full hover:bg-[rgba(172,176,206,0.08)] transition-colors"
-              >
-                <CloseLg size={20} color="#595e78" />
-              </button>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {SKILL_KEYS.map((key) => {
-                const isAdded = modalSkills.includes(key);
-                const label = getSkillLabel(key, t);
-                return (
-                  <button
-                    key={key}
-                    onClick={() => {
-                      if (isAdded) {
-                        removeSkill(key);
-                      } else {
-                        addSkillFromModal(key);
-                      }
-                    }}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                      isAdded
-                        ? 'bg-[#615fe2] text-white'
-                        : 'bg-[rgba(172,176,206,0.15)] text-[#595e78] hover:bg-[rgba(172,176,206,0.3)] hover:text-[#2c3149]'
-                    }`}
-                  >
-                    {isAdded && (
-                      <Check size={12} strokeWidth={3} className="inline mr-1" />
-                    )}
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <button
-              onClick={() => setShowSkillsModal(false)}
-              className="w-full py-3 rounded-xl text-sm font-medium text-white bg-[#615fe2] hover:bg-[#4a4bd7] transition-colors"
-            >
-              {t.profile.done}
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* ── Sicurezza e Privacy Sheet ─────────────────────────────── */}
       {/* Backdrop */}

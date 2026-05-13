@@ -3,7 +3,7 @@ import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { getHybridMatchedOpportunities, getNewOpportunities, scoreOpportunity, OppFilters } from '../services/matchingEngine';
 import { trackInteraction } from '../services/interaction.service';
-import { cacheGet, cacheSet } from '../lib/cache';
+import { cacheGet, cacheSet, cacheDel } from '../lib/cache';
 
 const OPP_TTL = 5 * 60; // 5 minutes per-user opportunity cache
 
@@ -160,6 +160,13 @@ router.get('/saved', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
+function invalidateUserOppCache(userId: string): void {
+  Promise.all([
+    cacheDel(`cache:opps:matched:${userId}:*`),
+    cacheDel(`cache:opps:new:${userId}:*`),
+  ]).catch(() => {});
+}
+
 // Get single opportunity by id
 router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
   try {
@@ -188,6 +195,18 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
 router.post('/:id/view', authMiddleware, async (req: Request, res: Response) => {
   try {
     trackInteraction(req.user!.userId, 'opportunity', req.params.id, 'view').catch(() => {});
+    invalidateUserOppCache(req.user!.userId);
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Track external link click
+router.post('/:id/click', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    trackInteraction(req.user!.userId, 'opportunity', req.params.id, 'click').catch(() => {});
+    invalidateUserOppCache(req.user!.userId);
     res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

@@ -72,7 +72,7 @@ function RelatedCard({ opp, onOpen }: { opp: Opportunity; onOpen: () => void }) 
   return (
     <button
       onClick={onOpen}
-      className="w-full text-left active:opacity-75 transition-opacity"
+      className="flex-shrink-0 w-[72vw] max-w-[280px] snap-start text-left active:opacity-75 transition-opacity"
     >
       <div
         className="flex flex-col gap-3 p-[17px] rounded-[24px]"
@@ -98,14 +98,14 @@ function RelatedCard({ opp, onOpen }: { opp: Opportunity; onOpen: () => void }) 
         </div>
         <div className="flex items-center justify-between pt-[5px]" style={{ borderTop: '1px solid #f3f2ff' }}>
           <div>
-            <p className="text-[11px] font-medium lowercase" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>affinità</p>
+            <p className="text-[11px] font-medium" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>Affinità</p>
             <p className="text-[16px] font-bold leading-[28px]" style={{ color: '#4a4bd7', fontFamily: 'var(--font-plus-jakarta)' }}>{opp.matchScore}%</p>
           </div>
           <div
             className="rounded-full px-[10px] py-[4px]"
             style={{ backgroundColor: getOpportunityTypeColor(opp.type) }}
           >
-            <span className="text-[13px] font-medium lowercase" style={{ color: '#4f5160', fontFamily: 'var(--font-plus-jakarta)' }}>
+            <span className="text-[13px] font-medium" style={{ color: '#4f5160', fontFamily: 'var(--font-plus-jakarta)' }}>
               {opp.type}
             </span>
           </div>
@@ -164,10 +164,10 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
       })
       .catch(() => setLoading(false));
 
-    api.get('/opportunities?matched=true&page=1&limit=5')
+    api.get('/opportunities?matched=true&page=1&limit=6')
       .then(({ data }) => {
         const items = Array.isArray(data.data || data) ? (data.data || data) : [];
-        setRelatedOpps(items.filter((o: any) => String(o.id) !== String(id)).slice(0, 2).map(mapRaw));
+        setRelatedOpps(items.filter((o: any) => String(o.id) !== String(id)).slice(0, 5).map(mapRaw));
       })
       .catch(() => {});
   }, [id]);
@@ -206,6 +206,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
       isRemote: opportunity!.remote,
       url: opportunity!.url,
       deadline: opportunity!.deadline,
+      matchScore: opportunity!.matchScore,
     });
   }
 
@@ -360,7 +361,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
           {/* Type + time */}
           <div className="flex items-center gap-3">
             <span
-              className="px-3 py-1 rounded-full text-[13px] font-medium lowercase"
+              className="px-3 py-1 rounded-full text-[13px] font-medium"
               style={{ backgroundColor: '#e0e1f4', color: '#4f5160', fontFamily: 'var(--font-plus-jakarta)' }}
             >
               {opportunity.type || 'Opportunità'}
@@ -527,29 +528,18 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
               </div>
               <div className="flex flex-col gap-4">
                 {opportunity.description && (
-                  <div className="flex items-start gap-4">
-                    <Briefcase size={20} strokeWidth={1.8} color="#acb0ce" className="flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-[16px] font-semibold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
-                        Modalità di lavoro
-                      </p>
-                      <p className="text-[16px]" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
-                        {opportunity.description}
-                      </p>
-                    </div>
-                  </div>
+                  <p className="text-[16px] leading-[26px]" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
+                    {opportunity.description}
+                  </p>
                 )}
                 {opportunity.matchReason && (
-                  <div className="flex items-start gap-4">
-                    <Bulb size={20} strokeWidth={1.8} color="#acb0ce" className="flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-[16px] font-semibold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
-                        Suggerimento
-                      </p>
-                      <p className="text-[16px]" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
-                        {opportunity.matchReason}
-                      </p>
-                    </div>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-[16px] font-semibold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
+                      Suggerimento
+                    </p>
+                    <p className="text-[16px] leading-[26px]" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
+                      {opportunity.matchReason}
+                    </p>
                   </div>
                 )}
               </div>
@@ -580,7 +570,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
           {(opportunity.structuredContent?.companyDescription || opportunity.about) && (
             <div className="flex flex-col gap-4">
               <h2 className="text-[20px] font-bold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
-                Descrizione dell&apos;azienda
+                Descrizione azienda
               </h2>
               <div
                 className="p-5 rounded-[16px]"
@@ -606,7 +596,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
               <h2 className="text-[20px] font-bold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
                 Opportunità correlate
               </h2>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-row gap-3 overflow-x-auto pb-1 -mx-5 px-5 snap-x snap-mandatory" style={{ scrollbarWidth: 'none' }}>
                 {relatedOpps.map((rel) => (
                   <RelatedCard key={rel.id} opp={rel} onOpen={() => handleOpenRelated(rel)} />
                 ))}
@@ -620,7 +610,11 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
       {/* ── Fixed CTA ─────────────────────────────────────────────── */}
       <div className="fixed z-30 left-0 right-0 max-w-lg mx-auto px-5" style={{ bottom: 80 }}>
         <button
-          onClick={() => hasUrl && window.open(opportunity.url, '_blank', 'noopener,noreferrer')}
+          onClick={() => {
+            if (!hasUrl) return;
+            api.post(`/opportunities/${opportunity.id}/click`).catch(() => {});
+            window.open(opportunity.url, '_blank', 'noopener,noreferrer');
+          }}
           disabled={!hasUrl}
           className="w-full flex items-center justify-center gap-2 rounded-[24px] font-bold text-[18px] active:opacity-80 transition-opacity"
           style={{

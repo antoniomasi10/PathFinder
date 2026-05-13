@@ -94,7 +94,7 @@ export default function UniversitiesPage() {
             zIndex: 1,
             opacity: 0.82,
             background:
-              'linear-gradient(135deg, #fbf8ff 0%, #edeaff 16%, #d4d0ff 32%, #b0acf5 50%, #8884eb 65%, #7370e5 82%, #615fe2 100%)',
+              'linear-gradient(135deg, #9591ee 0%, #8480e8 20%, #7370e5 40%, #615fe2 60%, #524fd4 80%, #4340c4 100%)',
             backgroundSize: '350% 350%',
             animation: 'aurora 14s ease infinite',
             pointerEvents: 'none',
@@ -113,25 +113,6 @@ export default function UniversitiesPage() {
 
         {/* ── Layer 5: content ──────────────────────────────────────── */}
         <div style={{ position: 'relative', zIndex: 4, textAlign: 'center' }}>
-
-          {/* Pill */}
-          <div className="uni-fadeup-1" style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
-            <span style={{
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
-              color: 'rgba(255,255,255,0.9)',
-              background: 'rgba(255,255,255,0.12)',
-              border: '1px solid rgba(255,255,255,0.28)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              borderRadius: 999,
-              padding: '5px 16px',
-            }}>
-              Prossimamente
-            </span>
-          </div>
 
           {/* Title */}
           <h1 className="uni-fadeup-2" style={{

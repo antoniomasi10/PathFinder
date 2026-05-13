@@ -19,6 +19,7 @@ function svgProps(p: IconProps) {
     fill: 'none',
     xmlns: 'http://www.w3.org/2000/svg',
     className: p.className,
+    style: { display: 'block' },
   };
 }
 
@@ -109,8 +110,9 @@ export function ChatConversation(p: IconProps) {
 
 /** PaperPlane - send message (communication/Paper_Plane) */
 export function PaperPlane(p: IconProps) {
+  const s = p.size ?? defaults.size;
   return (
-    <svg {...svgProps(p)}>
+    <svg width={s} height={s} viewBox="1.8 -1.8 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={p.className} style={{ display: 'block' }}>
       <path d="M22 2 11 13" {...strokeProps(p)} />
       <path d="M22 2 15 22l-4-9-9-4 20-7Z" {...strokeProps(p)} />
     </svg>
@@ -151,15 +153,17 @@ export function Share(p: IconProps) {
 
 /** House - home icon (navigation/House_01) */
 export function House(p: IconProps) {
+  const s = p.size ?? defaults.size;
+  const svgAttrs = { width: s, height: s, viewBox: '0 1.4 24 24', fill: 'none', xmlns: 'http://www.w3.org/2000/svg', className: p.className, style: { display: 'block' } };
   if (p.filled) {
     return (
-      <svg {...svgProps(p)}>
+      <svg {...svgAttrs}>
         <path d="M3 10.182V22h7v-7h4v7h7V10.182L12 2l-9 8.182Z" fill={p.color ?? defaults.color} stroke={p.color ?? defaults.color} strokeWidth={p.strokeWidth ?? defaults.strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     );
   }
   return (
-    <svg {...svgProps(p)}>
+    <svg {...svgAttrs}>
       <path d="M3 10.182V22h7v-7h4v7h7V10.182L12 2l-9 8.182Z" {...strokeProps(p)} />
     </svg>
   );
