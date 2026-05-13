@@ -414,6 +414,7 @@ const it = {
     resendCode: 'Invia di nuovo',
     resendInN: 'Invia di nuovo tra {n}s',
     googleError: "Errore durante l'autenticazione con Google",
+    backToLogin: 'Accedi',
     loading: 'Caricamento...',
   },
   skills: {
@@ -803,6 +804,7 @@ const en: Translations = {
     resendCode: 'Resend',
     resendInN: 'Resend in {n}s',
     googleError: 'Error authenticating with Google',
+    backToLogin: 'Log in',
     loading: 'Loading...',
   },
   skills: {
@@ -1192,6 +1194,7 @@ const zh: Translations = {
     resendCode: '重新发送',
     resendInN: '{n}秒后重新发送',
     googleError: 'Google认证出错',
+    backToLogin: '登录',
     loading: '加载中...',
   },
   skills: {
@@ -1581,6 +1584,7 @@ const es: Translations = {
     resendCode: 'Reenviar',
     resendInN: 'Reenviar en {n}s',
     googleError: 'Error al autenticar con Google',
+    backToLogin: 'Iniciar sesión',
     loading: 'Cargando...',
   },
   skills: {
@@ -1970,6 +1974,7 @@ const fr: Translations = {
     resendCode: "Renvoyer",
     resendInN: "Renvoyer dans {n}s",
     googleError: "Erreur lors de l'authentification avec Google",
+    backToLogin: 'Se connecter',
     loading: "Chargement...",
   },
   skills: {
