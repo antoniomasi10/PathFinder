@@ -3,7 +3,7 @@
 import { GoogleLogin } from '@react-oauth/google';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import api, { setAccessToken } from '@/lib/api';
+import { bffPost, setAccessToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
 export default function GoogleAuthButton() {
@@ -14,7 +14,7 @@ export default function GoogleAuthButton() {
   const handleSuccess = async (credentialResponse: any) => {
     setError('');
     try {
-      const { data } = await api.post('/auth/google', {
+      const { data } = await bffPost('/api/bff/google', {
         idToken: credentialResponse.credential,
       });
       setAccessToken(data.accessToken);

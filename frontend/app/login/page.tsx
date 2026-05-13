@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import api, { setAccessToken } from '@/lib/api';
+import { bffPost, setAccessToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 
 
@@ -65,7 +65,7 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const { data } = await api.post('/auth/login', { email, password });
+      const { data } = await bffPost('/api/bff/login', { email, password });
       setAccessToken(data.accessToken);
       setUser(data.user);
       if (!data.user.emailVerified) {

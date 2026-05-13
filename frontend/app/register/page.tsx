@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import api, { setAccessToken } from '@/lib/api';
+import { bffPost, setAccessToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import SearchableSelect from '@/components/SearchableSelect';
 import { italianCourses } from '@/data/italianCourses';
@@ -132,7 +132,7 @@ export default function RegisterPage() {
     setBirthDateError('');
     setLoading(true);
     try {
-      const { data } = await api.post('/auth/register', {
+      const { data } = await bffPost('/api/bff/register', {
         name, surname, email, password,
         phone: phone || undefined,
         universityId, courseOfStudy, birthDate,
