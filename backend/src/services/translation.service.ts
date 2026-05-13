@@ -65,3 +65,27 @@ export async function translateOpportunity(
   const [t, d] = await translateToItalian([title, description]);
   return { title: t, description: d };
 }
+
+const LIBRE_URL = process.env.LIBRETRANSLATE_URL || 'http://libretranslate:5000';
+
+/**
+ * Translates an array of strings from Italian to the target language
+ * using the self-hosted LibreTranslate (Argos Translate) container.
+ * Falls back to the original Italian text on any error.
+ */
+export async function translateBatch(texts: string[], targetLang: string): Promise<string[]> {
+  if (targetLang === 'it' || texts.length === 0) return texts;
+  try {
+    const res = await fetch(`${LIBRE_URL}/translate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: texts, source: 'it', target: targetLang, format: 'text' }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return texts;
+    const data = await res.json();
+    return Array.isArray(data.translatedText) ? data.translatedText : texts;
+  } catch {
+    return texts;
+  }
+}

@@ -1374,7 +1374,7 @@ export default function NetworkingPage() {
                         disabled={loadingMoreConv}
                         style={{ width: '100%', padding: '12px 0', fontSize: 14, fontWeight: 500, color: '#4a4bd7', fontFamily: 'var(--font-plus-jakarta)', opacity: loadingMoreConv ? 0.5 : 1 }}
                       >
-                        {loadingMoreConv ? 'Caricamento...' : 'Carica altro'}
+                        {loadingMoreConv ? t.common.loading : t.notifications.loadMore}
                       </button>
                     )}
                   </div>
@@ -1578,7 +1578,7 @@ export default function NetworkingPage() {
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-                  placeholder="Scrivi un messaggio..."
+                  placeholder={t.networking.writeMessage}
                   style={{
                     flex: 1,
                     minWidth: 0,
@@ -2270,7 +2270,7 @@ export default function NetworkingPage() {
               disabled={loadingMorePosts}
               className="w-full py-3 text-sm text-primary hover:text-primary/80 font-medium disabled:opacity-50"
             >
-              {loadingMorePosts ? 'Caricamento...' : 'Carica altro'}
+              {loadingMorePosts ? t.common.loading : t.notifications.loadMore}
             </button>
           )}
           </>
@@ -2619,7 +2619,7 @@ export default function NetworkingPage() {
                 onClick={() => setWarnPending(null)}
                 className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-300 text-sm font-medium hover:bg-white/5 transition-colors"
               >
-                Modifica
+                {t.common.edit}
               </button>
               <button
                 onClick={() => { const t = warnPending; setWarnPending(null); t === 'post' ? submitPost(true) : submitComment(true); }}
@@ -2652,7 +2652,7 @@ export default function NetworkingPage() {
                 onClick={() => setDeleteConfirm(null)}
                 className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 text-sm hover:bg-white/5 transition-colors"
               >
-                Annulla
+                {t.common.cancel}
               </button>
               <button
                 onClick={confirmDelete}

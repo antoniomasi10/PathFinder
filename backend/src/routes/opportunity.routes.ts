@@ -4,6 +4,9 @@ import prisma from '../lib/prisma';
 import { getHybridMatchedOpportunities, getNewOpportunities, scoreOpportunity, OppFilters } from '../services/matchingEngine';
 import { trackInteraction } from '../services/interaction.service';
 import { cacheGet, cacheSet, cacheDel } from '../lib/cache';
+import { translateOpportunities } from '../services/opportunityTranslation.service';
+
+const VALID_LANGS = new Set(['en', 'es', 'fr', 'zh']);
 
 const OPP_TTL = 5 * 60; // 5 minutes per-user opportunity cache
 
@@ -17,6 +20,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     const skip = (page - 1) * limit;
 
     const { matched, new: isNew } = req.query;
+    const lang = VALID_LANGS.has(req.query.lang as string) ? (req.query.lang as string) : 'it';
 
     // Parse common filters
     const filters: OppFilters = {};
@@ -36,11 +40,12 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
     if (isNew === 'true') {
       const filterKey = hasFilters ? JSON.stringify(filters) : '';
-      const cacheKey = `cache:opps:new:${req.user!.userId}:${page}:${limit}:${filterKey}`;
+      const cacheKey = `cache:opps:new:${req.user!.userId}:${page}:${limit}:${filterKey}:${lang}`;
       const cached = await cacheGet(cacheKey);
       if (cached) { res.json(cached); return; }
 
       const result = await getNewOpportunities(req.user!.userId, limit, skip, hasFilters ? filters : {});
+      if (lang !== 'it') await translateOpportunities(result.data, lang);
       const payload = { data: result.data, total: result.total, page, totalPages: Math.ceil(result.total / limit) };
       await cacheSet(cacheKey, payload, OPP_TTL);
       res.json(payload);
@@ -49,11 +54,12 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
     if (matched === 'true') {
       const filterKey = hasFilters ? JSON.stringify(filters) : '';
-      const cacheKey = `cache:opps:matched:${req.user!.userId}:${page}:${limit}:${filterKey}`;
+      const cacheKey = `cache:opps:matched:${req.user!.userId}:${page}:${limit}:${filterKey}:${lang}`;
       const cached = await cacheGet(cacheKey);
       if (cached) { res.json(cached); return; }
 
       const result = await getHybridMatchedOpportunities(req.user!.userId, limit, skip, hasFilters ? filters : {});
+      if (lang !== 'it') await translateOpportunities(result.data, lang);
       const payload = { data: result.data, total: result.total, page, totalPages: Math.ceil(result.total / limit) };
       await cacheSet(cacheKey, payload, OPP_TTL);
       res.json(payload);
@@ -141,6 +147,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       ? Number((countResult as [{ count: bigint }])[0].count)
       : (countResult as number);
 
+    if (lang !== 'it') await translateOpportunities(opportunities, lang);
     res.json({ data: opportunities, total, page, totalPages: Math.ceil(total / limit) });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

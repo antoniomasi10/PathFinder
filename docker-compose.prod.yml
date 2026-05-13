@@ -33,6 +33,19 @@ services:
       timeout: 5s
       retries: 5
 
+  libretranslate:
+    image: libretranslate/libretranslate:latest
+    container_name: coha-libretranslate
+    restart: unless-stopped
+    environment:
+      - LT_LOAD_ONLY=en,it,es,fr,zh
+      - LT_DISABLE_WEB_UI=true
+      - LT_API_KEYS=false
+    volumes:
+      - lt_models:/home/libretranslate/.local
+    expose:
+      - "5000"
+
   backend:
     build:
       context: ./backend
@@ -48,11 +61,14 @@ services:
       PORT: 4000
       DATABASE_URL: postgresql://${POSTGRES_USER:-coha}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-coha}?schema=public
       REDIS_URL: redis://redis:6379
+      LIBRETRANSLATE_URL: http://libretranslate:5000
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      libretranslate:
+        condition: service_started
 
     logging:
       driver: json-file
@@ -63,3 +79,4 @@ services:
 volumes:
   pgdata:
   redisdata:
+  lt_models:

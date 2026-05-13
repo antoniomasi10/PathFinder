@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSavedOpportunities } from '@/lib/savedOpportunities';
-import { useLanguage } from '@/lib/language';
+import { useLanguage, LANG_CODE } from '@/lib/language';
 import { isValidExternalUrl } from '@/lib/urlValidation';
 import api from '@/lib/api';
 import { getOpportunityTypeColor } from '@/lib/opportunityColors';
@@ -623,7 +623,8 @@ export default function HomePage() {
   const [searchFocused, setSearchFocused] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
   const { savedIds, savedOpps, toggleSave } = useSavedOpportunities();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const langCode = LANG_CODE[language];
   const filterCategories = getFilterCategories(t);
 
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -691,7 +692,7 @@ export default function HomePage() {
   const loadPerTePage = useCallback((page: number, search: string, filters: AdvancedFilters, scrollToTop = false, type?: string | null) => {
     setLoadingOpps(true);
     const qs = buildServerParams(search, filters, type);
-    return api.get(`/opportunities?matched=true&page=${page}&limit=20${qs}`)
+    return api.get(`/opportunities?matched=true&page=${page}&limit=20&lang=${langCode}${qs}`)
       .then(({ data }) => {
         const items = data.data || data;
         const mapped = (Array.isArray(items) ? items : []).map((o: any) => mapOpportunity(o));
@@ -707,7 +708,7 @@ export default function HomePage() {
   const loadEsploraPage = useCallback((page: number, search: string, filters: AdvancedFilters, scrollToTop = false, type?: string | null) => {
     setLoadingNew(true);
     const qs = buildServerParams(search, filters, type);
-    return api.get(`/opportunities?new=true&page=${page}&limit=20${qs}`)
+    return api.get(`/opportunities?new=true&page=${page}&limit=20&lang=${langCode}${qs}`)
       .then(({ data }) => {
         const items = data.data || data;
         const mapped = (Array.isArray(items) ? items : []).map((o: any) => mapOpportunity(o, { isNew: o.isNew ?? false }));

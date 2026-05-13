@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/lib/api';
+import { useLanguage } from '@/lib/language';
 
 const LOGO = '/logo-coha-swash.svg';
 
@@ -71,6 +72,7 @@ function ResetPasswordForm() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const router = useRouter();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const emailParam = searchParams.get('email');
@@ -82,19 +84,19 @@ function ResetPasswordForm() {
     setError('');
 
     if (newPassword !== confirmPassword) {
-      setError('Le password non corrispondono');
+      setError(t.security.passwordMismatch);
       return;
     }
     if (newPassword.length < 8) {
-      setError('La password deve avere almeno 8 caratteri');
+      setError(t.security.passwordTooShort);
       return;
     }
     if (!/[A-Z]/.test(newPassword)) {
-      setError('La password deve contenere almeno una lettera maiuscola');
+      setError(t.security.passwordTooShort);
       return;
     }
     if (!/[0-9]/.test(newPassword)) {
-      setError('La password deve contenere almeno un numero');
+      setError(t.security.passwordTooShort);
       return;
     }
 
@@ -104,7 +106,7 @@ function ResetPasswordForm() {
       setSuccess(true);
       setTimeout(() => router.push('/login'), 2000);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Errore durante il reset della password');
+      setError(err.response?.data?.error || t.auth.resetTitle);
     } finally {
       setLoading(false);
     }
@@ -122,7 +124,7 @@ function ResetPasswordForm() {
           <div className="flex items-center justify-center mb-6">
             <img
               src={LOGO}
-              alt="COA"
+              alt="COhA"
               style={{ width: 297, height: 85 }}
               className="object-contain pointer-events-none"
             />
@@ -130,8 +132,8 @@ function ResetPasswordForm() {
 
           {/* Heading */}
           <div className="text-center mb-7 w-full">
-            <h1 className="text-2xl font-semibold text-[#2c3149] leading-8">Reimposta password</h1>
-            <p className="text-sm text-[#595e78] mt-0.5">Inserisci il codice ricevuto e la nuova password</p>
+            <h1 className="text-2xl font-semibold text-[#2c3149] leading-8">{t.auth.resetTitle}</h1>
+            <p className="text-sm text-[#595e78] mt-0.5">{t.auth.resetSub}</p>
           </div>
 
           {/* Error */}
@@ -143,14 +145,14 @@ function ResetPasswordForm() {
 
           {success ? (
             <div className="w-full bg-green-50 border border-green-100 text-green-700 rounded-xl px-4 py-3 text-sm text-center mb-4">
-              Password reimpostata! Reindirizzamento al login...
+              {t.auth.resetSuccess}
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="w-full space-y-[10px] mt-1 mb-4">
 
               {/* Email */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-[#2c3149] tracking-[0.5px]">E-mail</label>
+                <label className="text-xs font-medium text-[#2c3149] tracking-[0.5px]">{t.security.emailLabel}</label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
                     <MailIcon />
@@ -159,7 +161,7 @@ function ResetPasswordForm() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Inserisci la tua e-mail"
+                    placeholder={t.security.emailPlaceholder}
                     required
                     className="w-full bg-[#fbf8ff] border border-[#acb0ce] rounded-[24px] pl-[45px] pr-4 py-4 text-sm text-[#2c3149] placeholder:text-[#747995] focus:outline-none focus:ring-2 focus:ring-[#615fe2]/30 focus:border-[#615fe2] transition-all"
                   />
@@ -168,7 +170,7 @@ function ResetPasswordForm() {
 
               {/* Codice */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-[#2c3149] tracking-[0.5px]">Codice di verifica</label>
+                <label className="text-xs font-medium text-[#2c3149] tracking-[0.5px]">{t.security.verificationCode}</label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
                     <CodeIcon />
@@ -178,7 +180,7 @@ function ResetPasswordForm() {
                     inputMode="numeric"
                     value={code}
                     onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="000000"
+                    placeholder={t.security.codePlaceholder}
                     maxLength={6}
                     required
                     className="w-full bg-[#fbf8ff] border border-[#acb0ce] rounded-[24px] pl-[45px] pr-4 py-4 text-sm text-[#2c3149] placeholder:text-[#747995] focus:outline-none focus:ring-2 focus:ring-[#615fe2]/30 focus:border-[#615fe2] transition-all text-center tracking-[0.4em]"
@@ -188,7 +190,7 @@ function ResetPasswordForm() {
 
               {/* Nuova password */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-[#2c3149] tracking-[0.5px]">Nuova password</label>
+                <label className="text-xs font-medium text-[#2c3149] tracking-[0.5px]">{t.security.newPassword}</label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
                     <LockIcon />
@@ -197,7 +199,7 @@ function ResetPasswordForm() {
                     type={showPassword ? 'text' : 'password'}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Minimo 8 caratteri, 1 maiuscola, 1 numero"
+                    placeholder={t.security.newPasswordPlaceholder}
                     required
                     className="w-full bg-[#fbf8ff] border border-[#acb0ce] rounded-[24px] pl-[45px] pr-12 py-4 text-sm text-[#2c3149] placeholder:text-[#747995] focus:outline-none focus:ring-2 focus:ring-[#615fe2]/30 focus:border-[#615fe2] transition-all"
                   />
@@ -213,7 +215,7 @@ function ResetPasswordForm() {
 
               {/* Conferma password */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-[#2c3149] tracking-[0.5px]">Conferma password</label>
+                <label className="text-xs font-medium text-[#2c3149] tracking-[0.5px]">{t.security.confirmPassword}</label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
                     <LockIcon />
@@ -222,7 +224,7 @@ function ResetPasswordForm() {
                     type={showConfirm ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Ripeti la nuova password"
+                    placeholder={t.security.confirmPasswordPlaceholder}
                     required
                     className="w-full bg-[#fbf8ff] border border-[#acb0ce] rounded-[24px] pl-[45px] pr-12 py-4 text-sm text-[#2c3149] placeholder:text-[#747995] focus:outline-none focus:ring-2 focus:ring-[#615fe2]/30 focus:border-[#615fe2] transition-all"
                   />
@@ -241,7 +243,7 @@ function ResetPasswordForm() {
                 disabled={loading}
                 className="w-full flex items-center justify-center gap-2 bg-[#615fe2] hover:bg-[#5451d0] text-[#fbf7ff] rounded-[24px] px-4 py-3.5 text-xs font-medium tracking-[0.5px] transition-colors disabled:opacity-50 drop-shadow-sm"
               >
-                <span>{loading ? 'Reset in corso...' : 'Reimposta password'}</span>
+                <span>{loading ? t.auth.resetting : t.auth.resetTitle}</span>
                 {!loading && <ArrowRightIcon />}
               </button>
             </form>
@@ -250,9 +252,9 @@ function ResetPasswordForm() {
 
         {/* Footer */}
         <div className="mt-4 flex items-center justify-center gap-1">
-          <span className="text-sm text-[#595e78]">Ricordi la password?</span>
+          <span className="text-sm text-[#595e78]">{t.auth.rememberPwd}</span>
           <Link href="/login" className="text-xs font-medium text-[#615fe2] tracking-[0.5px] hover:underline">
-            Accedi
+            {t.auth.backToLogin}
           </Link>
         </div>
       </div>
@@ -261,10 +263,11 @@ function ResetPasswordForm() {
 }
 
 export default function ResetPasswordPage() {
+  const { t } = useLanguage();
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#fbf8ff' }}>
-        <div className="text-sm text-[#595e78] font-jakarta">Caricamento...</div>
+        <div className="text-sm text-[#595e78] font-jakarta">{t.auth.loading}</div>
       </div>
     }>
       <ResetPasswordForm />

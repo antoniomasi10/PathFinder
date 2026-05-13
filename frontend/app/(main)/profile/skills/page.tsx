@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import api from '@/lib/api';
+import { useLanguage } from '@/lib/language';
 import {
   Brain, Code, Database, Smartphone, FlaskConical, Briefcase,
   TrendingUp, Palette, Leaf, Megaphone, Scale, Heart,
@@ -279,6 +280,7 @@ function SkillAccordion({
 export default function CoreSkillsPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const [selectedCore, setSelectedCore] = useState<string[]>([]);
   const [isEditCore, setIsEditCore] = useState(false);
@@ -386,7 +388,7 @@ export default function CoreSkillsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#fbf8ff' }}>
-        <div className="animate-pulse text-[#595e78]" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>Caricamento...</div>
+        <div className="animate-pulse text-[#595e78]" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>{t.skills.loading}</div>
       </div>
     );
   }
@@ -470,10 +472,10 @@ export default function CoreSkillsPage() {
               className="font-bold text-[#191b27]"
               style={{ fontSize: 32, lineHeight: '40px' }}
             >
-              Le tue competenze
+              {t.skills.pageTitle}
             </h1>
             <p className="text-[#464554]" style={{ fontSize: 14, lineHeight: '20px' }}>
-              Gestisci le competenze che ti rappresentano meglio.
+              {t.skills.pageSubtitle}
             </p>
           </div>
 
@@ -481,7 +483,7 @@ export default function CoreSkillsPage() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-[#191b27]" style={{ fontSize: 24, lineHeight: '32px' }}>
-                Principali
+                {t.skills.coreSkills}
               </h2>
               <span
                 className="font-medium text-[#4844c8] rounded-full"
@@ -535,7 +537,7 @@ export default function CoreSkillsPage() {
                 className="text-[#615fe2] font-medium hover:underline text-left"
                 style={{ fontSize: 14 }}
               >
-                {coreExpanded ? 'Chiudi selezione' : 'Modifica competenze principali'}
+                {coreExpanded ? t.skills.closeSelection : t.skills.editCore}
               </button>
             )}
           </div>
@@ -547,7 +549,7 @@ export default function CoreSkillsPage() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-[#191b27]" style={{ fontSize: 24, lineHeight: '32px' }}>
-                Competenze secondarie
+                {t.skills.sideSkills}
               </h2>
               <span
                 className="font-medium text-[#4844c8] rounded-full"
@@ -611,10 +613,12 @@ export default function CoreSkillsPage() {
           }}
         >
           {saving
-            ? 'Salvataggio...'
+            ? t.skills.saving
             : selectedCore.length === 3
-            ? 'Conferma selezione'
-            : `Seleziona ${3 - selectedCore.length} ${3 - selectedCore.length === 1 ? 'competenza' : 'competenze'}`}
+            ? t.skills.confirmSelection
+            : (3 - selectedCore.length === 1
+                ? t.skills.selectMore.replace('{n}', String(3 - selectedCore.length))
+                : t.skills.selectMorePlural.replace('{n}', String(3 - selectedCore.length)))}
         </button>
       </div>
     </div>

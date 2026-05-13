@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useLanguage } from '@/lib/language';
 
 export default function VerifyEmailPage() {
   const [code, setCode] = useState(['', '', '', '', '', '']);
@@ -14,6 +15,7 @@ export default function VerifyEmailPage() {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const router = useRouter();
   const { user, setUser } = useAuth();
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (user?.emailVerified) {
@@ -68,7 +70,7 @@ export default function VerifyEmailPage() {
   const handleSubmit = async (codeStr?: string) => {
     const fullCode = codeStr || code.join('');
     if (fullCode.length !== 6) {
-      setError('Inserisci il codice completo di 6 cifre');
+      setError(t.security.verificationCode);
       return;
     }
 
@@ -82,7 +84,7 @@ export default function VerifyEmailPage() {
       }
       router.push('/onboarding');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Codice non valido');
+      setError(err.response?.data?.error || t.common.error);
       setCode(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
     } finally {
@@ -95,12 +97,12 @@ export default function VerifyEmailPage() {
 
     try {
       await api.post('/auth/resend-otp');
-      setResendMessage('Nuovo codice inviato!');
+      setResendMessage(t.security.codeResent);
       setResendCooldown(60);
       setError('');
       setTimeout(() => setResendMessage(''), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.error || "Errore durante l'invio del codice");
+      setError(err.response?.data?.error || t.common.error);
     }
   };
 
@@ -116,10 +118,10 @@ export default function VerifyEmailPage() {
         {/* Heading */}
         <div className="flex flex-col items-center gap-1.5 w-full mb-6">
           <p className="font-[var(--font-plus-jakarta)] text-[#191b27] text-sm text-center">
-            Verifica la tua email
+            {t.auth.verifyTitle}
           </p>
           <div className="flex flex-col items-center text-sm font-[var(--font-plus-jakarta)] text-[#464554] text-center">
-            <span>Abbiamo inviato un codice a 6 cifre a</span>
+            <span>{t.auth.verifySub}</span>
             <span className="font-medium text-[#615fe2]">{user?.email}</span>
           </div>
         </div>
@@ -168,18 +170,20 @@ export default function VerifyEmailPage() {
             boxShadow: '0px 0.763px 0.763px rgba(0,0,0,0.05)',
           }}
         >
-          {loading ? 'Verifica in corso...' : 'Verifica'}
+          {loading ? t.auth.verifying : t.auth.verifyBtn}
         </button>
 
         {/* Resend */}
         <p className="text-sm font-[var(--font-plus-jakarta)] text-[#464554] text-center">
-          Non hai ricevuto il codice?{' '}
+          {t.auth.didntReceive}{' '}
           <button
             onClick={handleResend}
             disabled={resendCooldown > 0}
             className="font-medium text-[#615fe2] disabled:opacity-50"
           >
-            {resendCooldown > 0 ? `Invia di nuovo tra ${resendCooldown}s` : 'Invia di nuovo'}
+            {resendCooldown > 0
+              ? t.auth.resendInN.replace('{n}', String(resendCooldown))
+              : t.auth.resendCode}
           </button>
         </p>
       </div>
