@@ -75,7 +75,7 @@ api.interceptors.response.use(
 
       if (!refreshPromise) {
         refreshPromise = axios
-          .post(`${API_URL}/api/auth/refresh`, {}, { withCredentials: true })
+          .post('/api/bff/refresh', {})
           .then(({ data }) => {
             setAccessToken(data.accessToken);
             reauthenticateSockets();
@@ -102,5 +102,21 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+/** POST to a same-origin BFF route (no baseURL, preserves err.response pattern) */
+export async function bffPost<T = any>(path: string, body?: unknown): Promise<{ data: T }> {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  const data: T = await res.json();
+  if (!res.ok) {
+    const err: any = new Error((data as any).error || 'Request failed');
+    err.response = { data };
+    throw err;
+  }
+  return { data };
+}
 
 export default api;

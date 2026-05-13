@@ -3,7 +3,7 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { AuthContext, AuthUser } from '@/lib/auth';
-import api, { clearAccessToken } from '@/lib/api';
+import api, { clearAccessToken, bffPost } from '@/lib/api';
 import { useLanguage } from '@/lib/language';
 
 const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
@@ -54,7 +54,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = () => {
-    api.post('/auth/logout').catch(() => {});
+    bffPost('/api/bff/logout').catch(() => {});
     clearAccessToken();
     setUser(null);
     router.replace('/login');
