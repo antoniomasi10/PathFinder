@@ -12,12 +12,18 @@
  * - MUR universities: 1st of each month at 02:00
  * - MUR courses: 1st of each month at 02:30
  * - AlmaLaurea stats: quarterly (1st Jan, Apr, Jul, Oct at 04:00)
+ * - Developers.events Italian conferences: weekly Tuesday 04:30 (CC BY-NC 4.0)
+ * - TechConfit Italian conferences: weekly Thursday 04:30 (CC0)
+ * - Mobilizon Italy community events: weekly Friday 04:30 (AGPL-3.0)
  *
  * NOTE: EURES scraper disabled — no public API available.
  * Existing EURES data remains in DB as static cache.
  *
  * REMOVED: Bundesagentur — unofficial reverse-engineered API, BA explicitly opposed automated access.
  * REMOVED: The Muse — ToS Section 3.3 prohibits replicating services. Replaced by Jobicy.
+ *
+ * EXCLUDED (ToS violations): Eventbrite (§13.1 bans scraping), EventItalia (redistribution banned),
+ * Lu.ma (ambiguous "publicly supported interfaces"), Bevy/Startup Grind/GDG (explicit scraping ban).
  */
 import cron from 'node-cron';
 import { importUniversities, importCourses } from './mur.import';
@@ -39,6 +45,9 @@ import { importBestCoursesOpportunities } from './best-courses.import';
 import { importConfsTechOpportunities } from './confstech.import';
 import { importAlmaLaureaStats } from './almalaurea.import';
 import { importOpportunityDeskOpportunities } from './opportunity-desk.import';
+import { importDevelopersEventsOpportunities } from './developers-events.import';
+import { importTechConfitOpportunities } from './techconfit.import';
+import { importMobilizonOpportunities } from './mobilizon.import';
 import { runCleanup } from './cleanup.service';
 import { runUrlCheckBatch } from './urlChecker';
 import { alertImportFailure } from './alerting';
@@ -103,6 +112,11 @@ export function startImportScheduler() {
     runWithAlert('Jobicy', 'jobicy', 'opportunities', importJobicyOpportunities);
   });
 
+  // Weekly Thursday: TechConfit Italian tech conferences (04:30) — CC0 Public Domain
+  cron.schedule('30 4 * * 4', () => {
+    runWithAlert('TechConfit', 'techconfit', 'opportunities', importTechConfitOpportunities);
+  });
+
   // Devpost: DISABLED — ToS prohibits automated access (support@devpost.com for API access)
 
   // Weekly Friday: Lever internships (03:30)
@@ -113,6 +127,11 @@ export function startImportScheduler() {
   // Weekly Friday: FashionUnited fashion internships (04:00)
   cron.schedule('0 4 * * 5', () => {
     runWithAlert('FashionUnited', 'fashionunited', 'opportunities', importFashionUnitedOpportunities);
+  });
+
+  // Weekly Friday: Mobilizon Italy community events (04:30) — AGPL-3.0 public API
+  cron.schedule('30 4 * * 5', () => {
+    runWithAlert('Mobilizon', 'mobilizon-it', 'opportunities', importMobilizonOpportunities);
   });
 
   // Weekly Saturday: Ashby internships (03:30)
@@ -138,6 +157,11 @@ export function startImportScheduler() {
   // Weekly Tuesday: RemoteOK (04:00)
   cron.schedule('0 4 * * 2', () => {
     runWithAlert('RemoteOK', 'remoteok', 'opportunities', importRemoteOKOpportunities);
+  });
+
+  // Weekly Tuesday: Developers.events Italian conferences (04:30) — CC BY-NC 4.0
+  cron.schedule('30 4 * * 2', () => {
+    runWithAlert('DevelopersEvents', 'developers-events', 'opportunities', importDevelopersEventsOpportunities);
   });
 
   // BEST Courses: DISABLED — ToS unclear (403 on legal pages). Contact info@best.eu.org before re-enabling.
