@@ -23,9 +23,9 @@ describe('validateEnv', () => {
 
     it('passes with current dev values', () => {
       expect(() => validateEnv({
-        JWT_SECRET: 'pathfinder-jwt-secret-dev-only',
-        JWT_REFRESH_SECRET: 'pathfinder-refresh-secret-dev-only',
-        DATABASE_URL: 'postgresql://pathfinder:pathfinder@localhost:5432/pathfinder',
+        JWT_SECRET: 'coha-jwt-secret-dev-only',
+        JWT_REFRESH_SECRET: 'coha-refresh-secret-dev-only',
+        DATABASE_URL: 'postgresql://coha:coha@localhost:5432/coha',
       }, 'development')).not.toThrow();
     });
 

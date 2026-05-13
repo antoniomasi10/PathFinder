@@ -13,7 +13,8 @@
 import { FieldOfStudy, OpportunityFormat, OpportunityType } from '@prisma/client';
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
-import { buildDedupKey } from './utils';
+import { buildDedupKey, isSeniorRole } from './utils';
+import { parseOpportunityContent, parseAIDate } from '../ai/opportunityParser';
 
 export interface OpportunityRecord {
   id: string;
@@ -107,9 +108,24 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
     logger.info(`[BatchUpsert] Skipped ${crossSourceSkipped} cross-source duplicates`);
   }
 
-  if (toCreate.length > 0) {
+  // Filter out senior roles that would be classified as INTERNSHIP or STAGE.
+  const ENTRY_ONLY_TYPES = new Set<string>(['INTERNSHIP', 'STAGE']);
+  let seniorSkipped = 0;
+  const filteredCreate = toCreate.filter(r => {
+    if (ENTRY_ONLY_TYPES.has(r.type) && isSeniorRole(r.title)) {
+      seniorSkipped++;
+      return false;
+    }
+    return true;
+  });
+  if (seniorSkipped > 0) {
+    logger.info(`[BatchUpsert] Skipped ${seniorSkipped} senior roles (title-based filter)`);
+  }
+
+  if (filteredCreate.length > 0) {
+    // Insert new records first, then enrich with AI-parsed structured content.
     await prisma.opportunity.createMany({
-      data: toCreate.map(r => ({
+      data: filteredCreate.map(r => ({
         id: r.id,
         title: r.title,
         description: r.description,
@@ -146,6 +162,36 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
       })),
       skipDuplicates: true,
     });
+
+    // AI-parse new records concurrently (max 5 at a time) — errors are swallowed.
+    const PARSE_CONCURRENCY = 5;
+    for (let i = 0; i < filteredCreate.length; i += PARSE_CONCURRENCY) {
+      const chunk = filteredCreate.slice(i, i + PARSE_CONCURRENCY);
+      await Promise.all(
+        chunk.map(async (r) => {
+          const structured = await parseOpportunityContent(r.title, r.description, null, r.company);
+          if (structured) {
+            const updateData: any = { structuredContent: structured };
+            if (!r.deadline && structured.deadline) {
+              const extracted = parseAIDate(structured.deadline);
+              if (extracted) updateData.deadline = extracted;
+            }
+            // Senior role detected in description → expire immediately
+            if (ENTRY_ONLY_TYPES.has(r.type) && structured.minYearsRequired !== null && structured.minYearsRequired >= 2) {
+              updateData.expiresAt = new Date();
+              logger.info(`[BatchUpsert] Expired senior role: "${r.title}" (${structured.minYearsRequired} yrs required)`);
+            }
+            await prisma.opportunity.update({
+              where: { id: r.id },
+              data: updateData,
+            }).catch(() => {});
+          }
+        }),
+      );
+    }
+    if (filteredCreate.length > 0) {
+      logger.info(`[BatchUpsert] AI-parsed ${filteredCreate.length} new opportunities`);
+    }
   }
 
   for (let i = 0; i < toUpdate.length; i += UPDATE_CHUNK_SIZE) {

@@ -24,8 +24,8 @@ const BADGES: BadgeDefinition[] = [
   { id: 'pianificatore', name: 'Pianificatore', icon: '📅', description: 'Hai aggiunto 3 scadenze al calendario', rarity: 'comune', category: 'azione', target: 3, trackingKey: 'deadlines_added' },
   { id: 'candidato', name: 'Candidato', icon: '🚀', description: 'Hai cliccato Candidati ora per la prima volta', rarity: 'rara', category: 'azione', target: 1, trackingKey: 'applications_clicked' },
   { id: 'ambizioso', name: 'Ambizioso', icon: '💪', description: 'Hai avviato candidature per 3 corsi diversi', rarity: 'epica', category: 'azione', target: 3, trackingKey: 'applications_clicked' },
-  { id: 'fedele', name: 'Fedele', icon: '💚', description: 'Hai usato PathFinder per 5 giorni consecutivi', rarity: 'non_comune', category: 'engagement', target: 5, trackingKey: 'login_streak' },
-  { id: 'dedicato', name: 'Dedicato', icon: '🔥', description: 'Hai usato PathFinder per 15 giorni consecutivi', rarity: 'rara', category: 'engagement', target: 15, trackingKey: 'login_streak' },
+  { id: 'fedele', name: 'Fedele', icon: '💚', description: 'Hai usato COhA per 5 giorni consecutivi', rarity: 'non_comune', category: 'engagement', target: 5, trackingKey: 'login_streak' },
+  { id: 'dedicato', name: 'Dedicato', icon: '🔥', description: 'Hai usato COhA per 15 giorni consecutivi', rarity: 'rara', category: 'engagement', target: 15, trackingKey: 'login_streak' },
   { id: 'completista', name: 'Completista', icon: '🏆', description: 'Hai sbloccato tutti gli altri 14 badge!', rarity: 'leggendaria', category: 'engagement', target: 14, trackingKey: 'total_badges' },
 ];
 

@@ -24,7 +24,7 @@ export default function CookieBanner() {
     <div className="fixed bottom-0 left-0 right-0 z-50 p-4 md:p-6">
       <div className="max-w-2xl mx-auto bg-white border border-gray-200 rounded-2xl shadow-xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <p className="text-sm text-gray-700 flex-1 leading-relaxed">
-          PathFinder usa cookie tecnici essenziali per il funzionamento del servizio (sessione autenticata).
+          COhA usa cookie tecnici essenziali per il funzionamento del servizio (sessione autenticata).
           Non usiamo cookie di profilazione o tracciamento.{' '}
           <Link href="/privacy" className="text-[#615fe2] underline hover:text-[#5451d0]">
             Leggi l&apos;Informativa

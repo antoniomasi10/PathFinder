@@ -139,7 +139,7 @@ describe('Notification Creation', () => {
     const notif = await createNotification(
       users.userA.id,
       'SYSTEM',
-      'Aggiornamento disponibile per PathFinder',
+      'Aggiornamento disponibile per COhA',
       '/notifications',
       '\u{2699}\u{FE0F}'
     );

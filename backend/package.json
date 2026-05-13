@@ -32,7 +32,11 @@
     "import:best-courses": "ts-node --transpile-only -e \"require('./src/services/import/best-courses.import').importBestCoursesOpportunities().then(r=>console.log(JSON.stringify(r)))\"",
     "import:developers-events": "ts-node --transpile-only -e \"require('./src/services/import/developers-events.import').importDevelopersEventsOpportunities().then(r=>console.log(JSON.stringify(r)))\"",
     "import:techconfit": "ts-node --transpile-only -e \"require('./src/services/import/techconfit.import').importTechConfitOpportunities().then(r=>console.log(JSON.stringify(r)))\"",
-    "import:mobilizon": "ts-node --transpile-only -e \"require('./src/services/import/mobilizon.import').importMobilizonOpportunities().then(r=>console.log(JSON.stringify(r)))\""
+    "import:mobilizon": "ts-node --transpile-only -e \"require('./src/services/import/mobilizon.import').importMobilizonOpportunities().then(r=>console.log(JSON.stringify(r)))\"",
+    "backfill:structured-content": "ts-node --transpile-only scripts/backfill-structured-content.ts",
+    "backfill:deadlines": "ts-node --transpile-only scripts/backfill-deadlines.ts",
+    "backfill:expire-senior": "ts-node --transpile-only scripts/backfill-expire-senior.ts",
+    "sync:deadlines-from-structured": "ts-node --transpile-only scripts/sync-deadlines-from-structured.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -58,6 +62,7 @@
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.3",
+    "openai": "^6.37.0",
     "playwright": "^1.59.1",
     "sanitize-html": "^2.17.2",
     "socket.io": "^4.7.5",

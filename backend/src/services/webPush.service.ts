@@ -5,7 +5,7 @@ import { logger } from '../utils/logger';
 
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
-const VAPID_EMAIL = process.env.VAPID_EMAIL || 'mailto:admin@pathfinder.it';
+const VAPID_EMAIL = process.env.VAPID_EMAIL || 'mailto:admin@coha.app';
 
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
@@ -63,8 +63,8 @@ const TYPE_TITLES: Partial<Record<NotificationType, string>> = {
   POST_COMMENT: 'Nuovo commento',
   COMMENT_REPLY: 'Nuova risposta',
   GROUP_UPDATE: 'Aggiornamento gruppo',
-  SYSTEM: 'PathFinder',
-  GENERAL: 'PathFinder',
+  SYSTEM: 'COhA',
+  GENERAL: 'COhA',
 };
 
 export interface PushPayload {
@@ -99,7 +99,7 @@ export async function sendPushToUser(userId: string, payload: PushPayload) {
   const title =
     payload.title ||
     (payload.type && TYPE_TITLES[payload.type]) ||
-    'PathFinder';
+    'COhA';
 
   const pushPayload = JSON.stringify({
     title,

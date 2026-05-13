@@ -1,5 +1,5 @@
 export const metadata = {
-  title: 'Informativa sulla Privacy | PathFinder',
+  title: 'Informativa sulla Privacy | COhA',
   description: 'Informativa sul trattamento dei dati personali ai sensi del GDPR',
 };
 
@@ -23,7 +23,7 @@ export default function PrivacyPage() {
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3 text-gray-900">2. Dati Personali Raccolti</h2>
           <p className="text-sm leading-relaxed text-gray-700 mb-3">
-            PathFinder raccoglie i seguenti dati personali forniti direttamente dall&apos;utente:
+            COhA raccoglie i seguenti dati personali forniti direttamente dall&apos;utente:
           </p>
           <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700">
             <li><strong>Dati identificativi:</strong> nome, cognome, indirizzo e-mail, numero di telefono (opzionale)</li>
@@ -72,7 +72,7 @@ export default function PrivacyPage() {
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3 text-gray-900">5. Profilazione Automatizzata (Art. 22 GDPR)</h2>
           <p className="text-sm leading-relaxed text-gray-700">
-            PathFinder utilizza un sistema automatizzato per calcolare il tuo &quot;profilo&quot; (cluster tag:
+            COhA utilizza un sistema automatizzato per calcolare il tuo &quot;profilo&quot; (cluster tag:
             Analista, Creativo, Leader, Imprenditore, Sociale, Explorer) basato sulle risposte al questionario di
             onboarding. Questo profilo influenza le opportunità che ti vengono suggerite. Hai il diritto di
             richiedere una revisione umana di tale classificazione e di opporti alla profilazione contattandoci
@@ -110,7 +110,7 @@ export default function PrivacyPage() {
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3 text-gray-900">8. Cookie e Tecnologie di Tracciamento</h2>
           <p className="text-sm leading-relaxed text-gray-700">
-            PathFinder utilizza esclusivamente cookie tecnici essenziali per il funzionamento del servizio:
+            COhA utilizza esclusivamente cookie tecnici essenziali per il funzionamento del servizio:
           </p>
           <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 mt-2">
             <li><strong>refreshToken</strong> (cookie HTTPOnly, durata 7 giorni): necessario per mantenere la sessione autenticata. Non richiede consenso in quanto essenziale.</li>
@@ -124,7 +124,7 @@ export default function PrivacyPage() {
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3 text-gray-900">9. Minori</h2>
           <p className="text-sm leading-relaxed text-gray-700">
-            PathFinder è riservato a utenti di età pari o superiore a 18 anni. Non raccogliamo
+            COhA è riservato a utenti di età pari o superiore a 18 anni. Non raccogliamo
             consapevolmente dati personali di soggetti di età inferiore a 18 anni. Se sei genitore o tutore
             e ritieni che tuo figlio minorenne abbia creato un account, ti invitiamo a contattarci immediatamente
             all&apos;indirizzo indicato al punto 1 per richiedere la cancellazione dei dati.

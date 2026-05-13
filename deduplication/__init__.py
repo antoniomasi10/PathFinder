@@ -1,4 +1,4 @@
-"""Pipeline di deduplicazione offerte per PathFinder."""
+﻿"""Pipeline di deduplicazione offerte per COhA."""
 
 from .pipeline import deduplica
 

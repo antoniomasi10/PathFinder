@@ -1,5 +1,5 @@
 {
-  "name": "pathfinder",
+  "name": "coha",
   "private": true,
   "workspaces": ["frontend", "backend"],
   "scripts": {

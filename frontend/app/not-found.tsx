@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Pagina non trovata | PathFinder',
+  title: 'Pagina non trovata | COhA',
 };
 
 export default function NotFound() {
