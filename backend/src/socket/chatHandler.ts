@@ -15,14 +15,18 @@ const MAX_CONNECTIONS_PER_IP_PER_MINUTE = 20;
 // Zod schemas for socket message validation
 const groupMessageSchema = z.object({
   groupId: z.string().uuid(),
-  content: z.string().min(1).max(5000),
+  content: z.string().max(5000),
   images: z.array(z.string()).max(5).optional(),
+}).refine((d) => d.content.trim().length > 0 || (d.images && d.images.length > 0), {
+  message: 'Messaggio o immagine obbligatori',
 });
 
 const directMessageSchema = z.object({
   receiverId: z.string().uuid(),
-  content: z.string().min(1).max(5000),
+  content: z.string().max(5000),
   images: z.array(z.string()).max(5).optional(),
+}).refine((d) => d.content.trim().length > 0 || (d.images && d.images.length > 0), {
+  message: 'Messaggio o immagine obbligatori',
 });
 
 async function checkRateLimit(userId: string): Promise<boolean> {
