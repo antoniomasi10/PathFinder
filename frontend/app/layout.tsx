@@ -7,6 +7,9 @@ import QueryProvider from '@/components/QueryProvider';
 import { LanguageProvider } from '@/lib/language';
 import { PrivacyProvider } from '@/lib/privacy';
 import CookieBanner from '@/components/CookieBanner';
+import Script from 'next/script';
+
+const ONESIGNAL_APP_ID = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID || '';
 
 const sora = Sora({
   subsets: ['latin'],
@@ -48,6 +51,12 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
       <body className={`${sora.variable} ${dmSans.variable} ${plusJakartaSans.variable} font-body antialiased`}>
+        {ONESIGNAL_APP_ID && (
+          <Script
+            src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"
+            strategy="afterInteractive"
+          />
+        )}
         <QueryProvider>
           <LanguageProvider>
             <PrivacyProvider>

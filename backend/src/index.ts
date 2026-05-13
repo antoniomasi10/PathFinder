@@ -41,6 +41,7 @@ import { bulkGenerateEmbeddings } from './services/embedding.service';
 import { startRetentionCleanupJob } from './services/cleanup.service';
 import { runUrlCheckBatch } from './services/import/urlChecker';
 import { cacheDel } from './lib/cache';
+import { startCampaignScheduler } from './services/campaignScheduler';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3000');
 if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
@@ -200,6 +201,7 @@ httpServer.listen(PORT, () => {
   startDeadlineChecker();
   startImportScheduler();
   startRetentionCleanupJob();
+  startCampaignScheduler();
   // Backfill embeddings for records that don't have one yet (runs in background)
   bulkGenerateEmbeddings().catch((err) => {
     logger.error('Embedding backfill failed:', err);

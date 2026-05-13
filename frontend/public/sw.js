@@ -1,3 +1,6 @@
+// OneSignal SDK must be first — intercepts OneSignal-originated pushes before custom handlers
+importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+
 // Service Worker for COhA
 // Handles push notifications, click routing, and offline caching
 
