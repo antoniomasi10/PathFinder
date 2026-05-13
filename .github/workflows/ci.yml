@@ -66,8 +66,8 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /opt/pathfinder/app
+            cd /opt/coha/app
             git pull origin develop
-            cp /opt/pathfinder/.env .env
+            cp /opt/coha/.env .env
             docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
             echo "Deploy completed at $(date)"

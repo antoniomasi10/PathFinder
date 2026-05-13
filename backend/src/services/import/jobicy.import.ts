@@ -5,7 +5,7 @@
  * Free public API, no key required. Remote-first job listings worldwide.
  * Legal: public API designed for "building job apps". Attribution required
  * (link back to jobicy.com). Redistribution to external job platforms
- * (Jooble, Google Jobs, LinkedIn) prohibited — PathFinder is a university
+ * (Jooble, Google Jobs, LinkedIn) prohibited — COhA is a university
  * student platform, not a job board, so this is compliant.
  *
  * Rate limit: max 1 request/hour recommended, few times/day sufficient.

@@ -81,7 +81,7 @@ export async function uploadToR2(dataUri: string, folder: string): Promise<strin
 async function uploadToCloudinary(dataUri: string, folder: string): Promise<string> {
   try {
     const result = await cloudinary.uploader.upload(dataUri, {
-      folder: `pathfinder/${folder}`,
+      folder: `coha/${folder}`,
       transformation: [{ quality: 'auto', fetch_format: 'auto' }],
     });
     return result.secure_url;

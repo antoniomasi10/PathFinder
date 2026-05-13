@@ -1,6 +1,6 @@
 export const metadata = {
-  title: 'Termini di Servizio | PathFinder',
-  description: 'Termini e Condizioni di utilizzo della piattaforma PathFinder',
+  title: 'Termini di Servizio | COhA',
+  description: 'Termini e Condizioni di utilizzo della piattaforma COhA',
 };
 
 export default function TermsPage() {
@@ -13,7 +13,7 @@ export default function TermsPage() {
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3 text-gray-900">1. Accettazione dei Termini</h2>
           <p className="text-sm leading-relaxed text-gray-700">
-            Utilizzando PathFinder dichiari di aver letto, compreso e accettato integralmente i presenti Termini
+            Utilizzando COhA dichiari di aver letto, compreso e accettato integralmente i presenti Termini
             di Servizio e l&apos;Informativa sulla Privacy. Se non accetti questi termini, non puoi utilizzare
             la piattaforma. L&apos;utilizzo continuato del servizio dopo eventuali modifiche costituisce accettazione
             delle nuove condizioni.
@@ -23,7 +23,7 @@ export default function TermsPage() {
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3 text-gray-900">2. Descrizione del Servizio</h2>
           <p className="text-sm leading-relaxed text-gray-700">
-            PathFinder è una piattaforma di networking per studenti universitari italiani che offre:
+            COhA è una piattaforma di networking per studenti universitari italiani che offre:
             corrispondenza personalizzata con opportunità accademiche e professionali (stage, borse di studio,
             eventi, scambi), funzionalità social (post, commenti, amicizie), messaggistica privata e un sistema
             di profilazione basato su questionario. Il servizio è fornito &quot;così com&apos;è&quot; e può essere
@@ -34,7 +34,7 @@ export default function TermsPage() {
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3 text-gray-900">3. Requisiti di Accesso</h2>
           <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700">
-            <li>Devi avere almeno <strong>18 anni</strong> per registrarti e utilizzare PathFinder.</li>
+            <li>Devi avere almeno <strong>18 anni</strong> per registrarti e utilizzare COhA.</li>
             <li>Devi fornire informazioni accurate e veritiere durante la registrazione.</li>
             <li>Un indirizzo e-mail valido e verificabile è obbligatorio.</li>
             <li>Non puoi creare più di un account per persona.</li>
@@ -52,15 +52,15 @@ export default function TermsPage() {
             <li>Notificarci immediatamente di qualsiasi accesso non autorizzato a <strong>[EMAIL SICUREZZA]</strong></li>
           </ul>
           <p className="text-sm leading-relaxed text-gray-700 mt-3">
-            Non condividere le tue credenziali con terzi. PathFinder non ti chiederà mai la password tramite e-mail.
+            Non condividere le tue credenziali con terzi. COhA non ti chiederà mai la password tramite e-mail.
           </p>
         </section>
 
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3 text-gray-900">5. Contenuti dell&apos;Utente</h2>
           <p className="text-sm leading-relaxed text-gray-700 mb-3">
-            Caricando o pubblicando contenuti su PathFinder (post, commenti, messaggi, foto profilo), concedi
-            a PathFinder una licenza non esclusiva, gratuita e mondiale per ospitare, visualizzare e distribuire
+            Caricando o pubblicando contenuti su COhA (post, commenti, messaggi, foto profilo), concedi
+            a COhA una licenza non esclusiva, gratuita e mondiale per ospitare, visualizzare e distribuire
             tali contenuti esclusivamente ai fini dell&apos;erogazione del servizio. Rimani il proprietario dei
             tuoi contenuti. Sei responsabile di garantire di avere i diritti necessari sui contenuti che pubblichi.
           </p>
@@ -69,7 +69,7 @@ export default function TermsPage() {
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3 text-gray-900">6. Contenuti e Comportamenti Vietati</h2>
           <p className="text-sm leading-relaxed text-gray-700 mb-3">
-            È vietato utilizzare PathFinder per:
+            È vietato utilizzare COhA per:
           </p>
           <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700">
             <li>Pubblicare contenuti illegali, diffamatori, discriminatori, osceni o che violano i diritti di terzi</li>
@@ -95,7 +95,7 @@ export default function TermsPage() {
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3 text-gray-900">8. Proprietà Intellettuale</h2>
           <p className="text-sm leading-relaxed text-gray-700">
-            Il logo, il nome PathFinder, il design, il codice sorgente e tutti gli elementi originali della
+            Il logo, il nome COhA, il design, il codice sorgente e tutti gli elementi originali della
             piattaforma sono di proprietà di <strong>[RAGIONE SOCIALE]</strong> e protetti dalla normativa
             sul diritto d&apos;autore. È vietata la riproduzione, distribuzione o modifica senza previa
             autorizzazione scritta.
@@ -105,10 +105,10 @@ export default function TermsPage() {
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-3 text-gray-900">9. Limitazione di Responsabilità</h2>
           <p className="text-sm leading-relaxed text-gray-700">
-            PathFinder non garantisce la continuità, l&apos;accuratezza o l&apos;idoneità dei contenuti presenti
+            COhA non garantisce la continuità, l&apos;accuratezza o l&apos;idoneità dei contenuti presenti
             sulla piattaforma, incluse le opportunità pubblicate. Non siamo responsabili per danni diretti,
             indiretti o consequenziali derivanti dall&apos;uso o dall&apos;impossibilità di uso del servizio,
-            nei limiti consentiti dalla legge applicabile. Le opportunità pubblicate su PathFinder sono fornite
+            nei limiti consentiti dalla legge applicabile. Le opportunità pubblicate su COhA sono fornite
             da terzi; non ne garantiamo l&apos;accuratezza o la disponibilità.
           </p>
         </section>
@@ -117,7 +117,7 @@ export default function TermsPage() {
           <h2 className="text-xl font-semibold mb-3 text-gray-900">10. Legge Applicabile e Foro Competente</h2>
           <p className="text-sm leading-relaxed text-gray-700">
             I presenti Termini sono regolati dalla legge italiana. Per qualsiasi controversia derivante dall&apos;uso
-            di PathFinder, le parti concordano sulla competenza esclusiva del Tribunale di <strong>[CITTÀ]</strong>,
+            di COhA, le parti concordano sulla competenza esclusiva del Tribunale di <strong>[CITTÀ]</strong>,
             fatto salvo il diritto del consumatore di adire il tribunale del proprio luogo di residenza.
           </p>
         </section>

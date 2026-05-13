@@ -36,7 +36,7 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
         <meta name="theme-color" content="#4F46E5" />
-        <meta name="description" content="PathFinder - Trova il tuo percorso universitario ideale" />
+        <meta name="description" content="COhA - Trova il tuo percorso universitario ideale" />
 
         {/* PWA Manifest */}
         <link rel="manifest" href="/manifest.json" />
@@ -44,7 +44,7 @@ export default function RootLayout({
         {/* iOS PWA */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="PathFinder" />
+        <meta name="apple-mobile-web-app-title" content="COhA" />
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
       <body className={`${sora.variable} ${dmSans.variable} ${plusJakartaSans.variable} font-body antialiased`}>

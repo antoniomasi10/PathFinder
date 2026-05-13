@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## What is Pathfinder
+## What is COhA
 
 An Italian university student networking platform with personalized opportunity matching, social features (posts, friends, comments/likes), and real-time messaging. Built with Next.js 14 frontend + Express.js backend + PostgreSQL (via Docker) + Prisma ORM.
 

@@ -47,7 +47,7 @@ if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
   throw new Error('FRONTEND_URL must be set in production');
 }
 
-// Support multiple frontend origins (e.g. pathfinder-univ + pathfinder-italy on Vercel)
+// Support multiple frontend origins (e.g. coha-univ + coha-italy on Vercel)
 const ALLOWED_ORIGINS = [
   FRONTEND_URL,
   ...(process.env.EXTRA_ORIGINS ? process.env.EXTRA_ORIGINS.split(',') : []),

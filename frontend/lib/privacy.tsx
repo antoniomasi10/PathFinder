@@ -46,7 +46,7 @@ const PrivacyContext = createContext<PrivacyContextType>({
   togglePrivateProfile: () => {},
 });
 
-const STORAGE_KEY = 'pathfinder_privacy';
+const STORAGE_KEY = 'coha_privacy';
 
 export function PrivacyProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<PrivacySettings>(defaults);

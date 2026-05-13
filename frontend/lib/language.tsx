@@ -218,7 +218,7 @@ const it = {
     reportProblem: 'Segnala un problema',
     termsOfService: 'Termini di servizio',
     privacyPolicy: 'Informativa sulla privacy',
-    contactEmail: 'supporto@pathfinder.app',
+    contactEmail: 'supporto@coha.app',
     contactResponseTime: 'Rispondiamo entro 48 ore lavorative',
     contactSocialLabel: 'Seguici sui social',
     reportCategoryLabel: 'Categoria',
@@ -230,7 +230,7 @@ const it = {
     reportDescriptionPlaceholder: 'Descrivi il problema nel dettaglio...',
     reportSubmit: 'Invia segnalazione',
     reportSuccess: 'Segnalazione inviata',
-    reportSuccessDetail: 'Grazie! Il tuo feedback ci aiuta a migliorare Pathfinder.',
+    reportSuccessDetail: 'Grazie! Il tuo feedback ci aiuta a migliorare COhA.',
   },
   // Info sheet
   info: {
@@ -577,7 +577,7 @@ const en: Translations = {
     reportProblem: 'Report a problem',
     termsOfService: 'Terms of Service',
     privacyPolicy: 'Privacy Policy',
-    contactEmail: 'support@pathfinder.app',
+    contactEmail: 'support@coha.app',
     contactResponseTime: 'We respond within 48 business hours',
     contactSocialLabel: 'Follow us on social',
     reportCategoryLabel: 'Category',
@@ -589,7 +589,7 @@ const en: Translations = {
     reportDescriptionPlaceholder: 'Describe the problem in detail...',
     reportSubmit: 'Submit report',
     reportSuccess: 'Report submitted',
-    reportSuccessDetail: 'Thank you! Your feedback helps us improve Pathfinder.',
+    reportSuccessDetail: 'Thank you! Your feedback helps us improve COhA.',
   },
   info: {
     title: 'Info',
@@ -931,7 +931,7 @@ const zh: Translations = {
     reportProblem: '举报问题',
     termsOfService: '服务条款',
     privacyPolicy: '隐私政策',
-    contactEmail: 'support@pathfinder.app',
+    contactEmail: 'support@coha.app',
     contactResponseTime: '我们在48个工作小时内回复',
     contactSocialLabel: '在社交媒体上关注我们',
     reportCategoryLabel: '类别',
@@ -943,7 +943,7 @@ const zh: Translations = {
     reportDescriptionPlaceholder: '详细描述问题...',
     reportSubmit: '提交报告',
     reportSuccess: '报告已提交',
-    reportSuccessDetail: '谢谢！您的反馈帮助我们改进Pathfinder。',
+    reportSuccessDetail: '谢谢！您的反馈帮助我们改进COhA。',
   },
   info: {
     title: '信息',
@@ -1285,7 +1285,7 @@ const es: Translations = {
     reportProblem: 'Reportar un problema',
     termsOfService: 'Términos de servicio',
     privacyPolicy: 'Política de privacidad',
-    contactEmail: 'soporte@pathfinder.app',
+    contactEmail: 'soporte@coha.app',
     contactResponseTime: 'Respondemos en 48 horas laborables',
     contactSocialLabel: 'Síguenos en redes sociales',
     reportCategoryLabel: 'Categoría',
@@ -1297,7 +1297,7 @@ const es: Translations = {
     reportDescriptionPlaceholder: 'Describe el problema en detalle...',
     reportSubmit: 'Enviar informe',
     reportSuccess: 'Informe enviado',
-    reportSuccessDetail: '¡Gracias! Tu feedback nos ayuda a mejorar Pathfinder.',
+    reportSuccessDetail: '¡Gracias! Tu feedback nos ayuda a mejorar COhA.',
   },
   info: {
     title: 'Información',
@@ -1639,7 +1639,7 @@ const fr: Translations = {
     reportProblem: 'Signaler un problème',
     termsOfService: "Conditions d'utilisation",
     privacyPolicy: 'Politique de confidentialité',
-    contactEmail: 'support@pathfinder.app',
+    contactEmail: 'support@coha.app',
     contactResponseTime: 'Nous répondons sous 48 heures ouvrées',
     contactSocialLabel: 'Suis-nous sur les réseaux',
     reportCategoryLabel: 'Catégorie',
@@ -1651,7 +1651,7 @@ const fr: Translations = {
     reportDescriptionPlaceholder: 'Décris le problème en détail...',
     reportSubmit: 'Envoyer le rapport',
     reportSuccess: 'Rapport envoyé',
-    reportSuccessDetail: 'Merci ! Votre retour nous aide à améliorer Pathfinder.',
+    reportSuccessDetail: 'Merci ! Votre retour nous aide à améliorer COhA.',
   },
   info: {
     title: 'Info',
@@ -1846,7 +1846,7 @@ const LanguageContext = createContext<LanguageContextType>({
   t: it,
 });
 
-const LANG_STORAGE_KEY = 'pathfinder_language';
+const LANG_STORAGE_KEY = 'coha_language';
 const VALID_LANGUAGES: Language[] = ['Italiano', 'Inglese', 'Cinese', 'Spagnolo', 'Francese'];
 
 function getStoredLanguage(): Language {

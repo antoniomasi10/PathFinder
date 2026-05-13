@@ -1,6 +1,6 @@
 {
-  "name": "PathFinder - Trova il tuo percorso universitario",
-  "short_name": "PathFinder",
+  "name": "COhA - Trova il tuo percorso universitario",
+  "short_name": "COhA",
   "description": "Scopri corsi universitari, opportunità e connettiti con studenti",
   "start_url": "/",
   "display": "standalone",
