@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger';
+import prisma from '../lib/prisma';
 
 const APP_ID = process.env.ONESIGNAL_APP_ID || '';
 const REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY || '';
@@ -32,25 +33,18 @@ async function callOneSignal(endpoint: string, body: Record<string, any>): Promi
   }
 }
 
-export async function setExternalUserId(playerId: string, externalUserId: string): Promise<void> {
-  if (!isOneSignalConfigured()) return;
-  try {
-    await callOneSignal(`/players/${playerId}`, {
-      app_id: APP_ID,
-      external_user_id: externalUserId,
-    });
-  } catch (err) {
-    logger.warn('OneSignal setExternalUserId failed', { playerId, error: String(err) });
-  }
-}
+// No-op: external user ID linking is not used — we target by player ID directly
+export async function setExternalUserId(_playerId: string, _externalUserId: string): Promise<void> {}
 
-export async function sendPushToUser(externalUserId: string, payload: OneSignalPayload): Promise<void> {
+export async function sendPushToUser(userId: string, payload: OneSignalPayload): Promise<void> {
   if (!isOneSignalConfigured()) return;
   try {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { oneSignalPlayerId: true } });
+    if (!user?.oneSignalPlayerId) return;
+
     await callOneSignal('/notifications', {
       app_id: APP_ID,
-      include_external_user_ids: [externalUserId],
-      channel_for_external_user_ids: 'push',
+      include_player_ids: [user.oneSignalPlayerId],
       headings: { en: payload.title },
       contents: { en: payload.body },
       url: payload.url,
@@ -59,30 +53,39 @@ export async function sendPushToUser(externalUserId: string, payload: OneSignalP
       ttl: payload.priority === 'high' ? 86400 : 3600,
     });
   } catch (err) {
-    logger.warn('OneSignal sendPushToUser failed', { externalUserId, error: String(err) });
+    logger.warn('OneSignal sendPushToUser failed', { userId, error: String(err) });
   }
 }
 
-export async function sendPushToUsers(externalUserIds: string[], payload: OneSignalPayload): Promise<void> {
-  if (!isOneSignalConfigured() || externalUserIds.length === 0) return;
-  // OneSignal allows max 2000 external user IDs per request
-  const CHUNK = 2000;
-  for (let i = 0; i < externalUserIds.length; i += CHUNK) {
-    const chunk = externalUserIds.slice(i, i + CHUNK);
-    try {
-      await callOneSignal('/notifications', {
-        app_id: APP_ID,
-        include_external_user_ids: chunk,
-        channel_for_external_user_ids: 'push',
-        headings: { en: payload.title },
-        contents: { en: payload.body },
-        url: payload.url,
-        data: payload.data,
-        priority: payload.priority === 'high' ? 10 : 5,
-        ttl: payload.priority === 'high' ? 86400 : 3600,
-      });
-    } catch (err) {
-      logger.warn('OneSignal sendPushToUsers chunk failed', { chunk: i / CHUNK, error: String(err) });
+export async function sendPushToUsers(userIds: string[], payload: OneSignalPayload): Promise<void> {
+  if (!isOneSignalConfigured() || userIds.length === 0) return;
+  try {
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds }, oneSignalPlayerId: { not: null } },
+      select: { oneSignalPlayerId: true },
+    });
+    const playerIds = users.map(u => u.oneSignalPlayerId!).filter(Boolean);
+    if (playerIds.length === 0) return;
+
+    const CHUNK = 2000;
+    for (let i = 0; i < playerIds.length; i += CHUNK) {
+      const chunk = playerIds.slice(i, i + CHUNK);
+      try {
+        await callOneSignal('/notifications', {
+          app_id: APP_ID,
+          include_player_ids: chunk,
+          headings: { en: payload.title },
+          contents: { en: payload.body },
+          url: payload.url,
+          data: payload.data,
+          priority: payload.priority === 'high' ? 10 : 5,
+          ttl: payload.priority === 'high' ? 86400 : 3600,
+        });
+      } catch (err) {
+        logger.warn('OneSignal sendPushToUsers chunk failed', { chunk: i / CHUNK, error: String(err) });
+      }
     }
+  } catch (err) {
+    logger.warn('OneSignal sendPushToUsers failed', { error: String(err) });
   }
 }

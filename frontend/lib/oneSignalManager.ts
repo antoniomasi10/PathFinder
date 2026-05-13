@@ -29,18 +29,23 @@ export async function initOneSignal(): Promise<void> {
         notifyButton: { enable: false },
       });
 
-      // If already granted, register player ID silently
-      if (Notification.permission === 'granted') {
-        const sub = OneSignal.User?.PushSubscription;
-        const id = sub?.id ?? (await sub?.optIn?.());
-        if (id) await registerPlayerIdWithBackend(id);
-      }
-
-      // Listen for subscription changes (new grants)
+      // Listen for subscription changes — fires when SDK creates/updates subscription
       OneSignal.User?.PushSubscription?.addEventListener('change', async (event: any) => {
         const id = event?.current?.id;
         if (id) await registerPlayerIdWithBackend(id);
       });
+
+      // If permission already granted, trigger subscription creation and register
+      if (Notification.permission === 'granted') {
+        try {
+          // requestPermission is a no-op if already granted, but triggers subscription creation
+          await OneSignal.Notifications.requestPermission();
+        } catch {}
+        // Wait for SDK to finalize the push subscription
+        await new Promise(r => setTimeout(r, 1500));
+        const id = OneSignal.User?.PushSubscription?.id;
+        if (id) await registerPlayerIdWithBackend(id);
+      }
     } catch {
       // Non-critical — VAPID fallback still active
     }
