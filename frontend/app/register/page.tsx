@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { bffPost, setAccessToken } from '@/lib/api';
+import api, { bffPost, setAccessToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import SearchableSelect from '@/components/SearchableSelect';
 import { italianCourses } from '@/data/italianCourses';
