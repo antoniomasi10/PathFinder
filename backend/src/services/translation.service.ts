@@ -75,12 +75,22 @@ const LIBRE_URL = process.env.LIBRETRANSLATE_URL || 'http://libretranslate:5000'
  */
 export async function translateBatch(texts: string[], targetLang: string): Promise<string[]> {
   if (targetLang === 'it' || texts.length === 0) return texts;
+  // Split into chunks of 5 to avoid LibreTranslate timeouts on large batches
+  const CHUNK = 5;
+  if (texts.length > CHUNK) {
+    const results: string[] = [];
+    for (let i = 0; i < texts.length; i += CHUNK) {
+      const chunk = await translateBatch(texts.slice(i, i + CHUNK), targetLang);
+      results.push(...chunk);
+    }
+    return results;
+  }
   try {
     const res = await fetch(`${LIBRE_URL}/translate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q: texts, source: 'it', target: targetLang, format: 'text' }),
-      signal: AbortSignal.timeout(10000),
+      body: JSON.stringify({ q: texts, source: 'en', target: targetLang, format: 'text' }),
+      signal: AbortSignal.timeout(30000),
     });
     if (!res.ok) return texts;
     const data = await res.json() as { translatedText?: string[] };
