@@ -54,7 +54,7 @@ export default function CourseDetailPage() {
         <div style={{
           position: 'absolute', top: '18%', left: '50%',
           transform: 'translateX(-50%)',
-          width: 320, height: 320,
+          width: '20rem', height: '20rem',
           borderRadius: '50%',
           background: 'radial-gradient(circle, rgba(79,70,229,0.28) 0%, transparent 70%)',
           animation: 'glowPulse 5s ease-in-out infinite',
@@ -62,7 +62,7 @@ export default function CourseDetailPage() {
         }} />
         <div style={{
           position: 'absolute', top: '12%', left: '20%',
-          width: 200, height: 200,
+          width: '12.5rem', height: '12.5rem',
           borderRadius: '50%',
           background: 'radial-gradient(circle, rgba(139,92,246,0.18) 0%, transparent 70%)',
           animation: 'floatA 9s ease-in-out infinite',
@@ -70,7 +70,7 @@ export default function CourseDetailPage() {
         }} />
         <div style={{
           position: 'absolute', bottom: '20%', right: '15%',
-          width: 180, height: 180,
+          width: '11.25rem', height: '11.25rem',
           borderRadius: '50%',
           background: 'radial-gradient(circle, rgba(79,70,229,0.15) 0%, transparent 70%)',
           animation: 'floatB 11s ease-in-out infinite',
@@ -81,7 +81,7 @@ export default function CourseDetailPage() {
         <div style={{
           position: 'absolute', top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
-          width: 420, height: 420,
+          width: '26.25rem', height: '26.25rem',
           borderRadius: '50%',
           border: '1px solid rgba(79,70,229,0.12)',
           animation: 'ringPulse 6s ease-in-out infinite',
@@ -89,20 +89,20 @@ export default function CourseDetailPage() {
         }} />
 
         {/* Content */}
-        <div style={{ textAlign: 'center', padding: '0 32px', position: 'relative', zIndex: 1 }}>
+        <div style={{ textAlign: 'center', padding: '0 2rem', position: 'relative', zIndex: 1 }}>
           {/* Badge */}
-          <div className="course-fadeup-1" style={{ marginBottom: 20 }}>
+          <div className="course-fadeup-1" style={{ marginBottom: '1.25rem' }}>
             <span style={{
               display: 'inline-block',
               background: 'rgba(79,70,229,0.18)',
               border: '1px solid rgba(79,70,229,0.35)',
-              borderRadius: 100,
+              borderRadius: '6.25rem',
               color: 'rgba(167,154,255,0.9)',
-              fontSize: 12,
+              fontSize: '0.75rem',
               fontWeight: 600,
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
-              padding: '5px 16px',
+              padding: '0.3125rem 1rem',
             }}>
               Prossimamente
             </span>
@@ -110,11 +110,11 @@ export default function CourseDetailPage() {
 
           {/* Title */}
           <h1 className="course-fadeup-2" style={{
-            fontSize: 26,
+            fontSize: '1.625rem',
             fontWeight: 800,
             color: 'white',
             lineHeight: 1.25,
-            marginBottom: 14,
+            marginBottom: '0.875rem',
             letterSpacing: '-0.02em',
           }}>
             Dettaglio corso<br />in arrivo
@@ -122,10 +122,10 @@ export default function CourseDetailPage() {
 
           {/* Subtitle */}
           <p className="course-fadeup-3" style={{
-            fontSize: 14,
+            fontSize: '0.875rem',
             color: 'rgba(255,255,255,0.65)',
             lineHeight: 1.7,
-            maxWidth: 270,
+            maxWidth: '16.875rem',
             margin: '0 auto',
           }}>
             Stiamo costruendo qualcosa di speciale per te. Resta connesso per scoprire tutto quello che abbiamo in serbo.

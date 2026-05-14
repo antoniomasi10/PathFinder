@@ -17,7 +17,7 @@ const itemVariants = {
 function CheckboxIcon({ checked }: { checked: boolean }) {
   if (checked) {
     return (
-      <div className="flex-shrink-0 flex items-center justify-center rounded-[8px] bg-[#615fe2]" style={{ width: 28, height: 28 }}>
+      <div className="flex-shrink-0 flex items-center justify-center rounded-[0.5rem] bg-[#615fe2]" style={{ width: '1.75rem', height: '1.75rem' }}>
         <svg width="14" height="11" viewBox="0 0 14 11" fill="none">
           <path d="M1.5 5.5L5.5 9.5L12.5 1.5" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -26,8 +26,8 @@ function CheckboxIcon({ checked }: { checked: boolean }) {
   }
   return (
     <div
-      className="flex-shrink-0 rounded-[8px] border-2 border-[rgba(172,176,206,0.6)] bg-white"
-      style={{ width: 28, height: 28 }}
+      className="flex-shrink-0 rounded-[0.5rem] border-2 border-[rgba(172,176,206,0.6)] bg-white"
+      style={{ width: '1.75rem', height: '1.75rem' }}
     />
   );
 }
@@ -38,7 +38,7 @@ export default function OptionButton({ label, isSelected, onSelect }: Props) {
       variants={itemVariants}
       onClick={onSelect}
       whileTap={{ scale: 0.98 }}
-      className="w-full flex items-center gap-[18px] px-[18px] py-[14px] rounded-[24px] text-left transition-colors duration-200 border-2"
+      className="w-full flex items-center gap-[1.125rem] px-[1.125rem] py-[0.875rem] rounded-[1.5rem] text-left transition-colors duration-200 border-2"
       style={{
         backgroundColor: isSelected ? 'rgba(243,242,255,0.75)' : 'rgba(255,255,255,0.75)',
         borderColor: isSelected ? '#4a4bd7' : 'rgba(172,176,206,0.4)',

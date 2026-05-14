@@ -53,9 +53,9 @@ function InputField({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between pl-1">
-        <span className="text-xs font-medium text-[#464554] tracking-[0.5px]">{label}</span>
+        <span className="text-xs font-medium text-[#464554] tracking-[0.03125rem]">{label}</span>
         {optional && (
-          <span className="text-[10px] font-medium text-[#777585] tracking-[0.5px] uppercase">
+          <span className="text-[0.625rem] font-medium text-[#777585] tracking-[0.03125rem] uppercase">
             OPZIONALE
           </span>
         )}
@@ -69,7 +69,7 @@ function AuthInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`w-full bg-[#fbf8ff] border border-[#c7c4d6] rounded-[24px] px-5 py-3.5 text-sm text-[#2c3149] placeholder:text-[#c7c4d6] focus:outline-none focus:ring-2 focus:ring-[#615fe2]/30 focus:border-[#615fe2] transition-all ${props.className ?? ''}`}
+      className={`w-full bg-[#fbf8ff] border border-[#c7c4d6] rounded-[1.5rem] px-5 py-3.5 text-sm text-[#2c3149] placeholder:text-[#c7c4d6] focus:outline-none focus:ring-2 focus:ring-[#615fe2]/30 focus:border-[#615fe2] transition-all ${props.className ?? ''}`}
     />
   );
 }
@@ -153,16 +153,16 @@ export default function RegisterPage() {
     <div className="min-h-screen flex flex-col items-center justify-start px-4 pt-6 pb-10 font-jakarta"
       style={{ background: '#fbf8ff' }}>
 
-      <div className="w-full max-w-[390px]">
+      <div className="w-full max-w-[24.375rem]">
         {/* Card */}
-        <div className="bg-[#fbf8ff] border border-[#e6e7f8] rounded-[12px] shadow-[0px_8px_15px_rgba(72,68,200,0.06)] p-8 flex flex-col gap-6">
+        <div className="bg-[#fbf8ff] border border-[#e6e7f8] rounded-[0.75rem] shadow-[0px_8px_15px_rgba(72,68,200,0.06)] p-8 flex flex-col gap-6">
 
           {/* Logo */}
           <div className="flex flex-col items-center">
             <img
               src={LOGO_SWASH}
               alt="COA"
-              style={{ width: 297, height: 85 }}
+              style={{ width: '18.5625rem', height: '5.3125rem' }}
               className="object-contain pointer-events-none"
             />
             <h1 className="text-2xl font-semibold text-[#191b27] mt-2 leading-8">Crea il tuo account</h1>
@@ -266,7 +266,7 @@ export default function RegisterPage() {
                 onChange={setUniversityId}
                 placeholder="Cerca la tua università..."
                 required
-                inputClassName="w-full bg-[#fbf8ff] border border-[#c7c4d6] rounded-[24px] px-5 py-3.5 text-sm text-[#2c3149] placeholder:text-[#c7c4d6] focus:outline-none focus:ring-2 focus:ring-[#615fe2]/30 focus:border-[#615fe2] transition-all"
+                inputClassName="w-full bg-[#fbf8ff] border border-[#c7c4d6] rounded-[1.5rem] px-5 py-3.5 text-sm text-[#2c3149] placeholder:text-[#c7c4d6] focus:outline-none focus:ring-2 focus:ring-[#615fe2]/30 focus:border-[#615fe2] transition-all"
                 dropdownClassName="absolute z-50 mt-1 w-full max-h-48 overflow-auto rounded-xl bg-white border border-[#e6e7f8] shadow-lg"
                 optionClassName="text-[#464554] hover:bg-[#f3f3fd]"
                 optionActiveClassName="bg-[#615fe2]/10 text-[#615fe2]"
@@ -282,7 +282,7 @@ export default function RegisterPage() {
                 placeholder="Cerca il tuo corso di studi..."
                 required
                 allowCustom
-                inputClassName="w-full bg-[#fbf8ff] border border-[#c7c4d6] rounded-[24px] px-5 py-3.5 text-sm text-[#2c3149] placeholder:text-[#c7c4d6] focus:outline-none focus:ring-2 focus:ring-[#615fe2]/30 focus:border-[#615fe2] transition-all"
+                inputClassName="w-full bg-[#fbf8ff] border border-[#c7c4d6] rounded-[1.5rem] px-5 py-3.5 text-sm text-[#2c3149] placeholder:text-[#c7c4d6] focus:outline-none focus:ring-2 focus:ring-[#615fe2]/30 focus:border-[#615fe2] transition-all"
                 dropdownClassName="absolute z-50 mt-1 w-full max-h-48 overflow-auto rounded-xl bg-white border border-[#e6e7f8] shadow-lg"
                 optionClassName="text-[#464554] hover:bg-[#f3f3fd]"
                 optionActiveClassName="bg-[#615fe2]/10 text-[#615fe2]"
@@ -297,7 +297,7 @@ export default function RegisterPage() {
                 onChange={(e) => { setBirthDate(e.target.value); setBirthDateError(''); }}
                 max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
                 required
-                className="w-full bg-[#fbf8ff] border border-[#c7c4d6] rounded-[24px] px-5 py-3.5 text-sm text-[#2c3149] focus:outline-none focus:ring-2 focus:ring-[#615fe2]/30 focus:border-[#615fe2] transition-all"
+                className="w-full bg-[#fbf8ff] border border-[#c7c4d6] rounded-[1.5rem] px-5 py-3.5 text-sm text-[#2c3149] focus:outline-none focus:ring-2 focus:ring-[#615fe2]/30 focus:border-[#615fe2] transition-all"
               />
               {birthDateError && (
                 <p className="text-xs text-red-500 pl-1 mt-1">{birthDateError}</p>
@@ -339,7 +339,7 @@ export default function RegisterPage() {
               </div>
               <label htmlFor="marketing" className="text-sm text-[#464554] leading-[1.5] cursor-pointer">
                 Acconsento a ricevere comunicazioni di marketing e aggiornamenti sulle opportunità{' '}
-                <span className="text-[10px] font-medium text-[#777585] tracking-[0.5px] uppercase">(opzionale)</span>
+                <span className="text-[0.625rem] font-medium text-[#777585] tracking-[0.03125rem] uppercase">(opzionale)</span>
               </label>
             </div>
 
@@ -347,7 +347,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading || !passwordValid}
-              className="w-full flex items-center justify-center gap-2 bg-[#615fe2] hover:bg-[#5451d0] text-[#f7f4ff] rounded-[24px] py-4 text-xs font-medium tracking-[0.5px] transition-colors disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 bg-[#615fe2] hover:bg-[#5451d0] text-[#f7f4ff] rounded-[1.5rem] py-4 text-xs font-medium tracking-[0.03125rem] transition-colors disabled:opacity-50"
             >
               <span>{loading ? 'Registrazione...' : 'Registrati'}</span>
               {!loading && <ArrowRightIcon />}

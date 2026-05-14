@@ -49,7 +49,7 @@ export default function UniversitiesPage() {
 
       <div
         style={{
-          minHeight: 'calc(100dvh - 64px)',
+          minHeight: 'calc(100dvh - 4rem)',
           position: 'relative',
           overflow: 'hidden',
           background: '#fbf8ff',
@@ -57,7 +57,7 @@ export default function UniversitiesPage() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '40px 28px',
+          padding: '2.5rem 1.75rem',
         }}
       >
         {/* ── Layer 2: h mark full-screen watermark ─────────────────── */}
@@ -102,25 +102,25 @@ export default function UniversitiesPage() {
         />
 
         {/* ── Layer 3: orbs ─────────────────────────────────────────── */}
-        <div style={{ position: 'absolute', top: '30%', left: '-10%', width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(180,177,255,0.5) 0%, transparent 65%)', filter: 'blur(24px)', animation: 'floatA 10s ease-in-out infinite', zIndex: 2, pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: '18%', right: '-8%', width: 260, height: 260, borderRadius: '50%', background: 'radial-gradient(circle, rgba(150,145,240,0.45) 0%, transparent 65%)', filter: 'blur(20px)', animation: 'floatB 13s ease-in-out infinite', zIndex: 2, pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: '10%', right: '15%', width: 140, height: 140, borderRadius: '50%', background: 'radial-gradient(circle, rgba(200,196,255,0.35) 0%, transparent 70%)', filter: 'blur(16px)', animation: 'floatC 9s ease-in-out infinite', zIndex: 2, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: '30%', left: '-10%', width: '20rem', height: '20rem', borderRadius: '50%', background: 'radial-gradient(circle, rgba(180,177,255,0.5) 0%, transparent 65%)', filter: 'blur(24px)', animation: 'floatA 10s ease-in-out infinite', zIndex: 2, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: '18%', right: '-8%', width: '16.25rem', height: '16.25rem', borderRadius: '50%', background: 'radial-gradient(circle, rgba(150,145,240,0.45) 0%, transparent 65%)', filter: 'blur(20px)', animation: 'floatB 13s ease-in-out infinite', zIndex: 2, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: '10%', right: '15%', width: '8.75rem', height: '8.75rem', borderRadius: '50%', background: 'radial-gradient(circle, rgba(200,196,255,0.35) 0%, transparent 70%)', filter: 'blur(16px)', animation: 'floatC 9s ease-in-out infinite', zIndex: 2, pointerEvents: 'none' }} />
 
         {/* ── Layer 4: rings + glow ──────────────────────────────────── */}
-        <div style={{ position: 'absolute', width: 200, height: 200, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.18)', animation: 'ringPulse 4s ease-in-out infinite', zIndex: 3, pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', width: 280, height: 280, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.08)', animation: 'ringPulse 4s ease-in-out 1.3s infinite', zIndex: 3, pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%)', animation: 'glowPulse 5s ease-in-out infinite', zIndex: 3, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', width: '12.5rem', height: '12.5rem', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.18)', animation: 'ringPulse 4s ease-in-out infinite', zIndex: 3, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', width: '17.5rem', height: '17.5rem', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.08)', animation: 'ringPulse 4s ease-in-out 1.3s infinite', zIndex: 3, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', width: '13.75rem', height: '13.75rem', borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%)', animation: 'glowPulse 5s ease-in-out infinite', zIndex: 3, pointerEvents: 'none' }} />
 
         {/* ── Layer 5: content ──────────────────────────────────────── */}
         <div style={{ position: 'relative', zIndex: 4, textAlign: 'center' }}>
 
           {/* Title */}
           <h1 className="uni-fadeup-2" style={{
-            fontSize: 26,
+            fontSize: '1.625rem',
             fontWeight: 800,
             color: 'white',
             lineHeight: 1.25,
-            marginBottom: 14,
+            marginBottom: '0.875rem',
             letterSpacing: '-0.02em',
           }}>
             Nuove funzionalità<br />in arrivo
@@ -128,10 +128,10 @@ export default function UniversitiesPage() {
 
           {/* Subtitle */}
           <p className="uni-fadeup-3" style={{
-            fontSize: 14,
+            fontSize: '0.875rem',
             color: 'rgba(255,255,255,0.65)',
             lineHeight: 1.7,
-            maxWidth: 270,
+            maxWidth: '16.875rem',
             margin: '0 auto',
           }}>
             Stiamo costruendo qualcosa di speciale per te. Resta connesso per scoprire tutto quello che abbiamo in serbo.

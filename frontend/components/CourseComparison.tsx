@@ -132,17 +132,17 @@ export default function CourseComparison({ course, onClose }: Props) {
           </div>
         </div>
 
-        <div className="overflow-y-auto" style={{ maxHeight: 'calc(92vh - 80px)' }}>
+        <div className="overflow-y-auto" style={{ maxHeight: 'calc(92vh - 5rem)' }}>
           {/* Course A vs Course B cards */}
           <div className="px-5 pt-5 pb-4">
             <div className="flex items-center gap-3">
               {/* Course A */}
               <div
                 className="flex-1 rounded-2xl p-4"
-                style={{ backgroundColor: '#1C2F43', border: '2px solid #6C63FF' }}
+                style={{ backgroundColor: '#1C2F43', border: '0.125rem solid #6C63FF' }}
               >
                 <span
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mb-2"
+                  className="text-[0.625rem] font-bold px-2 py-0.5 rounded-full inline-block mb-2"
                   style={{ backgroundColor: '#6C63FF30', color: '#6C63FF' }}
                 >
                   Corso A
@@ -150,7 +150,7 @@ export default function CourseComparison({ course, onClose }: Props) {
                 <p className="text-sm font-bold text-white leading-tight mb-1">
                   {truncate(course.title, 50)}
                 </p>
-                <p className="text-[11px]" style={{ color: '#8B8FA8' }}>
+                <p className="text-[0.6875rem]" style={{ color: '#8B8FA8' }}>
                   {course.university}
                 </p>
               </div>
@@ -163,10 +163,10 @@ export default function CourseComparison({ course, onClose }: Props) {
               {courseB ? (
                 <div
                   className="flex-1 rounded-2xl p-4 relative"
-                  style={{ backgroundColor: '#1C2F43', border: '2px solid #4A9EFF' }}
+                  style={{ backgroundColor: '#1C2F43', border: '0.125rem solid #4A9EFF' }}
                 >
                   <span
-                    className="text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mb-2"
+                    className="text-[0.625rem] font-bold px-2 py-0.5 rounded-full inline-block mb-2"
                     style={{ backgroundColor: '#4A9EFF30', color: '#4A9EFF' }}
                   >
                     Corso B
@@ -174,12 +174,12 @@ export default function CourseComparison({ course, onClose }: Props) {
                   <p className="text-sm font-bold text-white leading-tight mb-1">
                     {truncate(courseB.title, 50)}
                   </p>
-                  <p className="text-[11px]" style={{ color: '#8B8FA8' }}>
+                  <p className="text-[0.6875rem]" style={{ color: '#8B8FA8' }}>
                     {courseB.university}
                   </p>
                   <button
                     onClick={() => setCourseB(null)}
-                    className="absolute top-2 right-2 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                    className="absolute top-2 right-2 text-[0.625rem] font-semibold px-2 py-0.5 rounded-full"
                     style={{ backgroundColor: '#2A3F54', color: '#D0D4DC' }}
                   >
                     Cambia
@@ -190,8 +190,8 @@ export default function CourseComparison({ course, onClose }: Props) {
                   className="flex-1 rounded-2xl p-4 flex flex-col items-center justify-center"
                   style={{
                     backgroundColor: '#1C2F43',
-                    border: '2px dashed #2A3F54',
-                    minHeight: '100px',
+                    border: '0.125rem dashed #2A3F54',
+                    minHeight: '6.25rem',
                   }}
                 >
                   <p className="text-xs text-center" style={{ color: '#8B8FA8' }}>
@@ -236,7 +236,7 @@ export default function CourseComparison({ course, onClose }: Props) {
                         style={{ borderBottom: '1px solid #2A3F54' }}
                       >
                         <p className="text-sm font-medium text-white">{truncate(c.title, 55)}</p>
-                        <p className="text-[11px]" style={{ color: '#8B8FA8' }}>
+                        <p className="text-[0.6875rem]" style={{ color: '#8B8FA8' }}>
                           {c.university} - {c.city}
                         </p>
                       </button>
@@ -261,8 +261,8 @@ export default function CourseComparison({ course, onClose }: Props) {
                       onClick={() => selectCourseB(c)}
                       className="flex-shrink-0 rounded-2xl p-3.5 text-left transition-transform active:scale-[0.97]"
                       style={{
-                        width: '160px',
-                        height: '120px',
+                        width: '10rem',
+                        height: '7.5rem',
                         backgroundColor: '#1C2F43',
                         border: '1px solid #2A3F54',
                       }}
@@ -270,13 +270,13 @@ export default function CourseComparison({ course, onClose }: Props) {
                       <p className="text-xs font-bold text-white leading-tight mb-1 line-clamp-2">
                         {truncate(c.title, 40)}
                       </p>
-                      <p className="text-[10px] mb-2" style={{ color: '#8B8FA8' }}>
+                      <p className="text-[0.625rem] mb-2" style={{ color: '#8B8FA8' }}>
                         {c.university}
                       </p>
-                      <p className="text-[11px] font-semibold" style={{ color: '#3DD68C' }}>
+                      <p className="text-[0.6875rem] font-semibold" style={{ color: '#3DD68C' }}>
                         {c.employmentRate} occupaz.
                       </p>
-                      <p className="text-[10px]" style={{ color: '#D0D4DC' }}>
+                      <p className="text-[0.625rem]" style={{ color: '#D0D4DC' }}>
                         {c.cost.length > 25 ? c.cost.slice(0, 25) + '...' : c.cost}
                       </p>
                     </button>
@@ -300,13 +300,13 @@ export default function CourseComparison({ course, onClose }: Props) {
               <div className="flex items-center justify-center gap-6 mb-5">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#6C63FF' }} />
-                  <span className="text-[11px] font-medium" style={{ color: '#D0D4DC' }}>
+                  <span className="text-[0.6875rem] font-medium" style={{ color: '#D0D4DC' }}>
                     {truncate(course.title, 20)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#4A9EFF' }} />
-                  <span className="text-[11px] font-medium" style={{ color: '#D0D4DC' }}>
+                  <span className="text-[0.6875rem] font-medium" style={{ color: '#D0D4DC' }}>
                     {truncate(courseB.title, 20)}
                   </span>
                 </div>
@@ -434,7 +434,7 @@ function BarComparison({
             style={{
               width: `${pctA}%`,
               backgroundColor: '#6C63FF',
-              minWidth: '8px',
+              minWidth: '0.5rem',
             }}
           />
         </div>
@@ -454,7 +454,7 @@ function BarComparison({
             style={{
               width: `${pctB}%`,
               backgroundColor: '#4A9EFF',
-              minWidth: '8px',
+              minWidth: '0.5rem',
             }}
           />
         </div>

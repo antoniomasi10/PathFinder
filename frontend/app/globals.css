@@ -2,6 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Responsive root scaling.
+   Design target ~390px → 16px base. Scales fluidly down to 14px @320px
+   and caps at ~19.7px around 480px so the UI stops growing on desktop.
+   Everything in rem (Tailwind utilities incluse) scala in blocco. */
+:root {
+  --design-width: 390;
+  --cap-width: 480;
+}
+html {
+  font-size: clamp(14px, 4.1vw, 19.7px);
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Prevent iOS Safari from zooming on input focus (effective size < 16px) */
+input, textarea, select {
+  font-size: max(1rem, 16px);
+}
+
 @keyframes slide-up {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }

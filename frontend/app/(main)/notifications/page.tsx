@@ -71,7 +71,7 @@ function formatTimestamp(dateStr: string): string {
 function NotificationItem({ notif, onPress, onDelete }: { notif: Notification; onPress: () => void; onDelete: () => void }) {
   const cfg = TYPE_CONFIG[notif.type] ?? TYPE_CONFIG.GENERAL;
   return (
-    <div className={`w-full flex gap-2 items-center bg-white border border-[rgba(199,196,214,0.3)] rounded-[24px] px-[17px] py-[13px] shadow-[0px_1px_1px_rgba(0,0,0,0.05)] ${notif.isRead ? 'opacity-75' : ''}`}>
+    <div className={`w-full flex gap-2 items-center bg-white border border-[rgba(199,196,214,0.3)] rounded-[1.5rem] px-[1.0625rem] py-[0.8125rem] shadow-[0px_1px_1px_rgba(0,0,0,0.05)] ${notif.isRead ? 'opacity-75' : ''}`}>
       {/* Clickable main area */}
       <button
         onClick={onPress}
@@ -79,7 +79,7 @@ function NotificationItem({ notif, onPress, onDelete }: { notif: Notification; o
       >
         {/* Icon box */}
         <div
-          className="shrink-0 w-12 h-12 rounded-[12px] flex items-center justify-center"
+          className="shrink-0 w-12 h-12 rounded-[0.75rem] flex items-center justify-center"
           style={{ backgroundColor: cfg.bg }}
         >
           {cfg.icon}
@@ -88,14 +88,14 @@ function NotificationItem({ notif, onPress, onDelete }: { notif: Notification; o
         {/* Text */}
         <div className="flex-1 min-w-0 flex flex-col gap-1">
           <div className="flex items-start justify-between gap-2">
-            <span className="font-['Plus_Jakarta_Sans',sans-serif] font-semibold text-[14px] text-[#191b27] leading-[20px] line-clamp-1">
+            <span className="font-['Plus_Jakarta_Sans',sans-serif] font-semibold text-[0.875rem] text-[#191b27] leading-[1.25rem] line-clamp-1">
               {notif.content.split('\n')[0]}
             </span>
-            <span className="shrink-0 font-['Plus_Jakarta_Sans',sans-serif] font-medium text-[12px] text-[#777585] tracking-[0.5px] leading-[16px] mt-[2px]">
+            <span className="shrink-0 font-['Plus_Jakarta_Sans',sans-serif] font-medium text-[0.75rem] text-[#777585] tracking-[0.03125rem] leading-[1rem] mt-[0.125rem]">
               {formatTimestamp(notif.createdAt)}
             </span>
           </div>
-          <p className="font-['Plus_Jakarta_Sans',sans-serif] font-normal text-[14px] text-[#464554] leading-[20px] line-clamp-2">
+          <p className="font-['Plus_Jakarta_Sans',sans-serif] font-normal text-[0.875rem] text-[#464554] leading-[1.25rem] line-clamp-2">
             {notif.content}
           </p>
         </div>
@@ -127,7 +127,7 @@ function Section({ label, items, onPress, onDelete }: { label: string; items: No
   return (
     <div className="flex flex-col gap-3 w-full">
       <div className="px-2">
-        <p className="font-['Plus_Jakarta_Sans',sans-serif] font-medium text-[12px] text-[#464554] tracking-[0.6px] uppercase leading-[16px]">
+        <p className="font-['Plus_Jakarta_Sans',sans-serif] font-medium text-[0.75rem] text-[#464554] tracking-[0.0375rem] uppercase leading-[1rem]">
           {label}
         </p>
       </div>
@@ -316,7 +316,7 @@ export default function NotificationsPage() {
           {hasUnread && (
             <button
               onClick={() => markAllReadMutation.mutate()}
-              className="text-[11px] font-medium text-[#615FE2] hover:opacity-70 transition-opacity"
+              className="text-[0.6875rem] font-medium text-[#615FE2] hover:opacity-70 transition-opacity"
             >
               Segna tutto letto
             </button>
@@ -324,7 +324,7 @@ export default function NotificationsPage() {
           {notifications.length > 0 && (
             <button
               onClick={() => deleteAllMutation.mutate()}
-              className="text-[11px] font-medium text-red-400 hover:opacity-70 transition-opacity"
+              className="text-[0.6875rem] font-medium text-red-400 hover:opacity-70 transition-opacity"
             >
               Elimina tutte
             </button>
@@ -337,15 +337,15 @@ export default function NotificationsPage() {
         {loading ? (
           <div className="flex flex-col gap-3 animate-pulse">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-[78px] bg-white/60 rounded-[24px]" />
+              <div key={i} className="h-[4.875rem] bg-white/60 rounded-[1.5rem]" />
             ))}
           </div>
         ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <div className="w-14 h-14 rounded-[16px] bg-[rgba(97,95,226,0.1)] flex items-center justify-center">
+            <div className="w-14 h-14 rounded-[1rem] bg-[rgba(97,95,226,0.1)] flex items-center justify-center">
               <Bell size={28} color="#615FE2" />
             </div>
-            <p className="font-['Plus_Jakarta_Sans',sans-serif] text-[14px] text-[#777585] text-center">
+            <p className="font-['Plus_Jakarta_Sans',sans-serif] text-[0.875rem] text-[#777585] text-center">
               {t.notifications.empty}
             </p>
           </div>
@@ -358,7 +358,7 @@ export default function NotificationsPage() {
               <button
                 onClick={loadMore}
                 disabled={loadingMore}
-                className="w-full py-3 text-[13px] text-[#615FE2] font-medium disabled:opacity-50"
+                className="w-full py-3 text-[0.8125rem] text-[#615FE2] font-medium disabled:opacity-50"
               >
                 {loadingMore ? '…' : t.notifications.loadMore}
               </button>

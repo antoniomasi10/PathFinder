@@ -41,7 +41,7 @@ export default function LivingMap({ city }: Props) {
 
       {/* Map */}
       <div className="relative" style={{ zIndex: 0 }}>
-        <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid #2A3F54', height: '320px' }}>
+        <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid #2A3F54', height: '20rem' }}>
           <LeafletMap
             data={data}
             onSelectZone={setSelectedZone}
@@ -120,7 +120,7 @@ function ZoneDetail({ zone, onClose }: { zone: LivingZone; onClose: () => void }
           </button>
         </div>
 
-        <div className="overflow-y-auto px-5 py-4 space-y-4" style={{ maxHeight: 'calc(70vh - 80px)' }}>
+        <div className="overflow-y-auto px-5 py-4 space-y-4" style={{ maxHeight: 'calc(70vh - 5rem)' }}>
           {/* Prices */}
           <div className="rounded-xl p-4" style={{ backgroundColor: '#1C2F43' }}>
             <h4 className="text-sm font-bold text-white mb-3">Prezzi affitto (stanza singola)</h4>

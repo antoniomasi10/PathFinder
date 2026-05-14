@@ -274,14 +274,14 @@ export default function NotificationsSettingsPage() {
             <button
               onClick={handleEnable}
               disabled={busy || !supported || !oneSignalAvail}
-              className="flex-1 min-w-[120px] py-2 px-3 rounded-xl text-sm font-semibold text-white bg-[#615fe2] hover:bg-[#4f4dc0] disabled:opacity-50 transition-colors"
+              className="flex-1 min-w-[7.5rem] py-2 px-3 rounded-xl text-sm font-semibold text-white bg-[#615fe2] hover:bg-[#4f4dc0] disabled:opacity-50 transition-colors"
             >
               {permission === 'granted' ? 'Ri-sincronizza' : 'Attiva notifiche'}
             </button>
             <button
               onClick={handleTest}
               disabled={busy || !serverStatus?.oneSignalPlayerId}
-              className="flex-1 min-w-[120px] py-2 px-3 rounded-xl text-sm font-semibold text-[#615fe2] bg-[rgba(97,95,226,0.1)] hover:bg-[rgba(97,95,226,0.2)] disabled:opacity-50 transition-colors"
+              className="flex-1 min-w-[7.5rem] py-2 px-3 rounded-xl text-sm font-semibold text-[#615fe2] bg-[rgba(97,95,226,0.1)] hover:bg-[rgba(97,95,226,0.2)] disabled:opacity-50 transition-colors"
             >
               Invia test push
             </button>
@@ -426,7 +426,7 @@ export default function NotificationsSettingsPage() {
             <span className="text-xs text-[#747995]">{showLog ? 'nascondi' : 'mostra'}</span>
           </button>
           {showLog && (
-            <div className="mt-3 max-h-64 overflow-y-auto bg-gray-50 rounded-lg p-2 font-mono text-[10px] leading-relaxed text-[#2c3149]">
+            <div className="mt-3 max-h-64 overflow-y-auto bg-gray-50 rounded-lg p-2 font-mono text-[0.625rem] leading-relaxed text-[#2c3149]">
               {logEntries.length === 0 ? (
                 <p className="text-[#747995]">Nessun evento.</p>
               ) : (

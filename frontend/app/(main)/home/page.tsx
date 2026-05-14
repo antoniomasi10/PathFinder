@@ -245,7 +245,7 @@ function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => 
   return (
     <button
       onClick={onOpen}
-      className="w-full text-left relative overflow-hidden rounded-[24px]"
+      className="w-full text-left relative overflow-hidden rounded-[1.5rem]"
       style={{
         backgroundColor: '#6B6CF5',
         boxShadow: '0 0 48px 18px rgba(220,218,255,0.60), 0 4px 24px rgba(107,108,245,0.35)',
@@ -258,14 +258,14 @@ function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => 
         style={{ right: '0%', top: '-5%', width: '100%', height: 'auto', opacity: 0.65 }}
       />
 
-      <div className="relative z-10 p-4 sm:p-[27px] flex flex-col">
+      <div className="relative z-10 p-4 sm:p-[1.6875rem] flex flex-col">
         {/* Label */}
-        <div className="flex items-center gap-[8px] mb-[12px]">
+        <div className="flex items-center gap-[0.5rem] mb-[0.75rem]">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)" stroke="none">
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
           </svg>
           <span
-            className="text-[16px] font-semibold uppercase tracking-[0.8px]"
+            className="text-[1rem] font-semibold uppercase tracking-[0.05rem]"
             style={{ color: 'white', fontFamily: 'var(--font-plus-jakarta)' }}
           >
             OPPORTUNITY OF THE DAY
@@ -273,20 +273,20 @@ function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => 
         </div>
 
         {/* Company + title */}
-        <div className="flex items-center gap-[16px] mt-[8px]">
+        <div className="flex items-center gap-[1rem] mt-[0.5rem]">
           <div
             className="flex-shrink-0 flex items-center justify-center rounded-full bg-white w-10 h-10 sm:w-14 sm:h-14"
             style={{ boxShadow: '0px 4px 6px -1px rgba(0,0,0,0.1), 0px 2px 4px -2px rgba(0,0,0,0.1)' }}
           >
-            <span className="text-[16px] sm:text-[18px] font-bold" style={{ color: '#4a4bd7' }}>
+            <span className="text-[1rem] sm:text-[1.125rem] font-bold" style={{ color: '#4a4bd7' }}>
               {opp.company.charAt(0).toUpperCase()}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[20px] font-bold leading-[28px] text-white line-clamp-2" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
+            <p className="text-[1.25rem] font-bold leading-[1.75rem] text-white line-clamp-2" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
               {opp.title}
             </p>
-            <p className="text-[16px] leading-[24px] truncate" style={{ color: 'rgba(255,255,255,0.9)', fontFamily: 'var(--font-plus-jakarta)' }}>
+            <p className="text-[1rem] leading-[1.5rem] truncate" style={{ color: 'rgba(255,255,255,0.9)', fontFamily: 'var(--font-plus-jakarta)' }}>
               {opp.company}{opp.location ? ` • ${opp.location}` : ''}
             </p>
           </div>
@@ -294,14 +294,14 @@ function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => 
 
         {/* Bottom row */}
         <div
-          className="grid items-center mt-2 pt-2 sm:mt-[13px] sm:pt-[13px]"
+          className="grid items-center mt-2 pt-2 sm:mt-[0.8125rem] sm:pt-[0.8125rem]"
           style={{ borderTop: '1px solid rgba(255,255,255,0.2)', gridTemplateColumns: '1fr 1fr 1fr' }}
         >
           <div>
-            <p className="text-[10px] font-medium lowercase" style={{ color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-plus-jakarta)' }}>
+            <p className="text-[0.625rem] font-medium lowercase" style={{ color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-plus-jakarta)' }}>
               {t.home.affinity}
             </p>
-            <p className="text-[20px] font-bold text-white leading-[28px]" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
+            <p className="text-[1.25rem] font-bold text-white leading-[1.75rem]" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
               {opp.matchScore}%
             </p>
           </div>
@@ -310,14 +310,14 @@ function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => 
           </div>
           <div className="flex justify-end">
             <div
-              className="rounded-full px-[11px] py-[4px]"
+              className="rounded-full px-[0.6875rem] py-[0.25rem]"
               style={{
                 backgroundColor: 'rgba(255,255,255,0.2)',
                 border: '1px solid rgba(255,255,255,0.1)',
                 backdropFilter: 'blur(6px)',
               }}
             >
-              <span className="text-[13px] font-medium text-white" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
+              <span className="text-[0.8125rem] font-medium text-white" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
                 {opp.type || 'Internship'}
               </span>
             </div>
@@ -337,24 +337,24 @@ function OpportunityCard({ opp, isSaved, onSave, onOpen }: {
   return (
     <div
       className="bg-white overflow-hidden"
-      style={{ border: '1px solid #ecedff', borderRadius: 24, boxShadow: '0px 2px 4px rgba(0,0,0,0.02)' }}
+      style={{ border: '1px solid #ecedff', borderRadius: '1.5rem', boxShadow: '0px 2px 4px rgba(0,0,0,0.02)' }}
     >
-      <button onClick={onOpen} className="w-full text-left active:opacity-75 transition-opacity" style={{ padding: 17 }}>
+      <button onClick={onOpen} className="w-full text-left active:opacity-75 transition-opacity" style={{ padding: '1.0625rem' }}>
         {/* Top row: logo + title + bookmark */}
-        <div className="flex items-center gap-[12px]">
+        <div className="flex items-center gap-[0.75rem]">
           <div
             className="flex-shrink-0 flex items-center justify-center overflow-hidden"
-            style={{ width: 48, height: 48, backgroundColor: '#e4e7ff', border: '1px solid #ecedff', borderRadius: 16, padding: 1 }}
+            style={{ width: '3rem', height: '3rem', backgroundColor: '#e4e7ff', border: '1px solid #ecedff', borderRadius: '1rem', padding: 1 }}
           >
-            <span className="text-[16px] font-bold" style={{ color: '#4a4bd7' }}>
+            <span className="text-[1rem] font-bold" style={{ color: '#4a4bd7' }}>
               {opp.company.charAt(0).toUpperCase()}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-[16px] leading-[24px] truncate" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
+            <p className="font-semibold text-[1rem] leading-[1.5rem] truncate" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
               {opp.title}
             </p>
-            <p className="text-[13px] leading-[24px] truncate" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
+            <p className="text-[0.8125rem] leading-[1.5rem] truncate" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
               {opp.company}{opp.location ? ` • ${opp.location}` : ''}
             </p>
           </div>
@@ -368,12 +368,12 @@ function OpportunityCard({ opp, isSaved, onSave, onOpen }: {
         </div>
 
         {/* Bottom row: affinità | deadline (centrata) | type pill */}
-        <div className="grid items-center mt-[4px] pt-[5px]" style={{ borderTop: '1px solid #f3f2ff', gridTemplateColumns: '1fr 1fr 1fr' }}>
+        <div className="grid items-center mt-[0.25rem] pt-[0.3125rem]" style={{ borderTop: '1px solid #f3f2ff', gridTemplateColumns: '1fr 1fr 1fr' }}>
           <div>
-            <p className="text-[11px] font-medium" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
+            <p className="text-[0.6875rem] font-medium" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
               {t.home.affinity}
             </p>
-            <p className="text-[16px] font-bold leading-[28px]" style={{ color: '#4a4bd7', fontFamily: 'var(--font-plus-jakarta)' }}>
+            <p className="text-[1rem] font-bold leading-[1.75rem]" style={{ color: '#4a4bd7', fontFamily: 'var(--font-plus-jakarta)' }}>
               {opp.matchScore}%
             </p>
           </div>
@@ -382,10 +382,10 @@ function OpportunityCard({ opp, isSaved, onSave, onOpen }: {
           </div>
           <div className="flex justify-end">
             <div
-              className="rounded-full px-[10px] py-[4px]"
+              className="rounded-full px-[0.625rem] py-[0.25rem]"
               style={{ backgroundColor: getOpportunityTypeColor(opp.type || opp.badge.split(' • ')[0]) }}
             >
-              <span className="text-[13px] font-medium" style={{ color: '#4f5160', fontFamily: 'var(--font-plus-jakarta)' }}>
+              <span className="text-[0.8125rem] font-medium" style={{ color: '#4f5160', fontFamily: 'var(--font-plus-jakarta)' }}>
                 {opp.type || opp.badge.split(' • ')[0]}
               </span>
             </div>
@@ -404,7 +404,7 @@ function SearchDropdown({ suggestions, query, activeIndex, onSelect, onHover }: 
 }) {
   if (!suggestions.length) return null;
   return (
-    <div className="absolute top-[calc(100%+6px)] left-0 right-0 rounded-[20px] overflow-hidden"
+    <div className="absolute top-[calc(100%+0.375rem)] left-0 right-0 rounded-[1.25rem] overflow-hidden"
       style={{ backgroundColor: 'white', border: '1px solid #ecedff', boxShadow: '0 8px 24px rgba(74,75,215,0.12)', zIndex: 9999 }}>
       {suggestions.map((s, i) => (
         <button key={s.opp.id}
@@ -419,7 +419,7 @@ function SearchDropdown({ suggestions, query, activeIndex, onSelect, onHover }: 
             <p className="text-sm truncate font-medium" style={{ color: '#2c3149' }}>{s.opp.title}</p>
             <p className="text-xs truncate" style={{ color: '#595e78' }}>{s.opp.company}</p>
           </div>
-          <span className="text-[10px] px-2 py-1 rounded-full flex-shrink-0 uppercase tracking-wide" style={{ backgroundColor: '#ecedff', color: '#4a4bd7' }}>
+          <span className="text-[0.625rem] px-2 py-1 rounded-full flex-shrink-0 uppercase tracking-wide" style={{ backgroundColor: '#ecedff', color: '#4a4bd7' }}>
             {s.opp.type || s.opp.badge.split(' • ')[0]}
           </span>
         </button>
@@ -436,7 +436,7 @@ function SearchHistoryDropdown({ history, onSelect, onRemove, onClear }: {
   const { t } = useLanguage();
   if (!history.length) return null;
   return (
-    <div className="absolute top-[calc(100%+6px)] left-0 right-0 rounded-[20px] overflow-hidden"
+    <div className="absolute top-[calc(100%+0.375rem)] left-0 right-0 rounded-[1.25rem] overflow-hidden"
       style={{ backgroundColor: 'white', border: '1px solid #ecedff', boxShadow: '0 8px 24px rgba(74,75,215,0.12)', zIndex: 9999 }}>
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
         <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#acb0ce' }}>{t.home.recentSearches}</span>
@@ -521,7 +521,7 @@ function FilterSheet({ open, draft, allTags, matchCount, filterCategories, tab, 
     { label: t.home.filterDeadline30d, value: '30' }, { label: t.home.filterDeadlineThisMonth, value: 'month' },
   ];
 
-  const inputStyle = { backgroundColor: '#f8f8ff', border: '1.5px solid #ecedff', color: '#2c3149', borderRadius: 12, padding: '12px 16px', fontSize: 14, width: '100%', outline: 'none' };
+  const inputStyle = { backgroundColor: '#f8f8ff', border: '0.09375rem solid #ecedff', color: '#2c3149', borderRadius: '0.75rem', padding: '0.75rem 1rem', fontSize: '0.875rem', width: '100%', outline: 'none' };
 
   return (
     <>
@@ -606,7 +606,7 @@ function FilterSheet({ open, draft, allTags, matchCount, filterCategories, tab, 
           )}
         </div>
         <div className="px-5 pt-4 pb-8" style={{ borderTop: '1px solid #f3f2ff' }}>
-          <button onClick={onApply} className="w-full py-4 rounded-[20px] font-semibold text-[15px] text-white" style={{ backgroundColor: '#4a4bd7', fontFamily: 'var(--font-plus-jakarta)' }}>
+          <button onClick={onApply} className="w-full py-4 rounded-[1.25rem] font-semibold text-[0.9375rem] text-white" style={{ backgroundColor: '#4a4bd7', fontFamily: 'var(--font-plus-jakarta)' }}>
             {`${t.home.applyFilters} (${matchCount})`}
           </button>
         </div>
@@ -912,12 +912,12 @@ const viewedRef = useRef<Set<string>>(new Set());
   return (
     <>
       {/* ── Scrollable content ────────────────────────────────────── */}
-      <div className="flex flex-col gap-[10px] px-[16px] pt-[8px] pb-[24px]">
+      <div className="flex flex-col gap-[0.625rem] px-[1rem] pt-[0.5rem] pb-[1.5rem]">
 
         {/* 1. Opportunity of the Day — only on page 1 */}
         {!searchQuery && !typeFilter && perTePage === 1 && (
           loadingOpps && !opportunities.length ? (
-            <div className="rounded-[24px] animate-pulse" style={{ height: 220, backgroundColor: '#dddeff' }} />
+            <div className="rounded-[1.5rem] animate-pulse" style={{ height: '13.75rem', backgroundColor: '#dddeff' }} />
           ) : topOpportunity ? (
             <OpportunityOfTheDay opp={topOpportunity} onOpen={() => handleOpen(topOpportunity)} />
           ) : null
@@ -926,8 +926,8 @@ const viewedRef = useRef<Set<string>>(new Set());
         {/* 2. Search bar */}
         <div ref={searchContainerRef}>
           <div className="relative">
-            <div className="bg-white rounded-full flex items-center" style={{ border: '1px solid #e4e7ff', boxShadow: '0px 1px 2px 0px rgba(0,0,0,0.05)', paddingTop: 14, paddingBottom: 14 }}>
-              <div className="pl-[16px] pr-[8px] flex-shrink-0">
+            <div className="bg-white rounded-full flex items-center" style={{ border: '1px solid #e4e7ff', boxShadow: '0px 1px 2px 0px rgba(0,0,0,0.05)', paddingTop: '0.875rem', paddingBottom: '0.875rem' }}>
+              <div className="pl-[1rem] pr-[0.5rem] flex-shrink-0">
                 <Search size={18} strokeWidth={2} color="#acb0ce" />
               </div>
               <input
@@ -937,7 +937,7 @@ const viewedRef = useRef<Set<string>>(new Set());
                 onChange={(e) => { setSearchQuery(e.target.value); setActiveSuggestionIndex(-1); }}
                 onFocus={() => setSearchFocused(true)}
                 onKeyDown={handleSearchKeyDown}
-                className="flex-1 min-w-0 bg-transparent outline-none text-[16px]"
+                className="flex-1 min-w-0 bg-transparent outline-none text-[1rem]"
                 style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}
               />
               {searchQuery && (
@@ -947,7 +947,7 @@ const viewedRef = useRef<Set<string>>(new Set());
                   </svg>
                 </button>
               )}
-              <button onClick={openFilterSheet} className="pr-[16px] pl-[8px] flex-shrink-0 relative" style={{ color: hasActiveFilters ? '#4a4bd7' : '#acb0ce' }}>
+              <button onClick={openFilterSheet} className="pr-[1rem] pl-[0.5rem] flex-shrink-0 relative" style={{ color: hasActiveFilters ? '#4a4bd7' : '#acb0ce' }}>
                 <Filter size={18} strokeWidth={2} color={hasActiveFilters ? '#4a4bd7' : '#acb0ce'} />
                 {hasActiveFilters && (
                   <span className="absolute top-0 right-3 w-2 h-2 rounded-full" style={{ backgroundColor: '#4a4bd7' }} />
@@ -979,9 +979,9 @@ const viewedRef = useRef<Set<string>>(new Set());
               <button
                 key={chip.labelKey}
                 onClick={() => setTypeFilter(chip.value)}
-                className="rounded-full font-medium text-[12px] px-[12px] transition-all"
+                className="rounded-full font-medium text-[0.75rem] px-[0.75rem] transition-all"
                 style={{
-                  paddingTop: 5, paddingBottom: 5,
+                  paddingTop: '0.3125rem', paddingBottom: '0.3125rem',
                   backgroundColor: active ? '#4a4bd7' : '#ecedff',
                   color: active ? '#fbf7ff' : '#595e78',
                   fontFamily: 'var(--font-plus-jakarta)',
@@ -1003,7 +1003,7 @@ const viewedRef = useRef<Set<string>>(new Set());
         >
           <div
             className="flex items-center justify-center rounded-full bg-white"
-            style={{ width: 36, height: 36, boxShadow: '0 2px 12px rgba(74,75,215,0.18)', flexShrink: 0 }}
+            style={{ width: '2.25rem', height: '2.25rem', boxShadow: '0 2px 12px rgba(74,75,215,0.18)', flexShrink: 0 }}
           >
             <svg
               ref={spinnerSvgRef}
@@ -1038,17 +1038,17 @@ const viewedRef = useRef<Set<string>>(new Set());
         {isLoading ? (
           <>
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-[24px] p-[17px] animate-pulse" style={{ border: '1px solid #ecedff' }}>
+              <div key={i} className="bg-white rounded-[1.5rem] p-[1.0625rem] animate-pulse" style={{ border: '1px solid #ecedff' }}>
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="rounded-[16px]" style={{ width: 48, height: 48, backgroundColor: '#e4e7ff' }} />
+                  <div className="rounded-[1rem]" style={{ width: '3rem', height: '3rem', backgroundColor: '#e4e7ff' }} />
                   <div className="flex-1">
                     <div className="h-4 rounded-full mb-2" style={{ backgroundColor: '#ecedff', width: '70%' }} />
                     <div className="h-3 rounded-full" style={{ backgroundColor: '#ecedff', width: '50%' }} />
                   </div>
                 </div>
-                <div className="flex justify-between pt-[5px]" style={{ borderTop: '1px solid #f3f2ff' }}>
-                  <div className="h-6 rounded-full" style={{ backgroundColor: '#ecedff', width: 48 }} />
-                  <div className="h-6 rounded-full" style={{ backgroundColor: '#e0e1f4', width: 80 }} />
+                <div className="flex justify-between pt-[0.3125rem]" style={{ borderTop: '1px solid #f3f2ff' }}>
+                  <div className="h-6 rounded-full" style={{ backgroundColor: '#ecedff', width: '3rem' }} />
+                  <div className="h-6 rounded-full" style={{ backgroundColor: '#e0e1f4', width: '5rem' }} />
                 </div>
               </div>
             ))}
@@ -1060,8 +1060,8 @@ const viewedRef = useRef<Set<string>>(new Set());
           </div>
         ) : (
           <>
-            <div ref={perTeTopRef} style={{ scrollMarginTop: 80 }} />
-            <div className="flex flex-col gap-[16px]">
+            <div ref={perTeTopRef} style={{ scrollMarginTop: '5rem' }} />
+            <div className="flex flex-col gap-[1rem]">
               {perTeFiltered.map((opp) => (
                 <OpportunityCard key={opp.id} opp={opp}
                   onOpen={() => handleOpen(opp)} isSaved={savedIds.has(opp.id)} onSave={() => handleSave(opp)} />

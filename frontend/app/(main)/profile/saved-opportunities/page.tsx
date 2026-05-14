@@ -21,7 +21,7 @@ export default function SavedOpportunitiesPage() {
           backdropFilter: 'blur(6px)',
           WebkitBackdropFilter: 'blur(6px)',
           borderBottom: '1px solid rgba(172,176,206,0.2)',
-          height: 64,
+          height: '4rem',
         }}
       >
         <div className="max-w-lg mx-auto flex items-center justify-between h-full px-4 relative">
@@ -78,29 +78,29 @@ export default function SavedOpportunitiesPage() {
           </button>
 
           {/* Spacer mirrors the back button to keep logo centered */}
-          <div style={{ width: 36 }} />
+          <div style={{ width: '2.25rem' }} />
         </div>
       </header>
 
       {/* Main content */}
       <main className="flex-1 flex flex-col px-6 pb-24 pt-6">
         <h1
-          className="font-bold text-[32px] leading-[40px] mb-8"
+          className="font-bold text-[2rem] leading-[2.5rem] mb-8"
           style={{ color: '#191b27', fontFamily: 'var(--font-plus-jakarta)' }}
         >
           Opportunità salvate
         </h1>
 
         {savedOpps.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center" style={{ paddingTop: 80 }}>
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center" style={{ paddingTop: '5rem' }}>
             <p
-              className="text-[16px] font-semibold"
+              className="text-[1rem] font-semibold"
               style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}
             >
               Nessuna opportunità salvata
             </p>
             <p
-              className="text-[14px]"
+              className="text-[0.875rem]"
               style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}
             >
               Esplora le opportunità e salva quelle che ti interessano.
@@ -137,21 +137,21 @@ export default function SavedOpportunitiesPage() {
                   style={{
                     backgroundColor: 'white',
                     border: '1px solid #ecedff',
-                    borderRadius: 24,
-                    padding: 17,
+                    borderRadius: '1.5rem',
+                    padding: '1.0625rem',
                     boxShadow: '0px 2px 4px rgba(0,0,0,0.02)',
                   }}
                 >
                   {/* Top row: logo + title + company */}
                   <div className="flex items-center gap-3">
                     <div
-                      className="flex items-center justify-center flex-shrink-0 font-bold text-[16px]"
+                      className="flex items-center justify-center flex-shrink-0 font-bold text-[1rem]"
                       style={{
-                        width: 48,
-                        height: 48,
+                        width: '3rem',
+                        height: '3rem',
                         backgroundColor: '#e4e7ff',
                         border: '1px solid #ecedff',
-                        borderRadius: 16,
+                        borderRadius: '1rem',
                         color: '#4a4bd7',
                         fontFamily: 'var(--font-plus-jakarta)',
                       }}
@@ -160,13 +160,13 @@ export default function SavedOpportunitiesPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p
-                        className="font-semibold text-[16px] leading-[24px] truncate"
+                        className="font-semibold text-[1rem] leading-[1.5rem] truncate"
                         style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}
                       >
                         {opp.title}
                       </p>
                       <p
-                        className="text-[13px] leading-[24px] truncate"
+                        className="text-[0.8125rem] leading-[1.5rem] truncate"
                         style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}
                       >
                         {[opp.company, opp.location].filter(Boolean).join(' • ')}
@@ -176,18 +176,18 @@ export default function SavedOpportunitiesPage() {
 
                   {/* Bottom row: affinità + deadline + type pill */}
                   <div
-                    className="flex items-center justify-between pt-[5px]"
+                    className="flex items-center justify-between pt-[0.3125rem]"
                     style={{ borderTop: '1px solid #f3f2ff' }}
                   >
                     <div>
                       <p
-                        className="text-[11px] font-medium lowercase"
+                        className="text-[0.6875rem] font-medium lowercase"
                         style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}
                       >
                         affinità
                       </p>
                       <p
-                        className="text-[16px] font-bold leading-[28px]"
+                        className="text-[1rem] font-bold leading-[1.75rem]"
                         style={{ color: '#4a4bd7', fontFamily: 'var(--font-plus-jakarta)' }}
                       >
                         {opp.matchScore != null ? `${opp.matchScore}%` : '—'}
@@ -195,11 +195,11 @@ export default function SavedOpportunitiesPage() {
                     </div>
                     {opp.deadline ? <DeadlineLabel deadline={opp.deadline} size="xs" /> : <OpenLabel size="xs" />}
                     <div
-                      className="rounded-full px-[10px] py-[4px]"
+                      className="rounded-full px-[0.625rem] py-[0.25rem]"
                       style={{ backgroundColor: getOpportunityTypeColor(opp.type) }}
                     >
                       <span
-                        className="text-[13px] font-medium"
+                        className="text-[0.8125rem] font-medium"
                         style={{ color: '#4f5160', fontFamily: 'var(--font-plus-jakarta)' }}
                       >
                         {opp.type}

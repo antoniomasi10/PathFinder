@@ -23,12 +23,12 @@ export default function RootPage() {
       <img
         src="/logo-coha-swash.svg"
         alt="COA"
-        style={{ width: 188, height: 113 }}
+        style={{ width: '11.75rem', height: '7.0625rem' }}
         className="object-contain pointer-events-none"
       />
       <p
         className="mt-2 text-[#595e78] text-center"
-        style={{ fontSize: 13.5, letterSpacing: '0.34px', fontFamily: 'var(--font-plus-jakarta)' }}
+        style={{ fontSize: '0.84375rem', letterSpacing: '0.02125rem', fontFamily: 'var(--font-plus-jakarta)' }}
       >
         University is not enough
       </p>

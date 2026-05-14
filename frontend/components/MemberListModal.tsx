@@ -97,18 +97,18 @@ export default function MemberListModal({
               <div className="flex items-center gap-2">
                 <span className="text-white font-medium text-sm truncate">{member.user.name}</span>
                 {member.role === 'CREATOR' && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 font-medium shrink-0">
+                  <span className="text-[0.625rem] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 font-medium shrink-0">
                     {t.group.creator}
                   </span>
                 )}
                 {member.user.id === currentUserId && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-700 text-gray-400 font-medium shrink-0">
+                  <span className="text-[0.625rem] px-2 py-0.5 rounded-full bg-gray-700 text-gray-400 font-medium shrink-0">
                     {t.group.you}
                   </span>
                 )}
               </div>
               {member.user.university?.name && (
-                <p className="text-[11px] text-gray-500 truncate">
+                <p className="text-[0.6875rem] text-gray-500 truncate">
                   {member.user.university.name}
                   {member.user.courseOfStudy && ` · ${member.user.courseOfStudy}`}
                 </p>

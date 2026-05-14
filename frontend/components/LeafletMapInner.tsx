@@ -33,7 +33,7 @@ export default function LeafletMapInner({ data, onSelectZone }: Props) {
         {/* Campus marker */}
         <Marker position={data.campus}>
           <Popup>
-            <div style={{ color: '#000', fontSize: '12px' }}>
+            <div style={{ color: '#000', fontSize: '0.75rem' }}>
               <strong>{data.campusName}</strong>
             </div>
           </Popup>
@@ -53,7 +53,7 @@ export default function LeafletMapInner({ data, onSelectZone }: Props) {
             eventHandlers={{ click: () => onSelectZone(zone) }}
           >
             <Tooltip permanent direction="center" className="zone-label">
-              <span style={{ fontSize: '10px', fontWeight: 'bold' }}>
+              <span style={{ fontSize: '0.625rem', fontWeight: 'bold' }}>
                 {zone.name}<br />{zone.rentAvg}
               </span>
             </Tooltip>

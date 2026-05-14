@@ -50,17 +50,17 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50"
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[30rem] z-50"
       style={{
         backgroundColor: 'white',
         borderTop: '1px solid #ecedff',
         boxShadow: '0px -4px 6px rgba(0,0,0,0.05)',
-        height: 64,
+        height: '4rem',
       }}
     >
       <div
-        className="max-w-lg mx-auto flex items-center justify-around pb-safe"
-        style={{ paddingTop: 9 }}
+        className="mx-auto flex items-center justify-around pb-safe"
+        style={{ paddingTop: '0.5625rem' }}
       >
         {navItems.map((item) => {
           const isActive = pathname.startsWith(item.href);
@@ -72,13 +72,13 @@ export default function BottomNav() {
               aria-label={item.label}
               className="flex-1 flex flex-col items-center"
             >
-              <span className="relative inline-flex items-center justify-center" style={{ width: 43, height: 43 }}>
+              <span className="relative inline-flex items-center justify-center" style={{ width: '2.6875rem', height: '2.6875rem' }}>
                 {isActive ? (
                   <span
                     className="flex items-center justify-center rounded-full"
                     style={{
-                      width: 43,
-                      height: 43,
+                      width: '2.6875rem',
+                      height: '2.6875rem',
                       backgroundColor: '#615fe2',
                       color: 'white',
                     }}
@@ -88,13 +88,13 @@ export default function BottomNav() {
                 ) : (
                   <span
                     className="flex items-center justify-center"
-                    style={{ width: 43, height: 43, color: '#acb0ce' }}
+                    style={{ width: '2.6875rem', height: '2.6875rem', color: '#acb0ce' }}
                   >
                     {item.icon(false)}
                   </span>
                 )}
                 {badge > 0 && (
-                  <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                  <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 text-white text-[0.5625rem] font-bold rounded-full flex items-center justify-center">
                     {badge > 9 ? '9+' : badge}
                   </span>
                 )}

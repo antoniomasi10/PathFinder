@@ -64,8 +64,8 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: '#fbf8ff' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-coha-swash.svg" alt="COhA" style={{ width: 188, height: 113 }} className="object-contain pointer-events-none" />
-        <p className="mt-2 text-center" style={{ fontSize: 13.5, letterSpacing: '0.34px', color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
+        <img src="/logo-coha-swash.svg" alt="COhA" style={{ width: '11.75rem', height: '7.0625rem' }} className="object-contain pointer-events-none" />
+        <p className="mt-2 text-center" style={{ fontSize: '0.84375rem', letterSpacing: '0.02125rem', color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
           University is not enough
         </p>
         <div className="mt-8 flex items-center gap-1.5">
@@ -73,7 +73,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
             <div
               key={i}
               className="rounded-full animate-bounce"
-              style={{ width: 6, height: 6, backgroundColor: '#4a4bd7', opacity: 0.7, animationDelay: `${i * 0.15}s` }}
+              style={{ width: '0.375rem', height: '0.375rem', backgroundColor: '#4a4bd7', opacity: 0.7, animationDelay: `${i * 0.15}s` }}
             />
           ))}
         </div>

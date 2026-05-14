@@ -103,7 +103,7 @@ export default function EditProfilePage() {
           backdropFilter: 'blur(6px)',
           WebkitBackdropFilter: 'blur(6px)',
           borderBottom: '1px solid rgba(172,176,206,0.2)',
-          height: 64,
+          height: '4rem',
         }}
       >
         <div className="max-w-lg mx-auto flex items-center justify-between h-full px-4 relative">
@@ -157,7 +157,7 @@ export default function EditProfilePage() {
             <ChevronLeft size={24} strokeWidth={2} color="#2c3149" />
           </button>
 
-          <div style={{ width: 36 }} />
+          <div style={{ width: '2.25rem' }} />
         </div>
       </header>
 
@@ -174,7 +174,7 @@ export default function EditProfilePage() {
       ) : (
         <main className="flex-1 flex flex-col px-6 pt-6 pb-32">
           <h1
-            className="font-bold text-[28px] leading-[36px] mb-6"
+            className="font-bold text-[1.75rem] leading-[2.25rem] mb-6"
             style={{ color: '#191b27', fontFamily: 'var(--font-plus-jakarta)' }}
           >
             {t.profile.editProfile}

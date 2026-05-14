@@ -112,7 +112,7 @@ export default function VerifyEmailPage() {
       style={{ background: 'linear-gradient(90deg, #fbf8ff 0%, #fbf8ff 100%)' }}
     >
       <div
-        className="w-full max-w-[342px] bg-white rounded-3xl p-6 flex flex-col items-center"
+        className="w-full max-w-[21.375rem] bg-white rounded-3xl p-6 flex flex-col items-center"
         style={{ boxShadow: '0px 3.054px 9.161px rgba(97, 95, 226, 0.06)' }}
       >
         {/* Heading */}
@@ -151,10 +151,10 @@ export default function VerifyEmailPage() {
               onChange={(e) => handleChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               disabled={loading}
-              className="w-9 h-[42px] text-center text-sm font-[var(--font-plus-jakarta)] text-[#191b27] rounded-[6px] outline-none transition-colors"
+              className="w-9 h-[2.625rem] text-center text-sm font-[var(--font-plus-jakarta)] text-[#191b27] rounded-[0.375rem] outline-none transition-colors"
               style={{
                 background: '#e1e1f2',
-                border: '0.763px solid #c7c4d6',
+                border: '0.04769rem solid #c7c4d6',
               }}
             />
           ))}

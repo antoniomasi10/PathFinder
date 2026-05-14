@@ -44,7 +44,7 @@ function SkillsPopup({ onDefine, onDismiss }: { onDefine: () => void; onDismiss:
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 99998,
-        padding: '16px',
+        padding: '1rem',
       }}
     >
       {/* Backdrop */}
@@ -66,10 +66,10 @@ function SkillsPopup({ onDefine, onDismiss }: { onDefine: () => void; onDismiss:
         style={{
           position: 'relative',
           backgroundColor: '#1e2139',
-          borderRadius: '24px',
-          padding: '32px',
+          borderRadius: '1.5rem',
+          padding: '2rem',
           width: '100%',
-          maxWidth: '420px',
+          maxWidth: '26.25rem',
           border: '1px solid #2d3154',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
           transition: 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease',
@@ -80,10 +80,10 @@ function SkillsPopup({ onDefine, onDismiss }: { onDefine: () => void; onDismiss:
         {/* Title */}
         <h2
           style={{
-            fontSize: '24px',
+            fontSize: '1.5rem',
             fontWeight: 400,
             color: '#FFFFFF',
-            marginBottom: '12px',
+            marginBottom: '0.75rem',
           }}
         >
           Definisci le tue competenze
@@ -92,10 +92,10 @@ function SkillsPopup({ onDefine, onDismiss }: { onDefine: () => void; onDismiss:
         {/* Subtitle */}
         <p
           style={{
-            fontSize: '14px',
+            fontSize: '0.875rem',
             color: '#a1a4b8',
             lineHeight: '1.6',
-            marginBottom: '32px',
+            marginBottom: '2rem',
           }}
         >
           Completa il tuo profilo con le tue competenze per ricevere opportunità più pertinenti e migliorare il matching con le proposte più adatte a te.
@@ -107,15 +107,15 @@ function SkillsPopup({ onDefine, onDismiss }: { onDefine: () => void; onDismiss:
           style={{
             display: 'block',
             width: '100%',
-            padding: '14px 24px',
-            borderRadius: '12px',
+            padding: '0.875rem 1.5rem',
+            borderRadius: '0.75rem',
             background: 'linear-gradient(to right, #6366f1, #8b5cf6)',
             border: 'none',
             color: '#FFFFFF',
-            fontSize: '15px',
+            fontSize: '0.9375rem',
             fontWeight: 500,
             cursor: 'pointer',
-            marginBottom: '12px',
+            marginBottom: '0.75rem',
           }}
         >
           Definisci ora
@@ -127,12 +127,12 @@ function SkillsPopup({ onDefine, onDismiss }: { onDefine: () => void; onDismiss:
           style={{
             display: 'block',
             width: '100%',
-            padding: '14px 24px',
-            borderRadius: '12px',
+            padding: '0.875rem 1.5rem',
+            borderRadius: '0.75rem',
             backgroundColor: '#2d3154',
             border: 'none',
             color: '#a1a4b8',
-            fontSize: '15px',
+            fontSize: '0.9375rem',
             fontWeight: 500,
             cursor: 'pointer',
           }}

@@ -290,17 +290,17 @@ export default function ProfilePage() {
           left: 0,
           right: 0,
           zIndex: 40,
-          height: 64,
+          height: '4rem',
           backgroundColor: 'rgba(255,255,255,0.92)',
           backdropFilter: 'blur(6px)',
           WebkitBackdropFilter: 'blur(6px)',
           borderBottom: '1px solid rgba(172,176,206,0.2)',
           display: 'flex',
           alignItems: 'center',
-          paddingLeft: 7,
-          paddingRight: 7,
-          paddingTop: 8,
-          paddingBottom: 8,
+          paddingLeft: '0.4375rem',
+          paddingRight: '0.4375rem',
+          paddingTop: '0.5rem',
+          paddingBottom: '0.5rem',
         }}
       >
         <div style={{ flex: 1 }} />
@@ -348,7 +348,7 @@ export default function ProfilePage() {
       </header>
 
       {/* Scrollable main content */}
-      <div style={{ paddingTop: 64, paddingBottom: 100, backgroundColor: '#fbf8ff', minHeight: '100vh' }}>
+      <div style={{ paddingTop: '4rem', paddingBottom: '6.25rem', backgroundColor: '#fbf8ff', minHeight: '100vh' }}>
 
         {/* Hero + Avatar + Info */}
         <div style={{ position: 'relative', marginBottom: 0 }}>
@@ -378,10 +378,10 @@ export default function ProfilePage() {
             bottom: -64,
             left: '50%',
             transform: 'translateX(-50%)',
-            width: 128,
-            height: 128,
+            width: '8rem',
+            height: '8rem',
             borderRadius: '50%',
-            border: '5px solid white',
+            border: '0.3125rem solid white',
             boxShadow: '0px 10px 15px -3px rgba(0,0,0,0.1), 0px 4px 6px -4px rgba(0,0,0,0.1)',
             overflow: 'hidden',
             boxSizing: 'border-box',
@@ -396,7 +396,7 @@ export default function ProfilePage() {
                 <img src={currentAvatar} alt={fullName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
               ) : (
                 <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ color: 'white', fontWeight: 700, fontSize: 32, fontFamily: 'var(--font-plus-jakarta)' }}>{initials}</span>
+                  <span style={{ color: 'white', fontWeight: 700, fontSize: '2rem', fontFamily: 'var(--font-plus-jakarta)' }}>{initials}</span>
                 </div>
               )}
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
@@ -408,37 +408,37 @@ export default function ProfilePage() {
         </div>
 
         {/* Profile info block */}
-        <div style={{ paddingTop: 80, paddingLeft: 24, paddingRight: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-          <h2 style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 700, fontSize: 24, lineHeight: '32px', color: '#2c3149', margin: 0 }}>
+        <div style={{ paddingTop: '5rem', paddingLeft: '1.5rem', paddingRight: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+          <h2 style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 700, fontSize: '1.5rem', lineHeight: '2rem', color: '#2c3149', margin: 0 }}>
             {fullName}
           </h2>
           {profile.university && (
-            <p style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 400, fontSize: 15, lineHeight: '24px', color: '#595e78', margin: '2px 0 0' }}>
+            <p style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 400, fontSize: '0.9375rem', lineHeight: '1.5rem', color: '#595e78', margin: '0.125rem 0 0' }}>
               {profile.university.name}
             </p>
           )}
           {profile.courseOfStudy && (
-            <p style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 400, fontSize: 12, lineHeight: '24px', color: 'rgba(89,94,120,0.6)', margin: 0 }}>
+            <p style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 400, fontSize: '0.75rem', lineHeight: '1.5rem', color: 'rgba(89,94,120,0.6)', margin: 0 }}>
               {profile.courseOfStudy}{profile.yearOfStudy ? ` • ${profile.yearOfStudy}° anno` : ''}
             </p>
           )}
 
           {/* Core skills (principali — purple) */}
           {coreSkills && coreSkills.length > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.75rem' }}>
               {coreSkills.map((skill) => (
                 <span key={skill.id} style={{
                   backgroundColor: '#615fe2',
-                  borderRadius: 9999,
-                  paddingLeft: 12,
-                  paddingRight: 12,
-                  paddingTop: 4,
-                  paddingBottom: 4,
+                  borderRadius: '624.9375rem',
+                  paddingLeft: '0.75rem',
+                  paddingRight: '0.75rem',
+                  paddingTop: '0.25rem',
+                  paddingBottom: '0.25rem',
                   color: 'white',
                   fontFamily: 'var(--font-plus-jakarta)',
                   fontWeight: 500,
-                  fontSize: 14,
-                  lineHeight: '20px',
+                  fontSize: '0.875rem',
+                  lineHeight: '1.25rem',
                   whiteSpace: 'nowrap',
                 }}>
                   {skill.name}
@@ -449,20 +449,20 @@ export default function ProfilePage() {
 
           {/* Side skills (secondarie — grey, smaller) */}
           {sideSkills && sideSkills.length > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.375rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
               {sideSkills.map((skill) => (
                 <span key={skill.id} style={{
                   backgroundColor: 'rgba(116,121,149,0.56)',
-                  borderRadius: 9999,
-                  paddingLeft: 9.802,
-                  paddingRight: 9.802,
-                  paddingTop: 3.267,
-                  paddingBottom: 3.267,
+                  borderRadius: '624.9375rem',
+                  paddingLeft: '0.61262rem',
+                  paddingRight: '0.61262rem',
+                  paddingTop: '0.20419rem',
+                  paddingBottom: '0.20419rem',
                   color: 'white',
                   fontFamily: 'var(--font-plus-jakarta)',
                   fontWeight: 500,
-                  fontSize: 11.436,
-                  lineHeight: '16.336px',
+                  fontSize: '0.71475rem',
+                  lineHeight: '1.021rem',
                   whiteSpace: 'nowrap',
                 }}>
                   {skill.name}
@@ -476,14 +476,14 @@ export default function ProfilePage() {
             onClick={() => router.push('/profile/edit')}
             style={{
               width: '100%',
-              maxWidth: 320,
+              maxWidth: '20rem',
               backgroundColor: '#615fe2',
-              borderRadius: 24,
-              paddingLeft: 24,
-              paddingRight: 24,
-              paddingTop: 12,
-              paddingBottom: 12,
-              marginTop: 16,
+              borderRadius: '1.5rem',
+              paddingLeft: '1.5rem',
+              paddingRight: '1.5rem',
+              paddingTop: '0.75rem',
+              paddingBottom: '0.75rem',
+              marginTop: '1rem',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -492,7 +492,7 @@ export default function ProfilePage() {
               cursor: 'pointer',
             }}
           >
-            <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 600, fontSize: 16, lineHeight: '24px', color: '#fbf7ff' }}>
+            <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 600, fontSize: '1rem', lineHeight: '1.5rem', color: '#fbf7ff' }}>
               Modifica profilo
             </span>
           </button>
@@ -500,11 +500,11 @@ export default function ProfilePage() {
 
         {/* Stats section */}
         <div style={{
-          margin: '16px 24px 0',
+          margin: '1rem 1.5rem 0',
           backgroundColor: 'white',
           border: '1px solid #acb0ce',
-          borderRadius: 24,
-          padding: '21px 0',
+          borderRadius: '1.5rem',
+          padding: '1.3125rem 0',
           boxShadow: '0px 1px 1px rgba(0,0,0,0.05)',
           display: 'flex',
           alignItems: 'center',
@@ -512,26 +512,26 @@ export default function ProfilePage() {
         }}>
           <button
             onClick={() => router.push('/profile/pathmates')}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 17, padding: 0, background: 'none', border: 'none', cursor: 'pointer' }}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.0625rem', padding: 0, background: 'none', border: 'none', cursor: 'pointer' }}
             className="active:opacity-75"
           >
-            <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 700, fontSize: 24, lineHeight: '32px', color: '#4a4bd7' }}>
+            <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 700, fontSize: '1.5rem', lineHeight: '2rem', color: '#4a4bd7' }}>
               {friends.length}
             </span>
-            <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 500, fontSize: 14, lineHeight: '20px', color: '#595e78', textTransform: 'uppercase', letterSpacing: '0.7px', textAlign: 'center', width: '100%' }}>
+            <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 500, fontSize: '0.875rem', lineHeight: '1.25rem', color: '#595e78', textTransform: 'uppercase', letterSpacing: '0.04375rem', textAlign: 'center', width: '100%' }}>
               PERSONE CONNESSE
             </span>
           </button>
-          <div style={{ width: 1, height: 75, backgroundColor: '#acb0ce', flexShrink: 0 }} />
+          <div style={{ width: 1, height: '4.6875rem', backgroundColor: '#acb0ce', flexShrink: 0 }} />
           <button
             onClick={() => router.push('/profile/saved-opportunities')}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 17, padding: 0, background: 'none', border: 'none', cursor: 'pointer' }}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.0625rem', padding: 0, background: 'none', border: 'none', cursor: 'pointer' }}
             className="active:opacity-75"
           >
-            <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 700, fontSize: 24, lineHeight: '32px', color: '#4a4bd7' }}>
+            <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 700, fontSize: '1.5rem', lineHeight: '2rem', color: '#4a4bd7' }}>
               {savedOpps.length}
             </span>
-            <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 500, fontSize: 14, lineHeight: '20px', color: '#595e78', textTransform: 'uppercase', letterSpacing: '0.7px', textAlign: 'center', width: '100%' }}>
+            <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 500, fontSize: '0.875rem', lineHeight: '1.25rem', color: '#595e78', textTransform: 'uppercase', letterSpacing: '0.04375rem', textAlign: 'center', width: '100%' }}>
               OPPORTUNITÀ SALVATE
             </span>
           </button>
@@ -539,7 +539,7 @@ export default function ProfilePage() {
 
 
         {/* Divider before settings */}
-        <div style={{ height: 1, backgroundColor: 'rgba(172,176,206,0.3)', margin: '32px 24px 0' }} />
+        <div style={{ height: 1, backgroundColor: 'rgba(172,176,206,0.3)', margin: '2rem 1.5rem 0' }} />
 
         {/* Settings section */}
         <div className="px-4 py-6 space-y-6">
@@ -612,7 +612,7 @@ export default function ProfilePage() {
                       <ChevronRight size={16} color="#747995" />
                     </button>
                     {i < arr.length - 1 && (
-                      <div className="ml-[60px] mr-2 h-px bg-[rgba(172,176,206,0.2)]" />
+                      <div className="ml-[3.75rem] mr-2 h-px bg-[rgba(172,176,206,0.2)]" />
                     )}
                   </div>
                 ))}
@@ -1713,7 +1713,7 @@ function LanguageDropdown() {
         <ChevronDown size={16} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 bg-white border border-[rgba(172,176,206,0.3)] rounded-xl overflow-hidden shadow-xl z-10 min-w-[120px]">
+        <div className="absolute right-0 top-full mt-1 bg-white border border-[rgba(172,176,206,0.3)] rounded-xl overflow-hidden shadow-xl z-10 min-w-[7.5rem]">
           {options.map((opt) => (
             <button
               key={opt}
@@ -1781,7 +1781,7 @@ function PrivacyDropdown({
         <ChevronDown size={16} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 bg-white border border-[rgba(172,176,206,0.3)] rounded-xl overflow-hidden shadow-xl z-10 min-w-[120px]">
+        <div className="absolute right-0 top-full mt-1 bg-white border border-[rgba(172,176,206,0.3)] rounded-xl overflow-hidden shadow-xl z-10 min-w-[7.5rem]">
           {options.map((opt) => (
             <button
               key={opt.key}

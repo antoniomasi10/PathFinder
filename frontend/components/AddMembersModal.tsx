@@ -150,7 +150,7 @@ export default function AddMembersModal({
                   <div className="flex-1 text-left min-w-0">
                     <p className="font-medium text-sm text-white">{friend.name}</p>
                     {friend.university?.name && (
-                      <p className="text-[11px] text-gray-500 truncate">
+                      <p className="text-[0.6875rem] text-gray-500 truncate">
                         {friend.university.name} {friend.courseOfStudy && `· ${friend.courseOfStudy}`}
                       </p>
                     )}
@@ -185,7 +185,7 @@ export default function AddMembersModal({
                 </div>
                 <div className="flex-1 text-left min-w-0">
                   <p className="font-medium text-sm text-gray-400">{friend.name}</p>
-                  <p className="text-[11px] text-gray-600">{t.group.alreadyInGroup}</p>
+                  <p className="text-[0.6875rem] text-gray-600">{t.group.alreadyInGroup}</p>
                 </div>
               </div>
             ))}
@@ -200,9 +200,9 @@ export default function AddMembersModal({
           disabled={selectedFriends.size === 0 || adding}
           className="w-full flex items-center justify-center font-medium text-white transition-colors"
           style={{
-            height: '56px',
-            borderRadius: '12px',
-            fontSize: '16px',
+            height: '3.5rem',
+            borderRadius: '0.75rem',
+            fontSize: '1rem',
             backgroundColor: selectedFriends.size > 0 && !adding ? '#6C63FF' : '#4A4A6A',
             cursor: selectedFriends.size > 0 && !adding ? 'pointer' : 'not-allowed',
           }}

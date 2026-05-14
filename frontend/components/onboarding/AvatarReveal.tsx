@@ -109,7 +109,7 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
         style={{ background: '#eef0ff' }}
       >
         <div
-          className="flex flex-col items-center gap-4 text-center p-8 rounded-[24px]"
+          className="flex flex-col items-center gap-4 text-center p-8 rounded-[1.5rem]"
           style={{ backgroundColor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(8px)' }}
         >
           <div
@@ -128,7 +128,7 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
           </p>
           <button
             onClick={handleRetry}
-            className="mt-2 px-8 py-3 rounded-[24px] text-white font-semibold"
+            className="mt-2 px-8 py-3 rounded-[1.5rem] text-white font-semibold"
             style={{ backgroundColor: '#615fe2', fontFamily: 'var(--font-plus-jakarta)' }}
           >
             Riprova
@@ -154,7 +154,7 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
         {/* Title */}
         <div className="text-center mb-10">
           <motion.h1
-            className="text-[28px] font-bold text-[#2c3149] leading-tight"
+            className="text-[1.75rem] font-bold text-[#2c3149] leading-tight"
             style={{ fontFamily: 'var(--font-plus-jakarta)', letterSpacing: '-0.3px' }}
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -198,11 +198,11 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
           {/* Floating dots */}
           <div
             className="absolute rounded-full animate-float-dot-1"
-            style={{ width: 10, height: 10, backgroundColor: '#b0b3f0', opacity: 0.7, top: '8%', right: '-8%' }}
+            style={{ width: '0.625rem', height: '0.625rem', backgroundColor: '#b0b3f0', opacity: 0.7, top: '8%', right: '-8%' }}
           />
           <div
             className="absolute rounded-full animate-float-dot-2"
-            style={{ width: 6, height: 6, backgroundColor: '#615fe2', opacity: 0.4, bottom: '12%', left: '-5%' }}
+            style={{ width: '0.375rem', height: '0.375rem', backgroundColor: '#615fe2', opacity: 0.4, bottom: '12%', left: '-5%' }}
           />
 
           {/* Video/image container */}
@@ -211,7 +211,7 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
             style={{
               width: 'min(80vw, 300px)',
               height: 'min(80vw, 300px)',
-              border: '3px solid #615fe2',
+              border: '0.1875rem solid #615fe2',
               backgroundColor: 'white',
               boxShadow: '0 8px 40px rgba(97,95,226,0.2)',
             }}
@@ -245,8 +245,8 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
           disabled={!buttonReady}
           className="w-full flex items-center justify-center gap-2 font-bold text-white text-base"
           style={{
-            height: 56,
-            borderRadius: 28,
+            height: '3.5rem',
+            borderRadius: '1.75rem',
             fontFamily: 'var(--font-plus-jakarta)',
             backgroundColor: '#615fe2',
             opacity: buttonReady ? 1 : 0.5,

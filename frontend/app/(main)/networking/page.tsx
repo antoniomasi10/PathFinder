@@ -1012,14 +1012,14 @@ export default function NetworkingPage() {
           <header
             className="sticky top-0 z-40 flex items-center justify-between px-4"
             style={{
-              height: 64,
+              height: '4rem',
               backgroundColor: 'rgba(255,255,255,0.92)',
               backdropFilter: 'blur(6px)',
               WebkitBackdropFilter: 'blur(6px)',
               borderBottom: '1px solid rgba(172,176,206,0.2)',
             }}
           >
-            <div style={{ width: 40 }} />
+            <div style={{ width: '2.5rem' }} />
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <svg width="129" height="37" viewBox="0 0 129 37" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="COhA">
                 <path d="M71.4712 25.1531C70.7006 23.029 70.2645 21.7405 69.7296 19.7567C69.4798 20.0067 69.2177 20.2587 68.9286 20.5282L69.9375 25.1531L71.2156 31.1483C71.7336 33.6313 72.0648 34.9232 73.1752 36.9722H79.1393C76.8634 34.9814 75.5636 33.7184 74.1976 31.1483C73.1431 29.2076 72.518 27.9747 71.8426 26.1809C71.7213 25.8588 71.5985 25.5187 71.4712 25.1531Z" fill="#615FE2"/>
@@ -1064,7 +1064,7 @@ export default function NetworkingPage() {
             <button
               onClick={() => setShowActionMenu(true)}
               className="flex items-center justify-center rounded-full active:opacity-70 ml-auto"
-              style={{ width: 40, height: 40 }}
+              style={{ width: '2.5rem', height: '2.5rem' }}
               aria-label="Nuova chat"
             >
               <Plus size={20} strokeWidth={2} color="#2c3149" />
@@ -1078,10 +1078,10 @@ export default function NetworkingPage() {
         <div>
 
           {/* Search bar — px-16, pt-16, full width */}
-          <div style={{ padding: '16px 16px 0' }}>
+          <div style={{ padding: '1rem 1rem 0' }}>
             <div style={{ position: 'relative' }}>
               {/* Wrapper div needed: Search component doesn't accept style prop */}
-              <div style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 1, display: 'flex', alignItems: 'center' }}>
+              <div style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', zIndex: 1, display: 'flex', alignItems: 'center' }}>
                 <Search size={18} color="#595e78" />
               </div>
               <input
@@ -1092,11 +1092,11 @@ export default function NetworkingPage() {
                   width: '100%',
                   backgroundColor: '#fbf8ff',
                   border: '1px solid #e4e7ff',
-                  borderRadius: 9999,
-                  padding: '16px 49px',
+                  borderRadius: '624.9375rem',
+                  padding: '1rem 3.0625rem',
                   fontFamily: 'var(--font-plus-jakarta)',
                   color: '#595e78',
-                  fontSize: 16,
+                  fontSize: '1rem',
                   outline: 'none',
                   boxShadow: '0px 1px 2px rgba(0,0,0,0.05)',
                 }}
@@ -1104,14 +1104,14 @@ export default function NetworkingPage() {
               {searchQuery ? (
                 <button
                   onClick={() => { setSearchQuery(''); setSelectedClusterTag(null); setProfileYearFilter(null); setCoreSkillArea(null); }}
-                  style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center' }}
+                  style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center' }}
                 >
                   <CloseSm size={16} color="#595e78" />
                 </button>
               ) : (
                 <button
                   onClick={() => setShowFilterSheet(true)}
-                  style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center' }}
+                  style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center' }}
                 >
                   <Filter size={18} color={selectedClusterTag || profileYearFilter || coreSkillArea ? '#615fe2' : '#595e78'} />
                 </button>
@@ -1121,13 +1121,13 @@ export default function NetworkingPage() {
 
           {/* Search results */}
           {(searchQuery.trim() || hasProfileFilters(selectedClusterTag, profileYearFilter, coreSkillArea)) ? (
-            <div style={{ padding: '16px 16px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ padding: '1rem 1rem 0', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {searchLoading ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
                   <div className="w-6 h-6 border-2 border-[#615fe2] border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : searchProfileResults.length === 0 ? (
-                <p style={{ textAlign: 'center', padding: '32px 0', color: '#acb0ce', fontFamily: 'var(--font-plus-jakarta)', fontSize: 14 }}>
+                <p style={{ textAlign: 'center', padding: '2rem 0', color: '#acb0ce', fontFamily: 'var(--font-plus-jakarta)', fontSize: '0.875rem' }}>
                   Nessun profilo trovato
                 </p>
               ) : (
@@ -1137,28 +1137,28 @@ export default function NetworkingPage() {
                     <button
                       key={u.id}
                       onClick={() => router.push(`/profile/${u.id}`)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 16, textAlign: 'left' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '1rem', textAlign: 'left' }}
                     >
-                      <div style={{ flexShrink: 0, width: 50, height: 50, borderRadius: '50%', overflow: 'hidden', backgroundColor: '#dde1ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ flexShrink: 0, width: '3.125rem', height: '3.125rem', borderRadius: '50%', overflow: 'hidden', backgroundColor: '#dde1ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {u.avatar && isValidImageUrl(u.avatar)
                           ? <img src={u.avatar} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          : <span style={{ fontSize: 18, fontWeight: 700, color: '#4a4bd7' }}>{u.name[0]}</span>
+                          : <span style={{ fontSize: '1.125rem', fontWeight: 700, color: '#4a4bd7' }}>{u.name[0]}</span>
                         }
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 600, fontSize: 14, color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.name}</p>
-                        <p style={{ fontSize: 12, color: '#595e78', fontFamily: 'var(--font-plus-jakarta)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <p style={{ fontWeight: 600, fontSize: '0.875rem', color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.name}</p>
+                        <p style={{ fontSize: '0.75rem', color: '#595e78', fontFamily: 'var(--font-plus-jakarta)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {u.university?.name}{u.courseOfStudy ? ` · ${u.courseOfStudy}` : ''}
                         </p>
                       </div>
                       {cs?.status === 'ACCEPTED' ? (
                         <Check size={14} strokeWidth={2.5} color="#4a4bd7" />
                       ) : cs?.status === 'PENDING' ? (
-                        <span style={{ fontSize: 10, color: '#acb0ce', border: '1px solid #e4e7ff', padding: '3px 10px', borderRadius: 9999, flexShrink: 0, fontFamily: 'var(--font-plus-jakarta)' }}>Inviato</span>
+                        <span style={{ fontSize: '0.625rem', color: '#acb0ce', border: '1px solid #e4e7ff', padding: '0.1875rem 0.625rem', borderRadius: '624.9375rem', flexShrink: 0, fontFamily: 'var(--font-plus-jakarta)' }}>Inviato</span>
                       ) : (
                         <button
                           onClick={async (e) => { e.stopPropagation(); await sendFriendRequest(u.id); }}
-                          style={{ fontSize: 10, color: '#4a4bd7', border: '1px solid #4a4bd7', padding: '3px 10px', borderRadius: 9999, flexShrink: 0, fontFamily: 'var(--font-plus-jakarta)' }}
+                          style={{ fontSize: '0.625rem', color: '#4a4bd7', border: '1px solid #4a4bd7', padding: '0.1875rem 0.625rem', borderRadius: '624.9375rem', flexShrink: 0, fontFamily: 'var(--font-plus-jakarta)' }}
                         >
                           Connetti
                         </button>
@@ -1171,26 +1171,26 @@ export default function NetworkingPage() {
           ) : (
             <>
               {/* ── PERSONE SUGGERITE ─────────────────────────────── */}
-              <div style={{ padding: '16px 16px 0' }}>
-                <p style={{ color: '#747995', fontSize: 12, fontWeight: 700, letterSpacing: '0.6px', lineHeight: '16px', marginBottom: 10, fontFamily: 'var(--font-plus-jakarta)', textTransform: 'uppercase' }}>
+              <div style={{ padding: '1rem 1rem 0' }}>
+                <p style={{ color: '#747995', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.0375rem', lineHeight: '1rem', marginBottom: '0.625rem', fontFamily: 'var(--font-plus-jakarta)', textTransform: 'uppercase' }}>
                   PERSONE SUGGERITE
                 </p>
 
                 {suggestionsLoading ? (
-                  <div style={{ display: 'flex', gap: 12, overflowX: 'auto', marginLeft: -16, marginRight: -16, paddingLeft: 16, paddingRight: 16, scrollbarWidth: 'none' }}>
+                  <div style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', marginLeft: -16, marginRight: -16, paddingLeft: '1rem', paddingRight: '1rem', scrollbarWidth: 'none' }}>
                     {[0, 1, 2, 3].map((i) => (
-                      <div key={i} className="animate-pulse" style={{ flexShrink: 0, width: 152, borderRadius: 20, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.10)' }}>
-                        <div style={{ height: 120, backgroundColor: '#e4e7ff' }} />
-                        <div style={{ height: 88, backgroundColor: '#f0f2ff' }} />
+                      <div key={i} className="animate-pulse" style={{ flexShrink: 0, width: '9.5rem', borderRadius: '1.25rem', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.10)' }}>
+                        <div style={{ height: '7.5rem', backgroundColor: '#e4e7ff' }} />
+                        <div style={{ height: '5.5rem', backgroundColor: '#f0f2ff' }} />
                       </div>
                     ))}
                   </div>
                 ) : suggestedProfiles.length === 0 ? (
-                  <p style={{ color: '#acb0ce', fontFamily: 'var(--font-plus-jakarta)', fontSize: 13 }}>
+                  <p style={{ color: '#acb0ce', fontFamily: 'var(--font-plus-jakarta)', fontSize: '0.8125rem' }}>
                     Nessun profilo suggerito al momento
                   </p>
                 ) : (
-                  <div className="scrollbar-hide" style={{ display: 'flex', gap: 12, overflowX: 'auto', marginLeft: -16, marginRight: -16, paddingLeft: 16, paddingRight: 16 }}>
+                  <div className="scrollbar-hide" style={{ display: 'flex', gap: '0.75rem', overflowX: 'auto', marginLeft: -16, marginRight: -16, paddingLeft: '1rem', paddingRight: '1rem' }}>
                     {(() => {
                       const CARD_COLORS = ['#4A4BD7', '#9B2FB5', '#0E7EA0', '#C2484B', '#1A6B52', '#B45309'];
                       const swirlPath = 'M0 65.3278C2.93232 70.639 4.08249 72.1671 7.95336 75.6846C7.95336 75.6846 11.952 78.6058 17.55 81.7925C23.1481 84.9792 24.481 85.5104 30.3456 87.1037C36.2103 88.6971 38.6094 89.2282 43.6744 89.4938C43.6744 89.4938 49.539 90.0249 57.5362 89.7593C65.5335 89.4938 70.6129 88.4438 78.329 86.3071C86.0452 84.1703 87.7836 83.6199 92.4575 81.527C97.1314 79.434 99.4416 77.8503 102.854 74.0913L99.655 59.751C98.2505 51.6744 98.2357 47.0641 98.8553 38.7718C100.739 30.1714 102.9 25.4931 109.785 17.527C116.982 11.1536 125.246 12.4813 128.445 22.5726C130.578 32.9295 130.255 38.1477 124.713 48.8631C118.711 59.5743 114.63 65.2704 106.053 74.8879C107.536 81.6148 108.987 85.3667 111.384 91.3527C111.989 88.8743 112.362 87.7028 115.116 86.0415C118.438 84.9378 120.203 84.4148 124.18 84.7137C129.511 85.7759 133.018 87.344 138.042 89.7593C146.17 94.4331 150.906 96.6237 159.634 99.8506C165.914 102.112 169.479 102.555 175.895 102.241C182.736 102.173 186.902 101.196 192.956 97.4606V115.784C192.472 118.684 191.817 120.26 189.757 122.954C186.98 126.002 184.978 127.157 180.427 128H176.429C176.429 128 163.513 119.831 156.169 113.394L140.708 100.913C133.955 95.6414 130.746 93.0526 123.114 89.2282C120.222 88.0439 116.982 86.8382 114.85 88.166C112.717 90.2905 112.349 91.3326 112.451 94.2739C115.576 103.166 117.999 107.37 123.114 115.519C126.579 120.895 129.73 123.903 135.109 128H125.779H116.449C113.396 120.96 111.77 116.541 109.785 108.88L103.387 76.7469C97.7311 81.557 93.911 84.2918 87.126 88.4315C79.1924 92.8774 74.4868 95.1096 65.5335 98.5228C56.9567 101.963 51.7008 103.243 42.0749 105.162C32.2476 107.288 27.0093 107.649 18.0832 107.021C9.98818 106.033 6.65094 104.343 0 99.8506V82.5892V65.3278ZM101.788 48.8631C101.434 57.9505 102.102 63.013 105.253 71.9668C111.588 65.2882 114.585 61.156 118.582 52.8465C121.963 46.7035 122.58 43.5519 122.047 36.9129C120.181 30.805 117.98 28.771 109.785 31.8672C104.832 34.6902 102.841 37.9099 101.788 48.8631Z';
@@ -1202,10 +1202,10 @@ export default function NetworkingPage() {
                             onClick={() => router.push(`/profile/${person.id}`)}
                             style={{
                               flexShrink: 0,
-                              width: 152,
+                              width: '9.5rem',
                               position: 'relative',
                               textAlign: 'left',
-                              borderRadius: 20,
+                              borderRadius: '1.25rem',
                               boxShadow: '0 4px 16px rgba(0,0,0,0.13)',
                               overflow: 'hidden',
                               border: 'none',
@@ -1215,7 +1215,7 @@ export default function NetworkingPage() {
                             }}
                           >
                             {/* Colored top section */}
-                            <div style={{ height: 120, overflow: 'hidden', position: 'relative' }}>
+                            <div style={{ height: '7.5rem', overflow: 'hidden', position: 'relative' }}>
                               <svg viewBox="0 0 193 128" width="100%" height="100%" style={{ position: 'absolute', inset: 0, display: 'block' }} preserveAspectRatio="xMidYMid slice">
                                 <rect width="193" height="128" fill={cardColor} />
                                 <path fillRule="evenodd" clipRule="evenodd" d={swirlPath} fill="white" fillOpacity="0.18" />
@@ -1223,35 +1223,35 @@ export default function NetworkingPage() {
                             </div>
 
                             {/* White bottom section */}
-                            <div style={{ backgroundColor: 'white', paddingTop: 42, paddingBottom: 14, paddingLeft: 12, paddingRight: 12 }}>
+                            <div style={{ backgroundColor: 'white', paddingTop: '2.625rem', paddingBottom: '0.875rem', paddingLeft: '0.75rem', paddingRight: '0.75rem' }}>
                             {/* Avatar — on the card wrapper, spanning the colored/white boundary */}
                             <div style={{
                               position: 'absolute',
-                              top: 88,
+                              top: '5.5rem',
                               left: '50%',
                               transform: 'translateX(-50%)',
-                              width: 64,
-                              height: 64,
+                              width: '4rem',
+                              height: '4rem',
                               borderRadius: '50%',
                               overflow: 'hidden',
-                              border: '3px solid white',
+                              border: '0.1875rem solid white',
                               zIndex: 3,
                             }}>
                               {person.avatar && isValidImageUrl(person.avatar) ? (
                                 <img src={person.avatar} alt={person.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : (
                                 <div style={{ width: '100%', height: '100%', backgroundColor: '#dde1ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  <span style={{ fontSize: 22, fontWeight: 700, color: '#4a4bd7' }}>{person.name[0]}</span>
+                                  <span style={{ fontSize: '1.375rem', fontWeight: 700, color: '#4a4bd7' }}>{person.name[0]}</span>
                                 </div>
                               )}
                             </div>
-                              <p style={{ fontSize: 14, fontWeight: 700, color: '#2c3149', lineHeight: '20px', fontFamily: 'var(--font-plus-jakarta)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', margin: 0 }}>
+                              <p style={{ fontSize: '0.875rem', fontWeight: 700, color: '#2c3149', lineHeight: '1.25rem', fontFamily: 'var(--font-plus-jakarta)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', margin: 0 }}>
                                 {person.name}
                               </p>
-                              <p style={{ fontSize: 11, color: '#595e78', lineHeight: '16px', marginTop: 3, fontFamily: 'var(--font-plus-jakarta)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                              <p style={{ fontSize: '0.6875rem', color: '#595e78', lineHeight: '1rem', marginTop: '0.1875rem', fontFamily: 'var(--font-plus-jakarta)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                                 {person.university?.name}
                               </p>
-                              <p style={{ fontSize: 10, color: '#747995', lineHeight: '14px', marginTop: 2, fontFamily: 'var(--font-plus-jakarta)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                              <p style={{ fontSize: '0.625rem', color: '#747995', lineHeight: '0.875rem', marginTop: '0.125rem', fontFamily: 'var(--font-plus-jakarta)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                                 {person.courseOfStudy}
                               </p>
                             </div>
@@ -1264,30 +1264,30 @@ export default function NetworkingPage() {
               </div>
 
               {/* ── CHAT ──────────────────────────────────────────── */}
-              <div style={{ padding: '16px 16px 0' }}>
-                <p style={{ color: '#747995', fontSize: 12, fontWeight: 700, letterSpacing: '0.6px', lineHeight: '16px', marginBottom: 12, fontFamily: 'var(--font-plus-jakarta)', textTransform: 'uppercase' }}>
+              <div style={{ padding: '1rem 1rem 0' }}>
+                <p style={{ color: '#747995', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.0375rem', lineHeight: '1rem', marginBottom: '0.75rem', fontFamily: 'var(--font-plus-jakarta)', textTransform: 'uppercase' }}>
                   CHAT
                 </p>
 
                 {loading ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {[1, 2, 3].map((i) => (
-                      <div key={i} className="animate-pulse" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 12, borderRadius: 24, backgroundColor: 'white' }}>
-                        <div style={{ width: 50, height: 50, borderRadius: '50%', backgroundColor: '#e4e7ff', flexShrink: 0 }} />
+                      <div key={i} className="animate-pulse" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem', borderRadius: '1.5rem', backgroundColor: 'white' }}>
+                        <div style={{ width: '3.125rem', height: '3.125rem', borderRadius: '50%', backgroundColor: '#e4e7ff', flexShrink: 0 }} />
                         <div style={{ flex: 1 }}>
-                          <div style={{ height: 14, borderRadius: 9999, width: '45%', backgroundColor: '#e4e7ff', marginBottom: 8 }} />
-                          <div style={{ height: 12, borderRadius: 9999, width: '70%', backgroundColor: '#e4e7ff' }} />
+                          <div style={{ height: '0.875rem', borderRadius: '624.9375rem', width: '45%', backgroundColor: '#e4e7ff', marginBottom: '0.5rem' }} />
+                          <div style={{ height: '0.75rem', borderRadius: '624.9375rem', width: '70%', backgroundColor: '#e4e7ff' }} />
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : unifiedConversations.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                    <p style={{ fontSize: 14, color: '#acb0ce', fontFamily: 'var(--font-plus-jakarta)' }}>Nessun messaggio ancora</p>
-                    <p style={{ fontSize: 12, color: '#acb0ce', fontFamily: 'var(--font-plus-jakarta)', marginTop: 4 }}>Connettiti con altri studenti per iniziare</p>
+                  <div style={{ textAlign: 'center', padding: '2.5rem 0' }}>
+                    <p style={{ fontSize: '0.875rem', color: '#acb0ce', fontFamily: 'var(--font-plus-jakarta)' }}>Nessun messaggio ancora</p>
+                    <p style={{ fontSize: '0.75rem', color: '#acb0ce', fontFamily: 'var(--font-plus-jakarta)', marginTop: '0.25rem' }}>Connettiti con altri studenti per iniziare</p>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {unifiedConversations.map((conv) => {
                       const timeStr = conv.lastMessageAt
                         ? (() => {
@@ -1309,10 +1309,10 @@ export default function NetworkingPage() {
                           style={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: 16,
-                            padding: 12,
+                            gap: '1rem',
+                            padding: '0.75rem',
                             backgroundColor: 'white',
-                            borderRadius: 24,
+                            borderRadius: '1.5rem',
                             boxShadow: isUnread
                               ? '0px 1px 2.4px 0px rgba(0,0,0,0.05)'
                               : '0px 1px 1px rgba(0,0,0,0.05)',
@@ -1322,15 +1322,15 @@ export default function NetworkingPage() {
                         >
                           {/* Avatar */}
                           {isGroup && !conv.avatar ? (
-                            <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: '#dde1ff', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                              <span style={{ fontWeight: 700, fontSize: 16, color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>{conv.name?.[0] ?? 'G'}</span>
+                            <div style={{ width: '3rem', height: '3rem', borderRadius: '50%', backgroundColor: '#dde1ff', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                              <span style={{ fontWeight: 700, fontSize: '1rem', color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>{conv.name?.[0] ?? 'G'}</span>
                             </div>
                           ) : (
-                            <div style={{ width: 50, height: 50, borderRadius: '50%', flexShrink: 0, overflow: 'hidden', backgroundColor: '#dde1ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: '3.125rem', height: '3.125rem', borderRadius: '50%', flexShrink: 0, overflow: 'hidden', backgroundColor: '#dde1ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {conv.avatar && isValidImageUrl(conv.avatar) ? (
                                 <img src={conv.avatar} alt={conv.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : conv.name ? (
-                                <span style={{ fontWeight: 700, fontSize: 16, color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>{conv.name[0]}</span>
+                                <span style={{ fontWeight: 700, fontSize: '1rem', color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>{conv.name[0]}</span>
                               ) : (
                                 <UserIcon size={22} color="#acb0ce" strokeWidth={1.5} />
                               )}
@@ -1338,32 +1338,32 @@ export default function NetworkingPage() {
                           )}
 
                           {/* Content */}
-                          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                             {/* Name row — time inside only for READ items */}
                             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', width: '100%' }}>
-                              <p style={{ fontWeight: 600, fontSize: 14, color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)', lineHeight: '20px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', maxWidth: isUnread ? '100%' : 'calc(100% - 40px)' }}>
+                              <p style={{ fontWeight: 600, fontSize: '0.875rem', color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)', lineHeight: '1.25rem', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', maxWidth: isUnread ? '100%' : 'calc(100% - 2.5rem)' }}>
                                 {conv.name || 'Utente eliminato'}
                               </p>
                               {!isUnread && timeStr && (
-                                <span style={{ fontWeight: 400, fontSize: 10, color: '#acb0ce', fontFamily: 'var(--font-plus-jakarta)', lineHeight: '15px', flexShrink: 0, marginLeft: 8 }}>
+                                <span style={{ fontWeight: 400, fontSize: '0.625rem', color: '#acb0ce', fontFamily: 'var(--font-plus-jakarta)', lineHeight: '0.9375rem', flexShrink: 0, marginLeft: '0.5rem' }}>
                                   {timeStr}
                                 </span>
                               )}
                             </div>
                             {/* Message */}
-                            <p style={{ fontSize: 12, color: isUnread ? '#595e78' : '#747995', fontFamily: 'var(--font-plus-jakarta)', fontWeight: isUnread ? 500 : 400, lineHeight: '16px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                            <p style={{ fontSize: '0.75rem', color: isUnread ? '#595e78' : '#747995', fontFamily: 'var(--font-plus-jakarta)', fontWeight: isUnread ? 500 : 400, lineHeight: '1rem', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                               {conv.lastMessage}
                             </p>
                           </div>
 
                           {/* Unread: time + dot OUTSIDE content column */}
                           {isUnread && timeStr && (
-                            <span style={{ fontWeight: 500, fontSize: 10, color: '#4a4bd7', fontFamily: 'var(--font-plus-jakarta)', lineHeight: '15px', flexShrink: 0 }}>
+                            <span style={{ fontWeight: 500, fontSize: '0.625rem', color: '#4a4bd7', fontFamily: 'var(--font-plus-jakarta)', lineHeight: '0.9375rem', flexShrink: 0 }}>
                               {timeStr}
                             </span>
                           )}
                           {isUnread && (
-                            <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#4a4bd7', flexShrink: 0 }} />
+                            <div style={{ width: '0.5rem', height: '0.5rem', borderRadius: '50%', backgroundColor: '#4a4bd7', flexShrink: 0 }} />
                           )}
                         </button>
                       );
@@ -1372,7 +1372,7 @@ export default function NetworkingPage() {
                       <button
                         onClick={loadMoreConversations}
                         disabled={loadingMoreConv}
-                        style={{ width: '100%', padding: '12px 0', fontSize: 14, fontWeight: 500, color: '#4a4bd7', fontFamily: 'var(--font-plus-jakarta)', opacity: loadingMoreConv ? 0.5 : 1 }}
+                        style={{ width: '100%', padding: '0.75rem 0', fontSize: '0.875rem', fontWeight: 500, color: '#4a4bd7', fontFamily: 'var(--font-plus-jakarta)', opacity: loadingMoreConv ? 0.5 : 1 }}
                       >
                         {loadingMoreConv ? t.common.loading : t.notifications.loadMore}
                       </button>
@@ -1406,7 +1406,7 @@ export default function NetworkingPage() {
             xmlns="http://www.w3.org/2000/svg"
             style={{
               position: 'absolute',
-              top: 64,
+              top: '4rem',
               left: 0,
               width: '100%',
               height: 'auto',
@@ -1424,23 +1424,23 @@ export default function NetworkingPage() {
             style={{
               flex: 1,
               overflowY: 'auto',
-              paddingTop: 80,
-              paddingBottom: 100,
-              paddingLeft: 16,
-              paddingRight: 16,
+              paddingTop: '5rem',
+              paddingBottom: '6.25rem',
+              paddingLeft: '1rem',
+              paddingRight: '1rem',
               display: 'flex',
               flexDirection: 'column',
-              gap: 16,
+              gap: '1rem',
               position: 'relative',
               zIndex: 1,
             }}
           >
             {messages.length === 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 8, paddingTop: 48, paddingBottom: 48, textAlign: 'center' }}>
-                <div style={{ width: 56, height: 56, borderRadius: '50%', backgroundColor: 'rgba(74,75,215,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '0.5rem', paddingTop: '3rem', paddingBottom: '3rem', textAlign: 'center' }}>
+                <div style={{ width: '3.5rem', height: '3.5rem', borderRadius: '50%', backgroundColor: 'rgba(74,75,215,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.25rem' }}>
                   <ChatDots size={28} color="#4a4bd7" />
                 </div>
-                <p style={{ fontFamily: 'var(--font-plus-jakarta)', fontSize: 14, color: '#595e78' }}>
+                <p style={{ fontFamily: 'var(--font-plus-jakarta)', fontSize: '0.875rem', color: '#595e78' }}>
                   {selectedUser.name
                     ? <>Inizia una conversazione con <span style={{ color: '#2c3149', fontWeight: 600 }}>{selectedUser.name}</span></>
                     : 'Questo account è stato eliminato'}
@@ -1459,20 +1459,20 @@ export default function NetworkingPage() {
               return (
                 <div key={msg.id}>
                   {showTimestamp && (
-                    <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8, paddingBottom: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
                       <div style={{
                         backgroundColor: '#f3f2ff',
-                        borderRadius: 9999,
-                        paddingLeft: 12,
-                        paddingRight: 12,
-                        paddingTop: 4,
-                        paddingBottom: 4,
+                        borderRadius: '624.9375rem',
+                        paddingLeft: '0.75rem',
+                        paddingRight: '0.75rem',
+                        paddingTop: '0.25rem',
+                        paddingBottom: '0.25rem',
                       }}>
                         <span style={{
                           fontFamily: 'var(--font-plus-jakarta)',
                           fontWeight: 500,
-                          fontSize: 12,
-                          lineHeight: '16px',
+                          fontSize: '0.75rem',
+                          lineHeight: '1rem',
                           color: '#595e78',
                         }}>
                           {msgDate.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -1484,22 +1484,22 @@ export default function NetworkingPage() {
                     <div style={{
                       maxWidth: '75%',
                       backgroundColor: isMine ? '#4a4bd7' : '#e4e7ff',
-                      borderRadius: 24,
-                      paddingLeft: 16,
-                      paddingRight: 16,
+                      borderRadius: '1.5rem',
+                      paddingLeft: '1rem',
+                      paddingRight: '1rem',
                       paddingTop: msg.images && msg.images.length > 0 ? 6 : 12,
                       paddingBottom: msg.images && msg.images.length > 0 ? 6 : 12,
                       boxShadow: '0px 1px 1px rgba(0,0,0,0.05)',
                     }}>
                       {msg.images && msg.images.length > 0 && (
-                        <div style={{ display: msg.images.length === 1 ? 'block' : 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4, marginBottom: msg.content ? 6 : 0 }}>
+                        <div style={{ display: msg.images.length === 1 ? 'block' : 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.25rem', marginBottom: msg.content ? 6 : 0 }}>
                           {msg.images.map((img, i) => (
                             <button
                               key={i}
                               onClick={() => setLightbox({ images: msg.images!, index: i })}
-                              style={{ display: 'block', overflow: 'hidden', borderRadius: 16, gridColumn: msg.images!.length % 2 !== 0 && i === msg.images!.length - 1 ? 'span 2' : undefined }}
+                              style={{ display: 'block', overflow: 'hidden', borderRadius: '1rem', gridColumn: msg.images!.length % 2 !== 0 && i === msg.images!.length - 1 ? 'span 2' : undefined }}
                             >
-                              <img src={img} alt="" style={{ width: '100%', objectFit: 'cover', maxHeight: msg.images!.length === 1 ? 256 : 128, borderRadius: 16 }} />
+                              <img src={img} alt="" style={{ width: '100%', objectFit: 'cover', maxHeight: msg.images!.length === 1 ? '16rem' : '8rem', borderRadius: '1rem' }} />
                             </button>
                           ))}
                         </div>
@@ -1508,8 +1508,8 @@ export default function NetworkingPage() {
                         <p style={{
                           fontFamily: 'var(--font-plus-jakarta)',
                           fontWeight: 400,
-                          fontSize: 14,
-                          lineHeight: '20px',
+                          fontSize: '0.875rem',
+                          lineHeight: '1.25rem',
                           color: isMine ? '#fbf7ff' : '#000000',
                           margin: 0,
                         }}>
@@ -1525,15 +1525,15 @@ export default function NetworkingPage() {
           </div>
 
           {/* Input bar */}
-          <div style={{ position: 'relative', zIndex: 2, padding: '8px 16px 16px', backgroundColor: '#fbf8ff' }}>
+          <div style={{ position: 'relative', zIndex: 2, padding: '0.5rem 1rem 1rem', backgroundColor: '#fbf8ff' }}>
             {chatImages.length > 0 && (
-              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 8, paddingBottom: 4 }} className="scrollbar-hide">
+              <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', marginBottom: '0.5rem', paddingBottom: '0.25rem' }} className="scrollbar-hide">
                 {chatImages.map((img, i) => (
                   <div key={i} style={{ position: 'relative', flexShrink: 0 }}>
-                    <img src={img} alt="" style={{ width: 64, height: 64, borderRadius: 12, objectFit: 'cover' }} />
+                    <img src={img} alt="" style={{ width: '4rem', height: '4rem', borderRadius: '0.75rem', objectFit: 'cover' }} />
                     <button
                       onClick={() => removeChatImage(i)}
-                      style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, backgroundColor: '#ef4444', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}
+                      style={{ position: 'absolute', top: -6, right: -6, width: '1.25rem', height: '1.25rem', backgroundColor: '#ef4444', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}
                     >
                       <CloseSm size={12} strokeWidth={3} />
                     </button>
@@ -1542,27 +1542,27 @@ export default function NetworkingPage() {
               </div>
             )}
             {selectedUser?.canMessage === false || !selectedUser?.name ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '12px 0', fontFamily: 'var(--font-plus-jakarta)', fontSize: 13, color: '#595e78', fontStyle: 'italic' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.75rem 0', fontFamily: 'var(--font-plus-jakarta)', fontSize: '0.8125rem', color: '#595e78', fontStyle: 'italic' }}>
                 {!selectedUser?.name ? 'Questo account è stato eliminato' : 'Questo utente non accetta messaggi'}
               </div>
             ) : (
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 8,
+                gap: '0.5rem',
                 backgroundColor: 'white',
                 border: '1px solid rgba(172,176,206,0.3)',
-                borderRadius: 24,
+                borderRadius: '1.5rem',
                 boxShadow: '0px 1px 1px rgba(0,0,0,0.05)',
-                paddingLeft: 17,
-                paddingRight: 5,
-                paddingTop: 5,
-                paddingBottom: 5,
+                paddingLeft: '1.0625rem',
+                paddingRight: '0.3125rem',
+                paddingTop: '0.3125rem',
+                paddingBottom: '0.3125rem',
               }}>
                 <button
                   onClick={() => chatFileInputRef.current?.click()}
                   disabled={chatImages.length >= 5}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4, borderRadius: 9999, flexShrink: 0, opacity: chatImages.length >= 5 ? 0.4 : 1 }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.25rem', borderRadius: '624.9375rem', flexShrink: 0, opacity: chatImages.length >= 5 ? 0.4 : 1 }}
                 >
                   <Plus size={20} strokeWidth={2} color="#595e78" />
                 </button>
@@ -1587,13 +1587,13 @@ export default function NetworkingPage() {
                     backgroundColor: 'transparent',
                     fontFamily: 'var(--font-plus-jakarta)',
                     fontWeight: 400,
-                    fontSize: 14,
+                    fontSize: '0.875rem',
                     color: '#2c3149',
-                    padding: '9px 8px',
+                    padding: '0.5625rem 0.5rem',
                   }}
                 />
                 <button
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4, borderRadius: 9999, flexShrink: 0 }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.25rem', borderRadius: '624.9375rem', flexShrink: 0 }}
                 >
                   <Mic size={20} strokeWidth={1.5} color="#595e78" />
                 </button>
@@ -1601,9 +1601,9 @@ export default function NetworkingPage() {
                   onClick={sendMessage}
                   disabled={!newMessage.trim() && chatImages.length === 0}
                   style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 9999,
+                    width: '2.25rem',
+                    height: '2.25rem',
+                    borderRadius: '624.9375rem',
                     backgroundColor: '#4a4bd7',
                     display: 'flex',
                     alignItems: 'center',
@@ -1642,7 +1642,7 @@ export default function NetworkingPage() {
             xmlns="http://www.w3.org/2000/svg"
             style={{
               position: 'absolute',
-              top: 64,
+              top: '4rem',
               left: 0,
               width: '100%',
               height: 'auto',
@@ -1660,13 +1660,13 @@ export default function NetworkingPage() {
             style={{
               flex: 1,
               overflowY: 'auto',
-              paddingTop: 80,
-              paddingBottom: 100,
-              paddingLeft: 16,
-              paddingRight: 16,
+              paddingTop: '5rem',
+              paddingBottom: '6.25rem',
+              paddingLeft: '1rem',
+              paddingRight: '1rem',
               display: 'flex',
               flexDirection: 'column',
-              gap: 16,
+              gap: '1rem',
               position: 'relative',
               zIndex: 1,
             }}
@@ -1681,9 +1681,9 @@ export default function NetworkingPage() {
               return (
                 <div key={msg.id}>
                   {showTimestamp && (
-                    <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8, paddingBottom: 8 }}>
-                      <div style={{ backgroundColor: '#f3f2ff', borderRadius: 9999, paddingLeft: 12, paddingRight: 12, paddingTop: 4, paddingBottom: 4 }}>
-                        <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 500, fontSize: 12, lineHeight: '16px', color: '#595e78' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '0.5rem', paddingBottom: '0.5rem' }}>
+                      <div style={{ backgroundColor: '#f3f2ff', borderRadius: '624.9375rem', paddingLeft: '0.75rem', paddingRight: '0.75rem', paddingTop: '0.25rem', paddingBottom: '0.25rem' }}>
+                        <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 500, fontSize: '0.75rem', lineHeight: '1rem', color: '#595e78' }}>
                           {msgDate.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
                         </span>
                       </div>
@@ -1692,34 +1692,34 @@ export default function NetworkingPage() {
                   <div style={{ display: 'flex', justifyContent: isMine ? 'flex-end' : 'flex-start' }}>
                     <div style={{ maxWidth: '75%' }}>
                       {!isMine && (
-                        <p style={{ fontFamily: 'var(--font-plus-jakarta)', fontSize: 10, color: '#4a4bd7', marginBottom: 2, marginLeft: 4 }}>
+                        <p style={{ fontFamily: 'var(--font-plus-jakarta)', fontSize: '0.625rem', color: '#4a4bd7', marginBottom: '0.125rem', marginLeft: '0.25rem' }}>
                           {msg.sender?.name || 'Utente eliminato'}
                         </p>
                       )}
                       <div style={{
                         backgroundColor: isMine ? '#4a4bd7' : '#e4e7ff',
-                        borderRadius: 24,
-                        paddingLeft: 16,
-                        paddingRight: 16,
+                        borderRadius: '1.5rem',
+                        paddingLeft: '1rem',
+                        paddingRight: '1rem',
                         paddingTop: msg.images && msg.images.length > 0 ? 6 : 12,
                         paddingBottom: msg.images && msg.images.length > 0 ? 6 : 12,
                         boxShadow: '0px 1px 1px rgba(0,0,0,0.05)',
                       }}>
                         {msg.images && msg.images.length > 0 && (
-                          <div style={{ display: msg.images.length === 1 ? 'block' : 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4, marginBottom: msg.content ? 6 : 0 }}>
+                          <div style={{ display: msg.images.length === 1 ? 'block' : 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.25rem', marginBottom: msg.content ? 6 : 0 }}>
                             {msg.images.map((img, i) => (
                               <button
                                 key={i}
                                 onClick={() => setLightbox({ images: msg.images!, index: i })}
-                                style={{ display: 'block', overflow: 'hidden', borderRadius: 16, gridColumn: msg.images!.length % 2 !== 0 && i === msg.images!.length - 1 ? 'span 2' : undefined }}
+                                style={{ display: 'block', overflow: 'hidden', borderRadius: '1rem', gridColumn: msg.images!.length % 2 !== 0 && i === msg.images!.length - 1 ? 'span 2' : undefined }}
                               >
-                                <img src={img} alt="" style={{ width: '100%', objectFit: 'cover', maxHeight: msg.images!.length === 1 ? 256 : 128, borderRadius: 16 }} />
+                                <img src={img} alt="" style={{ width: '100%', objectFit: 'cover', maxHeight: msg.images!.length === 1 ? '16rem' : '8rem', borderRadius: '1rem' }} />
                               </button>
                             ))}
                           </div>
                         )}
                         {msg.content && (
-                          <p style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 400, fontSize: 14, lineHeight: '20px', color: isMine ? '#fbf7ff' : '#000000', margin: 0 }}>
+                          <p style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 400, fontSize: '0.875rem', lineHeight: '1.25rem', color: isMine ? '#fbf7ff' : '#000000', margin: 0 }}>
                             {msg.content}
                           </p>
                         )}
@@ -1733,15 +1733,15 @@ export default function NetworkingPage() {
           </div>
 
           {/* Input bar */}
-          <div style={{ position: 'relative', zIndex: 2, padding: '8px 16px 16px', backgroundColor: '#fbf8ff' }}>
+          <div style={{ position: 'relative', zIndex: 2, padding: '0.5rem 1rem 1rem', backgroundColor: '#fbf8ff' }}>
             {chatImages.length > 0 && (
-              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 8, paddingBottom: 4 }} className="scrollbar-hide">
+              <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', marginBottom: '0.5rem', paddingBottom: '0.25rem' }} className="scrollbar-hide">
                 {chatImages.map((img, i) => (
                   <div key={i} style={{ position: 'relative', flexShrink: 0 }}>
-                    <img src={img} alt="" style={{ width: 64, height: 64, borderRadius: 12, objectFit: 'cover' }} />
+                    <img src={img} alt="" style={{ width: '4rem', height: '4rem', borderRadius: '0.75rem', objectFit: 'cover' }} />
                     <button
                       onClick={() => removeChatImage(i)}
-                      style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, backgroundColor: '#ef4444', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}
+                      style={{ position: 'absolute', top: -6, right: -6, width: '1.25rem', height: '1.25rem', backgroundColor: '#ef4444', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}
                     >
                       <CloseSm size={12} strokeWidth={3} />
                     </button>
@@ -1752,20 +1752,20 @@ export default function NetworkingPage() {
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
+              gap: '0.5rem',
               backgroundColor: 'white',
               border: '1px solid rgba(172,176,206,0.3)',
-              borderRadius: 24,
+              borderRadius: '1.5rem',
               boxShadow: '0px 1px 1px rgba(0,0,0,0.05)',
-              paddingLeft: 17,
-              paddingRight: 5,
-              paddingTop: 5,
-              paddingBottom: 5,
+              paddingLeft: '1.0625rem',
+              paddingRight: '0.3125rem',
+              paddingTop: '0.3125rem',
+              paddingBottom: '0.3125rem',
             }}>
               <button
                 onClick={() => chatFileInputRef.current?.click()}
                 disabled={chatImages.length >= 5}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4, borderRadius: 9999, flexShrink: 0, opacity: chatImages.length >= 5 ? 0.4 : 1 }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.25rem', borderRadius: '624.9375rem', flexShrink: 0, opacity: chatImages.length >= 5 ? 0.4 : 1 }}
               >
                 <Plus size={20} strokeWidth={2} color="#595e78" />
               </button>
@@ -1790,13 +1790,13 @@ export default function NetworkingPage() {
                   backgroundColor: 'transparent',
                   fontFamily: 'var(--font-plus-jakarta)',
                   fontWeight: 400,
-                  fontSize: 14,
+                  fontSize: '0.875rem',
                   color: '#2c3149',
-                  padding: '9px 8px',
+                  padding: '0.5625rem 0.5rem',
                 }}
               />
               <button
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4, borderRadius: 9999, flexShrink: 0 }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.25rem', borderRadius: '624.9375rem', flexShrink: 0 }}
               >
                 <Mic size={20} strokeWidth={1.5} color="#595e78" />
               </button>
@@ -1804,9 +1804,9 @@ export default function NetworkingPage() {
                 onClick={sendGroupMessage}
                 disabled={!newMessage.trim() && chatImages.length === 0}
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 9999,
+                  width: '2.25rem',
+                  height: '2.25rem',
+                  borderRadius: '624.9375rem',
                   backgroundColor: '#4a4bd7',
                   display: 'flex',
                   alignItems: 'center',
@@ -1879,7 +1879,7 @@ export default function NetworkingPage() {
                             <button className="flex-1 min-w-0 text-left" onClick={() => router.push(`/profile/${u.id}`)}>
                               <p className="text-white font-medium text-sm truncate">{u.name}</p>
                               <p className="text-gray-400 text-xs truncate">{u.university?.name}{u.courseOfStudy && ` · ${u.courseOfStudy}`}</p>
-                              {u.profile?.clusterTag && <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300">{u.profile.clusterTag}</span>}
+                              {u.profile?.clusterTag && <span className="inline-block mt-1 text-[0.625rem] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300">{u.profile.clusterTag}</span>}
                             </button>
                             {cs?.status === 'ACCEPTED' ? (
                               <span className="text-xs text-green-400 border border-green-400/30 px-3 py-1 rounded-full flex items-center gap-1 shrink-0"><Check size={12} strokeWidth={2.5} />{t.userProfile.connected}</span>
@@ -1942,7 +1942,7 @@ export default function NetworkingPage() {
                             })()}
                             <div>
                               <p className={`font-medium text-sm ${!post.author?.name ? 'text-[#64748B] italic' : 'text-text-primary'}`}>{post.author?.name || 'Utente eliminato'}</p>
-                              {post.author?.name && <p className="text-[10px] text-text-muted">{post.author.university?.name}{post.author.courseOfStudy && ` · ${post.author.courseOfStudy}`}</p>}
+                              {post.author?.name && <p className="text-[0.625rem] text-text-muted">{post.author.university?.name}{post.author.courseOfStudy && ` · ${post.author.courseOfStudy}`}</p>}
                             </div>
                           </button>
                           {post.author?.id && post.author.id !== user?.id && (() => {
@@ -1960,7 +1960,7 @@ export default function NetworkingPage() {
                           <button onClick={() => openComments(post)} className="flex items-center gap-1.5 text-gray-400 hover:text-indigo-400 transition-colors">
                             <Chat size={20} /><span className="text-sm">{post._count.comments}</span>
                           </button>
-                          <span className="text-[10px] ml-auto">{new Date(post.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</span>
+                          <span className="text-[0.625rem] ml-auto">{new Date(post.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</span>
                         </div>
                       </div>
                     ))}
@@ -1982,7 +1982,7 @@ export default function NetworkingPage() {
                             <p className="text-white font-medium text-sm truncate">{u.name}</p>
                             <p className="text-gray-400 text-xs truncate">{u.university?.name}{u.courseOfStudy && ` · ${u.courseOfStudy}`}</p>
                             {u.profile?.clusterTag && (
-                              <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300">{u.profile.clusterTag}</span>
+                              <span className="inline-block mt-1 text-[0.625rem] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300">{u.profile.clusterTag}</span>
                             )}
                           </button>
                           {cs?.status === 'ACCEPTED' ? (
@@ -2030,7 +2030,7 @@ export default function NetworkingPage() {
               <div className="flex gap-2 overflow-x-auto mb-3 pb-1 scrollbar-hide">
                 {postImages.map((img, i) => (
                   <div key={i} className="relative shrink-0">
-                    <img src={img} alt="" className="w-[72px] h-[72px] rounded-xl object-cover" />
+                    <img src={img} alt="" className="w-[4.5rem] h-[4.5rem] rounded-xl object-cover" />
                     <button
                       onClick={() => removePostImage(i)}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white"
@@ -2110,11 +2110,11 @@ export default function NetworkingPage() {
                           {post.author?.name || 'Utente eliminato'}
                         </p>
                         {post.author?.id === user?.id && (
-                          <span className="text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full font-medium leading-none">Tu</span>
+                          <span className="text-[0.625rem] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full font-medium leading-none">Tu</span>
                         )}
                       </div>
                       {post.author?.name && (
-                        <p className="text-[10px] text-text-muted">
+                        <p className="text-[0.625rem] text-text-muted">
                           {post.author.university?.name} {post.author.courseOfStudy && `· ${post.author.courseOfStudy}`}
                         </p>
                       )}
@@ -2154,7 +2154,7 @@ export default function NetworkingPage() {
                           <MoreHorizontal size={16} />
                         </button>
                         {openPostMenu === post.id && (
-                          <div className="absolute right-0 top-full mt-1 bg-card border border-white/10 rounded-xl shadow-lg py-1 z-10 min-w-[140px]">
+                          <div className="absolute right-0 top-full mt-1 bg-card border border-white/10 rounded-xl shadow-lg py-1 z-10 min-w-[8.75rem]">
                             {post.author.id === user?.id ? (
                               <button
                                 onClick={() => { setDeleteConfirm({ type: 'post', postId: post.id }); setOpenPostMenu(null); }}
@@ -2177,7 +2177,7 @@ export default function NetworkingPage() {
                       </div>
                     )}
                     {post.author?.id && post.author.id !== user?.id && reportedItems.has(post.id) && (
-                      <span className="text-[10px] text-gray-500 italic">Segnalato</span>
+                      <span className="text-[0.625rem] text-gray-500 italic">Segnalato</span>
                     )}
                   </div>
                 </div>
@@ -2257,7 +2257,7 @@ export default function NetworkingPage() {
                     <Chat size={20} />
                     <span className="text-sm">{post._count.comments}</span>
                   </button>
-                  <span className="text-[10px] ml-auto">
+                  <span className="text-[0.625rem] ml-auto">
                     {new Date(post.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}
                   </span>
                 </div>
@@ -2404,7 +2404,7 @@ export default function NetworkingPage() {
                           </button>
                         )}
                         {reportedItems.has(c.id) && (
-                          <span className="text-[10px] text-gray-600 italic ml-auto">Segnalato</span>
+                          <span className="text-[0.625rem] text-gray-600 italic ml-auto">Segnalato</span>
                         )}
                       </div>
                       <p className="text-gray-300 text-sm mt-0.5 break-words">{c.content}</p>
@@ -2569,7 +2569,7 @@ export default function NetworkingPage() {
                 loadSuggestions();
               }
             }}
-            className="w-full bg-primary text-white py-4 rounded-2xl font-semibold text-[15px] active:opacity-90 transition-opacity"
+            className="w-full bg-primary text-white py-4 rounded-2xl font-semibold text-[0.9375rem] active:opacity-90 transition-opacity"
           >
             Mostra risultati
           </button>

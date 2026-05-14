@@ -14,10 +14,10 @@ export default function TopBar() {
         backdropFilter: 'blur(6px)',
         WebkitBackdropFilter: 'blur(6px)',
         borderBottom: '1px solid rgba(172,176,206,0.2)',
-        height: 64,
+        height: '4rem',
       }}
     >
-      <div className="max-w-lg mx-auto flex items-center justify-between h-full px-4 relative">
+      <div className="max-w-[30rem] mx-auto flex items-center justify-between h-full px-4 relative">
         {/* COhA composite logo — centered */}
         <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 5, pointerEvents: 'none' }}>
           <Link href="/home" aria-label="Vai alla home" style={{ pointerEvents: 'auto' }}>
@@ -64,7 +64,7 @@ export default function TopBar() {
         </div>
 
         {/* Spacer left */}
-        <div style={{ width: 36 }} />
+        <div style={{ width: '2.25rem' }} />
 
         {/* Bell icon right */}
         <Link href="/notifications" className="relative p-1 z-10" aria-label="Notifiche">
@@ -76,13 +76,13 @@ export default function TopBar() {
             <span
               className="absolute flex items-center justify-center text-white font-bold rounded-full border-2"
               style={{
-                width: 10,
-                height: 10,
+                width: '0.625rem',
+                height: '0.625rem',
                 fontSize: 0,
                 backgroundColor: '#a8364b',
                 borderColor: '#fbf8ff',
-                top: 6,
-                right: 5.98,
+                top: '0.375rem',
+                right: '0.37375rem',
               }}
             />
           )}

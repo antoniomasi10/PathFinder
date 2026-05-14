@@ -175,7 +175,7 @@ export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps
                 <select
                   value={region}
                   onChange={(e) => setRegion(e.target.value)}
-                  className="w-full px-4 py-3 rounded-[12px] border-2 border-[#acb0ce] text-[#2c3149] bg-white focus:outline-none focus:border-[#615fe2] transition-colors"
+                  className="w-full px-4 py-3 rounded-[0.75rem] border-2 border-[#acb0ce] text-[#2c3149] bg-white focus:outline-none focus:border-[#615fe2] transition-colors"
                   style={{ fontFamily: 'var(--font-plus-jakarta)' }}
                 >
                   <option value="">Seleziona una regione</option>
@@ -197,7 +197,7 @@ export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                   placeholder="Es. Milano"
-                  className="w-full px-4 py-3 rounded-[12px] border-2 border-[#acb0ce] text-[#2c3149] bg-white placeholder-[#acb0ce] focus:outline-none focus:border-[#615fe2] transition-colors"
+                  className="w-full px-4 py-3 rounded-[0.75rem] border-2 border-[#acb0ce] text-[#2c3149] bg-white placeholder-[#acb0ce] focus:outline-none focus:border-[#615fe2] transition-colors"
                   style={{ fontFamily: 'var(--font-plus-jakarta)' }}
                 />
               </div>
@@ -217,7 +217,7 @@ export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps
                 setCurrentStep((s) => s + 1);
               }}
               disabled={!canContinueRegionCity}
-              className="w-full py-3 rounded-[24px] font-semibold text-white text-base transition-all"
+              className="w-full py-3 rounded-[1.5rem] font-semibold text-white text-base transition-all"
               style={{
                 backgroundColor: canContinueRegionCity ? '#615fe2' : '#acb0ce',
                 fontFamily: 'var(--font-plus-jakarta)',
@@ -329,7 +329,7 @@ export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps
                           hidden: { opacity: 0, y: 16 },
                           visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.4, 0, 0.2, 1] as const } },
                         }}
-                        className="w-full rounded-[24px] px-[18px] py-[14px] border-2 transition-colors duration-200"
+                        className="w-full rounded-[1.5rem] px-[1.125rem] py-[0.875rem] border-2 transition-colors duration-200"
                         style={{
                           backgroundColor: isOtherSelected ? 'rgba(243,242,255,0.85)' : 'rgba(255,255,255,0.85)',
                           borderColor: isOtherSelected ? '#4a4bd7' : 'rgba(172,176,206,0.4)',
@@ -339,12 +339,12 @@ export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps
                       >
                         <button
                           onClick={() => isMultiSelect ? handleMultiToggle('__other__') : handleSelect('__other__')}
-                          className="flex items-center gap-[18px] w-full text-left"
+                          className="flex items-center gap-[1.125rem] w-full text-left"
                         >
                           <div
-                            className="flex-shrink-0 flex items-center justify-center rounded-[8px]"
+                            className="flex-shrink-0 flex items-center justify-center rounded-[0.5rem]"
                             style={{
-                              width: 28, height: 28,
+                              width: '1.75rem', height: '1.75rem',
                               backgroundColor: isOtherSelected ? '#615fe2' : 'white',
                               border: isOtherSelected ? 'none' : '2px solid rgba(172,176,206,0.6)',
                             }}

@@ -695,7 +695,7 @@ function Step5Result({
       <div className="text-center mb-6">
         <div
           className="w-32 h-32 rounded-full mx-auto mb-4 flex items-center justify-center"
-          style={{ border: `4px solid ${result.categoria.color}`, backgroundColor: `${result.categoria.color}15` }}
+          style={{ border: `0.25rem solid ${result.categoria.color}`, backgroundColor: `${result.categoria.color}15` }}
         >
           <span className="text-4xl font-bold" style={{ color: result.categoria.color }}>
             {result.probabilitaFinale}%

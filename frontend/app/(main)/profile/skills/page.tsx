@@ -206,35 +206,35 @@ function SkillAccordion({
         return (
           <div
             key={area.id}
-            className="bg-white border border-[#e1e1f2] rounded-[24px] overflow-hidden"
+            className="bg-white border border-[#e1e1f2] rounded-[1.5rem] overflow-hidden"
             style={{ boxShadow: '0px 1px 1px rgba(0,0,0,0.05)' }}
           >
             <button
-              className="w-full flex items-center justify-between p-[17px]"
+              className="w-full flex items-center justify-between p-[1.0625rem]"
               onClick={() => setExpandedArea(isExpanded ? null : area.id)}
             >
               <div className="flex items-center gap-2">
                 <div
                   className="rounded-full bg-[#f3f3fd] flex items-center justify-center flex-shrink-0"
-                  style={{ width: 34, height: 34 }}
+                  style={{ width: '2.125rem', height: '2.125rem' }}
                 >
                   <Icon className="w-5 h-5 text-[#615fe2]" />
                 </div>
                 <span
                   className="font-semibold text-[#191b27]"
-                  style={{ fontFamily: 'var(--font-plus-jakarta)', fontSize: 20, lineHeight: '30px' }}
+                  style={{ fontFamily: 'var(--font-plus-jakarta)', fontSize: '1.25rem', lineHeight: '1.875rem' }}
                 >
                   {area.label}
                 </span>
               </div>
               <ChevronDown
                 className={`text-[#595e78] transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
-                style={{ width: 12, height: 12 }}
+                style={{ width: '0.75rem', height: '0.75rem' }}
               />
             </button>
 
             <Expandable expanded={isExpanded}>
-              <div className="px-[17px] pb-[17px] border-t border-[#e1e1f2] pt-[17px]">
+              <div className="px-[1.0625rem] pb-[1.0625rem] border-t border-[#e1e1f2] pt-[1.0625rem]">
                 <div className="flex flex-wrap gap-2">
                   {area.skills.map((skill) => {
                     const isSelected = selectedIds.includes(skill.id);
@@ -253,12 +253,12 @@ function SkillAccordion({
                         }`}
                         style={{
                           fontFamily: 'var(--font-plus-jakarta)',
-                          fontSize: 14,
-                          lineHeight: '20px',
-                          paddingLeft: 13,
-                          paddingRight: 13,
-                          paddingTop: 7,
-                          paddingBottom: 7,
+                          fontSize: '0.875rem',
+                          lineHeight: '1.25rem',
+                          paddingLeft: '0.8125rem',
+                          paddingRight: '0.8125rem',
+                          paddingTop: '0.4375rem',
+                          paddingBottom: '0.4375rem',
                         }}
                       >
                         {skill.label}
@@ -399,7 +399,7 @@ export default function CoreSkillsPage() {
       <header
         className="sticky top-0 z-40 flex items-center justify-between px-4"
         style={{
-          height: 64,
+          height: '4rem',
           backgroundColor: 'rgba(255,255,255,0.92)',
           backdropFilter: 'blur(6px)',
           WebkitBackdropFilter: 'blur(6px)',
@@ -409,7 +409,7 @@ export default function CoreSkillsPage() {
         <button
           onClick={() => router.back()}
           className="flex items-center justify-center rounded-full hover:bg-[#e6e7f8] transition-colors"
-          style={{ width: 40, height: 40, flexShrink: 0 }}
+          style={{ width: '2.5rem', height: '2.5rem', flexShrink: 0 }}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M10 3L5 8L10 13" stroke="#595e78" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -459,22 +459,22 @@ export default function CoreSkillsPage() {
           </svg>
         </div>
 
-        <div style={{ width: 40, flexShrink: 0 }} />
+        <div style={{ width: '2.5rem', flexShrink: 0 }} />
       </header>
 
       {/* Scrollable content — pb accounts for confirm button (88px) + bottom nav (64px) */}
-      <div className="flex-1 overflow-y-auto" style={{ paddingBottom: 160 }}>
+      <div className="flex-1 overflow-y-auto" style={{ paddingBottom: '10rem' }}>
         <div className="px-6 pt-6 flex flex-col gap-8 max-w-lg mx-auto">
 
           {/* ── Header section ── */}
           <div className="flex flex-col gap-2">
             <h1
               className="font-bold text-[#191b27]"
-              style={{ fontSize: 32, lineHeight: '40px' }}
+              style={{ fontSize: '2rem', lineHeight: '2.5rem' }}
             >
               {t.skills.pageTitle}
             </h1>
-            <p className="text-[#464554]" style={{ fontSize: 14, lineHeight: '20px' }}>
+            <p className="text-[#464554]" style={{ fontSize: '0.875rem', lineHeight: '1.25rem' }}>
               {t.skills.pageSubtitle}
             </p>
           </div>
@@ -482,20 +482,20 @@ export default function CoreSkillsPage() {
           {/* ── Principali ── */}
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-[#191b27]" style={{ fontSize: 24, lineHeight: '32px' }}>
+              <h2 className="font-semibold text-[#191b27]" style={{ fontSize: '1.5rem', lineHeight: '2rem' }}>
                 {t.skills.coreSkills}
               </h2>
               <span
                 className="font-medium text-[#4844c8] rounded-full"
                 style={{
                   background: 'rgba(97,95,226,0.2)',
-                  fontSize: 12,
-                  lineHeight: '16px',
-                  letterSpacing: '0.5px',
-                  paddingLeft: 12,
-                  paddingRight: 12,
-                  paddingTop: 4,
-                  paddingBottom: 4,
+                  fontSize: '0.75rem',
+                  lineHeight: '1rem',
+                  letterSpacing: '0.03125rem',
+                  paddingLeft: '0.75rem',
+                  paddingRight: '0.75rem',
+                  paddingTop: '0.25rem',
+                  paddingBottom: '0.25rem',
                 }}
               >
                 {selectedCore.length}/3
@@ -509,13 +509,13 @@ export default function CoreSkillsPage() {
                   <div
                     key={skill.id}
                     className="flex items-center gap-1 bg-[#e6e7f8] border border-[#c7c4d6] rounded-full"
-                    style={{ paddingLeft: 17, paddingRight: 17, paddingTop: 9, paddingBottom: 9 }}
+                    style={{ paddingLeft: '1.0625rem', paddingRight: '1.0625rem', paddingTop: '0.5625rem', paddingBottom: '0.5625rem' }}
                   >
-                    <span className="text-[#191b27]" style={{ fontSize: 14, lineHeight: '20px' }}>
+                    <span className="text-[#191b27]" style={{ fontSize: '0.875rem', lineHeight: '1.25rem' }}>
                       {skill.label}
                     </span>
                     <button onClick={() => removeCore(skill.id)} className="ml-1 hover:opacity-70 transition-opacity">
-                      <X className="w-[10.5px] h-[10.5px] text-[#595e78]" />
+                      <X className="w-[0.65625rem] h-[0.65625rem] text-[#595e78]" />
                     </button>
                   </div>
                 ))}
@@ -535,7 +535,7 @@ export default function CoreSkillsPage() {
               <button
                 onClick={() => setCoreExpanded((v) => !v)}
                 className="text-[#615fe2] font-medium hover:underline text-left"
-                style={{ fontSize: 14 }}
+                style={{ fontSize: '0.875rem' }}
               >
                 {coreExpanded ? t.skills.closeSelection : t.skills.editCore}
               </button>
@@ -548,20 +548,20 @@ export default function CoreSkillsPage() {
           {/* ── Competenze secondarie ── */}
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-[#191b27]" style={{ fontSize: 24, lineHeight: '32px' }}>
+              <h2 className="font-semibold text-[#191b27]" style={{ fontSize: '1.5rem', lineHeight: '2rem' }}>
                 {t.skills.sideSkills}
               </h2>
               <span
                 className="font-medium text-[#4844c8] rounded-full"
                 style={{
                   background: 'rgba(97,95,226,0.2)',
-                  fontSize: 12,
-                  lineHeight: '16px',
-                  letterSpacing: '0.5px',
-                  paddingLeft: 12,
-                  paddingRight: 12,
-                  paddingTop: 4,
-                  paddingBottom: 4,
+                  fontSize: '0.75rem',
+                  lineHeight: '1rem',
+                  letterSpacing: '0.03125rem',
+                  paddingLeft: '0.75rem',
+                  paddingRight: '0.75rem',
+                  paddingTop: '0.25rem',
+                  paddingBottom: '0.25rem',
                 }}
               >
                 {selectedSide.length}/5
@@ -575,13 +575,13 @@ export default function CoreSkillsPage() {
                   <div
                     key={skill.id}
                     className="flex items-center gap-1 bg-[#e6e7f8] border border-[#c7c4d6] rounded-full"
-                    style={{ paddingLeft: 17, paddingRight: 17, paddingTop: 9, paddingBottom: 9 }}
+                    style={{ paddingLeft: '1.0625rem', paddingRight: '1.0625rem', paddingTop: '0.5625rem', paddingBottom: '0.5625rem' }}
                   >
-                    <span className="text-[#191b27]" style={{ fontSize: 14, lineHeight: '20px' }}>
+                    <span className="text-[#191b27]" style={{ fontSize: '0.875rem', lineHeight: '1.25rem' }}>
                       {skill.label}
                     </span>
                     <button onClick={() => removeSide(skill.id)} className="ml-1 hover:opacity-70 transition-opacity">
-                      <X className="w-[10.5px] h-[10.5px] text-[#595e78]" />
+                      <X className="w-[0.65625rem] h-[0.65625rem] text-[#595e78]" />
                     </button>
                   </div>
                 ))}
@@ -601,14 +601,14 @@ export default function CoreSkillsPage() {
       {/* Confirm button — positioned above bottom nav (64px) */}
       <div
         className="fixed left-0 right-0 z-30 bg-white border-t border-[#ecedff] px-6 py-4 max-w-lg mx-auto"
-        style={{ bottom: 64, boxShadow: '0px -4px 6px rgba(0,0,0,0.05)' }}
+        style={{ bottom: '4rem', boxShadow: '0px -4px 6px rgba(0,0,0,0.05)' }}
       >
         <button
           onClick={handleConfirm}
           disabled={selectedCore.length !== 3 || saving}
           className="w-full h-14 rounded-full flex items-center justify-center font-semibold text-white transition-all duration-300 active:scale-95 disabled:opacity-50"
           style={{
-            fontSize: 14,
+            fontSize: '0.875rem',
             background: selectedCore.length === 3 ? '#615fe2' : 'rgba(97,95,226,0.4)',
           }}
         >

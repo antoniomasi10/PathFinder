@@ -45,7 +45,7 @@ function InterestCard({
     <motion.button
       onClick={onClick}
       whileTap={{ scale: 0.95 }}
-      className="flex flex-col items-center justify-center gap-2.5 py-5 px-2 w-full rounded-[20px] border-2 transition-colors duration-200"
+      className="flex flex-col items-center justify-center gap-2.5 py-5 px-2 w-full rounded-[1.25rem] border-2 transition-colors duration-200"
       style={{
         backgroundColor: 'rgba(255,255,255,0.85)',
         borderColor: isSelected ? '#615fe2' : 'transparent',
@@ -56,15 +56,15 @@ function InterestCard({
       <div
         className="flex items-center justify-center rounded-full"
         style={{
-          width: 48,
-          height: 48,
+          width: '3rem',
+          height: '3rem',
           backgroundColor: isSelected ? '#615fe2' : '#e8e8f2',
         }}
       >
         <Icon size={22} color={isSelected ? 'white' : '#595e78'} strokeWidth={1.8} />
       </div>
       <span
-        className="text-[11px] text-center leading-tight"
+        className="text-[0.6875rem] text-center leading-tight"
         style={{
           fontFamily: 'var(--font-plus-jakarta)',
           color: isSelected ? '#615fe2' : '#2c3149',
@@ -125,7 +125,7 @@ export default function InterestSelection({
           <button
             onClick={onBack}
             className="flex items-center justify-center rounded-full hover:bg-[#e6e7f8] transition-colors shrink-0"
-            style={{ width: 36, height: 36 }}
+            style={{ width: '2.25rem', height: '2.25rem' }}
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M13 4l-6 6 6 6" stroke="#595e78" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -147,7 +147,7 @@ export default function InterestSelection({
 
         {/* Title + subtitle */}
         <h1
-          className="text-[30px] font-bold text-[#2c3149] leading-tight mb-2"
+          className="text-[1.875rem] font-bold text-[#2c3149] leading-tight mb-2"
           style={{ fontFamily: 'var(--font-plus-jakarta)' }}
         >
           Cosa ti appassiona?
@@ -163,7 +163,7 @@ export default function InterestSelection({
         >
           <div
             className="flex items-center justify-center rounded-full bg-[#615fe2] shrink-0"
-            style={{ width: 16, height: 16 }}
+            style={{ width: '1rem', height: '1rem' }}
           >
             <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
               <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -200,7 +200,7 @@ export default function InterestSelection({
         <button
           onClick={handleContinue}
           disabled={selected.length === 0}
-          className="w-full flex items-center justify-center gap-2 py-4 rounded-[24px] font-bold text-white text-base disabled:opacity-40 transition-all"
+          className="w-full flex items-center justify-center gap-2 py-4 rounded-[1.5rem] font-bold text-white text-base disabled:opacity-40 transition-all"
           style={{
             fontFamily: 'var(--font-plus-jakarta)',
             backgroundColor: '#615fe2',

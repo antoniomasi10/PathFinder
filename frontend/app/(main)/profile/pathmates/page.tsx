@@ -81,7 +81,7 @@ export default function PathmatesPage() {
           backdropFilter: 'blur(6px)',
           WebkitBackdropFilter: 'blur(6px)',
           borderBottom: '1px solid rgba(172,176,206,0.2)',
-          height: 64,
+          height: '4rem',
         }}
       >
         <div className="max-w-lg mx-auto flex items-center justify-between h-full px-4 relative">
@@ -137,14 +137,14 @@ export default function PathmatesPage() {
             <ChevronLeft size={24} strokeWidth={2} color="#2c3149" />
           </button>
 
-          <div style={{ width: 36 }} />
+          <div style={{ width: '2.25rem' }} />
         </div>
       </header>
 
       {/* Main content */}
       <main className="flex-1 flex flex-col px-4 pb-24 pt-6">
         <h1
-          className="font-bold text-[28px] leading-[36px] mb-6"
+          className="font-bold text-[1.75rem] leading-[2.25rem] mb-6"
           style={{ color: '#191b27', fontFamily: 'var(--font-plus-jakarta)' }}
         >
           I tuoi Pathmates
@@ -153,7 +153,7 @@ export default function PathmatesPage() {
         {loading ? (
           <div className="space-y-3 animate-pulse">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl p-4 h-[72px] border border-[rgba(172,176,206,0.2)]" />
+              <div key={i} className="bg-white rounded-2xl p-4 h-[4.5rem] border border-[rgba(172,176,206,0.2)]" />
             ))}
           </div>
         ) : (

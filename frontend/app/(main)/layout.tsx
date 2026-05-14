@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 import TopBar from '@/components/TopBar';
+import AppFrame from '@/components/AppFrame';
 import { SavedOpportunitiesProvider } from '@/lib/savedOpportunities';
 import { SavedCoursesProvider } from '@/lib/savedCourses';
 import { ToastProvider } from '@/components/Toast';
@@ -102,14 +103,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <SavedOpportunitiesProvider>
         <SavedCoursesProvider>
         <SkillsPromptProvider>
-        <div className="min-h-screen" style={{ backgroundColor: '#fbf8ff' }}>
+        <AppFrame>
           {!isFullscreen && !hasCustomHeader && <TopBar />}
-          <main className={`${isFullscreen ? '' : 'pb-20'} max-w-lg mx-auto`}>
+          <main className={isFullscreen ? '' : 'pb-20'}>
             <ErrorBoundary FallbackComponent={ErrorFallback}>{children}</ErrorBoundary>
           </main>
           {!isFullscreen && <BottomNav />}
           {!isFullscreen && <PushPromptModal />}
-        </div>
+        </AppFrame>
         </SkillsPromptProvider>
         </SavedCoursesProvider>
       </SavedOpportunitiesProvider>

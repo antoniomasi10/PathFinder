@@ -47,7 +47,7 @@ export default function AvatarSelection({ onContinue, onBack }: Props) {
             <button
               onClick={onBack}
               className="flex items-center justify-center rounded-full hover:bg-[#e6e7f8] transition-colors shrink-0"
-              style={{ width: 36, height: 36 }}
+              style={{ width: '2.25rem', height: '2.25rem' }}
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <path d="M13 4l-6 6 6 6" stroke="#595e78" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -70,7 +70,7 @@ export default function AvatarSelection({ onContinue, onBack }: Props) {
 
         {/* Title */}
         <motion.h1
-          className="text-[30px] font-bold text-[#2c3149] leading-tight mb-2"
+          className="text-[1.875rem] font-bold text-[#2c3149] leading-tight mb-2"
           style={{ fontFamily: 'var(--font-plus-jakarta)' }}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -91,7 +91,7 @@ export default function AvatarSelection({ onContinue, onBack }: Props) {
         {/* Large circular preview */}
         <motion.div
           className="self-center mx-auto mb-8 relative"
-          style={{ width: 200, height: 200 }}
+          style={{ width: '12.5rem', height: '12.5rem' }}
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1, duration: 0.4 }}
@@ -99,7 +99,7 @@ export default function AvatarSelection({ onContinue, onBack }: Props) {
           <div
             className="w-full h-full rounded-full overflow-hidden"
             style={{
-              border: '3px solid #615fe2',
+              border: '0.1875rem solid #615fe2',
               backgroundColor: 'white',
               boxShadow: '0 8px 32px rgba(97,95,226,0.2)',
             }}
@@ -128,8 +128,8 @@ export default function AvatarSelection({ onContinue, onBack }: Props) {
           <motion.div
             className="absolute flex items-center justify-center rounded-full bg-[#615fe2]"
             style={{
-              width: 36, height: 36,
-              bottom: 4, right: 4,
+              width: '2.25rem', height: '2.25rem',
+              bottom: '0.25rem', right: '0.25rem',
               boxShadow: '0 4px 12px rgba(97,95,226,0.4)',
             }}
             initial={{ scale: 0 }}
@@ -153,8 +153,8 @@ export default function AvatarSelection({ onContinue, onBack }: Props) {
             className="grid justify-items-center"
             style={{
               gridTemplateColumns: 'repeat(4, 68px)',
-              columnGap: 12,
-              rowGap: 16,
+              columnGap: '0.75rem',
+              rowGap: '1rem',
               justifyContent: 'center',
             }}
           >
@@ -166,8 +166,8 @@ export default function AvatarSelection({ onContinue, onBack }: Props) {
                   onClick={() => handleAvatarSelect(av.id)}
                   className="relative rounded-full overflow-hidden"
                   style={{
-                    width: 68,
-                    height: 68,
+                    width: '4.25rem',
+                    height: '4.25rem',
                     backgroundColor: 'white',
                     border: isSelected ? '2.5px solid #615fe2' : '2.5px solid rgba(172,176,206,0.4)',
                     boxShadow: isSelected
@@ -203,7 +203,7 @@ export default function AvatarSelection({ onContinue, onBack }: Props) {
       >
         <motion.button
           onClick={handleContinue}
-          className="w-full flex items-center justify-center gap-2 py-4 rounded-[24px] font-bold text-white text-base"
+          className="w-full flex items-center justify-center gap-2 py-4 rounded-[1.5rem] font-bold text-white text-base"
           style={{
             fontFamily: 'var(--font-plus-jakarta)',
             backgroundColor: '#615fe2',
