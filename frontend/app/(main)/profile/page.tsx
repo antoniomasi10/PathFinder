@@ -1329,6 +1329,12 @@ export default function ProfilePage() {
           </button>
         </div>
         <div className="px-5 pb-8 pt-4 space-y-4 max-h-[75vh] overflow-y-auto no-scrollbar">
+          <a
+            href="/settings/notifications"
+            className="block bg-[rgba(97,95,226,0.06)] border border-[rgba(97,95,226,0.2)] rounded-2xl p-3 text-sm text-[#615fe2] font-medium hover:bg-[rgba(97,95,226,0.12)] transition-colors"
+          >
+            Apri impostazioni avanzate & diagnostica →
+          </a>
           {/* Master push toggle */}
           <div className="bg-white rounded-2xl p-4 border border-[rgba(172,176,206,0.3)]">
             <h4 className="text-xs font-semibold text-[#747995] uppercase tracking-wider mb-3">Notifiche push</h4>
