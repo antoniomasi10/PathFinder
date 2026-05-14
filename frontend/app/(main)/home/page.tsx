@@ -258,7 +258,7 @@ function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => 
         style={{ right: '0%', top: '-5%', width: '100%', height: 'auto', opacity: 0.65 }}
       />
 
-      <div className="relative z-10 p-[27px] flex flex-col">
+      <div className="relative z-10 p-4 sm:p-[27px] flex flex-col">
         {/* Label */}
         <div className="flex items-center gap-[8px] mb-[12px]">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)" stroke="none">
@@ -275,15 +275,15 @@ function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => 
         {/* Company + title */}
         <div className="flex items-center gap-[16px] mt-[8px]">
           <div
-            className="flex-shrink-0 flex items-center justify-center rounded-full bg-white"
-            style={{ width: 56, height: 56, boxShadow: '0px 4px 6px -1px rgba(0,0,0,0.1), 0px 2px 4px -2px rgba(0,0,0,0.1)' }}
+            className="flex-shrink-0 flex items-center justify-center rounded-full bg-white w-10 h-10 sm:w-14 sm:h-14"
+            style={{ boxShadow: '0px 4px 6px -1px rgba(0,0,0,0.1), 0px 2px 4px -2px rgba(0,0,0,0.1)' }}
           >
-            <span className="text-[18px] font-bold" style={{ color: '#4a4bd7' }}>
+            <span className="text-[16px] sm:text-[18px] font-bold" style={{ color: '#4a4bd7' }}>
               {opp.company.charAt(0).toUpperCase()}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[20px] font-bold leading-[28px] text-white" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
+            <p className="text-[20px] font-bold leading-[28px] text-white line-clamp-2" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
               {opp.title}
             </p>
             <p className="text-[16px] leading-[24px] truncate" style={{ color: 'rgba(255,255,255,0.9)', fontFamily: 'var(--font-plus-jakarta)' }}>
@@ -294,7 +294,7 @@ function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => 
 
         {/* Bottom row */}
         <div
-          className="grid items-center mt-[13px] pt-[13px]"
+          className="grid items-center mt-2 pt-2 sm:mt-[13px] sm:pt-[13px]"
           style={{ borderTop: '1px solid rgba(255,255,255,0.2)', gridTemplateColumns: '1fr 1fr 1fr' }}
         >
           <div>
@@ -914,8 +914,8 @@ const viewedRef = useRef<Set<string>>(new Set());
       {/* ── Scrollable content ────────────────────────────────────── */}
       <div className="flex flex-col gap-[10px] px-[16px] pt-[8px] pb-[24px]">
 
-        {/* 1. Opportunity of the Day */}
-        {!searchQuery && !typeFilter && (
+        {/* 1. Opportunity of the Day — only on page 1 */}
+        {!searchQuery && !typeFilter && perTePage === 1 && (
           loadingOpps && !opportunities.length ? (
             <div className="rounded-[24px] animate-pulse" style={{ height: 220, backgroundColor: '#dddeff' }} />
           ) : topOpportunity ? (

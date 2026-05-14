@@ -21,6 +21,8 @@ export interface InterestEntry {
 }
 
 export interface ProfileData {
+  region: string;
+  city: string;
   answers: {
     yearOfStudy: string;
     gpa: string;
@@ -190,6 +192,31 @@ export const QUESTIONS: Question[] = [
 
 export const TOTAL_STEPS = QUESTIONS.length;
 
+// ---------- Regions ----------
+
+export const ITALIAN_REGIONS: string[] = [
+  'Abruzzo',
+  'Basilicata',
+  'Calabria',
+  'Campania',
+  'Emilia-Romagna',
+  'Friuli-Venezia Giulia',
+  'Lazio',
+  'Liguria',
+  'Lombardia',
+  'Marche',
+  'Molise',
+  'Piemonte',
+  'Puglia',
+  'Sardegna',
+  'Sicilia',
+  'Toscana',
+  'Trentino-Alto Adige',
+  'Umbria',
+  'Valle d\'Aosta',
+  'Veneto',
+];
+
 // ---------- Language weights ----------
 
 const LANGUAGE_WEIGHTS: Record<string, number> = {
@@ -357,12 +384,16 @@ export function buildProfileData(
   multiAnswers: Record<number, string[]>,
   otherTexts: Record<number, string>,
   interests: InterestEntry[] = [],
+  region: string = '',
+  city: string = '',
 ): ProfileData {
   const cluster = computeCluster(answers, multiAnswers, otherTexts);
   const rawLanguages = multiAnswers[4] || [];
   const languageEntries = buildLanguageEntries(multiAnswers, otherTexts);
 
   return {
+    region,
+    city,
     answers: {
       yearOfStudy: answers[1] ?? '',
       gpa: answers[2] ?? '',

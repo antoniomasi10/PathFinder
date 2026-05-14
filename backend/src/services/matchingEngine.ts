@@ -1,7 +1,7 @@
 import { UserProfile, User, Opportunity, GpaRange, EnglishLevel, UserInteraction, OpportunityType, FieldOfStudy, Prisma } from '@prisma/client';
 import prisma from '../lib/prisma';
 import type { UserSkills, SkillEntry } from './skills.service';
-import { normalizeFieldToEnum } from './import/utils';
+import { normalizeFieldToEnum, isSeniorRole } from './import/utils';
 
 export interface OppFilters {
   search?: string;
@@ -243,7 +243,7 @@ function computeSkillMatchScore(
  */
 export function scoreOpportunity(
   profile: UserProfile,
-  user: Pick<User, 'gpa' | 'englishLevel' | 'willingToRelocate' | 'yearOfStudy' | 'courseOfStudy'>,
+  user: Pick<User, 'gpa' | 'englishLevel' | 'willingToRelocate' | 'yearOfStudy' | 'courseOfStudy' | 'region' | 'city' | 'regionLock' | 'cityLock'>,
   opportunity: Opportunity,
   skills?: UserSkills | null,
 ): number {
@@ -261,15 +261,20 @@ export function scoreOpportunity(
     // Fully misaligned type → no points
   }
 
-  // 2. Cluster tag → opportunity type
+  // 2. Cluster tag → Schwartz cluster scores on the opportunity (preferred)
+  //    Fallback to OpportunityType map for legacy opps not yet classified.
   const cluster = profile.clusterTag || 'Explorer';
-  const clusterTypes = CLUSTER_TYPE_MAP[cluster] ?? CLUSTER_TYPE_MAP.Explorer;
-  if (clusterTypes[0] === opportunity.type) {
-    score += p.cluster;
-  } else if (clusterTypes.includes(opportunity.type)) {
-    score += Math.round(p.cluster * 0.60);
+  const oppClusterScores = (opportunity as any).clusterScores as Record<string, number> | null | undefined;
+  if (oppClusterScores && typeof oppClusterScores === 'object' && oppClusterScores[cluster] !== undefined) {
+    const w = Math.max(0, Math.min(1, oppClusterScores[cluster] ?? 0));
+    score += Math.round(p.cluster * w);
   } else {
-    // Fully misaligned cluster → no points
+    const clusterTypes = CLUSTER_TYPE_MAP[cluster] ?? CLUSTER_TYPE_MAP.Explorer;
+    if (clusterTypes[0] === opportunity.type) {
+      score += p.cluster;
+    } else if (clusterTypes.includes(opportunity.type)) {
+      score += Math.round(p.cluster * 0.60);
+    }
   }
 
   // 3. GPA sufficient
@@ -294,27 +299,30 @@ export function scoreOpportunity(
     }
   }
 
-  // 5. Relocation willingness
+  // 5. Relocation willingness — uses structured country/region/city
   if (p.relocate > 0) {
-    // Treat as abroad if flagged OR if location string doesn't mention Italy
-    const ITALIAN_LOCATIONS = ['italia', 'italy', 'milan', 'milano', 'roma', 'rome', 'napoli', 'torino', 'firenze', 'bologna', 'venezia', 'genova', 'palermo', 'bari', 'catania'];
-    const locationSuggestsAbroad = opportunity.location
-      ? !ITALIAN_LOCATIONS.some((it) => opportunity.location!.toLowerCase().includes(it)) && opportunity.location.trim() !== ''
-      : false;
-    const effectivelyAbroad = opportunity.isAbroad || locationSuggestsAbroad;
+    const opp = opportunity as any;
+    const isRemote = opportunity.isRemote || opp.format === 'ONLINE';
+    const oppCountry: string | null = opp.country ?? null;
+    const oppRegion: string | null = opp.region ?? null;
+    const oppCity: string | null = opp.city ?? null;
+    const isItaly = oppCountry === 'IT' || (!oppCountry && !opportunity.isAbroad);
 
-    if (!effectivelyAbroad && !opportunity.location) {
+    if (isRemote) {
       score += p.relocate;
-    } else if (opportunity.isRemote || (opportunity as any).format === 'ONLINE') {
-      score += p.relocate;
-    } else if (!effectivelyAbroad) {
+    } else if (user.cityLock && user.city) {
+      score += oppCity && oppCity.toLowerCase() === user.city.toLowerCase() ? p.relocate : 0;
+    } else if (user.regionLock && user.region) {
+      score += oppRegion && oppRegion.toLowerCase() === user.region.toLowerCase() ? p.relocate : 0;
+    } else if (user.willingToRelocate === 'NO') {
+      score += isItaly ? p.relocate : 0;
+    } else if (isItaly) {
       score += p.relocate;
     } else if (user.willingToRelocate === 'YES') {
       score += p.relocate;
     } else if (user.willingToRelocate === 'MAYBE') {
       score += Math.round(p.relocate * 0.5);
     }
-    // willingToRelocate === 'NO' + effectivelyAbroad → 0 pts
   }
 
   // 6. Year of study accessibility
@@ -465,7 +473,7 @@ function computeFeedbackBoost(
  */
 export function scoreOpportunityWithFeedback(
   profile: UserProfile,
-  user: Pick<User, 'gpa' | 'englishLevel' | 'willingToRelocate' | 'yearOfStudy' | 'courseOfStudy'>,
+  user: Pick<User, 'gpa' | 'englishLevel' | 'willingToRelocate' | 'yearOfStudy' | 'courseOfStudy' | 'region' | 'city' | 'regionLock' | 'cityLock'>,
   opportunity: Opportunity,
   interactions: UserInteraction[],
   skills?: UserSkills | null,
@@ -499,6 +507,48 @@ export function sortOpportunitiesByFreshness<T extends { id: string }>(
     else b0.push(opp);
   }
   return [...b0, ...b1, ...b2];
+}
+
+// ─── Diversification (MMR) ──────────────────────────────────────────
+
+/**
+ * Re-ranks the top `windowSize` items so that adjacent items vary by type and cluster.
+ * Uses a Maximal Marginal Relevance scheme: each pick maximizes
+ *   lambda * normalizedScore + (1 - lambda) * diversityVsRecent
+ * Items past the window are appended unchanged.
+ *
+ * `recentMemory` controls how many of the most recent picks influence the diversity term.
+ */
+function diversifyMMR<T extends { type: string; clusterPrimary?: string | null; matchScore: number }>(
+  items: T[],
+  windowSize: number = 40,
+  lambda: number = 0.7,
+  recentMemory: number = 5,
+): T[] {
+  if (items.length <= 1) return items;
+  const window = items.slice(0, windowSize);
+  const rest = items.slice(windowSize);
+  const reranked: T[] = [];
+  const remaining = window.slice();
+  while (remaining.length > 0) {
+    let bestIdx = 0;
+    let bestVal = -Infinity;
+    const recent = reranked.slice(-recentMemory);
+    for (let i = 0; i < remaining.length; i++) {
+      const c = remaining[i];
+      let sameType = 0;
+      let sameCluster = 0;
+      for (const r of recent) {
+        if (r.type === c.type) sameType++;
+        if (r.clusterPrimary && r.clusterPrimary === c.clusterPrimary) sameCluster++;
+      }
+      const diversity = Math.max(0, 1 - (sameType * 0.3 + sameCluster * 0.15));
+      const mmr = lambda * (c.matchScore / 100) + (1 - lambda) * diversity;
+      if (mmr > bestVal) { bestVal = mmr; bestIdx = i; }
+    }
+    reranked.push(remaining.splice(bestIdx, 1)[0]);
+  }
+  return [...reranked, ...rest];
 }
 
 // ─── Hybrid Scoring (Phase 2: pgvector) ─────────────────────────────
@@ -553,18 +603,37 @@ export async function getHybridMatchedOpportunities(
 
   let candidates: any[];
 
-  // Hard filter: users who explicitly don't want to relocate never see in-person abroad opportunities
-  // Also filter out opportunities where location string suggests abroad (catches bad isAbroad flag)
-  const relocFilter = user.willingToRelocate === 'NO'
-    ? `AND (o."isAbroad" = false OR o."isRemote" = true)
-       AND (o."location" IS NULL OR o."location" = '' OR lower(o."location") ~ '(italia|italy|milan|milano|roma|rome|napoli|torino|firenze|bologna|venezia|genova|palermo|bari|catania|remote|online)')`
-    : '';
+  // Hard filter: structured location preference (city > region > country)
+  // Replaces fragile regex on location string. Remote opps always allowed.
+  let relocFilter = '';
+  if (user.cityLock && user.city) {
+    const safeCity = user.city.replace(/'/g, "''");
+    relocFilter = `AND (o."isRemote" = true OR lower(o."city") = lower('${safeCity}'))`;
+  } else if (user.regionLock && user.region) {
+    const safeRegion = user.region.replace(/'/g, "''");
+    relocFilter = `AND (o."isRemote" = true OR lower(o."region") = lower('${safeRegion}'))`;
+  } else if (user.willingToRelocate === 'NO') {
+    relocFilter = `AND (o."isRemote" = true OR o."country" = 'IT' OR (o."country" IS NULL AND o."isAbroad" = false))`;
+  }
 
-  // Hard filter: exclude opportunities outside user's field of study
+  // Hard filter: exclude opportunities outside user's field of study.
+  // When user.courseOfStudy doesn't match any known field (userField='ANY'),
+  // we still exclude opps that explicitly restrict eligibleFields — only fully open opps pass.
   const userField = user.courseOfStudy ? normalizeFieldToEnum(user.courseOfStudy) : 'ANY';
   const fieldFilter = userField !== 'ANY'
     ? `AND (o."eligibleFields" = '{}' OR 'ANY' = ANY(o."eligibleFields") OR '${userField}' = ANY(o."eligibleFields"))`
-    : '';
+    : `AND (o."eligibleFields" = '{}' OR 'ANY' = ANY(o."eligibleFields"))`;
+
+  // Hard filter: senior/experienced roles that leak under INTERNSHIP/STAGE tagging.
+  // We mirror isSeniorRole() semantics: senior pattern triggers exclusion UNLESS a safe
+  // pattern (intern/junior/trainee/...) is also present. The "years of experience" pattern
+  // is always disqualifying.
+  const seniorLeakFilter = `
+    AND NOT (
+      lower(o."title") ~ '(^|[^a-z])(senior|sr\\.?|director|head of|vp|vice president|lead|principal|staff|chief|cto|ceo|cmo|coo|cpo|manager|responsabile)([^a-z]|$)'
+      AND NOT lower(o."title") ~ '(^|[^a-z])(intern|interns|internship|internships|stage|tirocinio|stagista|trainee|junior|graduate program|werkstudent|apprenti|alternance|stagiaire|praktikant|borsista)([^a-z]|$)'
+    )
+    AND NOT lower(o."title") ~ '\\d+\\+? *(years?|anni?) +(of +)?(experience|esperienza)'`;
 
   if (userHasEmbedding) {
     // Stage 1: Candidate retrieval — all opportunities with vector similarity
@@ -574,7 +643,9 @@ export async function getHybridMatchedOpportunities(
               o."universityId", o."company", o."location", o."isRemote", o."isAbroad",
               o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
               o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
-              o."eligibleFields",
+              o."eligibleFields", o."country", o."city", o."region", o."format",
+              o."clusterScores", o."clusterPrimary", o."minYearOfStudy", o."maxYearOfStudy",
+              o."cost", o."hasScholarship",
               u."name" as "universityName", u."city" as "universityCity",
               u."id" as "uniId", u."logoUrl" as "universityLogoUrl",
               CASE WHEN o.embedding IS NOT NULL THEN 1 - (o.embedding <=> usr.embedding) ELSE 0 END AS "vectorSimilarity"
@@ -587,6 +658,7 @@ export async function getHybridMatchedOpportunities(
          AND (o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN')
          ${relocFilter}
          ${fieldFilter}
+         ${seniorLeakFilter}
        ORDER BY o."postedAt" DESC`,
       userId,
     );
@@ -598,7 +670,9 @@ export async function getHybridMatchedOpportunities(
               o."universityId", o."company", o."location", o."isRemote", o."isAbroad",
               o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
               o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
-              o."eligibleFields",
+              o."eligibleFields", o."country", o."city", o."region", o."format",
+              o."clusterScores", o."clusterPrimary", o."minYearOfStudy", o."maxYearOfStudy",
+              o."cost", o."hasScholarship",
               u."name" as "universityName", u."city" as "universityCity",
               u."id" as "uniId", u."logoUrl" as "universityLogoUrl"
        FROM "Opportunity" o
@@ -608,6 +682,7 @@ export async function getHybridMatchedOpportunities(
          AND (o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN')
          ${relocFilter}
          ${fieldFilter}
+         ${seniorLeakFilter}
        ORDER BY o."postedAt" DESC`,
     );
   }
@@ -669,17 +744,23 @@ export async function getHybridMatchedOpportunities(
       expiresAt: opp.expiresAt,
       source: opp.source,
       sourceId: opp.sourceId,
+      clusterPrimary: opp.clusterPrimary ?? null,
       matchScore: Math.max(0, Math.min(100, Math.round(hybridScore))),
       matchReason: getMatchReason(user.profile!, user, opp, userSkills),
     };
   });
 
-  scored.sort((a, b) => b.matchScore - a.matchScore);
+  // Sort by matchScore, tie-break on id for deterministic pagination across requests.
+  scored.sort((a, b) => b.matchScore - a.matchScore || a.id.localeCompare(b.id));
+
+  // MMR diversification on the top 40 — mix types/clusters at the head of the feed
+  // so the first pages aren't monoculture INTERNSHIP.
+  const diversified = diversifyMMR(scored, 40, 0.7, 5);
 
   // Derive view/click sets from the already-fetched interactions (90-day window)
   const viewedIds = new Set(interactions.filter((i) => i.action === 'view').map((i) => i.targetId));
   const clickedIds = new Set(interactions.filter((i) => i.action === 'click').map((i) => i.targetId));
-  const ranked = sortOpportunitiesByFreshness(scored, viewedIds, clickedIds);
+  const ranked = sortOpportunitiesByFreshness(diversified, viewedIds, clickedIds);
 
   const filtered = Object.keys(filters).length ? applyOppFilters(ranked, filters) : ranked;
   return {
@@ -762,11 +843,13 @@ export async function getNewOpportunities(
   }
 
   // Fetch opportunities (pre-filtered for efficiency)
-  const allOpps = await prisma.opportunity.findMany({
+  const allOppsRaw = await prisma.opportunity.findMany({
     where: Object.keys(where).length ? where : undefined,
     include: { university: true },
     orderBy: { postedAt: 'desc' },
   });
+  // Strip senior/experienced roles that leak under INTERNSHIP/STAGE tagging
+  const allOpps = allOppsRaw.filter((o) => !isSeniorRole(o.title));
 
   // Fetch opportunity IDs the user has saved/applied (novelty = 0)
   const seenInteractions = await prisma.userInteraction.findMany({
