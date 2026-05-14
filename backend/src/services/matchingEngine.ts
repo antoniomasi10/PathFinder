@@ -588,7 +588,7 @@ export async function getHybridMatchedOpportunities(
         limit, offset,
       ),
       prisma.opportunity.count({
-        where: { OR: [{ urlStatus: null }, { urlStatus: { not: 'BROKEN' } }] },
+        where: { OR: [{ urlStatus: null }, { urlStatus: { not: 'BROKEN' } }, { source: 'curated' }] },
       }),
     ]);
     return { data: opps, total };
@@ -654,8 +654,17 @@ export async function getHybridMatchedOpportunities(
        CROSS JOIN "User" usr
        WHERE usr.id = $1
          AND (o."expiresAt" IS NULL OR o."expiresAt" > NOW())
-         AND (o."deadline" IS NULL OR o."deadline" > NOW())
-         AND (o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN')
+         AND (
+           o."type" IN ('EVENT', 'CONFERENCE')
+           OR o."deadline" IS NULL
+           OR o."deadline" > NOW()
+         )
+         AND (
+           o."type" NOT IN ('EVENT', 'CONFERENCE')
+           OR o."endDate" IS NULL
+           OR o."endDate" >= CURRENT_DATE
+         )
+         AND (o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN' OR o."source" = 'curated')
          ${relocFilter}
          ${fieldFilter}
          ${seniorLeakFilter}
@@ -678,8 +687,17 @@ export async function getHybridMatchedOpportunities(
        FROM "Opportunity" o
        LEFT JOIN "University" u ON o."universityId" = u."id"
        WHERE (o."expiresAt" IS NULL OR o."expiresAt" > NOW())
-         AND (o."deadline" IS NULL OR o."deadline" > NOW())
-         AND (o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN')
+         AND (
+           o."type" IN ('EVENT', 'CONFERENCE')
+           OR o."deadline" IS NULL
+           OR o."deadline" > NOW()
+         )
+         AND (
+           o."type" NOT IN ('EVENT', 'CONFERENCE')
+           OR o."endDate" IS NULL
+           OR o."endDate" >= CURRENT_DATE
+         )
+         AND (o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN' OR o."source" = 'curated')
          ${relocFilter}
          ${fieldFilter}
          ${seniorLeakFilter}
@@ -802,11 +820,30 @@ export async function getNewOpportunities(
   if (filters.isAbroad !== undefined) where.isAbroad = filters.isAbroad;
   if (filters.englishLevels?.length) where.requiredEnglishLevel = { in: filters.englishLevels as any };
 
-  // Always exclude expired listings, past-deadline, and broken-URL opportunities
+  // Always exclude expired listings, past-deadline, and broken-URL opportunities.
+  // EVENT/CONFERENCE types use endDate (not deadline) — they don't have an application deadline.
+  // Curated rows are exempt from urlStatus=BROKEN (manually verified; urlChecker false-positives).
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const nowTs = new Date();
   where.AND = [
-    { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
-    { OR: [{ deadline: null }, { deadline: { gt: new Date() } }] },
-    { OR: [{ urlStatus: null }, { urlStatus: { not: 'BROKEN' } }] },
+    { OR: [{ expiresAt: null }, { expiresAt: { gt: nowTs } }] },
+    {
+      OR: [
+        {
+          AND: [
+            { type: { in: ['EVENT', 'CONFERENCE'] } },
+            { OR: [{ endDate: null }, { endDate: { gte: todayStart } }] },
+          ],
+        },
+        {
+          AND: [
+            { type: { notIn: ['EVENT', 'CONFERENCE'] } },
+            { OR: [{ deadline: null }, { deadline: { gt: nowTs } }] },
+          ],
+        },
+      ],
+    },
+    { OR: [{ urlStatus: null }, { urlStatus: { not: 'BROKEN' } }, { source: 'curated' }] },
   ];
 
   // Hard filter: users who explicitly don't want to relocate never see in-person abroad opportunities

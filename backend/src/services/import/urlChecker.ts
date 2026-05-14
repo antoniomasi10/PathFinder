@@ -53,9 +53,13 @@ export async function runUrlCheckBatch(limit = 200): Promise<{
 }> {
   const cutoff = new Date(Date.now() - RECHECK_INTERVAL_DAYS * 24 * 60 * 60 * 1000);
 
+  // Skip curated rows — those are manually verified and false-positives here
+  // (Cloudflare/anti-bot returning 403 to HEAD requests) have caused real opportunities
+  // to disappear from the feed. Curated source is trusted truth.
   const opps = await prisma.$queryRawUnsafe<{ id: string; url: string }[]>(
     `SELECT id, url FROM "Opportunity"
      WHERE url IS NOT NULL
+       AND source <> 'curated'
        AND (
          "urlStatus" IS NULL
          OR "urlStatus" = 'UNCHECKED'

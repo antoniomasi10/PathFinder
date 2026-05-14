@@ -69,8 +69,10 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     // Plain explore: build dynamic WHERE for raw SQL (avoids Unsupported vector column)
     const conditions: string[] = [
       `(o."expiresAt" IS NULL OR o."expiresAt" > NOW())`,
-      `(o."deadline" IS NULL OR o."deadline" > NOW())`,
-      `(o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN')`,
+      // For EVENT/CONFERENCE, deadline is meaningless — visibility is bounded by endDate.
+      `(o."type" IN ('EVENT', 'CONFERENCE') OR o."deadline" IS NULL OR o."deadline" > NOW())`,
+      `(o."type" NOT IN ('EVENT', 'CONFERENCE') OR o."endDate" IS NULL OR o."endDate" >= CURRENT_DATE)`,
+      `(o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN' OR o."source" = 'curated')`,
     ];
     const params: any[] = [limit, skip];
     let idx = 3;
