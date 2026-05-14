@@ -270,10 +270,10 @@ export default function UserProfilePage() {
         <div style={{ width: 80, height: 80, borderRadius: '50%', backgroundColor: '#EDE9FB', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
           <UserIcon size={40} color="#9B9BB0" strokeWidth={1.5} />
         </div>
-        <p style={{ color: '#1F1F2E', fontWeight: 600, fontSize: 18, marginBottom: 4 }}>Utente eliminato</p>
-        <p style={{ color: '#9B9BB0', fontSize: 14, marginBottom: 20 }}>Questo account è stato eliminato</p>
+        <p style={{ color: '#1F1F2E', fontWeight: 600, fontSize: 18, marginBottom: 4 }}>{t.profile.deletedUserTitle}</p>
+        <p style={{ color: '#9B9BB0', fontSize: 14, marginBottom: 20 }}>{t.profile.deletedUserSub}</p>
         <button onClick={() => router.back()} style={{ color: '#615FE2', fontSize: 14 }}>
-          Torna indietro
+          {t.profile.goBack}
         </button>
       </div>
     );
@@ -322,7 +322,7 @@ export default function UserProfilePage() {
           style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'white', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}
         >
           <ChevronLeft size={20} color="white" />
-          Indietro
+          {t.profile.back}
         </button>
 
         <div style={{ position: 'relative' }}>
@@ -347,7 +347,7 @@ export default function UserProfilePage() {
                   style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', fontSize: 14, color: '#6B6B80', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
                 >
                   <Share size={15} color="#9B9BB0" />
-                  Condividi profilo
+                  {t.profile.shareProfile}
                 </button>
                 {!reported && (
                   <button
@@ -355,12 +355,12 @@ export default function UserProfilePage() {
                     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', fontSize: 14, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
                   >
                     <Flag size={15} color="#EF4444" />
-                    Segnala utente
+                    {t.profile.reportUser}
                   </button>
                 )}
                 {reported && (
                   <span style={{ display: 'block', padding: '10px 16px', fontSize: 14, color: '#9B9BB0', fontStyle: 'italic' }}>
-                    Già segnalato
+                    {t.profile.alreadyReported}
                   </span>
                 )}
               </div>
@@ -377,7 +377,7 @@ export default function UserProfilePage() {
           borderRadius: 16, padding: '10px 20px', fontSize: 14, color: '#1F1F2E',
           boxShadow: '0 8px 24px rgba(97,95,226,0.15)',
         }}>
-          Link copiato negli appunti
+          {t.profile.linkCopied}
         </div>
       )}
 
@@ -468,7 +468,7 @@ export default function UserProfilePage() {
               }}
             >
               <ChatDots size={17} color="white" />
-              Invia messaggio
+              {t.userProfile.sendMessage}
             </button>
           )}
 
@@ -486,7 +486,7 @@ export default function UserProfilePage() {
               }}
             >
               <Check size={14} strokeWidth={2.5} color="#16A34A" />
-              Pathmate
+              {t.profile.pathmate}
             </button>
           ) : (
             profile.friendStatus === 'PENDING' && !profile.iAmRequester ? (
@@ -500,7 +500,7 @@ export default function UserProfilePage() {
                     border: 'none', cursor: 'pointer',
                   }}
                 >
-                  Accetta
+                  {t.profile.accept}
                 </button>
                 <button
                   onClick={handleRejectRequest}
@@ -511,7 +511,7 @@ export default function UserProfilePage() {
                     border: '1.5px solid #DDD8F7', cursor: 'pointer',
                   }}
                 >
-                  Rifiuta
+                  {t.profile.reject}
                 </button>
               </div>
             ) : profile.friendStatus === 'PENDING' ? (
@@ -520,7 +520,7 @@ export default function UserProfilePage() {
                 padding: '11px 22px', borderRadius: 24,
                 border: '1.5px solid #DDD8F7', backgroundColor: 'white',
               }}>
-                Richiesta inviata
+                {t.profile.requestSent}
               </span>
             ) : (
               <button
@@ -537,7 +537,7 @@ export default function UserProfilePage() {
                 }}
               >
                 <UserAdd size={17} color="white" />
-                Aggiungi ai Pathmates
+                {t.profile.addPathmate}
               </button>
             )
           )}
@@ -553,9 +553,9 @@ export default function UserProfilePage() {
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
               <Lock size={32} color="#C4BFEF" strokeWidth={1.5} />
             </div>
-            <p style={{ fontSize: 14, color: '#595e78', fontWeight: 500 }}>Questo profilo è privato</p>
+            <p style={{ fontSize: 14, color: '#595e78', fontWeight: 500 }}>{t.profile.privateProfile}</p>
             <p style={{ fontSize: 12, color: '#9B9BB0', marginTop: 4 }}>
-              Diventa pathmate per vedere il profilo completo
+              {t.profile.becomePathmate}
             </p>
           </div>
         )}
@@ -564,7 +564,7 @@ export default function UserProfilePage() {
         {profilePills && profilePills.length > 0 && (
           <div style={{ backgroundColor: 'white', borderRadius: 16, padding: 16, boxShadow: '0 2px 12px rgba(97,95,226,0.08)', border: '1px solid #EDE9FE' }}>
             <p style={{ fontSize: 11, fontWeight: 600, color: '#9B9BB0', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
-              {coreSkills && coreSkills.length > 0 ? 'Competenze' : 'Interessi'}
+              {coreSkills && coreSkills.length > 0 ? t.profile.skills : t.profile.interests}
             </p>
             <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2 }}>
               {profilePills.map((pill) => (
@@ -600,7 +600,7 @@ export default function UserProfilePage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
               <Bookmark size={15} color="#9B9BB0" />
               <p style={{ fontSize: 11, fontWeight: 600, color: '#9B9BB0', letterSpacing: '0.08em', textTransform: 'uppercase', flex: 1 }}>
-                Opportunità salvate
+                {t.profile.savedOpportunities}
               </p>
               <span style={{ fontSize: 12, fontWeight: 600, color: '#615fe2' }}>
                 {profile.savedOpportunities.length}
@@ -622,7 +622,7 @@ export default function UserProfilePage() {
               ))}
               {profile.savedOpportunities.length > 5 && (
                 <p style={{ fontSize: 12, color: '#9B9BB0', textAlign: 'center', paddingTop: 4 }}>
-                  +{profile.savedOpportunities.length - 5} altri
+                  {t.profile.moreItems.replace('{n}', String(profile.savedOpportunities.length - 5))}
                 </p>
               )}
             </div>
@@ -675,13 +675,13 @@ export default function UserProfilePage() {
                 ))}
                 {profile.pathmatesCount > profile.pathmates.length && (
                   <p style={{ fontSize: 12, color: '#9B9BB0', textAlign: 'center', paddingTop: 8, borderTop: '1px solid #F5F3FF', marginTop: 4 }}>
-                    +{profile.pathmatesCount - profile.pathmates.length} altri
+                    {t.profile.moreItems.replace('{n}', String(profile.pathmatesCount - profile.pathmates.length))}
                   </p>
                 )}
               </div>
             ) : (
               <p style={{ fontSize: 12, color: '#9B9BB0', textAlign: 'center', padding: '8px 0' }}>
-                Pathmates non visibili
+                {t.profile.pathmatesHidden}
               </p>
             )}
           </div>
@@ -702,10 +702,10 @@ export default function UserProfilePage() {
           >
             <div style={{ display: 'none' }} />
             <h3 style={{ fontWeight: 700, fontSize: 17, color: '#2c3149', margin: '0 0 6px' }}>
-              Rimuovi {profile.name} dai Pathmates?
+              {t.profile.removePathmateTitle.replace('{name}', profile.name)}
             </h3>
             <p style={{ fontSize: 14, color: '#9B9BB0', margin: '0 0 24px', lineHeight: '20px' }}>
-              Non potrete più vedere i profili privati e le opportunità salvate l'uno dell'altro.
+              {t.profile.removePathmateDesc}
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
               <button
@@ -716,7 +716,7 @@ export default function UserProfilePage() {
                   fontSize: 15, fontWeight: 500, background: 'white', cursor: 'pointer',
                 }}
               >
-                Annulla
+                {t.common.cancel}
               </button>
               <button
                 onClick={() => { setShowRemoveConfirm(false); handleRemovePathmate(); }}
@@ -726,7 +726,7 @@ export default function UserProfilePage() {
                   fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer',
                 }}
               >
-                Rimuovi
+                {t.profile.remove}
               </button>
             </div>
           </div>
@@ -754,19 +754,25 @@ export default function UserProfilePage() {
                 <div style={{ width: 52, height: 52, borderRadius: '50%', backgroundColor: 'rgba(34,197,94,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
                   <Check size={26} color="#16A34A" strokeWidth={2.5} />
                 </div>
-                <p style={{ fontWeight: 600, fontSize: 16, color: '#2c3149', marginBottom: 4 }}>Segnalazione inviata</p>
+                <p style={{ fontWeight: 600, fontSize: 16, color: '#2c3149', marginBottom: 4 }}>{t.profile.reportSent}</p>
                 <p style={{ fontSize: 14, color: '#9B9BB0' }}>
-                  Grazie per aver contribuito alla sicurezza della community.
+                  {t.profile.reportThanks}
                 </p>
               </div>
             ) : (
               <>
-                <h3 style={{ fontWeight: 700, fontSize: 18, color: '#2c3149', margin: '0 0 4px' }}>Segnala utente</h3>
+                <h3 style={{ fontWeight: 700, fontSize: 18, color: '#2c3149', margin: '0 0 4px' }}>{t.profile.reportTitle}</h3>
                 <p style={{ fontSize: 14, color: '#9B9BB0', marginBottom: 16 }}>
-                  Perché vuoi segnalare questo profilo?
+                  {t.profile.reportQuestion}
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
-                  {['Profilo falso', 'Spam', 'Contenuto inappropriato', 'Molestie o bullismo', 'Altro'].map((reason) => (
+                  {[
+                    t.profile.reportReasonFake,
+                    t.profile.reportReasonSpam,
+                    t.profile.reportReasonInappropriate,
+                    t.profile.reportReasonHarassment,
+                    t.profile.reportReasonOther,
+                  ].map((reason) => (
                     <button
                       key={reason}
                       onClick={() => setReportReason(reason)}
@@ -792,7 +798,7 @@ export default function UserProfilePage() {
                       fontSize: 14, fontWeight: 500, background: 'white', cursor: 'pointer',
                     }}
                   >
-                    Annulla
+                    {t.common.cancel}
                   </button>
                   <button
                     onClick={handleReport}
@@ -804,7 +810,7 @@ export default function UserProfilePage() {
                       opacity: (!reportReason || reportMutation.isPending) ? 0.45 : 1,
                     }}
                   >
-                    {reportMutation.isPending ? 'Invio...' : 'Segnala'}
+                    {reportMutation.isPending ? t.profile.sending : t.profile.report}
                   </button>
                 </div>
               </>

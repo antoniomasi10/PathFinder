@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { CloseLg as X, ChevronLeft, ChevronDown as ChevronDownIcon, ClockIcon as Clock, GraduationCap, Globe, Briefcase, Target, CircleCheck, CircleWarning, Check } from '@/components/icons';
 import { MockCourse } from '@/lib/mockCourses';
+import { useLanguage } from '@/lib/language';
 
 // ── Types ──
 
@@ -103,25 +104,25 @@ function calcolaProbabilita(input: SimulatorInput, course: MockCourse): Simulato
 
   // Categoria
   let categoria: { label: string; color: string };
-  if (prob >= 80) categoria = { label: 'Molto Alta', color: '#22C55E' };
-  else if (prob >= 60) categoria = { label: 'Alta', color: '#84CC16' };
-  else if (prob >= 35) categoria = { label: 'Moderata', color: '#F59E0B' };
-  else categoria = { label: 'Bassa', color: '#EF4444' };
+  if (prob >= 80) categoria = { label: 'catVeryHigh', color: '#22C55E' };
+  else if (prob >= 60) categoria = { label: 'catHigh', color: '#84CC16' };
+  else if (prob >= 35) categoria = { label: 'catModerate', color: '#F59E0B' };
+  else categoria = { label: 'catLow', color: '#EF4444' };
 
   // Suggerimenti
   const suggerimenti: string[] = [];
   const scores = [
-    { key: 'esperienza', val: esperienza, msg: 'Accumula esperienza pratica attraverso stage, tirocini o progetti personali nel settore' },
-    { key: 'lingue', val: lingue, msg: 'Migliora la tua certificazione linguistica per superare i requisiti minimi del corso' },
-    { key: 'accademico', val: accademico, msg: 'Concentrati sul migliorare il voto di laurea negli esami rimanenti' },
-    { key: 'coerenza', val: coerenza, msg: 'Considera corsi preparatori o certificazioni nel settore specifico del master' },
+    { key: 'esperienza', val: esperienza, msg: 'suggExperience' },
+    { key: 'lingue', val: lingue, msg: 'suggLanguage' },
+    { key: 'accademico', val: accademico, msg: 'suggAcademic' },
+    { key: 'coerenza', val: coerenza, msg: 'suggCoherence' },
   ];
   scores.sort((a, b) => a.val - b.val);
   for (const s of scores) {
     if (s.val < 75 && suggerimenti.length < 3) suggerimenti.push(s.msg);
   }
   if (suggerimenti.length === 0) {
-    suggerimenti.push('Ottimo profilo! Prepara una lettera motivazionale forte per distinguerti');
+    suggerimenti.push('suggPerfect');
   }
 
   return {
@@ -223,6 +224,7 @@ export default function AdmissionSimulator({ course, onClose }: Props) {
     setSaved(true);
   };
 
+  const { t } = useLanguage();
   const englishMeetsReq = input.livelloInglese
     ? (ENGLISH_ORDER[input.livelloInglese] || 0) >= (ENGLISH_ORDER[course.requiredEnglishLevel] || 0)
     : null;
@@ -254,7 +256,7 @@ export default function AdmissionSimulator({ course, onClose }: Props) {
               </button>
             )}
             <span className="text-white font-semibold text-base">
-              {step === 0 ? 'Simulatore ammissione' : step === 5 ? 'Risultato' : `Step ${step}/4`}
+              {step === 0 ? t.simulator.title : step === 5 ? t.simulator.result : t.simulator.stepOf.replace('{step}', String(step))}
             </span>
           </div>
           <button onClick={handleClose}>
@@ -296,7 +298,7 @@ export default function AdmissionSimulator({ course, onClose }: Props) {
                 color: canAdvance() ? 'white' : '#8B8FA8',
               }}
             >
-              {step === 4 ? 'Calcola probabilità' : 'Avanti'}
+              {step === 4 ? t.simulator.calcProb : t.simulator.next}
             </button>
           </div>
         )}
@@ -308,6 +310,7 @@ export default function AdmissionSimulator({ course, onClose }: Props) {
 // ── Step Components ──
 
 function StepIntro({ course, onStart }: { course: MockCourse; onStart: () => void }) {
+  const { t } = useLanguage();
   return (
     <div className="text-center py-6">
       <div
@@ -316,37 +319,38 @@ function StepIntro({ course, onStart }: { course: MockCourse; onStart: () => voi
       >
         <GraduationCap size={40} className="text-white" />
       </div>
-      <h2 className="text-xl font-bold text-white mb-2">Simula la tua ammissione</h2>
+      <h2 className="text-xl font-bold text-white mb-2">{t.simulator.introTitle}</h2>
       <p className="text-sm mb-1" style={{ color: '#D0D4DC' }}>
-        Rispondi a poche domande per calcolare la tua probabilità di essere ammesso a:
+        {t.simulator.introSub}
       </p>
       <p className="text-base font-semibold text-white mt-3">{course.title}</p>
       <p className="text-sm" style={{ color: '#8B8FA8' }}>{course.university}</p>
       <div className="flex items-center justify-center gap-2 mt-5" style={{ color: '#8B8FA8' }}>
         <Clock size={16} />
-        <span className="text-sm">Tempo stimato: 2 minuti</span>
+        <span className="text-sm">{t.simulator.introTime}</span>
       </div>
       <button
         onClick={onStart}
         className="w-full py-3 rounded-xl font-semibold mt-8 transition-colors"
         style={{ backgroundColor: '#4A9EFF', color: 'white' }}
       >
-        Inizia simulazione
+        {t.simulator.introStart}
       </button>
     </div>
   );
 }
 
 function Step1Academic({ input, setInput }: { input: SimulatorInput; setInput: (i: SimulatorInput) => void }) {
+  const { t } = useLanguage();
   return (
     <div>
       <div className="flex items-center gap-2 mb-5">
         <GraduationCap size={20} color="#4A9EFF" />
-        <h3 className="text-lg font-bold text-white">Dati accademici</h3>
+        <h3 className="text-lg font-bold text-white">{t.simulator.step1Title}</h3>
       </div>
 
       <label className="block text-sm font-medium mb-2" style={{ color: '#D0D4DC' }}>
-        Voto di laurea atteso/ottenuto
+        {t.simulator.gradeLabel}
       </label>
       <div className="mb-1">
         <input
@@ -365,18 +369,18 @@ function Step1Academic({ input, setInput }: { input: SimulatorInput; setInput: (
       </div>
       {input.votoDiLaurea < 90 && (
         <p className="text-xs mb-4 px-3 py-2 rounded-lg" style={{ backgroundColor: '#92400E20', color: '#F59E0B' }}>
-          Nota: alcuni corsi hanno requisiti minimi di voto
+          {t.simulator.gradeNote}
         </p>
       )}
 
       <label className="block text-sm font-medium mb-3" style={{ color: '#D0D4DC' }}>
-        Status di laurea
+        {t.simulator.statusLabel}
       </label>
       <div className="space-y-2">
         {([
-          { value: 'in_corso', label: 'Laureando in corso' },
-          { value: 'fuori_corso', label: 'Laureando fuori corso' },
-          { value: 'laureato', label: 'Già laureato' },
+          { value: 'in_corso', labelKey: 'statusInProgress' },
+          { value: 'fuori_corso', labelKey: 'statusOffTrack' },
+          { value: 'laureato', labelKey: 'statusGraduated' },
         ] as const).map((opt) => (
           <label
             key={opt.value}
@@ -402,7 +406,7 @@ function Step1Academic({ input, setInput }: { input: SimulatorInput; setInput: (
               onChange={() => setInput({ ...input, statusLaurea: opt.value })}
               className="sr-only"
             />
-            <span className="text-sm text-white">{opt.label}</span>
+            <span className="text-sm text-white">{(t.simulator as any)[opt.labelKey]}</span>
           </label>
         ))}
       </div>
@@ -413,15 +417,16 @@ function Step1Academic({ input, setInput }: { input: SimulatorInput; setInput: (
 function Step2Language({
   input, setInput, meetsReq, reqLevel,
 }: { input: SimulatorInput; setInput: (i: SimulatorInput) => void; meetsReq: boolean | null; reqLevel: string }) {
+  const { t } = useLanguage();
   return (
     <div>
       <div className="flex items-center gap-2 mb-5">
         <Globe size={20} color="#4A9EFF" />
-        <h3 className="text-lg font-bold text-white">Competenze linguistiche</h3>
+        <h3 className="text-lg font-bold text-white">{t.simulator.step2Title}</h3>
       </div>
 
       <label className="block text-sm font-medium mb-2" style={{ color: '#D0D4DC' }}>
-        Certificazione lingua inglese
+        {t.simulator.certLabel}
       </label>
       <div className="relative mb-4">
         <select
@@ -430,7 +435,7 @@ function Step2Language({
           className="w-full px-4 py-3 rounded-xl appearance-none focus:outline-none focus:ring-2 focus:ring-[#4A9EFF]"
           style={{ backgroundColor: '#1C2F43', border: '1px solid #2A3F54', color: input.livelloInglese ? 'white' : '#8B8FA8' }}
         >
-          <option value="">Seleziona livello</option>
+          <option value="">{t.simulator.selectLevel}</option>
           <option value="A2">A2 - Elementary</option>
           <option value="B1">B1 - Intermediate</option>
           <option value="B2">B2 - Upper Intermediate</option>
@@ -451,12 +456,10 @@ function Step2Language({
           <span className="mt-0.5">{meetsReq ? <CircleCheck size={20} color="#22C55E" /> : <CircleWarning size={20} color="#F59E0B" />}</span>
           <div>
             <p className="text-sm font-medium" style={{ color: meetsReq ? '#22C55E' : '#F59E0B' }}>
-              Requisito corso: {reqLevel}
+              {t.simulator.courseReq} {reqLevel}
             </p>
             <p className="text-xs mt-0.5" style={{ color: '#D0D4DC' }}>
-              {meetsReq
-                ? 'Il tuo livello soddisfa i requisiti minimi'
-                : 'Il tuo livello è sotto i requisiti minimi del corso'}
+              {meetsReq ? t.simulator.meetsReq : t.simulator.belowReq}
             </p>
           </div>
         </div>
@@ -468,6 +471,7 @@ function Step2Language({
 function Step3Experience({
   input, setInput, noExperience, setNoExperience,
 }: { input: SimulatorInput; setInput: (i: SimulatorInput) => void; noExperience: boolean; setNoExperience: (v: boolean) => void }) {
+  const { t } = useLanguage();
 
   const toggleNoExp = () => {
     if (!noExperience) {
@@ -480,10 +484,10 @@ function Step3Experience({
     <div>
       <div className="flex items-center gap-2 mb-5">
         <Briefcase size={20} color="#4A9EFF" />
-        <h3 className="text-lg font-bold text-white">Esperienze rilevanti</h3>
+        <h3 className="text-lg font-bold text-white">{t.simulator.step3Title}</h3>
       </div>
       <p className="text-sm mb-4" style={{ color: '#8B8FA8' }}>
-        Seleziona le tue esperienze nel settore di questo corso
+        {t.simulator.step3Sub}
       </p>
 
       <div className="space-y-3">
@@ -492,22 +496,22 @@ function Step3Experience({
           checked={input.hasStage}
           disabled={noExperience}
           onChange={(v) => setInput({ ...input, hasStage: v, stageDurataMesi: v ? input.stageDurataMesi : 0 })}
-          label="Stage / tirocinio"
+          label={t.simulator.internship}
         >
           {input.hasStage && (
             <div className="mt-2 flex items-center gap-2">
-              <span className="text-xs" style={{ color: '#8B8FA8' }}>Durata:</span>
+              <span className="text-xs" style={{ color: '#8B8FA8' }}>{t.simulator.duration}</span>
               <input
                 type="number"
                 min={1}
                 max={36}
                 value={input.stageDurataMesi || ''}
                 onChange={(e) => setInput({ ...input, stageDurataMesi: Number(e.target.value) })}
-                placeholder="mesi"
+                placeholder={t.simulator.months}
                 className="w-20 px-3 py-1.5 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#4A9EFF]"
                 style={{ backgroundColor: '#0D1117', border: '1px solid #2A3F54' }}
               />
-              <span className="text-xs" style={{ color: '#8B8FA8' }}>mesi</span>
+              <span className="text-xs" style={{ color: '#8B8FA8' }}>{t.simulator.months}</span>
             </div>
           )}
         </ExpCheckbox>
@@ -517,7 +521,7 @@ function Step3Experience({
           checked={input.hasProgetti}
           disabled={noExperience}
           onChange={(v) => setInput({ ...input, hasProgetti: v })}
-          label="Progetti personali rilevanti"
+          label={t.simulator.personalProjects}
         />
 
         {/* Lavoro */}
@@ -525,22 +529,22 @@ function Step3Experience({
           checked={input.hasLavoro}
           disabled={noExperience}
           onChange={(v) => setInput({ ...input, hasLavoro: v, lavoroDurataMesi: v ? input.lavoroDurataMesi : 0 })}
-          label="Esperienza lavorativa"
+          label={t.simulator.workExp}
         >
           {input.hasLavoro && (
             <div className="mt-2 flex items-center gap-2">
-              <span className="text-xs" style={{ color: '#8B8FA8' }}>Durata:</span>
+              <span className="text-xs" style={{ color: '#8B8FA8' }}>{t.simulator.duration}</span>
               <input
                 type="number"
                 min={1}
                 max={60}
                 value={input.lavoroDurataMesi || ''}
                 onChange={(e) => setInput({ ...input, lavoroDurataMesi: Number(e.target.value) })}
-                placeholder="mesi"
+                placeholder={t.simulator.months}
                 className="w-20 px-3 py-1.5 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#4A9EFF]"
                 style={{ backgroundColor: '#0D1117', border: '1px solid #2A3F54' }}
               />
-              <span className="text-xs" style={{ color: '#8B8FA8' }}>mesi</span>
+              <span className="text-xs" style={{ color: '#8B8FA8' }}>{t.simulator.months}</span>
             </div>
           )}
         </ExpCheckbox>
@@ -553,7 +557,7 @@ function Step3Experience({
           checked={noExperience}
           disabled={false}
           onChange={toggleNoExp}
-          label="Nessuna esperienza pratica"
+          label={t.simulator.noExp}
         />
       </div>
     </div>
@@ -591,17 +595,18 @@ function ExpCheckbox({
 }
 
 function Step4Coherence({ input, setInput, course }: { input: SimulatorInput; setInput: (i: SimulatorInput) => void; course: MockCourse }) {
+  const { t } = useLanguage();
   const matchAuto = input.campoStudi ? (FIELD_MATCH[input.campoStudi]?.[course.sector] ?? 50) : null;
 
   return (
     <div>
       <div className="flex items-center gap-2 mb-5">
         <Target size={20} color="#4A9EFF" />
-        <h3 className="text-lg font-bold text-white">Allineamento del percorso</h3>
+        <h3 className="text-lg font-bold text-white">{t.simulator.step4Title}</h3>
       </div>
 
       <label className="block text-sm font-medium mb-2" style={{ color: '#D0D4DC' }}>
-        Il tuo campo di studi
+        {t.simulator.fieldLabel}
       </label>
       <div className="relative mb-5">
         <select
@@ -610,14 +615,14 @@ function Step4Coherence({ input, setInput, course }: { input: SimulatorInput; se
           className="w-full px-4 py-3 rounded-xl appearance-none focus:outline-none focus:ring-2 focus:ring-[#4A9EFF]"
           style={{ backgroundColor: '#1C2F43', border: '1px solid #2A3F54', color: input.campoStudi ? 'white' : '#8B8FA8' }}
         >
-          <option value="">Seleziona</option>
-          <option value="Informatica">Informatica</option>
-          <option value="Ingegneria">Ingegneria</option>
-          <option value="Matematica">Matematica / Statistica</option>
-          <option value="Fisica">Fisica</option>
-          <option value="Economia">Economia / Business</option>
-          <option value="Comunicazione">Comunicazione / Lingue</option>
-          <option value="Altro">Altro</option>
+          <option value="">{t.simulator.selectField}</option>
+          <option value="Informatica">{t.simulator.fieldCS}</option>
+          <option value="Ingegneria">{t.simulator.fieldEngineering}</option>
+          <option value="Matematica">{t.simulator.fieldMath}</option>
+          <option value="Fisica">{t.simulator.fieldPhysics}</option>
+          <option value="Economia">{t.simulator.fieldEconomics}</option>
+          <option value="Comunicazione">{t.simulator.fieldComm}</option>
+          <option value="Altro">{t.simulator.fieldOther}</option>
         </select>
         <ChevronDownIcon size={20} color="#8B8FA8" className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
       </div>
@@ -637,14 +642,14 @@ function Step4Coherence({ input, setInput, course }: { input: SimulatorInput; se
             {matchAuto}%
           </div>
           <div>
-            <p className="text-sm font-medium text-white">Match automatico</p>
+            <p className="text-sm font-medium text-white">{t.simulator.autoMatch}</p>
             <p className="text-xs" style={{ color: '#8B8FA8' }}>{input.campoStudi} → {course.sector}</p>
           </div>
         </div>
       )}
 
       <label className="block text-sm font-medium mb-2" style={{ color: '#D0D4DC' }}>
-        Quanto è allineato il tuo percorso con questo corso?
+        {t.simulator.alignLabel}
       </label>
       <input
         type="range"
@@ -655,17 +660,17 @@ function Step4Coherence({ input, setInput, course }: { input: SimulatorInput; se
         className="w-full accent-[#4A9EFF] mb-1"
       />
       <div className="flex justify-between">
-        <span className="text-xs" style={{ color: '#8B8FA8' }}>Poco allineato</span>
+        <span className="text-xs" style={{ color: '#8B8FA8' }}>{t.simulator.lessAligned}</span>
         <span className="text-sm font-bold text-white">{input.coerenzaPercorso}%</span>
-        <span className="text-xs" style={{ color: '#8B8FA8' }}>Molto allineato</span>
+        <span className="text-xs" style={{ color: '#8B8FA8' }}>{t.simulator.moreAligned}</span>
       </div>
 
       <div className="mt-5 p-3 rounded-xl" style={{ backgroundColor: '#1C2F43', border: '1px solid #2A3F54' }}>
-        <p className="text-xs font-medium mb-1" style={{ color: '#4A9EFF' }}>💡 Considera:</p>
+        <p className="text-xs font-medium mb-1" style={{ color: '#4A9EFF' }}>💡 {t.simulator.consider}</p>
         <ul className="text-xs space-y-0.5" style={{ color: '#D0D4DC' }}>
-          <li>• Materie già studiate nel tuo percorso</li>
-          <li>• Progetti e tesi attinenti</li>
-          <li>• Interessi e competenze personali</li>
+          <li>• {t.simulator.studiedSubjects}</li>
+          <li>• {t.simulator.thesis}</li>
+          <li>• {t.simulator.personalInterests}</li>
         </ul>
       </div>
     </div>
@@ -675,11 +680,13 @@ function Step4Coherence({ input, setInput, course }: { input: SimulatorInput; se
 function Step5Result({
   result, course, saved, onSave, onClose,
 }: { result: SimulatorResult; course: MockCourse; saved: boolean; onSave: () => void; onClose: () => void }) {
+  const { t } = useLanguage();
+  const simT = t.simulator as Record<string, string>;
   const bars = [
-    { label: 'Preparazione accademica', value: result.dettaglio.accademico },
-    { label: 'Competenze linguistiche', value: result.dettaglio.lingue },
-    { label: 'Esperienza pratica', value: result.dettaglio.esperienza },
-    { label: 'Coerenza percorso', value: result.dettaglio.coerenza },
+    { label: t.simulator.barAcademic, value: result.dettaglio.accademico },
+    { label: t.simulator.barLanguage, value: result.dettaglio.lingue },
+    { label: t.simulator.barExperience, value: result.dettaglio.esperienza },
+    { label: t.simulator.barCoherence, value: result.dettaglio.coerenza },
   ];
 
   return (
@@ -695,14 +702,14 @@ function Step5Result({
           </span>
         </div>
         <p className="text-lg font-bold" style={{ color: result.categoria.color }}>
-          {result.categoria.label} probabilità
+          {simT[result.categoria.label] || result.categoria.label}{t.simulator.probLabel}
         </p>
-        <p className="text-sm" style={{ color: '#8B8FA8' }}>di ammissione</p>
+        <p className="text-sm" style={{ color: '#8B8FA8' }}>{t.simulator.admissionLabel}</p>
       </div>
 
       {/* Detail bars */}
       <div className="rounded-2xl p-4 mb-4" style={{ backgroundColor: '#1C2F43', border: '1px solid #2A3F54' }}>
-        <h4 className="text-sm font-bold text-white mb-3">Dettaglio punteggi</h4>
+        <h4 className="text-sm font-bold text-white mb-3">{t.simulator.scoresTitle}</h4>
         <div className="space-y-3">
           {bars.map((bar) => (
             <div key={bar.label}>
@@ -726,12 +733,12 @@ function Step5Result({
 
       {/* Suggestions */}
       <div className="rounded-2xl p-4 mb-4" style={{ backgroundColor: '#1C2F43', border: '1px solid #2A3F54' }}>
-        <h4 className="text-sm font-bold text-white mb-2">💡 Come migliorare</h4>
+        <h4 className="text-sm font-bold text-white mb-2">{t.simulator.improveTip}</h4>
         <ul className="space-y-2">
           {result.suggerimenti.map((s, i) => (
             <li key={i} className="flex gap-2">
               <span style={{ color: '#4A9EFF' }}>•</span>
-              <span className="text-xs" style={{ color: '#D0D4DC' }}>{s}</span>
+              <span className="text-xs" style={{ color: '#D0D4DC' }}>{simT[s] || s}</span>
             </li>
           ))}
         </ul>
@@ -739,7 +746,7 @@ function Step5Result({
 
       {/* Disclaimer */}
       <p className="text-center text-xs mb-5 px-2" style={{ color: '#8B8FA8' }}>
-        Questa è una stima basata su criteri generali. La decisione finale dipende dalla commissione universitaria.
+        {t.simulator.disclaimer}
       </p>
 
       {/* Actions */}
@@ -754,14 +761,14 @@ function Step5Result({
             border: saved ? '1px solid #22C55E50' : 'none',
           }}
         >
-          {saved ? '✓ Simulazione salvata' : 'Salva risultato'}
+          {saved ? t.simulator.savedResult : t.simulator.saveResult}
         </button>
         <button
           onClick={onClose}
           className="w-full py-3 rounded-xl font-medium transition-colors"
           style={{ border: '1px solid #2A3F54', color: '#D0D4DC' }}
         >
-          Chiudi
+          {t.simulator.close}
         </button>
       </div>
     </div>

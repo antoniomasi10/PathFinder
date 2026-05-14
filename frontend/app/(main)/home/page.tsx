@@ -241,6 +241,7 @@ function DualRangeSlider({ minVal, maxVal, onMinChange, onMaxChange }: {
 /* ── Opportunity of the Day ──────────────────────────────────────── */
 
 function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => void }) {
+  const { t } = useLanguage();
   return (
     <button
       onClick={onOpen}
@@ -298,7 +299,7 @@ function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => 
         >
           <div>
             <p className="text-[10px] font-medium lowercase" style={{ color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-plus-jakarta)' }}>
-              Affinità
+              {t.home.affinity}
             </p>
             <p className="text-[20px] font-bold text-white leading-[28px]" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
               {opp.matchScore}%
@@ -332,6 +333,7 @@ function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => 
 function OpportunityCard({ opp, isSaved, onSave, onOpen }: {
   opp: Opportunity; isSaved: boolean; onSave: () => void; onOpen: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <div
       className="bg-white overflow-hidden"
@@ -369,7 +371,7 @@ function OpportunityCard({ opp, isSaved, onSave, onOpen }: {
         <div className="grid items-center mt-[4px] pt-[5px]" style={{ borderTop: '1px solid #f3f2ff', gridTemplateColumns: '1fr 1fr 1fr' }}>
           <div>
             <p className="text-[11px] font-medium" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>
-              Affinità
+              {t.home.affinity}
             </p>
             <p className="text-[16px] font-bold leading-[28px]" style={{ color: '#4a4bd7', fontFamily: 'var(--font-plus-jakarta)' }}>
               {opp.matchScore}%
@@ -431,13 +433,14 @@ function SearchDropdown({ suggestions, query, activeIndex, onSelect, onHover }: 
 function SearchHistoryDropdown({ history, onSelect, onRemove, onClear }: {
   history: string[]; onSelect: (term: string) => void; onRemove: (term: string) => void; onClear: () => void;
 }) {
+  const { t } = useLanguage();
   if (!history.length) return null;
   return (
     <div className="absolute top-[calc(100%+6px)] left-0 right-0 rounded-[20px] overflow-hidden"
       style={{ backgroundColor: 'white', border: '1px solid #ecedff', boxShadow: '0 8px 24px rgba(74,75,215,0.12)', zIndex: 9999 }}>
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
-        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#acb0ce' }}>Recenti</span>
-        <button onMouseDown={(e) => e.preventDefault()} onClick={onClear} className="text-xs" style={{ color: '#acb0ce' }}>Cancella tutto</button>
+        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#acb0ce' }}>{t.home.recentSearches}</span>
+        <button onMouseDown={(e) => e.preventDefault()} onClick={onClear} className="text-xs" style={{ color: '#acb0ce' }}>{t.home.clearAll}</button>
       </div>
       {history.map((term) => (
         <div key={term} className="flex items-center gap-3 px-4 py-2.5" style={{ borderTop: '1px solid #f3f2ff' }}>
@@ -964,16 +967,17 @@ const viewedRef = useRef<Set<string>>(new Set());
         {/* 3. Category chips — full-width distributed */}
         <div className="flex justify-between">
           {([
-            { label: 'Tutti',        value: null },
-            { label: 'Internship',   value: 'INTERNSHIP' },
-            { label: 'Summer School', value: 'SUMMER_SCHOOL' },
-            { label: 'Progetti',     value: 'PROJECT' },
-            { label: 'Eventi',       value: 'EVENT' },
-          ] as { label: string; value: string | null }[]).map((chip) => {
+            { labelKey: 'filterAll',         value: null },
+            { labelKey: 'filterInternship',  value: 'INTERNSHIP' },
+            { labelKey: 'filterSummerSchool', value: 'SUMMER_SCHOOL' },
+            { labelKey: 'filterProjects',    value: 'PROJECT' },
+            { labelKey: 'filterEvents',      value: 'EVENT' },
+          ] as { labelKey: keyof typeof t.home; value: string | null }[]).map((chip) => {
+            const label = t.home[chip.labelKey] as string;
             const active = typeFilter === chip.value;
             return (
               <button
-                key={chip.label}
+                key={chip.labelKey}
                 onClick={() => setTypeFilter(chip.value)}
                 className="rounded-full font-medium text-[12px] px-[12px] transition-all"
                 style={{
@@ -985,7 +989,7 @@ const viewedRef = useRef<Set<string>>(new Set());
                   whiteSpace: 'nowrap',
                 }}
               >
-                {chip.label}
+                {label}
               </button>
             );
           })}
@@ -1018,8 +1022,8 @@ const viewedRef = useRef<Set<string>>(new Set());
           if (!expiring.length) return null;
           const nearest = expiring.reduce((a, b) => getDaysLeft(a.deadline!) <= getDaysLeft(b.deadline!) ? a : b);
           const days = getDaysLeft(nearest.deadline!);
-          const time = days <= 0 ? 'oggi' : days === 1 ? 'domani' : `tra ${days} giorni`;
-          const verb = expiring.length === 1 ? 'scade' : 'scadono';
+          const time = days <= 0 ? t.home.deadlineToday : days === 1 ? t.home.deadlineTomorrow : t.home.deadlineInDays.replace('{days}', String(days));
+          const verb = expiring.length === 1 ? t.home.oppExpireSingular : t.home.oppExpirePlural;
           return (
             <div className="flex items-center gap-1.5">
               <svg className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#f59e0b' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
