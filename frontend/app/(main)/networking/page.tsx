@@ -145,21 +145,18 @@ export default function NetworkingPage() {
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchTab, setSearchTab] = useState<'post' | 'profili'>('post');
-  const [searchPostResults, setSearchPostResults] = useState<Post[]>([]);
   const [searchProfileResults, setSearchProfileResults] = useState<{
     id: string; name: string; avatar?: string; courseOfStudy?: string; yearOfStudy?: number;
-    university?: { name: string }; profile?: { clusterTag?: string };
+    university?: { name: string; shortName?: string }; profile?: { clusterTag?: string };
   }[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [selectedClusterTag, setSelectedClusterTag] = useState<string | null>(null);
-  const [postSortBy, setPostSortBy] = useState<'recent' | 'likes'>('recent');
   const [profileYearFilter, setProfileYearFilter] = useState<number | null>(null);
   const [coreSkillArea, setCoreSkillArea] = useState<string | null>(null);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [suggestedProfiles, setSuggestedProfiles] = useState<{
     id: string; name: string; avatar?: string; courseOfStudy?: string; yearOfStudy?: number;
-    university?: { name: string }; profile?: { clusterTag?: string };
+    university?: { name: string; shortName?: string }; profile?: { clusterTag?: string };
   }[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
@@ -852,17 +849,12 @@ export default function NetworkingPage() {
   const runSearch = async (
     q: string,
     clusterTag: string | null,
-    sortBy: 'recent' | 'likes',
     yearOfStudy: number | null,
     skillArea: string | null,
   ) => {
     const hasQuery = q.trim().length > 0;
     const hasFilters = hasProfileFilters(clusterTag, yearOfStudy, skillArea);
-    if (!hasQuery && !hasFilters) {
-      setSearchPostResults([]);
-      setSearchProfileResults([]);
-      return;
-    }
+    if (!hasQuery && !hasFilters) { setSearchProfileResults([]); return; }
     setSearchLoading(true);
     try {
       const profileParams = new URLSearchParams();
@@ -870,22 +862,10 @@ export default function NetworkingPage() {
       if (clusterTag) profileParams.set('clusterTag', clusterTag);
       if (yearOfStudy) profileParams.set('yearOfStudy', String(yearOfStudy));
       if (skillArea) profileParams.set('coreSkillArea', skillArea);
-
-      const requests: Promise<any>[] = [];
-      if (hasQuery) requests.push(api.get(`/posts?q=${encodeURIComponent(q)}&sortBy=${sortBy}`));
-      else requests.push(Promise.resolve({ data: [] }));
-      requests.push(api.get(`/profile/search?${profileParams.toString()}`));
-
-      const [postsRes, profilesRes] = await Promise.all(requests);
-      setSearchPostResults(postsRes.data);
-      setSearchProfileResults(profilesRes.data);
-      const authorIds = [...new Set(postsRes.data.map((p: Post) => p.author.id).filter((id: string) => id !== user?.id))] as string[];
-      if (authorIds.length > 0) {
-        const { data: statuses } = await api.post('/friends/status/batch', { userIds: authorIds });
-        setConnectionStatuses(prev => ({ ...prev, ...statuses }));
-      }
+      const { data } = await api.get(`/profile/search?${profileParams.toString()}`);
+      setSearchProfileResults(data);
     } catch (err) {
-      // silent;
+      // silent
     } finally {
       setSearchLoading(false);
     }
@@ -895,9 +875,9 @@ export default function NetworkingPage() {
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     const hasQuery = searchQuery.trim().length > 0;
     const hasFilters = hasProfileFilters(selectedClusterTag, profileYearFilter, coreSkillArea);
-    if (!hasQuery && !hasFilters) { setSearchPostResults([]); setSearchProfileResults([]); return; }
+    if (!hasQuery && !hasFilters) { setSearchProfileResults([]); return; }
     searchDebounceRef.current = setTimeout(() => {
-      runSearch(searchQuery, selectedClusterTag, postSortBy, profileYearFilter, coreSkillArea);
+      runSearch(searchQuery, selectedClusterTag, profileYearFilter, coreSkillArea);
     }, 400);
     return () => { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); };
   }, [searchQuery]);
@@ -906,8 +886,8 @@ export default function NetworkingPage() {
     const hasQuery = searchQuery.trim().length > 0;
     const hasFilters = hasProfileFilters(selectedClusterTag, profileYearFilter, coreSkillArea);
     if (!hasQuery && !hasFilters) return;
-    runSearch(searchQuery, selectedClusterTag, postSortBy, profileYearFilter, coreSkillArea);
-  }, [selectedClusterTag, postSortBy, profileYearFilter, coreSkillArea]);
+    runSearch(searchQuery, selectedClusterTag, profileYearFilter, coreSkillArea);
+  }, [selectedClusterTag, profileYearFilter, coreSkillArea]);
 
   const togglePin = (convId: string) => {
     setPinnedIds((prev) => {
@@ -1839,7 +1819,7 @@ export default function NetworkingPage() {
             />
             {searchQuery && (
               <button
-                onClick={() => { setSearchQuery(''); setSelectedClusterTag(null); setProfileYearFilter(null); setCoreSkillArea(null); setPostSortBy('recent'); }}
+                onClick={() => { setSearchQuery(''); setSelectedClusterTag(null); setProfileYearFilter(null); setCoreSkillArea(null); }}
                 className="absolute right-10 top-1/2 -translate-y-1/2 text-gray-500 active:opacity-70 w-6 h-6 flex items-center justify-center"
               >
                 <CloseSm size={14} />
@@ -1849,171 +1829,68 @@ export default function NetworkingPage() {
               onClick={() => setShowFilterSheet(true)}
               className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg"
             >
-              <Filter size={20} strokeWidth={2} className={`transition-colors ${(selectedClusterTag || profileYearFilter || coreSkillArea || postSortBy !== 'recent' || searchTab !== 'post') ? 'text-primary' : 'text-gray-400'}`} />
-              {(selectedClusterTag || profileYearFilter || coreSkillArea || postSortBy !== 'recent' || searchTab !== 'post') && (
+              <Filter size={20} strokeWidth={2} className={`transition-colors ${(selectedClusterTag || profileYearFilter || coreSkillArea) ? 'text-primary' : 'text-gray-400'}`} />
+              {(selectedClusterTag || profileYearFilter || coreSkillArea) && (
                 <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary pointer-events-none" />
               )}
             </button>
           </div>
 
-          {/* Search mode: sub-tabs + results */}
-          {(searchQuery.trim() || hasProfileFilters(selectedClusterTag, profileYearFilter, coreSkillArea) || (searchTab === 'profili' && suggestedProfiles.length > 0)) && (
+          {/* Search results: profiles only */}
+          {(searchQuery.trim() || hasProfileFilters(selectedClusterTag, profileYearFilter, coreSkillArea)) && (
             <>
-              {/* Suggested profiles (no query, no filters, profili tab) */}
-              {searchTab === 'profili' && !searchQuery.trim() && !hasProfileFilters(selectedClusterTag, profileYearFilter, coreSkillArea) ? (
-                suggestionsLoading ? (
-                  <div className="flex justify-center py-8">
-                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-xs text-gray-500 font-medium">Profili suggeriti <span className="text-gray-600">({suggestedProfiles.length})</span></p>
-                    <div className="space-y-3">
-                      {suggestedProfiles.map((u) => {
-                        const cs = connectionStatuses[u.id];
-                        return (
-                          <div key={u.id} className="bg-[#1a1b2e] rounded-2xl p-4 flex items-center gap-3" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
-                            <button onClick={() => router.push(`/profile/${u.id}`)} className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 shrink-0 overflow-hidden">
-                              {u.avatar ? <img src={u.avatar} alt={u.name} className="w-full h-full object-cover" /> : <span className="text-white text-lg font-medium">{u.name[0]}</span>}
-                            </button>
-                            <button className="flex-1 min-w-0 text-left" onClick={() => router.push(`/profile/${u.id}`)}>
-                              <p className="text-white font-medium text-sm truncate">{u.name}</p>
-                              <p className="text-gray-400 text-xs truncate">{u.university?.name}{u.courseOfStudy && ` · ${u.courseOfStudy}`}</p>
-                              {u.profile?.clusterTag && <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300">{u.profile.clusterTag}</span>}
-                            </button>
-                            {cs?.status === 'ACCEPTED' ? (
-                              <span className="text-xs text-green-400 border border-green-400/30 px-3 py-1 rounded-full flex items-center gap-1 shrink-0"><Check size={12} strokeWidth={2.5} />{t.userProfile.connected}</span>
-                            ) : cs?.status === 'PENDING' ? (
-                              <span className="text-xs text-gray-500 border border-gray-600 px-3 py-1 rounded-full shrink-0">{t.userProfile.requestSent}</span>
-                            ) : (
-                              <button
-                                onClick={async () => {
-                                  await sendFriendRequest(u.id);
-                                  const { data: statuses } = await api.post('/friends/status/batch', { userIds: [u.id] });
-                                  setConnectionStatuses(prev => ({ ...prev, ...statuses }));
-                                }}
-                                className="text-xs text-primary border border-primary/30 px-3 py-1 rounded-full hover:bg-primary/10 transition-colors shrink-0"
-                              >
-                                {t.userProfile.connect}
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </>
-                )
-              ) : (
-              <>
-              {/* Results label */}
               <p className="text-xs text-gray-500 font-medium">
-                {searchTab === 'post' ? t.networking.searchPosts : t.networking.searchProfiles}
-                {!searchLoading && (
-                  <span className="ml-1.5 text-gray-600">
-                    ({searchTab === 'post' ? searchPostResults.length : searchProfileResults.length})
-                  </span>
-                )}
+                {t.networking.searchProfiles}
+                {!searchLoading && <span className="ml-1.5 text-gray-600">({searchProfileResults.length})</span>}
               </p>
-
               {searchLoading ? (
                 <div className="flex justify-center py-8">
                   <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 </div>
-              ) : searchTab === 'post' ? (
-                searchPostResults.length === 0 ? (
-                  <div className="text-center py-10 text-gray-500 text-sm">{t.networking.noPostsFound}</div>
-                ) : (
-                  <div className="space-y-4">
-                    {searchPostResults.map((post) => (
-                      <div key={post.id} id={`post-${post.id}`} className={`card${post.author?.id === user?.id ? ' border-l-2 border-l-primary/60' : ''}`}>
-                        <div className="flex items-center justify-between mb-3">
-                          <button
-                            className="flex items-center gap-3 text-left"
-                            onClick={() => post.author?.id && post.author.id !== user?.id && router.push(`/profile/${post.author.id}`)}
-                          >
-                            {(() => {
-                              const isDeleted = !post.author?.name;
-                              const avatar = isDeleted ? null : (post.author.id === user?.id ? (user?.avatar ?? post.author.avatar) : post.author.avatar);
-                              return (
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold overflow-hidden shrink-0 ${isDeleted ? 'bg-[#1E293B]' : 'bg-primary/20 text-primary'}`}>
-                                  {isDeleted ? <UserIcon size={20} color="#475569" strokeWidth={1.5} /> : avatar ? <img src={avatar} alt={post.author.name} className="w-full h-full object-cover" /> : post.author.name[0]}
-                                </div>
-                              );
-                            })()}
-                            <div>
-                              <p className={`font-medium text-sm ${!post.author?.name ? 'text-[#64748B] italic' : 'text-text-primary'}`}>{post.author?.name || 'Utente eliminato'}</p>
-                              {post.author?.name && <p className="text-[10px] text-text-muted">{post.author.university?.name}{post.author.courseOfStudy && ` · ${post.author.courseOfStudy}`}</p>}
-                            </div>
-                          </button>
-                          {post.author?.id && post.author.id !== user?.id && (() => {
-                            const cs = connectionStatuses[post.author.id];
-                            if (cs?.status === 'ACCEPTED') return <span className="text-xs text-green-400 border border-green-400/30 px-3 py-1 rounded-full flex items-center gap-1"><Check size={12} strokeWidth={2.5} />{t.userProfile.connected}</span>;
-                            if (cs?.status === 'PENDING') return null;
-                            return <button onClick={() => sendFriendRequest(post.author.id)} className="text-xs text-primary border border-primary/30 px-3 py-1 rounded-full hover:bg-primary/10 transition-colors">{t.userProfile.connect}</button>;
-                          })()}
-                        </div>
-                        {post.content && <p className="text-sm text-text-primary mb-3 whitespace-pre-wrap">{post.content}</p>}
-                        <div className="flex items-center gap-4 text-text-muted text-sm">
-                          <button onClick={() => toggleLike(post.id, !!post.liked)} className={`flex items-center gap-1.5 transition-colors ${post.liked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}>
-                            <Heart size={20} filled={!!post.liked} /><span className="text-sm">{post._count.likes}</span>
-                          </button>
-                          <button onClick={() => openComments(post)} className="flex items-center gap-1.5 text-gray-400 hover:text-indigo-400 transition-colors">
-                            <Chat size={20} /><span className="text-sm">{post._count.comments}</span>
-                          </button>
-                          <span className="text-[10px] ml-auto">{new Date(post.createdAt).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )
+              ) : searchProfileResults.length === 0 ? (
+                <div className="text-center py-10 text-gray-500 text-sm">{t.networking.noProfilesFound}</div>
               ) : (
-                searchProfileResults.length === 0 ? (
-                  <div className="text-center py-10 text-gray-500 text-sm">{t.networking.noProfilesFound}</div>
-                ) : (
-                  <div className="space-y-3">
-                    {searchProfileResults.map((u) => {
-                      const cs = connectionStatuses[u.id];
-                      return (
-                        <div key={u.id} className="bg-[#1a1b2e] rounded-2xl p-4 flex items-center gap-3" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
-                          <button onClick={() => router.push(`/profile/${u.id}`)} className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 shrink-0 overflow-hidden">
-                            {u.avatar ? <img src={u.avatar} alt={u.name} className="w-full h-full object-cover" /> : <span className="text-white text-lg font-medium">{u.name[0]}</span>}
-                          </button>
-                          <button className="flex-1 min-w-0 text-left" onClick={() => router.push(`/profile/${u.id}`)}>
-                            <p className="text-white font-medium text-sm truncate">{u.name}</p>
-                            <p className="text-gray-400 text-xs truncate">{u.university?.name}{u.courseOfStudy && ` · ${u.courseOfStudy}`}</p>
-                            {u.profile?.clusterTag && (
-                              <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300">{u.profile.clusterTag}</span>
-                            )}
-                          </button>
-                          {cs?.status === 'ACCEPTED' ? (
-                            <span className="text-xs text-green-400 border border-green-400/30 px-3 py-1 rounded-full flex items-center gap-1 shrink-0"><Check size={12} strokeWidth={2.5} />{t.userProfile.connected}</span>
-                          ) : cs?.status === 'PENDING' ? (
-                            <span className="text-xs text-gray-500 border border-gray-600 px-3 py-1 rounded-full shrink-0">{t.userProfile.requestSent}</span>
-                          ) : (
-                            <button
-                              onClick={async () => {
-                                await sendFriendRequest(u.id);
-                                const { data: statuses } = await api.post('/friends/status/batch', { userIds: [u.id] });
-                                setConnectionStatuses(prev => ({ ...prev, ...statuses }));
-                              }}
-                              className="text-xs text-primary border border-primary/30 px-3 py-1 rounded-full hover:bg-primary/10 transition-colors shrink-0"
-                            >
-                              {t.userProfile.connect}
-                            </button>
+                <div className="space-y-3">
+                  {searchProfileResults.map((u) => {
+                    const cs = connectionStatuses[u.id];
+                    return (
+                      <div key={u.id} className="bg-[#1a1b2e] rounded-2xl p-4 flex items-center gap-3" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
+                        <button onClick={() => router.push(`/profile/${u.id}`)} className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 shrink-0 overflow-hidden">
+                          {u.avatar ? <img src={u.avatar} alt={u.name} className="w-full h-full object-cover" /> : <span className="text-white text-lg font-medium">{u.name[0]}</span>}
+                        </button>
+                        <button className="flex-1 min-w-0 text-left" onClick={() => router.push(`/profile/${u.id}`)}>
+                          <p className="text-white font-medium text-sm truncate">{u.name}</p>
+                          <p className="text-gray-400 text-xs truncate">{u.university?.shortName || u.university?.name}{u.courseOfStudy && ` · ${u.courseOfStudy}`}</p>
+                          {u.profile?.clusterTag && (
+                            <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300">{u.profile.clusterTag}</span>
                           )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )
-              )}
-              </>
+                        </button>
+                        {cs?.status === 'ACCEPTED' ? (
+                          <span className="text-xs text-green-400 border border-green-400/30 px-3 py-1 rounded-full flex items-center gap-1 shrink-0"><Check size={12} strokeWidth={2.5} />{t.userProfile.connected}</span>
+                        ) : cs?.status === 'PENDING' ? (
+                          <span className="text-xs text-gray-500 border border-gray-600 px-3 py-1 rounded-full shrink-0">{t.userProfile.requestSent}</span>
+                        ) : (
+                          <button
+                            onClick={async () => {
+                              await sendFriendRequest(u.id);
+                              const { data: statuses } = await api.post('/friends/status/batch', { userIds: [u.id] });
+                              setConnectionStatuses(prev => ({ ...prev, ...statuses }));
+                            }}
+                            className="text-xs text-primary border border-primary/30 px-3 py-1 rounded-full hover:bg-primary/10 transition-colors shrink-0"
+                          >
+                            {t.userProfile.connect}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </>
           )}
 
           {/* Normal feed (hidden when searching) */}
-          {!searchQuery.trim() && !hasProfileFilters(selectedClusterTag, profileYearFilter, coreSkillArea) && !(searchTab === 'profili' && suggestedProfiles.length > 0) && (
+          {!searchQuery.trim() && !hasProfileFilters(selectedClusterTag, profileYearFilter, coreSkillArea) && (
           <>
           {/* New post input */}
           <div className="card">
@@ -2447,132 +2324,93 @@ export default function NetworkingPage() {
         <div className="fixed inset-0 z-[5]" onClick={() => setOpenPostMenu(null)} />
       )}
 
-      {/* Search Filter Sheet */}
+      {/* Search Filter Modal */}
       <div
-        className={`fixed inset-0 z-[60] bg-black/60 transition-opacity duration-300 ${showFilterSheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 z-[60] transition-opacity duration-300 ${showFilterSheet ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        style={{ backgroundColor: 'rgba(44,49,73,0.4)' }}
         onClick={() => setShowFilterSheet(false)}
       />
-      <div className={`fixed bottom-0 left-0 right-0 z-[60] max-w-lg mx-auto bg-[#161B22] rounded-t-3xl transition-transform duration-300 ease-out ${showFilterSheet ? 'translate-y-0' : 'translate-y-full'}`}>
-        <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 rounded-full bg-[#2D3748]" /></div>
-
-        <div className="flex items-center justify-between px-5 pt-3 pb-4">
-          <h2 className="text-white font-bold text-lg">Filtri</h2>
-          <button
-            onClick={() => { setSearchTab('post'); setSelectedClusterTag(null); setProfileYearFilter(null); setCoreSkillArea(null); setPostSortBy('recent'); }}
-            className="text-primary text-sm font-semibold active:opacity-70 transition-opacity"
-          >
-            Reset
-          </button>
-        </div>
-
-        <div className="px-5 pb-4 space-y-6 max-h-[60vh] overflow-y-auto no-scrollbar">
-
-          {/* Tipo di ricerca */}
-          <div>
-            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Tipo di ricerca</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => { setSearchTab('post'); setSelectedClusterTag(null); setProfileYearFilter(null); setCoreSkillArea(null); }}
-                className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 ${searchTab === 'post' ? 'bg-primary text-white' : 'bg-[#0D1117] text-gray-400'}`}
-              >
-                {t.networking.searchPosts}
-              </button>
-              <button
-                onClick={() => setSearchTab('profili')}
-                className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 ${searchTab === 'profili' ? 'bg-primary text-white' : 'bg-[#0D1117] text-gray-400'}`}
-              >
-                {t.networking.searchProfiles}
-              </button>
-            </div>
+      <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 pointer-events-none">
+        <div
+          className={`w-full max-w-lg rounded-3xl transition-all duration-300 ease-out ${showFilterSheet ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}
+          style={{ backgroundColor: 'white', boxShadow: '0 8px 40px rgba(74,75,215,0.15)' }}
+        >
+          <div className="flex items-center justify-between px-5 pt-5 pb-4">
+            <h2 className="font-bold text-lg" style={{ color: '#2c3149' }}>Filtri</h2>
+            <button
+              onClick={() => { setSelectedClusterTag(null); setProfileYearFilter(null); setCoreSkillArea(null); }}
+              className="text-sm font-semibold active:opacity-70 transition-opacity"
+              style={{ color: '#4a4bd7' }}
+            >
+              Reset
+            </button>
           </div>
 
-          <div className="h-px bg-[#1E293B]" />
+          <div className="px-5 pb-4 space-y-6 max-h-[68vh] overflow-y-auto no-scrollbar">
 
-          {/* Post filters */}
-          {searchTab === 'post' && (
             <div>
-              <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Ordina per</p>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#acb0ce' }}>Cluster</p>
               <div className="flex flex-wrap gap-2">
-                {[{ val: 'recent', label: 'Più recenti' }, { val: 'likes', label: 'Più apprezzati' }].map(({ val, label }) => (
+                {CLUSTER_TAGS.map((tag) => (
                   <button
-                    key={val}
-                    onClick={() => setPostSortBy(val as 'recent' | 'likes')}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 ${postSortBy === val ? 'bg-primary text-white' : 'bg-[#0D1117] text-gray-400'}`}
+                    key={tag}
+                    onClick={() => setSelectedClusterTag(selectedClusterTag === tag ? null : tag)}
+                    className="px-4 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 whitespace-nowrap"
+                    style={{ backgroundColor: selectedClusterTag === tag ? '#4a4bd7' : '#f0f1f8', color: selectedClusterTag === tag ? 'white' : '#595e78' }}
                   >
-                    {label}
+                    {tag}
                   </button>
                 ))}
               </div>
             </div>
-          )}
 
-          {/* Profile filters */}
-          {searchTab === 'profili' && (
-            <>
-              <div>
-                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Cluster</p>
-                <div className="flex flex-wrap gap-2">
-                  {CLUSTER_TAGS.map((tag) => (
-                    <button
-                      key={tag}
-                      onClick={() => setSelectedClusterTag(selectedClusterTag === tag ? null : tag)}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 ${selectedClusterTag === tag ? 'bg-primary text-white' : 'bg-[#0D1117] text-gray-400'}`}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
+            <div className="h-px" style={{ backgroundColor: '#f3f2ff' }} />
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#acb0ce' }}>Anno di studio</p>
+              <div className="flex flex-wrap gap-2">
+                {[1, 2, 3, 4, 5].map((yr) => (
+                  <button
+                    key={yr}
+                    onClick={() => setProfileYearFilter(profileYearFilter === yr ? null : yr)}
+                    className="px-4 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75"
+                    style={{ backgroundColor: profileYearFilter === yr ? '#4a4bd7' : '#f0f1f8', color: profileYearFilter === yr ? 'white' : '#595e78' }}
+                  >
+                    {yr}° anno
+                  </button>
+                ))}
               </div>
+            </div>
 
-              <div className="h-px bg-[#1E293B]" />
+            <div className="h-px" style={{ backgroundColor: '#f3f2ff' }} />
 
-              <div>
-                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Anno di studio</p>
-                <div className="flex flex-wrap gap-2">
-                  {[1, 2, 3, 4, 5].map((yr) => (
-                    <button
-                      key={yr}
-                      onClick={() => setProfileYearFilter(profileYearFilter === yr ? null : yr)}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 ${profileYearFilter === yr ? 'bg-primary text-white' : 'bg-[#0D1117] text-gray-400'}`}
-                    >
-                      {yr}° anno
-                    </button>
-                  ))}
-                </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#acb0ce' }}>Competenza core</p>
+              <div className="flex flex-wrap gap-2">
+                {MACRO_AREAS.map((area) => (
+                  <button
+                    key={area.id}
+                    onClick={() => setCoreSkillArea(coreSkillArea === area.id ? null : area.id)}
+                    className="px-4 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75"
+                    style={{ backgroundColor: coreSkillArea === area.id ? '#4a4bd7' : '#f0f1f8', color: coreSkillArea === area.id ? 'white' : '#595e78' }}
+                  >
+                    {area.label}
+                  </button>
+                ))}
               </div>
+            </div>
 
-              <div className="h-px bg-[#1E293B]" />
+          </div>
 
-              <div>
-                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Competenza core</p>
-                <div className="flex flex-wrap gap-2">
-                  {MACRO_AREAS.map((area) => (
-                    <button
-                      key={area.id}
-                      onClick={() => setCoreSkillArea(coreSkillArea === area.id ? null : area.id)}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all active:opacity-75 ${coreSkillArea === area.id ? 'bg-primary text-white' : 'bg-[#0D1117] text-gray-400'}`}
-                    >
-                      {area.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="px-5 pt-4 pb-8 border-t border-[#1E293B]">
-          <button
-            onClick={() => {
-              setShowFilterSheet(false);
-              if (searchTab === 'profili' && !searchQuery.trim() && !hasProfileFilters(selectedClusterTag, profileYearFilter, coreSkillArea)) {
-                loadSuggestions();
-              }
-            }}
-            className="w-full bg-primary text-white py-4 rounded-2xl font-semibold text-[15px] active:opacity-90 transition-opacity"
-          >
-            Mostra risultati
-          </button>
+          <div className="px-5 pt-4 pb-8" style={{ borderTop: '1px solid #f3f2ff' }}>
+            <button
+              onClick={() => setShowFilterSheet(false)}
+              className="w-full py-4 rounded-[20px] font-semibold text-[15px] text-white active:opacity-90 transition-opacity"
+              style={{ backgroundColor: '#4a4bd7' }}
+            >
+              Mostra risultati
+            </button>
+          </div>
         </div>
       </div>
 

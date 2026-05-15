@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from 'react';
 interface Option {
   value: string;
   label: string;
+  searchTerms?: string;
 }
 
 interface SearchableSelectProps {
@@ -51,7 +52,8 @@ export default function SearchableSelect({
   }, [value, options, isOpen]);
 
   const filtered = options.filter((o) =>
-    o.label.toLowerCase().includes(search.toLowerCase())
+    o.label.toLowerCase().includes(search.toLowerCase()) ||
+    (o.searchTerms && o.searchTerms.toLowerCase().includes(search.toLowerCase()))
   );
 
   // Close on outside click

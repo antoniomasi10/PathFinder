@@ -285,6 +285,7 @@ model Opportunity {
 model University {
   id            String        @id @default(uuid())
   name          String
+  shortName     String?
   city          String
   country       String        @default("Italia")
   logoUrl       String?

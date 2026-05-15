@@ -16,7 +16,7 @@ const transporter = smtpConfigured
   : null;
 
 const FROM_NAME = process.env.EMAIL_FROM_NAME || 'COhA';
-const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'noreply@coha.app';
+const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'info@cohaapp.com';
 
 function baseTemplate(title: string, body: string): string {
   return `
@@ -101,6 +101,78 @@ export async function sendPasswordResetEmail(to: string, name: string, code: str
     logger.info('Password reset email sent', { to });
   } catch (error) {
     logger.error('Failed to send password reset email', { to, error: String(error) });
+  }
+}
+
+export async function sendContactEmail(
+  userEmail: string,
+  userName: string,
+  subject: string,
+  message: string,
+): Promise<void> {
+  if (!transporter) return;
+
+  const html = baseTemplate('Nuovo messaggio da Contattaci', `
+    <h2 class="title">Nuovo messaggio di supporto</h2>
+    <p class="text"><strong style="color:#fff">Da:</strong> ${userName} &lt;${userEmail}&gt;</p>
+    <p class="text"><strong style="color:#fff">Oggetto:</strong> ${subject}</p>
+    <div style="background:#0F0F23;border-radius:12px;padding:20px;margin-bottom:24px;text-align:left;">
+      <p style="color:#D1D5DB;font-size:15px;line-height:1.6;margin:0;white-space:pre-wrap;">${message}</p>
+    </div>
+    <p class="warning">Rispondi direttamente a questa email per contattare l'utente.</p>
+  `);
+
+  try {
+    await transporter.sendMail({
+      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+      to: 'info@cohaapp.com',
+      replyTo: `"${userName}" <${userEmail}>`,
+      subject: `[Contattaci] ${subject}`,
+      html,
+    });
+    logger.info('Contact email sent', { from: userEmail });
+  } catch (error) {
+    logger.error('Failed to send contact email', { from: userEmail, error: String(error) });
+  }
+}
+
+export async function sendReportEmail(
+  userEmail: string,
+  userName: string,
+  category: string,
+  description: string,
+): Promise<void> {
+  if (!transporter) return;
+
+  const categoryLabels: Record<string, string> = {
+    bug: 'Bug tecnico',
+    content: 'Contenuto inappropriato',
+    user: 'Problema con un utente',
+    other: 'Altro',
+  };
+  const categoryLabel = categoryLabels[category] ?? category;
+
+  const html = baseTemplate('Nuova segnalazione problema', `
+    <h2 class="title">Nuova segnalazione</h2>
+    <p class="text"><strong style="color:#fff">Da:</strong> ${userName} &lt;${userEmail}&gt;</p>
+    <p class="text"><strong style="color:#fff">Categoria:</strong> ${categoryLabel}</p>
+    <div style="background:#0F0F23;border-radius:12px;padding:20px;margin-bottom:24px;text-align:left;">
+      <p style="color:#D1D5DB;font-size:15px;line-height:1.6;margin:0;white-space:pre-wrap;">${description}</p>
+    </div>
+    <p class="warning">Rispondi direttamente a questa email per contattare l'utente.</p>
+  `);
+
+  try {
+    await transporter.sendMail({
+      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+      to: 'info@cohaapp.com',
+      replyTo: `"${userName}" <${userEmail}>`,
+      subject: `[Segnalazione] ${categoryLabel}`,
+      html,
+    });
+    logger.info('Report email sent', { from: userEmail, category });
+  } catch (error) {
+    logger.error('Failed to send report email', { from: userEmail, error: String(error) });
   }
 }
 

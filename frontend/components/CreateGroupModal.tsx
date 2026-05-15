@@ -11,7 +11,7 @@ interface Friend {
   name: string;
   avatar?: string;
   courseOfStudy?: string;
-  university?: { name: string };
+  university?: { name: string; shortName?: string };
 }
 
 interface CreateGroupModalProps {
@@ -327,7 +327,7 @@ export default function CreateGroupModal({ isOpen, onClose, onGroupCreated }: Cr
                     <p style={{ fontWeight: 600, fontSize: 14, color: '#2c3149', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{friend.name}</p>
                     {friend.university?.name && (
                       <p style={{ fontSize: 11, color: '#747995', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {friend.university.name}{friend.courseOfStudy ? ` · ${friend.courseOfStudy}` : ''}
+                        {friend.university.shortName || friend.university.name}{friend.courseOfStudy ? ` · ${friend.courseOfStudy}` : ''}
                       </p>
                     )}
                   </div>

@@ -53,7 +53,7 @@ interface AdvancedFilters {
 }
 
 const DEFAULT_FILTERS: AdvancedFilters = {
-  badges: {}, company: '', location: '', minScore: 1, maxScore: 100,
+  badges: {}, company: '', location: '', minScore: 0, maxScore: 100,
   deadline: '', onlyRemote: false, onlyAbroad: false, onlyNew: false,
   englishLevels: [], tags: [],
 };
