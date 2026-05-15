@@ -28,10 +28,14 @@ async function cleanOldMessages(): Promise<number> {
 }
 
 async function cleanExpiredOpportunities(): Promise<number> {
-  // Delete listings that expired more than 7 days ago (buffer before permanent deletion)
+  // Delete listings that expired more than 7 days ago (buffer before permanent deletion).
+  // Curated rows are manual truth — never delete them automatically.
   const cutoff = calculateRetentionCutoff(7);
   const result = await prisma.opportunity.deleteMany({
-    where: { expiresAt: { lt: cutoff } },
+    where: {
+      expiresAt: { lt: cutoff },
+      source: { not: 'curated' },
+    },
   });
   return result.count;
 }

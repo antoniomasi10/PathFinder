@@ -19,10 +19,12 @@ import prisma from '../src/lib/prisma';
 import { parseAIDate } from '../src/services/ai/opportunityParser';
 
 async function main() {
+  // Skip curated rows — those are manual truth and must never be overwritten by AI.
   const rows = await prisma.$queryRaw<{ id: string; aiDeadline: string }[]>`
     SELECT id, "structuredContent"->>'deadline' AS "aiDeadline"
     FROM "Opportunity"
     WHERE deadline IS NULL
+      AND source <> 'curated'
       AND "structuredContent" IS NOT NULL
       AND "structuredContent"->>'deadline' IS NOT NULL
   `;
@@ -30,10 +32,13 @@ async function main() {
   console.log(`Found ${rows.length} rows with AI-extracted deadline but missing deadline column`);
   if (rows.length === 0) { await prisma.$disconnect(); return; }
 
+  const now = new Date();
   let updated = 0;
+  let skippedPast = 0;
   for (const row of rows) {
     const d = parseAIDate(row.aiDeadline);
     if (!d) continue;
+    if (d <= now) { skippedPast++; continue; }
     await prisma.opportunity.update({
       where: { id: row.id },
       data: { deadline: d },
@@ -41,7 +46,7 @@ async function main() {
     updated++;
   }
 
-  console.log(`Done. Updated ${updated} deadlines from structuredContent.`);
+  console.log(`Done. Updated ${updated} deadlines from structuredContent. Skipped ${skippedPast} past dates.`);
   await prisma.$disconnect();
 }
 

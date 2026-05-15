@@ -4,9 +4,9 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { useLanguage, SKILL_KEYS, getSkillLabel, normalizePassionToKey } from '@/lib/language';
+import { useLanguage, getSkillLabel, normalizePassionToKey } from '@/lib/language';
 import { isValidImageUrl } from '@/lib/urlValidation';
-import { ChevronLeft, Camera, Check, Plus } from '@/components/icons';
+import { ChevronLeft, Camera, Plus } from '@/components/icons';
 
 interface ProfileData {
   name: string;
@@ -36,8 +36,6 @@ export default function EditProfilePage() {
   const [course, setCourse] = useState('');
   const [year, setYear] = useState<number | undefined>();
   const [skills, setSkills] = useState<string[]>([]);
-  const [showSkillsModal, setShowSkillsModal] = useState(false);
-  const [modalSkills, setModalSkills] = useState<string[]>([]);
 
   useEffect(() => {
     api.get('/profile/me').then(({ data }: { data: ProfileData }) => {
@@ -49,7 +47,6 @@ export default function EditProfilePage() {
       setCurrentAvatar(data.avatar);
       const passions = (data.profile?.passions || []).map(normalizePassionToKey);
       setSkills(passions);
-      setModalSkills(passions);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -59,27 +56,6 @@ export default function EditProfilePage() {
     const reader = new FileReader();
     reader.onloadend = () => setAvatarPreview(reader.result as string);
     reader.readAsDataURL(file);
-  };
-
-  const addSkill = async (skill: string) => {
-    if (modalSkills.includes(skill)) return;
-    const next = [...modalSkills, skill];
-    setModalSkills(next);
-    setSkills(next);
-    api.patch('/profile/me', { passions: next }).catch(() => {
-      setModalSkills(modalSkills);
-      setSkills(modalSkills);
-    });
-  };
-
-  const removeSkill = async (skill: string) => {
-    const next = modalSkills.filter((s) => s !== skill);
-    setModalSkills(next);
-    setSkills(next);
-    api.patch('/profile/me', { passions: next }).catch(() => {
-      setModalSkills(modalSkills);
-      setSkills(modalSkills);
-    });
   };
 
   const save = async () => {
@@ -96,7 +72,6 @@ export default function EditProfilePage() {
         bio,
         courseOfStudy: course,
         yearOfStudy: year,
-        passions: skills,
         ...(avatarPreview && { avatar: avatarPreview }),
       });
       if (avatarPreview && user) {
@@ -308,7 +283,7 @@ export default function EditProfilePage() {
                   </span>
                 ))}
                 <button
-                  onClick={() => setShowSkillsModal(true)}
+                  onClick={() => router.push('/profile/skills')}
                   className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-[rgba(97,95,226,0.1)] text-[#615fe2] hover:bg-[rgba(97,95,226,0.15)] transition-colors"
                 >
                   <Plus size={12} strokeWidth={2.5} />
@@ -343,40 +318,6 @@ export default function EditProfilePage() {
         </main>
       )}
 
-      {/* Skills Modal */}
-      {showSkillsModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowSkillsModal(false)} />
-          <div className="relative w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl p-6 space-y-4 animate-slide-up max-h-[80vh] overflow-y-auto no-scrollbar">
-            <h3 className="text-lg font-bold text-[#2c3149]">{t.profile.addSkills}</h3>
-            <div className="flex flex-wrap gap-2">
-              {SKILL_KEYS.map((key) => {
-                const isAdded = modalSkills.includes(key);
-                return (
-                  <button
-                    key={key}
-                    onClick={() => isAdded ? removeSkill(key) : addSkill(key)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                      isAdded
-                        ? 'bg-[#615fe2] text-white'
-                        : 'bg-[rgba(172,176,206,0.15)] text-[#595e78] hover:bg-[rgba(172,176,206,0.3)] hover:text-[#2c3149]'
-                    }`}
-                  >
-                    {isAdded && <Check size={12} strokeWidth={3} className="inline mr-1" />}
-                    {getSkillLabel(key, t)}
-                  </button>
-                );
-              })}
-            </div>
-            <button
-              onClick={() => setShowSkillsModal(false)}
-              className="w-full py-3 rounded-xl text-sm font-medium text-white bg-[#615fe2] hover:bg-[#4a4bd7] transition-colors"
-            >
-              {t.profile.done}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

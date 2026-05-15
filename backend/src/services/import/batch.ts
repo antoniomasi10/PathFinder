@@ -15,6 +15,7 @@ import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { buildDedupKey, isSeniorRole } from './utils';
 import { parseOpportunityContent, parseAIDate } from '../ai/opportunityParser';
+import { classifyOpportunityCluster } from '../ai/clusterClassifier';
 
 export interface OpportunityRecord {
   id: string;
@@ -169,18 +170,33 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
       const chunk = filteredCreate.slice(i, i + PARSE_CONCURRENCY);
       await Promise.all(
         chunk.map(async (r) => {
-          const structured = await parseOpportunityContent(r.title, r.description, null, r.company);
+          const [structured, clusters] = await Promise.all([
+            parseOpportunityContent(r.title, r.description, null, r.company),
+            classifyOpportunityCluster({
+              title: r.title,
+              description: r.description,
+              type: r.type,
+              tags: r.tags ?? [],
+              eligibleFields: (r as any).eligibleFields ?? [],
+            }),
+          ]);
+          const updateData: any = {};
           if (structured) {
-            const updateData: any = { structuredContent: structured };
+            updateData.structuredContent = structured;
             if (!r.deadline && structured.deadline) {
               const extracted = parseAIDate(structured.deadline);
               if (extracted) updateData.deadline = extracted;
             }
-            // Senior role detected in description → expire immediately
             if (ENTRY_ONLY_TYPES.has(r.type) && structured.minYearsRequired !== null && structured.minYearsRequired >= 2) {
               updateData.expiresAt = new Date();
               logger.info(`[BatchUpsert] Expired senior role: "${r.title}" (${structured.minYearsRequired} yrs required)`);
             }
+          }
+          if (clusters) {
+            updateData.clusterScores = clusters.scores;
+            updateData.clusterPrimary = clusters.primary;
+          }
+          if (Object.keys(updateData).length > 0) {
             await prisma.opportunity.update({
               where: { id: r.id },
               data: updateData,

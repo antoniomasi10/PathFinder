@@ -235,18 +235,18 @@ export function mapOpportunityType(title: string, jobTypes?: string[] | null): O
 const FIELD_KEYWORD_MAP: Array<{ keywords: string[]; field: FieldOfStudy }> = [
   { keywords: ['computer science', 'informatica', 'software', 'computing', 'data science', 'data engineering', 'ai ', 'artificial intelligence', 'machine learning', 'deep learning', 'cybersecurity', 'information technology', 'it ', 'programming', 'coding', 'web development', 'cloud', 'devops', 'blockchain', 'cryptography', 'nlp', 'computer vision', 'robotics software'], field: 'COMPUTER_SCIENCE' },
   { keywords: ['engineer', 'ingegneria', 'mechanical', 'electrical', 'civil', 'aerospace', 'chemical engineering', 'biomedical engineering', 'industrial engineering', 'robotics', 'automation', 'embedded', 'hardware', 'electronics', 'iot', 'renewable energy', 'manufacturing', 'materials engineering'], field: 'ENGINEERING' },
-  { keywords: ['medicine', 'medical', 'medicina', 'clinical', 'surgery', 'pharmacy', 'pharmacology', 'dental', 'nursing', 'healthcare professional', 'public health', 'epidemiology', 'oncology', 'cardiology', 'radiology', 'pathology'], field: 'MEDICINE' },
+  { keywords: ['medicine', 'medical', 'medicina', 'clinical', 'surgery', 'pharmacy', 'pharmacology', 'dental', 'nursing', 'healthcare professional', 'public health', 'epidemiology', 'oncology', 'cardiology', 'radiology', 'pathology', 'scienze mediche', 'infermieristica', 'farmacia'], field: 'MEDICINE' },
   { keywords: ['biology', 'biologia', 'biochemistry', 'biochimica', 'biotech', 'biotechnology', 'life science', 'genetics', 'genomics', 'ecology', 'microbiology', 'molecular biology', 'cell biology', 'biophysics', 'neurobiology', 'marine biology', 'zoology', 'botany', 'environmental science'], field: 'LIFE_SCIENCES' },
   { keywords: ['physics', 'fisica', 'chemistry', 'chimica', 'astronomy', 'astrophysics', 'geoscience', 'geology', 'material science', 'materials science', 'nanotechnology', 'photonics', 'quantum', 'nuclear', 'thermodynamics', 'optics'], field: 'PHYSICAL_SCIENCES' },
   { keywords: ['mathematics', 'matematica', 'statistics', 'statistica', 'actuarial', 'quantitative', 'applied math', 'calculus', 'algebra', 'probability', 'data analysis', 'operations research', 'mathematical modeling'], field: 'MATHEMATICS' },
-  { keywords: ['economics', 'economia', 'econom', 'finance', 'finanza', 'financial', 'banking', 'accounting', 'investment', 'trading', 'hedge fund', 'fintech', 'microeconomics', 'macroeconomics', 'development economics', 'behavioral economics'], field: 'ECONOMICS' },
-  { keywords: ['business', 'management', 'marketing', 'mba', 'bba', 'entrepreneurship', 'startup', 'strategy', 'commerce', 'supply chain', 'operations', 'consulting', 'sales', 'retail', 'e-commerce', 'brand', 'human resources', 'organizational'], field: 'BUSINESS' },
-  { keywords: ['law', 'legge', 'giurisprudenza', 'legal', 'jurisprudence', 'diritto', 'intellectual property', 'human rights law', 'international law', 'corporate law', 'constitutional', 'litigation', 'regulation', 'compliance'], field: 'LAW' },
-  { keywords: ['political science', 'scienze politiche', 'politics', 'international relations', 'policy', 'diplomacy', 'public administration', 'governance', 'geopolitics', 'democracy', 'security studies', 'conflict', 'peace studies', 'un ', 'united nations', 'eu ', 'european union'], field: 'POLITICAL_SCIENCE' },
-  { keywords: ['humanities', 'lettere', 'literature', 'history', 'philosophy', 'linguistics', 'language', 'arts ', 'cultural studies', 'culture', 'communication', 'journalism', 'media studies', 'anthropology', 'sociology', 'gender studies', 'religious studies', 'museum', 'heritage', 'translation'], field: 'HUMANITIES' },
-  { keywords: ['design', 'graphic design', 'ux', 'ui ', 'user experience', 'fashion design', 'product design', 'industrial design', 'visual design', 'motion design', 'game design', 'interaction design', 'branding', 'typography', 'illustration'], field: 'DESIGN' },
+  { keywords: ['economics', 'economia', 'econom', 'finance', 'finanza', 'financial', 'banking', 'accounting', 'investment', 'trading', 'hedge fund', 'fintech', 'microeconomics', 'macroeconomics', 'development economics', 'behavioral economics', 'contabilità'], field: 'ECONOMICS' },
+  { keywords: ['business', 'management', 'marketing', 'mba', 'bba', 'entrepreneurship', 'startup', 'strategy', 'commerce', 'supply chain', 'operations', 'consulting', 'sales', 'retail', 'e-commerce', 'brand', 'human resources', 'organizational', 'gestione aziendale', 'amministrazione aziendale', 'comunicazione', 'giornalismo', 'media studies', 'pubbliche relazioni'], field: 'BUSINESS' },
+  { keywords: ['law', 'legge', 'giurisprudenza', 'legal', 'jurisprudence', 'diritto'], field: 'LAW' },
+  { keywords: ['political science', 'scienze politiche', 'politics', 'international relations', 'relazioni internazionali', 'policy', 'diplomacy', 'public administration', 'governance', 'geopolitics', 'democracy', 'security studies', 'conflict', 'peace studies', 'un ', 'united nations', 'eu ', 'european union'], field: 'POLITICAL_SCIENCE' },
+  { keywords: ['humanities', 'lettere', 'literature', 'history', 'storia', 'philosophy', 'filosofia', 'linguistics', 'language', 'lingue', 'arts ', 'cultural studies', 'culture', 'anthropology', 'sociology', 'gender studies', 'religious studies', 'museum', 'heritage', 'translation'], field: 'HUMANITIES' },
+  { keywords: ['design', 'graphic design', 'ux', 'ui ', 'user experience', 'fashion design', 'product design', 'industrial design', 'design industriale', 'visual design', 'motion design', 'game design', 'interaction design', 'branding', 'typography', 'illustration', 'architettura'], field: 'DESIGN' },
   { keywords: ['architecture', 'architettura', 'urban planning', 'urbanistica', 'urban design', 'landscape architecture', 'spatial planning', 'real estate development'], field: 'ARCHITECTURE' },
-  { keywords: ['psychology', 'psicologia', 'neuroscience', 'neuroscienze', 'behavioral', 'cognitive science', 'cognitive psychology', 'clinical psychology', 'mental health', 'counseling', 'psychiatry'], field: 'PSYCHOLOGY' },
+  { keywords: ['psychology', 'psicologia', 'neuroscience', 'neuroscienze', 'behavioral', 'cognitive science', 'cognitive psychology', 'clinical psychology', 'mental health', 'counseling', 'psychiatry', 'scienze cognitive'], field: 'PSYCHOLOGY' },
   { keywords: ['education', 'pedagogia', 'teaching', 'pedagogy', 'e-learning', 'instructional design', 'curriculum', 'edtech', 'higher education', 'school'], field: 'EDUCATION' },
 ];
 
@@ -534,20 +534,31 @@ export async function fetchMetaDescription(url: string, timeoutMs = 8000): Promi
 // Senior role detection
 // ---------------------------------------------------------------------------
 
+// Anchor on non-letter boundaries so em-dash, slash, parens etc. still trigger matches.
+// `\b` is unreliable: "Lead — Anthropic" doesn't match `\blead\s\b` because of the em-dash.
 const SENIOR_TITLE_PATTERNS = [
-  /\b(senior|sr\.?\s|director|head\s+of|vp\s|vice\s+president|lead\s|principal|staff\s|chief\s|cto|ceo|cmo|coo|cpo|manager|responsabile)\b/i,
+  /(?:^|[^a-z])(senior|sr\.?|director|head\s+of|vp|vice\s+president|lead|principal|staff|chief|cto|ceo|cmo|coo|cpo|manager|responsabile)(?:[^a-z]|$)/i,
   /\d+\+?\s*(?:years?|anni?)\s*(?:of\s+)?(?:experience|esperienza)/i,
 ];
 
-// Safe keywords that override senior signals (e.g. "Marketing Intern Manager", "Junior Manager")
-const SAFE_TITLE_PATTERNS = [
-  /\b(intern|internship|stage|tirocinio|trainee|junior|graduate\s+program|werkstudent|apprenti|alternance|stagiaire|praktikant|borsista)\b/i,
+// Safe keywords that override senior signals. We use lookahead/lookbehind on non-letters
+// to avoid "Internal" matching "intern" or "graduate program" matching "graduate".
+export const SAFE_TITLE_PATTERNS = [
+  /(?:^|[^a-z])(intern|interns|internship|internships|stage|tirocinio|stagista|trainee|junior|graduate\s+program|werkstudent|apprenti|alternance|stagiaire|praktikant|borsista)(?=[^a-z]|$)/i,
 ];
+
+export { SENIOR_TITLE_PATTERNS };
 
 /**
  * Returns true if the job title clearly indicates a senior/experienced role.
  * Safe patterns (intern, junior, trainee…) take priority — if the title contains
  * both a senior word and a safe word, the role is considered entry-level.
+ *
+ * Examples:
+ *  - "International Expansions Lead — Anthropic" → true (em-dash boundary)
+ *  - "Junior Marketing Intern" → false (safe pattern wins)
+ *  - "Internal Audit Lead at Stripe" → true ("internal" no longer bypasses)
+ *  - "Store Manager Trainee" → false (trainee = safe)
  */
 export function isSeniorRole(title: string): boolean {
   if (SAFE_TITLE_PATTERNS.some(p => p.test(title))) return false;

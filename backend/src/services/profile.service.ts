@@ -11,11 +11,14 @@ const safeUserSelect = {
   englishLevel: true, willingToRelocate: true, profileCompleted: true, publicProfile: true,
   privacySavedOpps: true, privacyPathmates: true, messagePrivacy: true, privacySkills: true,
   privacyUniversity: true, passwordResetToken: true, passwordResetExpiry: true,
+  region: true, city: true, regionLock: true, cityLock: true,
   skills: true,
   createdAt: true, updatedAt: true,
 } as const;
 
 interface ProfileData {
+  region?: string;
+  city?: string;
   answers: {
     yearOfStudy: string;
     gpa: string;
@@ -61,10 +64,23 @@ function mapEnglishLevel(level: string): EnglishLevel {
   return 'B1_B2';
 }
 
-function mapWillingToRelocate(w: string): WillingnessToRelocate {
-  if (w.startsWith('Sì')) return 'YES';
-  if (w === 'No, preferisco restare nella mia città') return 'NO';
-  return 'MAYBE';
+function derivePreferences(w: string): {
+  willingToRelocate: WillingnessToRelocate;
+  regionLock: boolean;
+  cityLock: boolean;
+} {
+  switch (w) {
+    case 'Sì, ovunque':
+      return { willingToRelocate: 'YES', regionLock: false, cityLock: false };
+    case 'Solo in Italia':
+      return { willingToRelocate: 'NO', regionLock: false, cityLock: false };
+    case 'Solo nella mia regione':
+      return { willingToRelocate: 'NO', regionLock: true, cityLock: false };
+    case 'No, preferisco restare nella mia città':
+      return { willingToRelocate: 'NO', regionLock: true, cityLock: true };
+    default:
+      return { willingToRelocate: 'MAYBE', regionLock: false, cityLock: false };
+  }
 }
 
 function extractYearOfStudy(s: string): number {
@@ -98,6 +114,7 @@ async function derivePrimaryInterest(userId: string): Promise<string> {
 export async function saveQuestionnaire(userId: string, input: ProfileData) {
   const { answers, cluster } = input;
   const primaryInterest = await derivePrimaryInterest(userId);
+  const prefs = derivePreferences(answers.willingToRelocate);
 
   const profileFields = {
     primaryInterest,
@@ -147,7 +164,11 @@ export async function saveQuestionnaire(userId: string, input: ProfileData) {
         yearOfStudy: extractYearOfStudy(answers.yearOfStudy),
         gpa: mapGpa(answers.gpa),
         englishLevel: mapEnglishLevel(answers.englishLevel),
-        willingToRelocate: mapWillingToRelocate(answers.willingToRelocate),
+        willingToRelocate: prefs.willingToRelocate,
+        region: input.region ?? null,
+        city: input.city ?? null,
+        regionLock: prefs.regionLock,
+        cityLock: prefs.cityLock,
         profileCompleted: true,
         ...(input.avatarId && { avatar: input.avatarId }),
         ...(input.avatarBgColor && { avatarBgColor: input.avatarBgColor }),

@@ -81,21 +81,73 @@ router.post('/push/onesignal-register', authMiddleware, async (req: Request, res
 // POST /push/test — send a test push to the authenticated user
 router.post('/push/test', authMiddleware, async (req: Request, res: Response) => {
   try {
-    if (oneSignalService.isOneSignalConfigured()) {
-      await oneSignalService.sendPushToUser(req.user!.userId, {
-        title: 'PathFinder',
-        body: 'Le notifiche push funzionano correttamente!',
-        url: '/notifications',
-      });
-      res.json({ success: true });
-    } else {
-      const result = await webPushService.sendPushToUser(req.user!.userId, {
-        body: 'Le notifiche push funzionano correttamente!',
-        type: 'GENERAL',
-        url: '/notifications',
-      });
-      res.json({ success: true, result });
+    if (!oneSignalService.isOneSignalConfigured()) {
+      return res.status(503).json({ success: false, error: 'OneSignal non configurato sul server' });
     }
+    const user = await prisma.user.findUnique({
+      where: { id: req.user!.userId },
+      select: { oneSignalPlayerId: true },
+    });
+    if (!user?.oneSignalPlayerId) {
+      return res.status(409).json({
+        success: false,
+        error: 'Nessun device registrato. Attiva le notifiche da questo dispositivo prima di inviare un test.',
+      });
+    }
+    await oneSignalService.sendPushToUser(req.user!.userId, {
+      title: 'PathFinder',
+      body: 'Le notifiche push funzionano correttamente!',
+      url: '/notifications',
+    });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /push/status — diagnostic snapshot of the user's push setup
+router.get('/push/status', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user!.userId },
+      select: { oneSignalPlayerId: true },
+    });
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentCount = await prisma.notification.count({
+      where: { userId: req.user!.userId, createdAt: { gte: since } },
+    });
+    const lastNotification = await prisma.notification.findFirst({
+      where: { userId: req.user!.userId },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true, type: true },
+    });
+    res.json({
+      oneSignalConfigured: oneSignalService.isOneSignalConfigured(),
+      oneSignalPlayerId: user?.oneSignalPlayerId ?? null,
+      recentNotifications24h: recentCount,
+      lastNotificationAt: lastNotification?.createdAt ?? null,
+      lastNotificationType: lastNotification?.type ?? null,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /push/diagnostic-log — accept client-side push logs (mobile debugging)
+router.post('/push/diagnostic-log', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const { level, step, detail } = req.body || {};
+    if (!step || typeof step !== 'string') {
+      return res.status(400).json({ error: 'step required' });
+    }
+    const safeLevel = level === 'error' || level === 'warn' || level === 'info' ? level : 'info';
+    const ua = String(req.headers['user-agent'] || '').slice(0, 200);
+    // Log to backend logs so we can grep mobile issues by userId
+    console[safeLevel === 'error' ? 'error' : 'warn'](
+      '[push.diag]',
+      JSON.stringify({ userId: req.user!.userId, level: safeLevel, step, detail, ua })
+    );
+    res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

@@ -40,10 +40,11 @@ const nextConfig = {
         ],
       },
       {
-        source: '/sw.js',
+        source: '/OneSignalSDKWorker.js',
         headers: [
           { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
-          { key: 'Content-Security-Policy', value: cspDirectives },
+          { key: 'Service-Worker-Allowed', value: '/' },
+          { key: 'Content-Type', value: 'application/javascript' },
         ],
       },
     ];

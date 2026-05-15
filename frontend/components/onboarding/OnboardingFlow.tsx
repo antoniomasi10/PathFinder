@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { QUESTIONS, TOTAL_STEPS, buildProfileData } from './onboarding-data';
+import { QUESTIONS, TOTAL_STEPS, buildProfileData, ITALIAN_REGIONS } from './onboarding-data';
 import type { ProfileData, InterestEntry } from './onboarding-data';
 import AmbientBackground from './AmbientBackground';
 import ProgressBar from './ProgressBar';
@@ -34,6 +34,8 @@ export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps
   const [otherTexts, setOtherTexts] = useState<Record<number, string>>({});
   const [direction, setDirection] = useState(1);
   const [selectedInterests, setSelectedInterests] = useState<SelectedInterest[]>([]);
+  const [region, setRegion] = useState('');
+  const [city, setCity] = useState('');
 
   const question = currentStep < TOTAL_STEPS ? QUESTIONS[currentStep] : null;
   const questionId = question?.id ?? 0;
@@ -104,18 +106,128 @@ export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps
   }, []);
 
   const handleAvatarContinue = useCallback((avatarId: string) => {
-    const profileData = buildProfileData(answers, multiAnswers, otherTexts, selectedInterests);
+    const profileData = buildProfileData(answers, multiAnswers, otherTexts, selectedInterests, region, city);
     onAvatarSelected(profileData, avatarId);
-  }, [answers, multiAnswers, otherTexts, selectedInterests, onAvatarSelected]);
+  }, [answers, multiAnswers, otherTexts, selectedInterests, region, city, onAvatarSelected]);
 
-  // ---------- Avatar Selection Screen (after interests) ----------
-  if (currentStep === TOTAL_STEPS + 1) {
+  // ---------- Avatar Selection Screen (after region/city) ----------
+  if (currentStep === TOTAL_STEPS + 2) {
     return (
       <div
         className="fixed inset-0 font-jakarta overflow-hidden"
         style={{ background: '#eef0ff' }}
       >
         <AvatarSelection onContinue={handleAvatarContinue} onBack={handleBack} />
+      </div>
+    );
+  }
+
+  // ---------- Region/City Selection Screen (after interests) ----------
+  if (currentStep === TOTAL_STEPS + 1) {
+    const canContinueRegionCity = region !== '' && city.trim() !== '';
+    return (
+      <div
+        className="fixed inset-0 font-jakarta overflow-hidden"
+        style={{ background: '#eef0ff' }}
+      >
+        {/* Watermark */}
+        <img
+          src="/logo-coha-watermark.svg"
+          alt=""
+          aria-hidden
+          className="absolute pointer-events-none select-none"
+          style={{
+            top: '-5%',
+            left: '30%',
+            transform: 'translateX(-50%)',
+            width: '300%',
+            height: 'auto',
+            maxWidth: 'none',
+          }}
+        />
+
+        <div className="relative z-10 flex flex-col h-full">
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto pt-6 px-6 pb-32">
+            {/* Back button */}
+            <div className="flex items-center gap-3 mb-8">
+              <BackButton onClick={handleBack} />
+            </div>
+
+            {/* Question Card */}
+            <div className="mb-8">
+              <div className="mb-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-sm font-semibold text-[#595e78]" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
+                    STEP 13/13
+                  </span>
+                </div>
+                <h2 className="text-2xl font-bold text-[#2c3149]" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
+                  Dove vivi?
+                </h2>
+              </div>
+
+              {/* Region Dropdown */}
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-[#2c3149] mb-3" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
+                  In quale regione vivi?
+                </label>
+                <select
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
+                  className="w-full px-4 py-3 rounded-[12px] border-2 border-[#acb0ce] text-[#2c3149] bg-white focus:outline-none focus:border-[#615fe2] transition-colors"
+                  style={{ fontFamily: 'var(--font-plus-jakarta)' }}
+                >
+                  <option value="">Seleziona una regione</option>
+                  {ITALIAN_REGIONS.map((reg) => (
+                    <option key={reg} value={reg}>
+                      {reg}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* City Input */}
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-[#2c3149] mb-3" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
+                  In quale città?
+                </label>
+                <input
+                  type="text"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Es. Milano"
+                  className="w-full px-4 py-3 rounded-[12px] border-2 border-[#acb0ce] text-[#2c3149] bg-white placeholder-[#acb0ce] focus:outline-none focus:border-[#615fe2] transition-colors"
+                  style={{ fontFamily: 'var(--font-plus-jakarta)' }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom action */}
+          <div
+            className="fixed bottom-0 left-0 right-0 z-20 px-6 pb-6 pt-12"
+            style={{
+              background: 'linear-gradient(to top, #eef0ff 60%, rgba(238,240,255,0.9) 80%, transparent 100%)',
+            }}
+          >
+            <button
+              onClick={() => {
+                setDirection(1);
+                setCurrentStep((s) => s + 1);
+              }}
+              disabled={!canContinueRegionCity}
+              className="w-full py-3 rounded-[24px] font-semibold text-white text-base transition-all"
+              style={{
+                backgroundColor: canContinueRegionCity ? '#615fe2' : '#acb0ce',
+                fontFamily: 'var(--font-plus-jakarta)',
+                cursor: canContinueRegionCity ? 'pointer' : 'not-allowed',
+              }}
+            >
+              Avanti
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

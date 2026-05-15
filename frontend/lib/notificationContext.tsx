@@ -4,8 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 import { io, Socket } from 'socket.io-client';
 import { useQueryClient } from '@tanstack/react-query';
 import api, { getAccessToken } from '@/lib/api';
-import { registerServiceWorker, subscribeToPush, isPushSupported } from '@/lib/pushManager';
-import { initOneSignal, isOneSignalAvailable } from '@/lib/oneSignalManager';
+import { ensurePushInitialized, isPushSupported } from '@/lib/pushManager';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -68,17 +67,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     setSocket(ns);
 
-    // Register service worker and re-sync push subscription
+    // Initialize OneSignal SDK (registers its own SW, attaches subscription listener).
+    // Idempotent and does NOT request permission — that requires a user gesture.
     if (typeof window !== 'undefined' && isPushSupported()) {
-      registerServiceWorker().then(() => {
-        if (isOneSignalAvailable()) {
-          // OneSignal handles its own re-registration on init
-          initOneSignal().catch(() => {});
-        } else if (Notification.permission === 'granted') {
-          // VAPID fallback: re-sync existing subscription with backend
-          subscribeToPush().catch(() => {});
-        }
-      });
+      ensurePushInitialized().catch(() => {});
     }
 
     return () => {

@@ -141,6 +141,10 @@ model User {
   gpa               GpaRange?
   englishLevel      EnglishLevel?
   willingToRelocate WillingnessToRelocate?
+  region              String?
+  city                String?
+  regionLock          Boolean   @default(false)
+  cityLock            Boolean   @default(false)
   profileCompleted    Boolean   @default(false)
   publicProfile       Boolean   @default(false)
   privacySavedOpps    String    @default("Pathmates")
@@ -245,6 +249,11 @@ model Opportunity {
   format               OpportunityFormat?
   city                 String?
   country              String?         // ISO-3166-1 alpha-2 (e.g. "IT", "DE")
+  region               String?         // Italian region (e.g. "Puglia", "Lombardia"); null if country != IT
+
+  // --- Schwartz personality cluster classification ---
+  clusterScores        Json?           // { Analista: 0-1, Creativo: 0-1, Leader: 0-1, Imprenditore: 0-1, Sociale: 0-1, Explorer: 0-1 }
+  clusterPrimary       String?         // denormalized top cluster for fast queries
 
   // --- Cost / compensation ---
   cost                 Int?            // EUR; 0 = free, null = unknown
@@ -278,6 +287,8 @@ model Opportunity {
   @@index([startDate])
   @@index([format])
   @@index([country])
+  @@index([region])
+  @@index([clusterPrimary])
   @@index([type, deadline])
   @@index([type, startDate])
 }
