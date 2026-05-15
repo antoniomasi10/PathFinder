@@ -14,11 +14,11 @@ router.post('/contact', authMiddleware, async (req: Request, res: Response) => {
 
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
-      select: { email: true, firstName: true, lastName: true },
+      select: { email: true, name: true, surname: true },
     });
     if (!user) return res.status(404).json({ error: 'Utente non trovato' });
 
-    const name = `${user.firstName} ${user.lastName}`.trim();
+    const name = `${user.name} ${user.surname}`.trim();
     await sendContactEmail(user.email, name, subject.trim(), message.trim());
 
     res.json({ success: true });
@@ -36,11 +36,11 @@ router.post('/report', authMiddleware, async (req: Request, res: Response) => {
 
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
-      select: { email: true, firstName: true, lastName: true },
+      select: { email: true, name: true, surname: true },
     });
     if (!user) return res.status(404).json({ error: 'Utente non trovato' });
 
-    const name = `${user.firstName} ${user.lastName}`.trim();
+    const name = `${user.name} ${user.surname}`.trim();
     await sendReportEmail(user.email, name, category.trim(), description.trim());
 
     res.json({ success: true });

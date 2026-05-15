@@ -127,7 +127,7 @@ export async function markAsRead(notificationId: string, userId: string) {
     where: { id: notificationId },
     data: { isRead: true },
   });
-  Promise.all([
+  await Promise.all([
     cacheDel(notifCountKey(userId)),
     cacheDel(`cache:notif:badges:${userId}`),
   ]).catch(() => {});
@@ -139,7 +139,7 @@ export async function markAllAsRead(userId: string) {
     where: { userId, isRead: false, type: { notIn: CHAT_ONLY_TYPES } },
     data: { isRead: true },
   });
-  Promise.all([
+  await Promise.all([
     cacheDel(notifCountKey(userId)),
     cacheDel(`cache:notif:badges:${userId}`),
   ]).catch(() => {});
