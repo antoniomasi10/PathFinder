@@ -6,15 +6,19 @@ export async function POST(req: NextRequest) {
   if (!token) {
     return NextResponse.json({ error: 'Refresh token mancante' }, { status: 401 });
   }
-  const backendRes = await fetch(`${BACKEND_URL}/api/auth/refresh`, {
-    method: 'POST',
-    headers: { Cookie: `refreshToken=${token}` },
-  });
-  const data = await backendRes.json();
-  const res = NextResponse.json(data, { status: backendRes.status });
-  if (backendRes.ok) {
-    const newToken = extractRefreshToken(backendRes.headers.get('set-cookie'));
-    if (newToken) applyRefreshCookie(res, newToken);
+  try {
+    const backendRes = await fetch(`${BACKEND_URL}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { Cookie: `refreshToken=${token}` },
+    });
+    const data = await backendRes.json();
+    const res = NextResponse.json(data, { status: backendRes.status });
+    if (backendRes.ok) {
+      const newToken = extractRefreshToken(backendRes.headers.get('set-cookie'));
+      if (newToken) applyRefreshCookie(res, newToken);
+    }
+    return res;
+  } catch {
+    return NextResponse.json({ error: 'Servizio non disponibile. Riprova più tardi.' }, { status: 503 });
   }
-  return res;
 }

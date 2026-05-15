@@ -29,7 +29,8 @@ async function main() {
   const universities = await Promise.all([
     prisma.university.create({
       data: {
-        name: 'Università di Bologna',
+        name: 'Alma Mater Studiorum – Università di Bologna',
+        shortName: 'Università di Bologna',
         city: 'Bologna',
         description: 'La più antica università del mondo occidentale, fondata nel 1088. Eccellenza nella ricerca e nella formazione con una forte vocazione internazionale.',
         websiteUrl: 'https://www.unibo.it',
@@ -40,6 +41,7 @@ async function main() {
     prisma.university.create({
       data: {
         name: 'Politecnico di Milano',
+        shortName: 'Politecnico di Milano',
         city: 'Milano',
         description: 'Eccellenza italiana nell\'ingegneria, architettura e design. Tra le prime università tecniche in Europa per ricerca e innovazione.',
         websiteUrl: 'https://www.polimi.it',
@@ -49,7 +51,8 @@ async function main() {
     }),
     prisma.university.create({
       data: {
-        name: 'Sapienza Università di Roma',
+        name: 'Università degli Studi di Roma "La Sapienza"',
+        shortName: 'La Sapienza',
         city: 'Roma',
         description: 'La più grande università d\'Europa, con un\'offerta formativa vastissima e centri di ricerca d\'eccellenza in tutti i campi del sapere.',
         websiteUrl: 'https://www.uniroma1.it',
@@ -59,7 +62,8 @@ async function main() {
     }),
     prisma.university.create({
       data: {
-        name: 'Università di Torino',
+        name: 'Università degli Studi di Torino',
+        shortName: 'Università di Torino',
         city: 'Torino',
         description: 'Ateneo con forte tradizione nella ricerca scientifica e umanistica, situato nel cuore di una città innovativa e tecnologica.',
         websiteUrl: 'https://www.unito.it',
@@ -69,7 +73,8 @@ async function main() {
     }),
     prisma.university.create({
       data: {
-        name: 'Università Federico II',
+        name: 'Università degli Studi di Napoli "Federico II"',
+        shortName: 'Federico II',
         city: 'Napoli',
         description: 'Fondata nel 1224, è una delle più antiche università pubbliche al mondo. Leader nella ricerca scientifica del Sud Italia.',
         websiteUrl: 'https://www.unina.it',
@@ -79,7 +84,8 @@ async function main() {
     }),
     prisma.university.create({
       data: {
-        name: 'Università di Firenze',
+        name: 'Università degli Studi di Firenze',
+        shortName: 'Università di Firenze',
         city: 'Firenze',
         description: 'Ateneo di grande tradizione nel cuore del Rinascimento, con eccellenze in discipline umanistiche, scientifiche e mediche.',
         websiteUrl: 'https://www.unifi.it',
@@ -90,6 +96,7 @@ async function main() {
     prisma.university.create({
       data: {
         name: 'Politecnico di Torino',
+        shortName: 'Politecnico di Torino',
         city: 'Torino',
         description: 'Eccellenza nell\'ingegneria e nell\'architettura, con forti legami con il mondo industriale e dell\'innovazione.',
         websiteUrl: 'https://www.polito.it',
@@ -99,7 +106,8 @@ async function main() {
     }),
     prisma.university.create({
       data: {
-        name: 'Università Ca\' Foscari',
+        name: 'Università Ca\' Foscari Venezia',
+        shortName: 'Ca\' Foscari',
         city: 'Venezia',
         description: 'Prima business school in Italia, oggi eccellenza in lingue, economia, scienze ambientali e digital humanities.',
         websiteUrl: 'https://www.unive.it',
@@ -109,7 +117,8 @@ async function main() {
     }),
     prisma.university.create({
       data: {
-        name: 'Università di Padova',
+        name: 'Università degli Studi di Padova',
+        shortName: 'Università di Padova',
         city: 'Padova',
         description: 'Tra le più antiche e prestigiose d\'Europa, con eccellenze in medicina, ingegneria e scienze. Fondata nel 1222.',
         websiteUrl: 'https://www.unipd.it',
@@ -119,7 +128,8 @@ async function main() {
     }),
     prisma.university.create({
       data: {
-        name: 'Università di Pisa',
+        name: 'Università degli Studi di Pisa',
+        shortName: 'Università di Pisa',
         city: 'Pisa',
         description: 'Ateneo di prestigio con la Scuola Normale Superiore, eccellenza nella ricerca scientifica e nella formazione d\'élite.',
         websiteUrl: 'https://www.unipi.it',
@@ -130,6 +140,97 @@ async function main() {
   ]);
 
   const [bologna, polimi, sapienza, torino, federicoII, firenze, polito, caFoscari, padova, pisa] = universities;
+
+  // ============ ALL ITALIAN UNIVERSITIES ============
+  await prisma.university.createMany({
+    data: [
+      { name: 'Università degli Studi di Bari "Aldo Moro"', shortName: 'Università di Bari', city: 'Bari', websiteUrl: 'https://www.uniba.it' },
+      { name: 'Università degli Studi di Bergamo', shortName: 'Università di Bergamo', city: 'Bergamo', websiteUrl: 'https://www.unibg.it' },
+      { name: 'Università degli Studi di Brescia', shortName: 'Università di Brescia', city: 'Brescia', websiteUrl: 'https://www.unibs.it' },
+      { name: 'Università degli Studi di Cagliari', shortName: 'Università di Cagliari', city: 'Cagliari', websiteUrl: 'https://www.unica.it' },
+      { name: 'Università degli Studi di Camerino', shortName: 'Università di Camerino', city: 'Camerino', websiteUrl: 'https://www.unicam.it' },
+      { name: 'Università degli Studi della Campania Luigi Vanvitelli', shortName: 'Vanvitelli', city: 'Caserta', websiteUrl: 'https://www.unicampania.it' },
+      { name: 'Università degli Studi di Cassino e del Lazio Meridionale', shortName: 'Università di Cassino', city: 'Cassino', websiteUrl: 'https://www.unicas.it' },
+      { name: 'Università degli Studi di Catania', shortName: 'Università di Catania', city: 'Catania', websiteUrl: 'https://www.unict.it' },
+      { name: "Università degli Studi di Chieti-Pescara \"Gabriele d'Annunzio\"", shortName: "D'Annunzio", city: 'Chieti', websiteUrl: 'https://www.unich.it' },
+      { name: 'Università degli Studi della Calabria', shortName: 'UniCal', city: 'Rende', websiteUrl: 'https://www.unical.it' },
+      { name: 'Università degli Studi di Ferrara', shortName: 'Università di Ferrara', city: 'Ferrara', websiteUrl: 'https://www.unife.it' },
+      { name: 'Università degli Studi di Foggia', shortName: 'Università di Foggia', city: 'Foggia', websiteUrl: 'https://www.unifg.it' },
+      { name: 'Università degli Studi di Genova', shortName: 'Università di Genova', city: 'Genova', websiteUrl: 'https://www.unige.it' },
+      { name: "Università degli Studi dell'Insubria", shortName: 'Insubria', city: 'Varese', websiteUrl: 'https://www.uninsubria.it' },
+      { name: "Università degli Studi dell'Aquila", shortName: 'UniAQ', city: "L'Aquila", websiteUrl: 'https://www.univaq.it' },
+      { name: 'Istituto Universitario di Studi Superiori – IUSS', shortName: 'IUSS', city: 'Pavia', websiteUrl: 'https://www.iusspavia.it' },
+      { name: 'IMT Alti Studi Lucca', shortName: 'IMT Lucca', city: 'Lucca', websiteUrl: 'https://www.imtlucca.it' },
+      { name: 'Università degli Studi di Macerata', shortName: 'Università di Macerata', city: 'Macerata', websiteUrl: 'https://www.unimc.it' },
+      { name: 'Università degli Studi Magna Græcia di Catanzaro', shortName: 'Magna Græcia', city: 'Catanzaro', websiteUrl: 'https://www.umg.it' },
+      { name: 'Università degli Studi Mediterranea di Reggio Calabria', shortName: 'Mediterranea', city: 'Reggio Calabria', websiteUrl: 'https://www.unirc.it' },
+      { name: 'Università degli Studi di Messina', shortName: 'Università di Messina', city: 'Messina', websiteUrl: 'https://www.unime.it' },
+      { name: 'Università degli Studi di Milano', shortName: 'Università di Milano', city: 'Milano', websiteUrl: 'https://www.unimi.it' },
+      { name: 'Università degli Studi di Milano-Bicocca', shortName: 'Milano-Bicocca', city: 'Milano', websiteUrl: 'https://www.unimib.it' },
+      { name: 'Università degli Studi di Modena e Reggio Emilia', shortName: 'UniMoRe', city: 'Modena', websiteUrl: 'https://www.unimore.it' },
+      { name: 'Università degli Studi del Molise', shortName: 'Università del Molise', city: 'Campobasso', websiteUrl: 'https://www.unimol.it' },
+      { name: "Università degli Studi di Napoli \"L'Orientale\"", shortName: "L'Orientale", city: 'Napoli', websiteUrl: 'https://www.unior.it' },
+      { name: 'Università degli Studi di Napoli "Parthenope"', shortName: 'Parthenope', city: 'Napoli', websiteUrl: 'https://www.uniparthenope.it' },
+      { name: 'Università degli Studi di Palermo', shortName: 'Università di Palermo', city: 'Palermo', websiteUrl: 'https://www.unipa.it' },
+      { name: 'Università degli Studi di Parma', shortName: 'Università di Parma', city: 'Parma', websiteUrl: 'https://www.unipr.it' },
+      { name: 'Università degli Studi di Pavia', shortName: 'Università di Pavia', city: 'Pavia', websiteUrl: 'https://www.unipv.it' },
+      { name: 'Università degli Studi di Perugia', shortName: 'Università di Perugia', city: 'Perugia', websiteUrl: 'https://www.unipg.it' },
+      { name: 'Università degli Studi del Piemonte Orientale "Amedeo Avogadro"', shortName: 'Piemonte Orientale', city: 'Vercelli', websiteUrl: 'https://www.uniupo.it' },
+      { name: 'Politecnico di Bari', shortName: 'Poliba', city: 'Bari', websiteUrl: 'https://www.poliba.it' },
+      { name: 'Università Politecnica delle Marche', shortName: 'Politecnica delle Marche', city: 'Ancona', websiteUrl: 'https://www.univpm.it' },
+      { name: 'Università degli Studi di Roma "Foro Italico"', shortName: 'Foro Italico', city: 'Roma', websiteUrl: 'https://www.uniroma4.it' },
+      { name: 'Università degli Studi di Roma Tor Vergata', shortName: 'Tor Vergata', city: 'Roma', websiteUrl: 'https://www.uniroma2.it' },
+      { name: 'Università degli Studi Roma Tre', shortName: 'Roma Tre', city: 'Roma', websiteUrl: 'https://www.uniroma3.it' },
+      { name: 'Università degli Studi di Salerno', shortName: 'Università di Salerno', city: 'Salerno', websiteUrl: 'https://www.unisa.it' },
+      { name: 'Università degli Studi del Sannio', shortName: 'Università del Sannio', city: 'Benevento', websiteUrl: 'https://www.unisannio.it' },
+      { name: 'Università degli Studi di Sassari', shortName: 'Università di Sassari', city: 'Sassari', websiteUrl: 'https://www.uniss.it' },
+      { name: 'Scuola Normale Superiore', shortName: 'SNS', city: 'Pisa', websiteUrl: 'https://www.sns.it' },
+      { name: "Scuola Superiore Sant'Anna", shortName: "Sant'Anna", city: 'Pisa', websiteUrl: 'https://www.santannapisa.it' },
+      { name: 'Scuola Superiore Meridionale', shortName: 'SSM', city: 'Napoli', websiteUrl: 'https://www.ssmeridionale.it' },
+      { name: 'Università del Salento', shortName: 'UniSalento', city: 'Lecce', websiteUrl: 'https://www.unisalento.it' },
+      { name: 'Università degli Studi di Siena', shortName: 'Università di Siena', city: 'Siena', websiteUrl: 'https://www.unisi.it' },
+      { name: 'Università degli Studi di Teramo', shortName: 'Università di Teramo', city: 'Teramo', websiteUrl: 'https://www.unite.it' },
+      { name: 'Università degli Studi di Trento', shortName: 'Università di Trento', city: 'Trento', websiteUrl: 'https://www.unitn.it' },
+      { name: 'Università degli Studi di Trieste', shortName: 'Università di Trieste', city: 'Trieste', websiteUrl: 'https://www.units.it' },
+      { name: 'Università degli Studi della Tuscia', shortName: 'Università della Tuscia', city: 'Viterbo', websiteUrl: 'https://www.unitus.it' },
+      { name: 'Università degli Studi di Udine', shortName: 'Università di Udine', city: 'Udine', websiteUrl: 'https://www.uniud.it' },
+      { name: 'Università degli Studi di Urbino "Carlo Bo"', shortName: 'Università di Urbino', city: 'Urbino', websiteUrl: 'https://www.uniurb.it' },
+      { name: 'Università Iuav di Venezia', shortName: 'IUAV', city: 'Venezia', websiteUrl: 'https://www.iuav.it' },
+      { name: 'Università degli Studi di Verona', shortName: 'Università di Verona', city: 'Verona', websiteUrl: 'https://www.univr.it' },
+      { name: 'Università per Stranieri di Perugia', shortName: 'Stranieri di Perugia', city: 'Perugia', websiteUrl: 'https://www.unistrapg.it' },
+      { name: 'Università per Stranieri di Siena', shortName: 'Stranieri di Siena', city: 'Siena', websiteUrl: 'https://www.unistrasi.it' },
+      { name: 'Università degli Studi della Basilicata', shortName: 'Università della Basilicata', city: 'Potenza', websiteUrl: 'https://www.unibas.it' },
+      { name: 'Università Cattolica del Sacro Cuore', shortName: 'Cattolica', city: 'Milano', websiteUrl: 'https://www.unicatt.it' },
+      { name: 'Università Commerciale Luigi Bocconi', shortName: 'Bocconi', city: 'Milano', websiteUrl: 'https://www.unibocconi.it' },
+      { name: 'LUISS – Libera Università Internazionale degli Studi Sociali', shortName: 'LUISS', city: 'Roma', websiteUrl: 'https://www.luiss.it' },
+      { name: 'IULM – Libera Università di Lingue e Comunicazione', shortName: 'IULM', city: 'Milano', websiteUrl: 'https://www.iulm.it' },
+      { name: 'LUMSA – Libera Università Maria Santissima Assunta', shortName: 'LUMSA', city: 'Roma', websiteUrl: 'https://www.lumsa.it' },
+      { name: 'Università degli Studi "Suor Orsola Benincasa"', shortName: 'Suor Orsola Benincasa', city: 'Napoli', websiteUrl: 'https://www.unisob.na.it' },
+      { name: 'Università Campus Bio-Medico di Roma', shortName: 'Campus Bio-Medico', city: 'Roma', websiteUrl: 'https://www.unicampus.it' },
+      { name: 'Università Europea di Roma', shortName: 'Università Europea di Roma', city: 'Roma', websiteUrl: 'https://www.unier.it' },
+      { name: 'Università Vita-Salute San Raffaele', shortName: 'Vita-Salute San Raffaele', city: 'Milano', websiteUrl: 'https://www.unisr.it' },
+      { name: 'Humanitas University', shortName: 'Humanitas', city: 'Rozzano', websiteUrl: 'https://www.hunimed.eu' },
+      { name: 'LIUC – Università Cattaneo', shortName: 'LIUC', city: 'Castellanza', websiteUrl: 'https://www.liuc.it' },
+      { name: 'Università degli Studi di Scienze Gastronomiche', shortName: 'UNISG', city: 'Pollenzo', websiteUrl: 'https://www.unisg.it' },
+      { name: 'Università degli Studi "Giustino Fortunato"', shortName: 'Giustino Fortunato', city: 'Benevento', websiteUrl: 'https://www.unifortunato.eu' },
+      { name: 'Link Campus University', shortName: 'Link Campus', city: 'Roma', websiteUrl: 'https://www.unilink.it' },
+      { name: 'Università degli Studi Internazionali di Roma – UNINT', shortName: 'UNINT', city: 'Roma', websiteUrl: 'https://www.unint.eu' },
+      { name: 'Libera Università di Bolzano', shortName: 'Unibz', city: 'Bolzano', websiteUrl: 'https://www.unibz.it' },
+      { name: "Università della Valle d'Aosta", shortName: "UniVdA", city: 'Aosta', websiteUrl: 'https://www.univda.it' },
+      { name: 'Università degli Studi di Enna "Kore"', shortName: 'Kore', city: 'Enna', websiteUrl: 'https://www.unikore.it' },
+      { name: 'Università degli Studi San Raffaele Roma', shortName: 'San Raffaele Roma', city: 'Roma', websiteUrl: 'https://www.uniroma5.it' },
+      { name: 'Università telematica eCampus', shortName: 'eCampus', city: 'Novedrate', websiteUrl: 'https://www.uniecampus.it' },
+      { name: 'Università telematica Pegaso', shortName: 'Pegaso', city: 'Napoli', websiteUrl: 'https://www.unipegaso.it' },
+      { name: 'Università telematica Niccolò Cusano – UNICUSANO', shortName: 'Cusano', city: 'Roma', websiteUrl: 'https://www.unicusano.it' },
+      { name: 'Università telematica Internazionale Uninettuno', shortName: 'Uninettuno', city: 'Roma', websiteUrl: 'https://www.uninettunouniversity.net' },
+      { name: 'Università telematica Leonardo da Vinci', shortName: 'Leonardo da Vinci', city: 'Torrevecchia Teatina', websiteUrl: 'https://www.unidav.it' },
+      { name: 'UNITELMA Sapienza', shortName: 'UNITELMA', city: 'Roma', websiteUrl: 'https://www.unitelmasapienza.it' },
+      { name: 'Università telematica Mercatorum', shortName: 'Mercatorum', city: 'Roma', websiteUrl: 'https://www.universitamercatorum.it' },
+      { name: 'Università telematica San Raffaele Roma', shortName: 'Telematica San Raffaele', city: 'Roma', websiteUrl: 'https://www.sanraffaele.org' },
+      { name: 'Università telematica IUL', shortName: 'IUL', city: 'Firenze', websiteUrl: 'https://www.iuline.it' },
+      { name: 'Università telematica Giustino Fortunato', shortName: 'Telematica Giustino Fortunato', city: 'Benevento', websiteUrl: 'https://www.unifortunato.it' },
+    ],
+  });
 
   // ============ COURSES ============
   const coursesData = [
@@ -1386,7 +1487,7 @@ async function main() {
   ]);
 
   console.log('Seed completed successfully!');
-  console.log(`- ${universities.length} universities`);
+  console.log(`- ${universities.length + 83} universities (10 demo + 83 Italian universities)`);
   console.log(`- ${coursesData.length} courses`);
   console.log('- 36 mock opportunities (all 13 types)');
   console.log(`- 5 demo users (password: Password123)`);

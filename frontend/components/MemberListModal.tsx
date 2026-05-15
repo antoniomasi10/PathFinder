@@ -15,7 +15,7 @@ interface Member {
     name: string;
     avatar?: string;
     courseOfStudy?: string;
-    university?: { name: string };
+    university?: { name: string; shortName?: string };
   };
 }
 
@@ -109,7 +109,7 @@ export default function MemberListModal({
               </div>
               {member.user.university?.name && (
                 <p className="text-[11px] text-gray-500 truncate">
-                  {member.user.university.name}
+                  {member.user.university.shortName || member.user.university.name}
                   {member.user.courseOfStudy && ` · ${member.user.courseOfStudy}`}
                 </p>
               )}

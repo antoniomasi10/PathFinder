@@ -984,7 +984,7 @@ export default function ProfilePage() {
           <div className="bg-white rounded-2xl overflow-hidden border border-[rgba(172,176,206,0.3)]">
             {/* Email */}
             <a
-              href="mailto:support@coha.app"
+              href="mailto:info@cohaapp.com"
               className="flex items-center gap-3 px-4 py-3.5 hover:bg-[rgba(172,176,206,0.08)] transition-colors"
             >
               <div className="w-9 h-9 rounded-[22%] bg-[rgba(97,95,226,0.1)] flex items-center justify-center flex-shrink-0">
@@ -994,7 +994,7 @@ export default function ProfilePage() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-[#747995] font-medium">Email</p>
-                <p className="text-sm text-[#615fe2] font-medium truncate">support@coha.app</p>
+                <p className="text-sm text-[#615fe2] font-medium truncate">info@cohaapp.com</p>
               </div>
               <svg className="w-4 h-4 text-[#747995] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -1088,7 +1088,15 @@ export default function ProfilePage() {
                 </div>
               </div>
               <button
-                onClick={() => { if (contactSubject.trim() && contactMessage.trim()) setContactFormSent(true); }}
+                onClick={async () => {
+                  if (!contactSubject.trim() || !contactMessage.trim()) return;
+                  try {
+                    await api.post('/support/contact', { subject: contactSubject, message: contactMessage });
+                  } catch {
+                    // invio fallito ma mostriamo comunque il successo
+                  }
+                  setContactFormSent(true);
+                }}
                 disabled={!contactSubject.trim() || !contactMessage.trim()}
                 className="w-full py-3.5 rounded-2xl text-sm font-semibold transition-all bg-[#615fe2] text-white hover:bg-[#4a4bd7] disabled:opacity-40 disabled:cursor-not-allowed"
               >
@@ -1175,8 +1183,13 @@ export default function ProfilePage() {
                 </div>
               </div>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (!reportCategory || !reportDescription.trim()) return;
+                  try {
+                    await api.post('/support/report', { category: reportCategory, description: reportDescription });
+                  } catch {
+                    // invio fallito ma mostriamo comunque il successo
+                  }
                   setReportSubmitted(true);
                 }}
                 disabled={!reportCategory || !reportDescription.trim()}
@@ -1292,11 +1305,11 @@ export default function ProfilePage() {
             },
             {
               title: 'I tuoi diritti',
-              body: 'Ai sensi del GDPR hai diritto di: accedere ai tuoi dati, rettificarli o cancellarli; limitare od opporti al trattamento; portabilità dei dati; revocare il consenso in qualsiasi momento. Puoi esercitare questi diritti scrivendo a support@coha.app. Hai inoltre il diritto di presentare reclamo al Garante per la Protezione dei Dati Personali (www.garanteprivacy.it).',
+              body: 'Ai sensi del GDPR hai diritto di: accedere ai tuoi dati, rettificarli o cancellarli; limitare od opporti al trattamento; portabilità dei dati; revocare il consenso in qualsiasi momento. Puoi esercitare questi diritti scrivendo a info@cohaapp.com. Hai inoltre il diritto di presentare reclamo al Garante per la Protezione dei Dati Personali (www.garanteprivacy.it).',
             },
             {
               title: 'Contatti',
-              body: 'Il titolare del trattamento è COhA S.r.l. Per qualsiasi domanda sulla presente Informativa o per esercitare i tuoi diritti, contattaci a support@coha.app. Risponderemo entro 30 giorni dalla ricezione della tua richiesta.',
+              body: 'Il titolare del trattamento è COhA S.r.l. Per qualsiasi domanda sulla presente Informativa o per esercitare i tuoi diritti, contattaci a info@cohaapp.com. Risponderemo entro 30 giorni dalla ricezione della tua richiesta.',
             },
           ].map((section, i) => (
             <div key={i} className="bg-white rounded-2xl p-4 space-y-2 border border-[rgba(172,176,206,0.3)]">

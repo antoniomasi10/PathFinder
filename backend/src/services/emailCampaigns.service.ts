@@ -6,8 +6,8 @@ import { renderWeeklyDigest, renderExpiringAlert } from './emailTemplates.servic
 import nodemailer from 'nodemailer';
 
 const APP_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-const FROM_NAME = process.env.EMAIL_FROM_NAME || 'PathFinder';
-const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'noreply@pathfinder.it';
+const FROM_NAME = process.env.EMAIL_FROM_NAME || 'COhA';
+const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'info@cohaapp.com';
 
 const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 const transporter = smtpConfigured

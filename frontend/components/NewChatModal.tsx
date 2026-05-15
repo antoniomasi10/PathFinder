@@ -11,7 +11,7 @@ interface User {
   name: string;
   avatar?: string;
   courseOfStudy?: string;
-  university?: { name: string };
+  university?: { name: string; shortName?: string };
 }
 
 interface NewChatModalProps {
@@ -173,7 +173,7 @@ export default function NewChatModal({ isOpen, onClose, onUserSelected }: NewCha
                     <p style={{ fontWeight: 600, fontSize: 14, color: '#2c3149', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</p>
                     {u.university?.name && (
                       <p style={{ fontSize: 11, color: '#747995', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {u.university.name}{u.courseOfStudy ? ` · ${u.courseOfStudy}` : ''}
+                        {u.university.shortName || u.university.name}{u.courseOfStudy ? ` · ${u.courseOfStudy}` : ''}
                       </p>
                     )}
                   </div>

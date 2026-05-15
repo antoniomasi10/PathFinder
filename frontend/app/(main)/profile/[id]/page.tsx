@@ -37,7 +37,7 @@ interface PublicProfile {
   bio?: string | null;
   courseOfStudy?: string | null;
   yearOfStudy?: number | null;
-  university?: { name: string } | null;
+  university?: { name: string; shortName?: string } | null;
   publicProfile: boolean;
   privacySavedOpps?: string;
   privacyPathmates?: string;
@@ -55,7 +55,7 @@ interface PublicProfile {
     name: string;
     avatar?: string | null;
     courseOfStudy?: string | null;
-    university?: { name: string } | null;
+    university?: { name: string; shortName?: string } | null;
   }>;
   pathmatesCount: number;
   friendStatus: string | null;
@@ -666,7 +666,7 @@ export default function UserProfilePage() {
                         </p>
                       ) : pm.university ? (
                         <p style={{ fontSize: 12, color: '#9B9BB0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {pm.university.name}
+                          {pm.university.shortName || pm.university.name}
                         </p>
                       ) : null}
                     </div>

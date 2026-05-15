@@ -13,6 +13,7 @@ const LOGO_SWASH = '/logo-coha-swash.svg';
 interface University {
   id: string;
   name: string;
+  shortName?: string;
 }
 
 function EyeOffIcon() {
@@ -261,7 +262,7 @@ export default function RegisterPage() {
             {/* Università */}
             <InputField label="Università">
               <SearchableSelect
-                options={universities.map((u) => ({ value: u.id, label: u.name }))}
+                options={universities.map((u) => ({ value: u.id, label: u.name, searchTerms: u.shortName }))}
                 value={universityId}
                 onChange={setUniversityId}
                 placeholder="Cerca la tua università..."

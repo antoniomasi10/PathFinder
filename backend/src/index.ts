@@ -30,6 +30,7 @@ import badgeRoutes from './routes/badge.routes';
 import importRoutes from './routes/import.routes';
 import skillRoutes from './routes/skills.routes';
 import adminRoutes from './routes/admin.routes';
+import supportRoutes from './routes/support.routes';
 import { setupChatSocket } from './socket/chatHandler';
 import { logger } from './utils/logger';
 import { setupNotificationSocket } from './socket/notificationHandler';
@@ -151,6 +152,7 @@ app.use('/api/badges', badgeRoutes);
 app.use('/api/import', importRoutes);
 app.use('/api/v1/users', skillRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/support', supportRoutes);
 
 // Gestore globale errori — deve essere l'ultimo middleware prima dell'health check
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

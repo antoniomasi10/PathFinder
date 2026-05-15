@@ -11,7 +11,7 @@ interface Friend {
   name: string;
   avatar?: string;
   courseOfStudy?: string;
-  university?: { name: string };
+  university?: { name: string; shortName?: string };
 }
 
 interface AddMembersModalProps {
@@ -151,7 +151,7 @@ export default function AddMembersModal({
                     <p className="font-medium text-sm text-white">{friend.name}</p>
                     {friend.university?.name && (
                       <p className="text-[11px] text-gray-500 truncate">
-                        {friend.university.name} {friend.courseOfStudy && `· ${friend.courseOfStudy}`}
+                        {friend.university.shortName || friend.university.name} {friend.courseOfStudy && `· ${friend.courseOfStudy}`}
                       </p>
                     )}
                   </div>
