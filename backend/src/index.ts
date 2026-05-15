@@ -52,6 +52,7 @@ if (process.env.NODE_ENV === 'production' && !process.env.FRONTEND_URL) {
 // Support multiple frontend origins (e.g. coha-univ + coha-italy on Vercel)
 const ALLOWED_ORIGINS = [
   FRONTEND_URL,
+  'https://cohaapp.com',
   ...(process.env.EXTRA_ORIGINS ? process.env.EXTRA_ORIGINS.split(',') : []),
   ...(process.env.NODE_ENV !== 'production' ? ['http://localhost:3000', 'http://localhost:3001'] : []),
 ].filter(Boolean);

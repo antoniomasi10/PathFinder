@@ -78,7 +78,7 @@ export async function refresh(req: Request, res: Response) {
 
     // Check if token is blacklisted
     if (await isTokenBlacklisted(token)) {
-      res.clearCookie('refreshToken', { path: '/api/auth' });
+      res.clearCookie('refreshToken', { path: '/' });
       res.status(401).json({ error: 'Token revocato' });
       return;
     }
@@ -97,7 +97,7 @@ export async function refresh(req: Request, res: Response) {
     res.json({ accessToken });
   } catch (err) {
     logger.error('Refresh token verification failed');
-    res.clearCookie('refreshToken', { path: '/api/auth' });
+    res.clearCookie('refreshToken', { path: '/' });
     res.status(401).json({ error: 'Token non valido' });
   }
 }
