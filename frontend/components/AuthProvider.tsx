@@ -3,7 +3,8 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { AuthContext, AuthUser } from '@/lib/auth';
-import api, { clearAccessToken, bffPost } from '@/lib/api';
+import api, { clearAccessToken, setAccessToken, bffPost } from '@/lib/api';
+import { reauthenticateSockets } from '@/lib/socket';
 import { useLanguage } from '@/lib/language';
 
 const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
@@ -16,10 +17,13 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    // No localStorage check — the httpOnly refresh cookie is the session source of truth.
-    // api.get('/profile/me') will auto-refresh via the 401 interceptor if the in-memory
-    // access token is missing (e.g., after a page reload).
-    api.get('/profile/me')
+    // Refresh first so the subsequent /profile/me never sees a 401.
+    bffPost<{ accessToken: string }>('/api/bff/refresh')
+      .then(({ data }) => {
+        setAccessToken(data.accessToken);
+        reauthenticateSockets();
+        return api.get('/profile/me');
+      })
       .then(({ data }) => {
         setUser({
           id: data.id,
@@ -34,7 +38,6 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
           university: data.university,
         });
 
-        // Redirect based on verification and profile state
         if (!data.emailVerified && pathname !== '/verify-email') {
           router.replace('/verify-email');
         } else if (data.emailVerified && !data.profileCompleted && pathname !== '/onboarding') {
@@ -44,7 +47,6 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch(() => {
-        // Refresh cookie also invalid — user is logged out
         clearAccessToken();
         if (!publicPaths.includes(pathname)) {
           router.replace('/login');

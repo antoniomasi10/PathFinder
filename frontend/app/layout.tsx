@@ -40,6 +40,8 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
         <meta name="theme-color" content="#4F46E5" />
         <meta name="description" content="COhA - Trova il tuo percorso universitario ideale" />
+        <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+        <link rel="shortcut icon" href="/icon.svg" />
 
         {/* PWA Manifest */}
         <link rel="manifest" href="/manifest.json" />
