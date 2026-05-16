@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { AuthContext, AuthUser } from '@/lib/auth';
 import api, { clearAccessToken, bffPost } from '@/lib/api';
 import { useLanguage } from '@/lib/language';
+import { identify, resetAnalytics } from '@/lib/analytics';
 
 const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
 
@@ -33,6 +34,11 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
           provider: data.provider ?? 'LOCAL',
           university: data.university,
         });
+        identify(data.id, {
+          email: data.email,
+          universityId: data.university?.id,
+          profileCompleted: data.profileCompleted,
+        });
 
         // Redirect based on verification and profile state
         if (!data.emailVerified && pathname !== '/verify-email') {
@@ -56,6 +62,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     bffPost('/api/bff/logout').catch(() => {});
     clearAccessToken();
+    resetAnalytics();
     setUser(null);
     router.replace('/login');
   };

@@ -14,6 +14,7 @@ import { logSecurityEvent } from '../utils/securityLogger';
 import { logger } from '../utils/logger';
 import { trackLoginStreak } from '../services/badge.service';
 import { blacklistToken, isTokenBlacklisted, trackUserToken, invalidateAllUserTokens } from '../utils/tokenBlacklist';
+import { captureServerEvent } from '../lib/analytics';
 
 function setRefreshCookie(res: Response, token: string) {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -21,7 +22,7 @@ function setRefreshCookie(res: Response, token: string) {
     httpOnly: true,
     secure: isProduction,
     sameSite: isProduction ? 'none' : 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: 14 * 24 * 60 * 60 * 1000,
     path: '/',
   });
 }
@@ -39,6 +40,7 @@ export async function register(req: Request, res: Response) {
     trackUserToken(result.user.id, result.refreshToken).catch(() => {});
 
     logSecurityEvent('REGISTER', { userId: result.user.id });
+    captureServerEvent(result.user.id, 'signup_completed', { provider: 'local' });
     res.status(201).json({ user: result.user, accessToken: result.accessToken });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -58,6 +60,7 @@ export async function login(req: Request, res: Response) {
     trackUserToken(result.user.id, result.refreshToken).catch(() => {});
 
     logSecurityEvent('LOGIN_SUCCESS', { userId: result.user.id });
+    captureServerEvent(result.user.id, 'login_succeeded', { provider: 'local' });
 
     trackLoginStreak(result.user.id).catch(() => {});
 

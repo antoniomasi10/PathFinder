@@ -5,6 +5,9 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 import { validateEnv } from './lib/validateEnv';
 validateEnv();
 
+import { initAnalytics, Sentry } from './lib/analytics';
+initAnalytics();
+
 import express from 'express';
 import prisma from './lib/prisma';
 import helmet from 'helmet';
@@ -157,6 +160,9 @@ app.use('/api/support', supportRoutes);
 // Gestore globale errori — deve essere l'ultimo middleware prima dell'health check
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   logger.error('Errore non gestito', { error: String(err), stack: err?.stack });
+  if (process.env.SENTRY_DSN) {
+    Sentry.captureException(err);
+  }
   const message = process.env.NODE_ENV === 'production' ? 'Internal server error' : (err?.message ?? 'Internal server error');
   res.status(err?.status ?? 500).json({ error: message });
 });

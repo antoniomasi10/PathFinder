@@ -1,14 +1,13 @@
 'use client';
 
 import { isValidImageUrl } from '@/lib/urlValidation';
-import { ChevronLeft, MoreVertical } from '@/components/icons';
+import { ChevronLeft } from '@/components/icons';
 
 type IndividualProps = {
   type: 'individual';
   user: { id: string; name: string; avatar?: string; university?: string };
   onBack: () => void;
   onPress: () => void;
-  onMore?: () => void;
   loading?: boolean;
 };
 
@@ -17,14 +16,13 @@ type GroupProps = {
   group: { id: string; name: string; image?: string };
   onBack: () => void;
   onPress: () => void;
-  onMore?: () => void;
   loading?: boolean;
 };
 
 type ChatHeaderProps = IndividualProps | GroupProps;
 
 export default function ChatHeader(props: ChatHeaderProps) {
-  const { type, onBack, onPress, onMore, loading } = props;
+  const { type, onBack, onPress, loading } = props;
 
   const name = type === 'individual' ? props.user.name : props.group.name;
   const avatar = type === 'individual' ? props.user.avatar : props.group.image;
@@ -146,20 +144,6 @@ export default function ChatHeader(props: ChatHeaderProps) {
         )}
       </button>
 
-      {/* 3-dots menu */}
-      <button
-        onClick={onMore}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 8,
-          borderRadius: 9999,
-          flexShrink: 0,
-        }}
-      >
-        <MoreVertical size={16} color="#2c3149" />
-      </button>
     </div>
   );
 }

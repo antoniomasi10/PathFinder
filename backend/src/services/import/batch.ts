@@ -191,6 +191,14 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
               updateData.expiresAt = new Date();
               logger.info(`[BatchUpsert] Expired senior role: "${r.title}" (${structured.minYearsRequired} yrs required)`);
             }
+            // Override eligibleFields only if the scraper provided none AND the AI inferred at least one.
+            // This avoids overwriting curated values from sources that already specify the discipline.
+            const scraperFields = (r as any).eligibleFields as string[] | undefined;
+            const inferred = structured.eligibleFields.filter(f => f !== 'ANY');
+            if ((!scraperFields || scraperFields.length === 0) && inferred.length > 0) {
+              updateData.eligibleFields = inferred;
+              logger.info(`[BatchUpsert] Inferred eligibleFields for "${r.title}": ${inferred.join(',')}`);
+            }
           }
           if (clusters) {
             updateData.clusterScores = clusters.scores;
