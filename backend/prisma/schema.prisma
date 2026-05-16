@@ -273,6 +273,7 @@ model Opportunity {
 
   // --- AI-extracted structured content ---
   structuredContent    Json?           // {opportunityDescription, companyDescription, tasks}
+  extractedSkills      String[]        @default([]) // AI-extracted, up to 5 real skill names
 
   // --- URL health ---
   urlStatus            String?         @default("UNCHECKED") // UNCHECKED | ACTIVE | BROKEN

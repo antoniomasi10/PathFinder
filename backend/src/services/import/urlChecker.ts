@@ -8,6 +8,11 @@ const DELAY_MS = 300;
 
 const BOT_UA = 'Mozilla/5.0 (compatible; PathFinder-Bot/1.0; +https://pathfinder.it)';
 
+// Statuses that definitively mean "resource gone" — safe to mark BROKEN even for curated.
+const HARD_GONE_STATUSES = new Set([404, 410]);
+// Statuses likely caused by anti-bot protection — not a signal the page is gone.
+const ANTI_BOT_STATUSES = new Set([403, 429]);
+
 async function checkUrl(url: string): Promise<'ACTIVE' | 'BROKEN' | 'SKIP'> {
   try {
     const res = await axios({
@@ -31,10 +36,16 @@ async function checkUrl(url: string): Promise<'ACTIVE' | 'BROKEN' | 'SKIP'> {
         validateStatus: () => true,
         headers: { 'User-Agent': BOT_UA },
       });
-      return getRes.status >= 200 && getRes.status < 400 ? 'ACTIVE' : 'BROKEN';
+      if (getRes.status >= 200 && getRes.status < 400) return 'ACTIVE';
+      if (ANTI_BOT_STATUSES.has(getRes.status)) return 'SKIP';
+      if (HARD_GONE_STATUSES.has(getRes.status)) return 'BROKEN';
+      return 'SKIP';
     }
 
-    return 'BROKEN';
+    if (ANTI_BOT_STATUSES.has(res.status)) return 'SKIP';
+    if (HARD_GONE_STATUSES.has(res.status)) return 'BROKEN';
+    // Other 4xx/5xx: ambiguous — don't mark broken, retry next cycle
+    return 'SKIP';
   } catch {
     // Network error, DNS failure, timeout — skip this round
     return 'SKIP';
@@ -53,13 +64,11 @@ export async function runUrlCheckBatch(limit = 200): Promise<{
 }> {
   const cutoff = new Date(Date.now() - RECHECK_INTERVAL_DAYS * 24 * 60 * 60 * 1000);
 
-  // Skip curated rows — those are manually verified and false-positives here
-  // (Cloudflare/anti-bot returning 403 to HEAD requests) have caused real opportunities
-  // to disappear from the feed. Curated source is trusted truth.
+  // All sources are checked — curated included. Anti-bot 403/429 now return SKIP (not BROKEN),
+  // so legitimate curated opportunities behind Cloudflare stay visible.
   const opps = await prisma.$queryRawUnsafe<{ id: string; url: string }[]>(
     `SELECT id, url FROM "Opportunity"
      WHERE url IS NOT NULL
-       AND source <> 'curated'
        AND (
          "urlStatus" IS NULL
          OR "urlStatus" = 'UNCHECKED'
@@ -78,12 +87,13 @@ export async function runUrlCheckBatch(limit = 200): Promise<{
   for (const opp of opps) {
     const status = await checkUrl(opp.url);
 
-    if (status !== 'SKIP') {
-      await prisma.opportunity.update({
-        where: { id: opp.id },
-        data: { urlStatus: status, urlCheckedAt: new Date() },
-      });
-    }
+    await prisma.opportunity.update({
+      where: { id: opp.id },
+      data: {
+        ...(status !== 'SKIP' ? { urlStatus: status } : {}),
+        urlCheckedAt: new Date(),
+      },
+    });
 
     checked++;
     if (status === 'ACTIVE') active++;

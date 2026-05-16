@@ -10,6 +10,7 @@
  */
 
 import OpenAI from 'openai';
+import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 
 export interface StructuredContent {
@@ -148,4 +149,98 @@ export async function extractDeadlineFromText(
     logger.warn(`[OpportunityParser] extractDeadline failed for "${title}": ${err}`);
     return null;
   }
+}
+
+const SKILLS_SYSTEM_PROMPT = `Sei un assistente che estrae competenze richieste da descrizioni di opportunità per studenti universitari italiani.
+
+Data la descrizione di un'opportunità, estrai le competenze concrete richieste o preferite.
+Rispondi SOLO con JSON: { "skills": ["Competenza 1", "Competenza 2", ...] }
+
+Regole:
+- Massimo 5 competenze.
+- Solo competenze REALI e SPECIFICHE (es. "Excel avanzato", "Python", "Public speaking", "Analisi dati", "Project management", "Lingua tedesca B2", "Adobe Photoshop").
+- NON includere parole vaghe o generiche come "teamwork", "motivazione", "dinamismo", "flessibilità", "passione", "proattività", "team", "junior", "senior".
+- NON includere requisiti di studio/anno (quelli sono prerequisiti, non competenze).
+- Mantieni la lingua dell'opportunità (se è in inglese, scrivi in inglese).
+- Se non ci sono competenze specifiche identificabili, ritorna array vuoto: { "skills": [] }.
+- Rispondi SOLO con JSON valido.`;
+
+/**
+ * Extracts up to 5 concrete required skills from an opportunity description.
+ * Returns an empty array if none found or on error — never throws.
+ */
+export async function extractOpportunitySkills(
+  title: string,
+  description: string,
+  about?: string | null,
+): Promise<string[]> {
+  const client = getClient();
+  if (!client) return [];
+
+  const userContent = [
+    `Titolo: ${title}`,
+    `Descrizione:\n${description.slice(0, 3000)}`,
+    about ? `Info aggiuntive:\n${about.slice(0, 1000)}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
+  try {
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: SKILLS_SYSTEM_PROMPT },
+        { role: 'user', content: userContent },
+      ],
+      max_tokens: 150,
+      temperature: 0.1,
+    });
+
+    const raw = response.choices[0]?.message?.content;
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw) as { skills?: unknown };
+    if (!Array.isArray(parsed.skills)) return [];
+    return parsed.skills
+      .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+      .slice(0, 5);
+  } catch (err) {
+    logger.warn(`[OpportunityParser] extractSkills failed for "${title}": ${err}`);
+    return [];
+  }
+}
+
+/**
+ * Boot-time backfill: processes up to `limit` active opportunities that have no
+ * extractedSkills yet. Runs in the background — never throws, never blocks startup.
+ */
+export async function backfillExtractedSkillsBoot(limit = 50): Promise<void> {
+  if (!process.env.OPENAI_API_KEY) return;
+
+  const now = new Date();
+  const opps = await prisma.opportunity.findMany({
+    where: {
+      extractedSkills: { isEmpty: true },
+      OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+    },
+    select: { id: true, title: true, description: true, about: true },
+    take: limit,
+    orderBy: { postedAt: 'desc' },
+  });
+
+  if (!opps.length) return;
+
+  logger.info(`[SkillsBackfill] Processing ${opps.length} opportunities at boot`);
+
+  for (const opp of opps) {
+    try {
+      const skills = await extractOpportunitySkills(opp.title, opp.description, opp.about);
+      await prisma.opportunity.update({ where: { id: opp.id }, data: { extractedSkills: skills } });
+    } catch {
+      // Non-fatal — will be retried on next boot
+    }
+  }
+
+  logger.info('[SkillsBackfill] Boot backfill complete');
 }

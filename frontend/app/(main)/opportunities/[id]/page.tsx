@@ -31,6 +31,7 @@ interface Opportunity {
   url?: string;
   remote: boolean;
   skills: string[];
+  extractedSkills: string[];
   requiredEnglishLevel?: string;
   deadline: string;
   source?: string;
@@ -52,6 +53,7 @@ function mapRaw(o: any): Opportunity {
     url: o.url || '',
     remote: o.isRemote || o.remote || false,
     skills: o.tags || o.skills || [],
+    extractedSkills: o.extractedSkills || [],
     requiredEnglishLevel: o.requiredEnglishLevel || '',
     deadline: o.deadline || '',
     source: o.source || '',
@@ -149,7 +151,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
     try {
       const cached = sessionStorage.getItem(`opp_${id}`);
       if (cached) {
-        setOpportunity(JSON.parse(cached));
+        setOpportunity(mapRaw(JSON.parse(cached)));
         setLoading(false);
       }
     } catch {}
@@ -188,10 +190,14 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
   const isSaved = savedIds.has(opportunity.id);
   const companyInitial = opportunity.company.charAt(0).toUpperCase() || '?';
 
+  // Prefer AI-extracted skills (clean, specific); fall back to raw tags only if none extracted
+  const skillsSource = (opportunity.extractedSkills ?? []).length > 0
+    ? opportunity.extractedSkills
+    : opportunity.skills.slice(0, 4);
   const requirements: string[] = [
-    ...opportunity.skills.slice(0, 4),
+    ...skillsSource,
     ...(opportunity.requiredEnglishLevel ? [`Inglese ${opportunity.requiredEnglishLevel}`] : []),
-  ];
+  ].slice(0, 6);
 
   const hasUrl = !!opportunity.url && isValidExternalUrl(opportunity.url);
 

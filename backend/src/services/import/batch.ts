@@ -14,8 +14,9 @@ import { FieldOfStudy, OpportunityFormat, OpportunityType } from '@prisma/client
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { buildDedupKey, isSeniorRole } from './utils';
-import { parseOpportunityContent, parseAIDate } from '../ai/opportunityParser';
+import { parseOpportunityContent, parseAIDate, extractOpportunitySkills } from '../ai/opportunityParser';
 import { classifyOpportunityCluster } from '../ai/clusterClassifier';
+import { translateToItalian } from '../translation.service';
 
 export interface OpportunityRecord {
   id: string;
@@ -170,7 +171,7 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
       const chunk = filteredCreate.slice(i, i + PARSE_CONCURRENCY);
       await Promise.all(
         chunk.map(async (r) => {
-          const [structured, clusters] = await Promise.all([
+          const [structured, clusters, skills, translated] = await Promise.all([
             parseOpportunityContent(r.title, r.description, null, r.company),
             classifyOpportunityCluster({
               title: r.title,
@@ -179,6 +180,8 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
               tags: r.tags ?? [],
               eligibleFields: (r as any).eligibleFields ?? [],
             }),
+            extractOpportunitySkills(r.title, r.description, null),
+            translateToItalian([r.title, r.description]),
           ]);
           const updateData: any = {};
           if (structured) {
@@ -196,6 +199,13 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
             updateData.clusterScores = clusters.scores;
             updateData.clusterPrimary = clusters.primary;
           }
+          if (skills.length > 0) {
+            updateData.extractedSkills = skills;
+          }
+          // Save Italian translation if DeepL changed the text
+          const [itTitle, itDesc] = translated;
+          if (itTitle && itTitle !== r.title) updateData.title = itTitle;
+          if (itDesc && itDesc !== r.description) updateData.description = itDesc;
           if (Object.keys(updateData).length > 0) {
             await prisma.opportunity.update({
               where: { id: r.id },

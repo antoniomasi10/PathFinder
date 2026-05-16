@@ -843,7 +843,7 @@ export async function getNewOpportunities(
         },
       ],
     },
-    { OR: [{ urlStatus: null }, { urlStatus: { not: 'BROKEN' } }, { source: 'curated' }] },
+    { OR: [{ urlStatus: null }, { urlStatus: { not: 'BROKEN' } }] },
   ];
 
   // Hard filter: users who explicitly don't want to relocate never see in-person abroad opportunities

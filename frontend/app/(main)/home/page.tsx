@@ -630,6 +630,9 @@ export default function HomePage() {
   const langCode = LANG_CODE[language];
   const filterCategories = getFilterCategories(t);
 
+  const [dailyOpportunity, setDailyOpportunity] = useState<Opportunity | null>(null);
+  const [loadingDaily, setLoadingDaily] = useState(true);
+
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loadingOpps, setLoadingOpps] = useState(true);
   const [perTePage, setPerTePage] = useState(1);
@@ -799,6 +802,11 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    setLoadingDaily(true);
+    api.get('/opportunities/daily')
+      .then(({ data }) => setDailyOpportunity(data ? mapOpportunity(data) : null))
+      .catch(() => setDailyOpportunity(null))
+      .finally(() => setLoadingDaily(false));
     loadPerTePage(1, '', DEFAULT_FILTERS);
     loadEsploraPage(1, '', DEFAULT_FILTERS);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -904,9 +912,6 @@ const viewedRef = useRef<Set<string>>(new Set());
   const draftMatchCount = combinedPool
     .filter((o) => matchesClientFilters(o, draftFilters, 'per-te'))
     .filter((o) => !typeFilter || o.type === typeFilter).length;
-  const topOpportunity = combinedPool
-    .filter((o) => matchesClientFilters(o, appliedFilters, 'per-te'))[0] ?? null;
-
   const isLoading = loadingOpps && !opportunities.length;
 
   return (
@@ -916,10 +921,10 @@ const viewedRef = useRef<Set<string>>(new Set());
 
         {/* 1. Opportunity of the Day — only on page 1 */}
         {!searchQuery && !typeFilter && perTePage === 1 && (
-          loadingOpps && !opportunities.length ? (
+          loadingDaily ? (
             <div className="rounded-[24px] animate-pulse" style={{ height: 220, backgroundColor: '#dddeff' }} />
-          ) : topOpportunity ? (
-            <OpportunityOfTheDay opp={topOpportunity} onOpen={() => handleOpen(topOpportunity)} />
+          ) : dailyOpportunity ? (
+            <OpportunityOfTheDay opp={dailyOpportunity} onOpen={() => handleOpen(dailyOpportunity)} />
           ) : null
         )}
 

@@ -72,7 +72,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       // For EVENT/CONFERENCE, deadline is meaningless — visibility is bounded by endDate.
       `(o."type" IN ('EVENT', 'CONFERENCE') OR o."deadline" IS NULL OR o."deadline" > NOW())`,
       `(o."type" NOT IN ('EVENT', 'CONFERENCE') OR o."endDate" IS NULL OR o."endDate" >= CURRENT_DATE)`,
-      `(o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN' OR o."source" = 'curated')`,
+      `(o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN')`,
     ];
     const params: any[] = [limit, skip];
     let idx = 3;
@@ -151,6 +151,38 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
     if (lang !== 'it') await translateOpportunities(opportunities, lang);
     res.json({ data: opportunities, total, page, totalPages: Math.ceil(total / limit) });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get the deterministic "opportunity of the day" for this user
+// Same user + same calendar day (Europe/Rome) → same opportunity guaranteed.
+router.get('/daily', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const romeDateStr = new Date().toLocaleDateString('sv', { timeZone: 'Europe/Rome' }); // YYYY-MM-DD
+    const cacheKey = `cache:opp:daily:${req.user!.userId}:${romeDateStr}`;
+
+    const cached = await cacheGet<any>(cacheKey);
+    if (cached) { res.json(cached); return; }
+
+    const result = await getHybridMatchedOpportunities(req.user!.userId, 30, 0, {});
+    const pool = result.data;
+    if (!pool.length) { res.json(null); return; }
+
+    // Deterministic index: hash(userId + date) mod pool size
+    const seedStr = req.user!.userId + romeDateStr;
+    let hash = 0;
+    for (let i = 0; i < seedStr.length; i++) hash = ((hash << 5) - hash + seedStr.charCodeAt(i)) | 0;
+    const daily = pool[Math.abs(hash) % pool.length];
+
+    // TTL = seconds remaining until midnight Rome time
+    const romeNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Rome' }));
+    const endOfDay = new Date(romeNow); endOfDay.setHours(23, 59, 59, 999);
+    const ttl = Math.max(60, Math.floor((endOfDay.getTime() - romeNow.getTime()) / 1000));
+
+    await cacheSet(cacheKey, daily, ttl);
+    res.json(daily);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
