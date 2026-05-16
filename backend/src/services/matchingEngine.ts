@@ -2,6 +2,7 @@ import { UserProfile, User, Opportunity, GpaRange, EnglishLevel, UserInteraction
 import prisma from '../lib/prisma';
 import type { UserSkills, SkillEntry } from './skills.service';
 import { normalizeFieldToEnum, isSeniorRole } from './import/utils';
+import { logger } from '../utils/logger';
 
 export interface OppFilters {
   search?: string;
@@ -11,6 +12,7 @@ export interface OppFilters {
   isAbroad?: boolean;
   englishLevels?: string[];
   deadline?: string;
+  types?: string[];
 }
 
 function applyOppFilters(items: any[], f: OppFilters): any[] {
@@ -32,6 +34,7 @@ function applyOppFilters(items: any[], f: OppFilters): any[] {
       if (f.deadline === '30' && daysLeft > 30) return false;
       if (f.deadline === 'month' && (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear())) return false;
     }
+    if (f.types?.length && !f.types.includes(opp.type)) return false;
     return true;
   });
 }
@@ -377,12 +380,19 @@ export function scoreOpportunity(
   // 12. Skill match bonus (additive, max +10, clamped to 100)
   score += computeSkillMatchScore(skills || null, opportunity);
 
-  // 13. Field ineligibility penalty: if eligibleFields is set and user's field not in it
+  // 13. Field mismatch penalty: if eligibleFields is set and user's field not in it,
+  // apply a soft penalty rather than a hard exclusion. Hard exclusion at SQL level
+  // causes too many opportunities to disappear when AI-inferred fields don't perfectly
+  // match the user's normalised field enum (e.g. ENGINEERING vs COMPUTER_SCIENCE).
   const eligFields: FieldOfStudy[] = (opportunity as any).eligibleFields ?? [];
   if (eligFields.length > 0 && !eligFields.includes('ANY' as FieldOfStudy)) {
     const userField = user.courseOfStudy ? normalizeFieldToEnum(user.courseOfStudy) : ('ANY' as FieldOfStudy);
     if (userField !== 'ANY' && !eligFields.includes(userField)) {
       score = Math.round(score * 0.15);
+    }
+    // User field unknown but opportunity is restricted: mild penalty since we can't verify eligibility.
+    if (userField === 'ANY') {
+      score = Math.round(score * 0.5);
     }
   }
 
@@ -484,29 +494,27 @@ export function scoreOpportunityWithFeedback(
 }
 
 /**
- * Sorts a pre-scored opportunity list by "freshness" using three priority buckets,
- * while preserving matchScore ordering within each bucket.
+ * Applies a soft "freshness" penalty to the display matchScore so that already-seen
+ * opportunities slide slightly lower without being banished to the end of the feed.
  *
- * Bucket 0 — never seen:          highest priority
- * Bucket 1 — viewed, not clicked: deprioritized
- * Bucket 2 — external link clicked: lowest priority
+ *   viewed (not clicked) → -5
+ *   external link clicked → -10
  *
- * The matchScore field is NOT modified — this only affects display order.
+ * High-scoring already-seen opps remain visible near their natural position; the
+ * underlying score is clamped to [0, 100].
  */
-export function sortOpportunitiesByFreshness<T extends { id: string }>(
+export function applyFreshnessPenalty<T extends { id: string; matchScore: number }>(
   opps: T[],
   viewedIds: Set<string>,
   clickedIds: Set<string>,
 ): T[] {
-  const b0: T[] = [];
-  const b1: T[] = [];
-  const b2: T[] = [];
-  for (const opp of opps) {
-    if (clickedIds.has(opp.id)) b2.push(opp);
-    else if (viewedIds.has(opp.id)) b1.push(opp);
-    else b0.push(opp);
-  }
-  return [...b0, ...b1, ...b2];
+  return opps.map((opp) => {
+    let penalty = 0;
+    if (clickedIds.has(opp.id)) penalty = 10;
+    else if (viewedIds.has(opp.id)) penalty = 5;
+    if (penalty === 0) return opp;
+    return { ...opp, matchScore: Math.max(0, Math.min(100, opp.matchScore - penalty)) };
+  });
 }
 
 // ─── Diversification (MMR) ──────────────────────────────────────────
@@ -564,6 +572,19 @@ export async function getHybridMatchedOpportunities(
   offset: number = 0,
   filters: OppFilters = {},
 ): Promise<{ data: any[]; total: number }> {
+  const full = await getHybridMatchedOpportunitiesFull(userId, filters);
+  return { data: full.slice(offset, offset + limit), total: full.length };
+}
+
+/**
+ * Returns the full ranked & diversified list of matched opportunities (no pagination).
+ * The route layer caches this snapshot and paginates by slicing — guarantees that
+ * page N never contains items already shown on a previous page within the same snapshot.
+ */
+export async function getHybridMatchedOpportunitiesFull(
+  userId: string,
+  filters: OppFilters = {},
+): Promise<any[]> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { profile: true },
@@ -572,26 +593,19 @@ export async function getHybridMatchedOpportunities(
   if (!user?.profile) {
     // Fallback: return opportunities by date if no profile
     // Use raw query to avoid Prisma failing on the Unsupported vector column
-    const [opps, total] = await Promise.all([
-      prisma.$queryRawUnsafe<any[]>(
-        `SELECT o."id", o."title", o."description", o."about", o."url", o."type",
-                o."universityId", o."company", o."location", o."isRemote", o."isAbroad",
-                o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
-                o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
-                u."name" as "universityName", u."city" as "universityCity",
-                u."id" as "uniId", u."logoUrl" as "universityLogoUrl"
-         FROM "Opportunity" o
-         LEFT JOIN "University" u ON o."universityId" = u."id"
-         WHERE (o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN')
-         ORDER BY o."postedAt" DESC
-         LIMIT $1 OFFSET $2`,
-        limit, offset,
-      ),
-      prisma.opportunity.count({
-        where: { OR: [{ urlStatus: null }, { urlStatus: { not: 'BROKEN' } }, { source: 'curated' }] },
-      }),
-    ]);
-    return { data: opps, total };
+    const opps = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT o."id", o."title", o."description", o."about", o."url", o."type",
+              o."universityId", o."company", o."location", o."isRemote", o."isAbroad",
+              o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
+              o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
+              u."name" as "universityName", u."city" as "universityCity",
+              u."id" as "uniId", u."logoUrl" as "universityLogoUrl"
+       FROM "Opportunity" o
+       LEFT JOIN "University" u ON o."universityId" = u."id"
+       WHERE (o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN')
+       ORDER BY o."postedAt" DESC, o."id" ASC`,
+    );
+    return opps;
   }
 
   // Check if user has an embedding for vector search
@@ -615,14 +629,6 @@ export async function getHybridMatchedOpportunities(
   } else if (user.willingToRelocate === 'NO') {
     relocFilter = `AND (o."isRemote" = true OR o."country" = 'IT' OR (o."country" IS NULL AND o."isAbroad" = false))`;
   }
-
-  // Hard filter: exclude opportunities outside user's field of study.
-  // When user.courseOfStudy doesn't match any known field (userField='ANY'),
-  // we still exclude opps that explicitly restrict eligibleFields — only fully open opps pass.
-  const userField = user.courseOfStudy ? normalizeFieldToEnum(user.courseOfStudy) : 'ANY';
-  const fieldFilter = userField !== 'ANY'
-    ? `AND (o."eligibleFields" = '{}' OR 'ANY' = ANY(o."eligibleFields") OR '${userField}' = ANY(o."eligibleFields"))`
-    : `AND (o."eligibleFields" = '{}' OR 'ANY' = ANY(o."eligibleFields"))`;
 
   // Hard filter: senior/experienced roles that leak under INTERNSHIP/STAGE tagging.
   // We mirror isSeniorRole() semantics: senior pattern triggers exclusion UNLESS a safe
@@ -666,7 +672,6 @@ export async function getHybridMatchedOpportunities(
          )
          AND (o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN' OR o."source" = 'curated')
          ${relocFilter}
-         ${fieldFilter}
          ${seniorLeakFilter}
        ORDER BY o."postedAt" DESC`,
       userId,
@@ -699,7 +704,6 @@ export async function getHybridMatchedOpportunities(
          )
          AND (o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN' OR o."source" = 'curated')
          ${relocFilter}
-         ${fieldFilter}
          ${seniorLeakFilter}
        ORDER BY o."postedAt" DESC`,
     );
@@ -768,23 +772,21 @@ export async function getHybridMatchedOpportunities(
     };
   });
 
-  // Sort by matchScore, tie-break on id for deterministic pagination across requests.
-  scored.sort((a, b) => b.matchScore - a.matchScore || a.id.localeCompare(b.id));
-
-  // MMR diversification on the top 40 — mix types/clusters at the head of the feed
-  // so the first pages aren't monoculture INTERNSHIP.
-  const diversified = diversifyMMR(scored, 40, 0.7, 5);
-
-  // Derive view/click sets from the already-fetched interactions (90-day window)
+  // Soft freshness penalty: already-viewed/-clicked opps lose a few points so they
+  // slide slightly lower without being banished to the end of the feed.
   const viewedIds = new Set(interactions.filter((i) => i.action === 'view').map((i) => i.targetId));
   const clickedIds = new Set(interactions.filter((i) => i.action === 'click').map((i) => i.targetId));
-  const ranked = sortOpportunitiesByFreshness(diversified, viewedIds, clickedIds);
+  const adjusted = applyFreshnessPenalty(scored, viewedIds, clickedIds);
+
+  // Sort by matchScore, tie-break on id for deterministic pagination across requests.
+  adjusted.sort((a, b) => b.matchScore - a.matchScore || a.id.localeCompare(b.id));
+
+  // MMR diversification across the WHOLE list (lambda 0.7 keeps score dominant)
+  // so type/cluster heterogeneity is preserved on every page, not just the first 40.
+  const ranked = diversifyMMR(adjusted, adjusted.length, 0.7, 5);
 
   const filtered = Object.keys(filters).length ? applyOppFilters(ranked, filters) : ranked;
-  return {
-    data: filtered.slice(offset, offset + limit),
-    total: filtered.length,
-  };
+  return filtered;
 }
 
 /**
@@ -801,6 +803,18 @@ export async function getNewOpportunities(
   offset: number = 0,
   filters: OppFilters = {},
 ): Promise<{ data: any[]; total: number }> {
+  const full = await getNewOpportunitiesFull(userId, filters);
+  return { data: full.slice(offset, offset + limit), total: full.length };
+}
+
+/**
+ * Full ranked list for the "Nuove" tab (no pagination).
+ * Used by the route layer to cache a snapshot and paginate via slicing.
+ */
+export async function getNewOpportunitiesFull(
+  userId: string,
+  filters: OppFilters = {},
+): Promise<any[]> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { profile: true },
@@ -853,19 +867,6 @@ export async function getNewOpportunities(
     );
   }
 
-  // Hard filter: exclude opportunities outside user's eligible field of study
-  if (user?.courseOfStudy) {
-    const userField = normalizeFieldToEnum(user.courseOfStudy);
-    if (userField !== 'ANY') {
-      (where.AND as Prisma.OpportunityWhereInput[]).push({
-        OR: [
-          { eligibleFields: { isEmpty: true } },
-          { eligibleFields: { has: 'ANY' as FieldOfStudy } },
-          { eligibleFields: { has: userField } },
-        ],
-      });
-    }
-  }
 
   if (filters.deadline) {
     const now = new Date(); now.setHours(0, 0, 0, 0);
@@ -954,12 +955,10 @@ export async function getNewOpportunities(
     };
   });
 
-  scored.sort((a, b) => b._rankingScore - a._rankingScore);
+  scored.sort((a, b) => b._rankingScore - a._rankingScore || a.id.localeCompare(b.id));
 
   // Strip internal ranking field before returning
-  const data = scored.slice(offset, offset + limit).map(({ _rankingScore, ...opp }) => opp);
-
-  return { data, total: scored.length };
+  return scored.map(({ _rankingScore, ...opp }) => opp);
 }
 
 function getMatchReason(profile: any, user: any, opp: any, skills?: UserSkills | null): string {

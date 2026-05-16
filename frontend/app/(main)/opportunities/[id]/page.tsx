@@ -6,6 +6,7 @@ import api from '@/lib/api';
 import BottomNav from '@/components/BottomNav';
 import { isValidExternalUrl } from '@/lib/urlValidation';
 import { useSavedOpportunities } from '@/lib/savedOpportunities';
+import { track } from '@/lib/analytics';
 import { getOpportunityTypeColor } from '@/lib/opportunityColors';
 import DeadlineLabel, { OpenLabel } from '@/components/DeadlineLabel';
 import {
@@ -160,6 +161,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
         // Preserve matchScore from sessionStorage cache (computed by hybrid engine in list view).
         // The GET /:id route uses a simplified scorer that can return inflated values.
         setOpportunity(prev => ({ ...fresh, matchScore: prev?.matchScore || fresh.matchScore }));
+        track('opportunity_viewed', { opportunityId: fresh.id, type: fresh.type, matchScore: fresh.matchScore });
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -613,6 +615,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
           onClick={() => {
             if (!hasUrl) return;
             api.post(`/opportunities/${opportunity.id}/click`).catch(() => {});
+            track('opportunity_clicked_apply', { opportunityId: opportunity.id, type: opportunity.type, matchScore: opportunity.matchScore });
             window.open(opportunity.url, '_blank', 'noopener,noreferrer');
           }}
           disabled={!hasUrl}

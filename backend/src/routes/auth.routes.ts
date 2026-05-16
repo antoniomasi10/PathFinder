@@ -25,7 +25,7 @@ router.post('/logout', (req: Request, res: Response) => {
   const token = req.cookies?.refreshToken;
   if (token) {
     // Blacklist the refresh token so it can't be reused
-    blacklistToken(token, 7 * 24 * 60 * 60).catch(() => {});
+    blacklistToken(token, 14 * 24 * 60 * 60).catch(() => {});
   }
   const isProduction = process.env.NODE_ENV === 'production';
   res.clearCookie('refreshToken', {

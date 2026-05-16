@@ -251,11 +251,30 @@ const FIELD_KEYWORD_MAP: Array<{ keywords: string[]; field: FieldOfStudy }> = [
 ];
 
 /**
- * Maps a free-text field-of-study string (from scraper sources) to a FieldOfStudy enum value.
- * Returns 'ANY' if no match — callers should treat ANY as "open to all disciplines".
+ * Italian degree-program aliases that map directly to a FieldOfStudy enum.
+ * Checked BEFORE the generic keyword map so multi-word names (e.g. "Economia e Management",
+ * "Ingegneria Gestionale") resolve to the most appropriate field rather than the first
+ * keyword that happens to match.
+ */
+const ITALIAN_COURSE_ALIASES: Array<{ pattern: RegExp; field: FieldOfStudy }> = [
+  { pattern: /\b(economia\s+e\s+management|management\s+e\s+marketing|marketing\s+e\s+comunicazione|economia\s+aziendale|amministrazione\s+(e|d')?\s*controllo)\b/, field: 'BUSINESS' },
+  { pattern: /\b(ingegneria\s+gestionale)\b/, field: 'ENGINEERING' },
+  { pattern: /\b(scienze\s+della\s+comunicazione|comunicazione\s+d'impresa)\b/, field: 'BUSINESS' },
+  { pattern: /\b(scienze\s+politiche\s+e\s+(delle\s+)?relazioni\s+internazionali)\b/, field: 'POLITICAL_SCIENCE' },
+  { pattern: /\b(lingue\s+e\s+culture|mediazione\s+linguistica)\b/, field: 'HUMANITIES' },
+];
+
+/**
+ * Maps a free-text field-of-study string (from scraper sources or user onboarding)
+ * to a FieldOfStudy enum value. Returns 'ANY' if no match — callers should treat ANY
+ * as "open to all disciplines".
  */
 export function normalizeFieldToEnum(raw: string): FieldOfStudy {
-  const r = raw.toLowerCase();
+  const r = raw.toLowerCase().trim();
+  if (!r) return 'ANY';
+  for (const { pattern, field } of ITALIAN_COURSE_ALIASES) {
+    if (pattern.test(r)) return field;
+  }
   for (const { keywords, field } of FIELD_KEYWORD_MAP) {
     if (keywords.some(kw => r.includes(kw))) return field;
   }

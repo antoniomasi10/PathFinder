@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import api from '@/lib/api';
 import { parseDeadlineDate } from '@/lib/dateUtils';
+import { track } from '@/lib/analytics';
 
 export interface SavedOpportunity {
   id: string;
@@ -170,6 +171,12 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
     if (!isSaved) {
       saveListeners.current.forEach((fn) => fn());
     }
+
+    track(isSaved ? 'opportunity_unsaved' : 'opportunity_saved', {
+      opportunityId: oppId,
+      type: data?.type,
+      matchScore: data?.matchScore,
+    });
 
     // Persist to server — localStorage is the source of truth, no rollback on failure
     api.post(`/opportunities/${oppId}/save`).catch((err) => {

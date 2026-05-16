@@ -49,13 +49,13 @@ interface AdvancedFilters {
   onlyAbroad: boolean;
   onlyNew: boolean;
   englishLevels: string[];
-  tags: string[];
+  opportunityTypes: string[];
 }
 
 const DEFAULT_FILTERS: AdvancedFilters = {
   badges: {}, company: '', location: '', minScore: 0, maxScore: 100,
   deadline: '', onlyRemote: false, onlyAbroad: false, onlyNew: false,
-  englishLevels: [], tags: [],
+  englishLevels: [], opportunityTypes: [],
 };
 
 /* ── Filter logic ────────────────────────────────────────────────── */
@@ -74,11 +74,11 @@ function matchesClientFilters(opp: Opportunity, f: AdvancedFilters, tab: 'per-te
   }
   if (opp.matchScore < f.minScore || opp.matchScore > f.maxScore) return false;
   if (f.onlyNew && tab !== 'per-te' && !opp.isNew) return false;
-  if (f.tags.length > 0 && !opp.skills.some((s) => f.tags.includes(s))) return false;
+  if (f.opportunityTypes.length > 0 && !f.opportunityTypes.includes(opp.type.toUpperCase())) return false;
   return true;
 }
 
-function buildServerParams(search: string, f: AdvancedFilters, type?: string | null): string {
+function buildServerParams(search: string, f: AdvancedFilters): string {
   const p: Record<string, string> = {};
   if (search.trim()) p.search = search.trim();
   if (f.company) p.company = f.company;
@@ -87,7 +87,7 @@ function buildServerParams(search: string, f: AdvancedFilters, type?: string | n
   if (f.onlyAbroad) p.isAbroad = 'true';
   if (f.englishLevels.length) p.englishLevel = f.englishLevels.join(',');
   if (f.deadline) p.deadline = f.deadline;
-  if (type) p.type = type;
+  if (f.opportunityTypes.length) p.type = f.opportunityTypes.join(',');
   const qs = new URLSearchParams(p).toString();
   return qs ? `&${qs}` : '';
 }
@@ -97,7 +97,7 @@ function hasAnyFilter(f: AdvancedFilters): boolean {
     Object.values(f.badges).some((arr) => arr.length > 0) ||
     !!f.company || !!f.location || f.minScore > 1 || f.maxScore < 100 ||
     !!f.deadline || f.onlyRemote || f.onlyAbroad || f.onlyNew ||
-    f.englishLevels.length > 0 || f.tags.length > 0
+    f.englishLevels.length > 0 || f.opportunityTypes.length > 0
   );
 }
 
@@ -148,10 +148,6 @@ function getFilterCategories(t: ReturnType<typeof useLanguage>['t']) {
       { label: t.home.filterRemote, value: 'remote' },
       { label: t.home.filterInPerson, value: 'in-person' },
       { label: t.home.filterHybrid, value: 'hybrid' },
-    ]},
-    { id: 'livello', label: t.home.filterLevel, options: [
-      { label: t.home.filterJunior, value: 'junior' },
-      { label: t.home.filterSenior, value: 'senior' },
     ]},
   ];
 }
@@ -239,6 +235,46 @@ function DualRangeSlider({ minVal, maxVal, onMinChange, onMaxChange }: {
 }
 
 /* ── Opportunity of the Day ──────────────────────────────────────── */
+
+const MIN_OPP_OF_DAY_SCORE = 40;
+
+function OpportunityOfTheDayEmpty({ onCta }: { onCta: () => void }) {
+  return (
+    <div
+      className="rounded-[24px] flex flex-col items-center justify-center text-center px-6"
+      style={{
+        height: 220,
+        background: 'linear-gradient(135deg, #ecedff 0%, #dddeff 100%)',
+        border: '1px solid #ecedff',
+      }}
+    >
+      <p
+        className="font-semibold text-[16px] leading-[22px]"
+        style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}
+      >
+        Stiamo ancora cercando l'opportunità giusta per te
+      </p>
+      <p
+        className="text-[13px] leading-[18px] mt-2"
+        style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)', maxWidth: 280 }}
+      >
+        Completa il tuo profilo per ricevere match più accurati con le tue passioni e il tuo corso di studi.
+      </p>
+      <button
+        onClick={onCta}
+        className="mt-4 rounded-full font-semibold text-[13px] active:opacity-80"
+        style={{
+          backgroundColor: '#4a4bd7',
+          color: 'white',
+          padding: '10px 20px',
+          fontFamily: 'var(--font-plus-jakarta)',
+        }}
+      >
+        Vai al profilo
+      </button>
+    </div>
+  );
+}
 
 function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => void }) {
   const { t } = useLanguage();
@@ -339,7 +375,14 @@ function OpportunityCard({ opp, isSaved, onSave, onOpen }: {
       className="bg-white overflow-hidden"
       style={{ border: '1px solid #ecedff', borderRadius: 24, boxShadow: '0px 2px 4px rgba(0,0,0,0.02)' }}
     >
-      <button onClick={onOpen} className="w-full text-left active:opacity-75 transition-opacity" style={{ padding: 17 }}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onOpen}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(); } }}
+        className="w-full text-left active:opacity-75 transition-opacity cursor-pointer"
+        style={{ padding: 17 }}
+      >
         {/* Top row: logo + title + bookmark */}
         <div className="flex items-center gap-[12px]">
           <div
@@ -391,7 +434,7 @@ function OpportunityCard({ opp, isSaved, onSave, onOpen }: {
             </div>
           </div>
         </div>
-      </button>
+      </div>
     </div>
   );
 }
@@ -464,15 +507,17 @@ function SearchHistoryDropdown({ history, onSelect, onRemove, onClear }: {
 function Pagination({ currentPage, totalPages, onPageChange, disabled }: {
   currentPage: number; totalPages: number; onPageChange: (page: number) => void; disabled?: boolean;
 }) {
+  if (totalPages <= 1) return null;
   const pages: (number | '...')[] = [];
-  if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); }
-  else {
+  if (totalPages <= 5) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
     pages.push(1);
-    if (currentPage > 3) pages.push('...');
     const start = Math.max(2, currentPage - 1);
     const end = Math.min(totalPages - 1, currentPage + 1);
+    if (start > 2) pages.push('...');
     for (let i = start; i <= end; i++) pages.push(i);
-    if (currentPage < totalPages - 2) pages.push('...');
+    if (end < totalPages - 1) pages.push('...');
     pages.push(totalPages);
   }
   const btn = 'w-10 h-10 rounded-xl flex items-center justify-center text-sm font-medium transition-all active:opacity-75';
@@ -509,8 +554,16 @@ function FilterSection({ label, children }: { label: string; children: React.Rea
   );
 }
 
-function FilterSheet({ open, draft, allTags, matchCount, filterCategories, tab, t, onUpdate, onToggleBadge, onReset, onApply, onClose }: {
-  open: boolean; draft: AdvancedFilters; allTags: string[]; matchCount: number;
+const OPPORTUNITY_TYPE_CHIPS = [
+  { label: 'Internship / Stage',      types: ['INTERNSHIP', 'STAGE'] },
+  { label: 'Summer School',           types: ['SUMMER_PROGRAM'] },
+  { label: 'Events',                  types: ['EVENT'] },
+  { label: 'Hackathon & Competition', types: ['HACKATHON', 'COMPETITION'] },
+  { label: 'Exchange & Volunteering', types: ['EXCHANGE', 'VOLUNTEERING'] },
+] as const;
+
+function FilterSheet({ open, draft, matchCount, filterCategories, tab, t, onUpdate, onToggleBadge, onReset, onApply, onClose }: {
+  open: boolean; draft: AdvancedFilters; matchCount: number;
   filterCategories: ReturnType<typeof getFilterCategories>; tab: 'per-te' | 'esplora';
   t: ReturnType<typeof useLanguage>['t'];
   onUpdate: (partial: Partial<AdvancedFilters>) => void; onToggleBadge: (catId: string, value: string) => void;
@@ -575,6 +628,33 @@ function FilterSheet({ open, draft, allTags, matchCount, filterCategories, tab, 
             {tab === 'esplora' && <Toggle label={t.home.filterOnlyNew} active={draft.onlyNew} onToggle={() => onUpdate({ onlyNew: !draft.onlyNew })} />}
           </div>
           <div className="h-px" style={{ backgroundColor: '#f3f2ff' }} />
+          <FilterSection label={t.home.filterOpportunityType}>
+            <div className="flex flex-wrap gap-2">
+              {OPPORTUNITY_TYPE_CHIPS.map(({ label, types }) => {
+                const active = (types as readonly string[]).some((type) => draft.opportunityTypes.includes(type));
+                return (
+                  <button
+                    key={label}
+                    onClick={() => {
+                      const allActive = (types as readonly string[]).every((type) => draft.opportunityTypes.includes(type));
+                      const next = allActive
+                        ? draft.opportunityTypes.filter((x) => !(types as readonly string[]).includes(x))
+                        : [...new Set([...draft.opportunityTypes, ...(types as readonly string[])])];
+                      onUpdate({ opportunityTypes: next });
+                    }}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold transition-all active:opacity-75"
+                    style={{
+                      backgroundColor: active ? '#4a4bd7' : '#f0f1f8',
+                      color: active ? 'white' : '#595e78',
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </FilterSection>
+          <div className="h-px" style={{ backgroundColor: '#f3f2ff' }} />
           {filterCategories.map((cat) => (
             <FilterSection key={cat.id} label={cat.label}>
               <div className="flex flex-wrap gap-2">
@@ -591,19 +671,6 @@ function FilterSheet({ open, draft, allTags, matchCount, filterCategories, tab, 
               ))}
             </div>
           </FilterSection>
-          {allTags.length > 0 && (
-            <>
-              <div className="h-px" style={{ backgroundColor: '#f3f2ff' }} />
-              <FilterSection label={t.home.filterSkillsTags}>
-                <div className="flex flex-wrap gap-2">
-                  {allTags.map((tag) => (
-                    <Chip key={tag} label={tag} active={draft.tags.includes(tag)}
-                      onToggle={() => onUpdate({ tags: draft.tags.includes(tag) ? draft.tags.filter((v) => v !== tag) : [...draft.tags, tag] })} />
-                  ))}
-                </div>
-              </FilterSection>
-            </>
-          )}
         </div>
         <div className="px-5 pt-4 pb-8" style={{ borderTop: '1px solid #f3f2ff' }}>
           <button onClick={onApply} className="w-full py-4 rounded-[20px] font-semibold text-[15px] text-white" style={{ backgroundColor: '#4a4bd7', fontFamily: 'var(--font-plus-jakarta)' }}>
@@ -621,7 +688,6 @@ function FilterSheet({ open, draft, allTags, matchCount, filterCategories, tab, 
 export default function HomePage() {
   const router = useRouter();
   const [tab] = useState<'per-te' | 'esplora'>('per-te');
-  const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
@@ -649,11 +715,11 @@ export default function HomePage() {
   const pullDistRef = useRef(0);
   const indicatorRef = useRef<HTMLDivElement>(null);
   const spinnerSvgRef = useRef<SVGSVGElement>(null);
-  const refreshParamsRef = useRef<{ searchQuery: string; appliedFilters: AdvancedFilters; typeFilter: string | null }>({
-    searchQuery: '', appliedFilters: DEFAULT_FILTERS, typeFilter: null,
+  const refreshParamsRef = useRef<{ searchQuery: string; appliedFilters: AdvancedFilters }>({
+    searchQuery: '', appliedFilters: DEFAULT_FILTERS,
   });
-  const loadPerTeRef = useRef<((page: number, search: string, filters: AdvancedFilters, scrollToTop?: boolean, type?: string | null) => Promise<unknown> | void) | null>(null);
-  const loadEsploraRef = useRef<((page: number, search: string, filters: AdvancedFilters, scrollToTop?: boolean, type?: string | null) => Promise<unknown> | void) | null>(null);
+  const loadPerTeRef = useRef<((page: number, search: string, filters: AdvancedFilters, scrollToTop?: boolean) => Promise<unknown> | void) | null>(null);
+  const loadEsploraRef = useRef<((page: number, search: string, filters: AdvancedFilters, scrollToTop?: boolean) => Promise<unknown> | void) | null>(null);
 
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
@@ -692,9 +758,9 @@ export default function HomePage() {
     };
   }
 
-  const loadPerTePage = useCallback((page: number, search: string, filters: AdvancedFilters, scrollToTop = false, type?: string | null) => {
+  const loadPerTePage = useCallback((page: number, search: string, filters: AdvancedFilters, scrollToTop = false) => {
     setLoadingOpps(true);
-    const qs = buildServerParams(search, filters, type);
+    const qs = buildServerParams(search, filters);
     return api.get(`/opportunities?matched=true&page=${page}&limit=20&lang=${langCode}${qs}`)
       .then(({ data }) => {
         const items = data.data || data;
@@ -708,9 +774,9 @@ export default function HomePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadEsploraPage = useCallback((page: number, search: string, filters: AdvancedFilters, scrollToTop = false, type?: string | null) => {
+  const loadEsploraPage = useCallback((page: number, search: string, filters: AdvancedFilters, scrollToTop = false) => {
     setLoadingNew(true);
-    const qs = buildServerParams(search, filters, type);
+    const qs = buildServerParams(search, filters);
     return api.get(`/opportunities?new=true&page=${page}&limit=20&lang=${langCode}${qs}`)
       .then(({ data }) => {
         const items = data.data || data;
@@ -741,10 +807,10 @@ export default function HomePage() {
     setIsRefreshing(true);
     if (indicatorRef.current) { indicatorRef.current.style.transition = 'none'; indicatorRef.current.style.height = '56px'; indicatorRef.current.style.opacity = '1'; }
     if (spinnerSvgRef.current) spinnerSvgRef.current.style.transform = '';
-    const { searchQuery: sq, appliedFilters: af, typeFilter: tf } = refreshParamsRef.current;
+    const { searchQuery: sq, appliedFilters: af } = refreshParamsRef.current;
     Promise.all([
-      loadPerTeRef.current?.(1, sq, af, false, tf) ?? Promise.resolve(),
-      loadEsploraRef.current?.(1, sq, af, false, tf) ?? Promise.resolve(),
+      loadPerTeRef.current?.(1, sq, af, false) ?? Promise.resolve(),
+      loadEsploraRef.current?.(1, sq, af, false) ?? Promise.resolve(),
     ]).finally(() => {
       isRefreshingRef.current = false;
       setIsRefreshing(false);
@@ -804,23 +870,11 @@ export default function HomePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    loadPerTePage(1, searchQuery, appliedFilters, false, typeFilter);
-    loadEsploraPage(1, searchQuery, appliedFilters, false, typeFilter);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [typeFilter]);
-
-  const allTags = useMemo(() => {
-    const set = new Set<string>();
-    [...opportunities, ...newOpportunities].forEach((o) => o.skills.forEach((s) => s && set.add(s)));
-    return Array.from(set).sort();
-  }, [opportunities, newOpportunities]);
-
   const [filterOpen, setFilterOpen] = useState(false);
   const [draftFilters, setDraftFilters] = useState<AdvancedFilters>({ ...DEFAULT_FILTERS });
   const [appliedFilters, setAppliedFilters] = useState<AdvancedFilters>({ ...DEFAULT_FILTERS });
 
-  useEffect(() => { refreshParamsRef.current = { searchQuery, appliedFilters, typeFilter }; }, [searchQuery, appliedFilters, typeFilter]);
+  useEffect(() => { refreshParamsRef.current = { searchQuery, appliedFilters }; }, [searchQuery, appliedFilters]);
 
   function updateDraft(partial: Partial<AdvancedFilters>) { setDraftFilters((prev) => ({ ...prev, ...partial })); }
   function toggleDraftBadge(catId: string, value: string) {
@@ -852,6 +906,14 @@ export default function HomePage() {
   }
 
   const hasActiveFilters = hasAnyFilter(appliedFilters);
+  const activeFilterCount = (
+    Object.values(appliedFilters.badges).flat().length +
+    (appliedFilters.company ? 1 : 0) + (appliedFilters.location ? 1 : 0) +
+    (appliedFilters.minScore > 1 ? 1 : 0) + (appliedFilters.maxScore < 100 ? 1 : 0) +
+    (appliedFilters.deadline ? 1 : 0) + (appliedFilters.onlyRemote ? 1 : 0) +
+    (appliedFilters.onlyAbroad ? 1 : 0) + (appliedFilters.onlyNew ? 1 : 0) +
+    appliedFilters.englishLevels.length + appliedFilters.opportunityTypes.length
+  );
 
 const viewedRef = useRef<Set<string>>(new Set());
   function handleOpen(opp: Opportunity) {
@@ -898,12 +960,10 @@ const viewedRef = useRef<Set<string>>(new Set());
   }, [opportunities, newOpportunities]);
 
   const perTeFiltered = combinedPool
-    .filter((o) => matchesClientFilters(o, appliedFilters, 'per-te'))
-    .filter((o) => !typeFilter || o.type.toUpperCase() === typeFilter.toUpperCase());
+    .filter((o) => matchesClientFilters(o, appliedFilters, 'per-te'));
   const esploraFiltered = perTeFiltered; // alias mantenuto per compatibilità FilterSheet
   const draftMatchCount = combinedPool
-    .filter((o) => matchesClientFilters(o, draftFilters, 'per-te'))
-    .filter((o) => !typeFilter || o.type === typeFilter).length;
+    .filter((o) => matchesClientFilters(o, draftFilters, 'per-te')).length;
   const topOpportunity = combinedPool
     .filter((o) => matchesClientFilters(o, appliedFilters, 'per-te'))[0] ?? null;
 
@@ -915,11 +975,13 @@ const viewedRef = useRef<Set<string>>(new Set());
       <div className="flex flex-col gap-[10px] px-[16px] pt-[8px] pb-[24px]">
 
         {/* 1. Opportunity of the Day — only on page 1 */}
-        {!searchQuery && !typeFilter && perTePage === 1 && (
+        {!searchQuery && perTePage === 1 && (
           loadingOpps && !opportunities.length ? (
             <div className="rounded-[24px] animate-pulse" style={{ height: 220, backgroundColor: '#dddeff' }} />
-          ) : topOpportunity ? (
+          ) : topOpportunity && topOpportunity.matchScore >= MIN_OPP_OF_DAY_SCORE ? (
             <OpportunityOfTheDay opp={topOpportunity} onOpen={() => handleOpen(topOpportunity)} />
+          ) : topOpportunity ? (
+            <OpportunityOfTheDayEmpty onCta={() => router.push('/profile/edit')} />
           ) : null
         )}
 
@@ -949,8 +1011,11 @@ const viewedRef = useRef<Set<string>>(new Set());
               )}
               <button onClick={openFilterSheet} className="pr-[16px] pl-[8px] flex-shrink-0 relative" style={{ color: hasActiveFilters ? '#4a4bd7' : '#acb0ce' }}>
                 <Filter size={18} strokeWidth={2} color={hasActiveFilters ? '#4a4bd7' : '#acb0ce'} />
-                {hasActiveFilters && (
-                  <span className="absolute top-0 right-3 w-2 h-2 rounded-full" style={{ backgroundColor: '#4a4bd7' }} />
+                {activeFilterCount > 0 && (
+                  <span className="absolute -top-0.5 right-2 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1"
+                    style={{ backgroundColor: '#4a4bd7' }}>
+                    {activeFilterCount}
+                  </span>
                 )}
               </button>
             </div>
@@ -962,37 +1027,6 @@ const viewedRef = useRef<Set<string>>(new Set());
               <SearchDropdown suggestions={suggestions} query={searchQuery} activeIndex={activeSuggestionIndex} onSelect={handleSuggestionSelect} onHover={setActiveSuggestionIndex} />
             )}
           </div>
-        </div>
-
-        {/* 3. Category chips — full-width distributed */}
-        <div className="flex justify-between">
-          {([
-            { labelKey: 'filterAll',         value: null },
-            { labelKey: 'filterInternship',  value: 'INTERNSHIP' },
-            { labelKey: 'filterSummerSchool', value: 'SUMMER_SCHOOL' },
-            { labelKey: 'filterProjects',    value: 'PROJECT' },
-            { labelKey: 'filterEvents',      value: 'EVENT' },
-          ] as { labelKey: keyof typeof t.home; value: string | null }[]).map((chip) => {
-            const label = t.home[chip.labelKey] as string;
-            const active = typeFilter === chip.value;
-            return (
-              <button
-                key={chip.labelKey}
-                onClick={() => setTypeFilter(chip.value)}
-                className="rounded-full font-medium text-[12px] px-[12px] transition-all"
-                style={{
-                  paddingTop: 5, paddingBottom: 5,
-                  backgroundColor: active ? '#4a4bd7' : '#ecedff',
-                  color: active ? '#fbf7ff' : '#595e78',
-                  fontFamily: 'var(--font-plus-jakarta)',
-                  boxShadow: active ? '0px 1px 1px rgba(0,0,0,0.05)' : 'none',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
         </div>
 
         {/* Pull-to-refresh indicator */}
@@ -1067,7 +1101,7 @@ const viewedRef = useRef<Set<string>>(new Set());
                   onOpen={() => handleOpen(opp)} isSaved={savedIds.has(opp.id)} onSave={() => handleSave(opp)} />
               ))}
             </div>
-            {!typeFilter && perTeTotalPages > 1 && (
+            {perTeTotalPages > 1 && (
               <Pagination currentPage={perTePage} totalPages={perTeTotalPages}
                 onPageChange={(p) => loadPerTePage(p, searchQuery, appliedFilters, true)} disabled={loadingOpps} />
             )}
@@ -1077,7 +1111,7 @@ const viewedRef = useRef<Set<string>>(new Set());
 
       {/* ── Filter sheet ──────────────────────────────────────────── */}
       <FilterSheet
-        open={filterOpen} draft={draftFilters} allTags={allTags}
+        open={filterOpen} draft={draftFilters}
         matchCount={draftMatchCount} filterCategories={filterCategories}
         tab={tab} t={t}
         onUpdate={updateDraft} onToggleBadge={toggleDraftBadge}

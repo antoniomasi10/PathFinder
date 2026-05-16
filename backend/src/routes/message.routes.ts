@@ -5,6 +5,7 @@ import { sendMessageSchema } from '../schemas';
 import prisma from '../lib/prisma';
 import { validateImages } from '../utils/imageValidation';
 import { uploadImages } from '../utils/imageUpload';
+import { captureServerEvent } from '../lib/analytics';
 
 const router = Router();
 
@@ -228,6 +229,7 @@ router.post('/', authMiddleware, validate(sendMessageSchema), async (req: Reques
         sender: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
       },
     });
+    captureServerEvent(senderId, 'message_sent', { channel: 'rest', hasImages: imageUrls.length > 0 });
     res.status(201).json(message);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
