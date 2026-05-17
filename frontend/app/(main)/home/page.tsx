@@ -80,14 +80,16 @@ function matchesClientFilters(opp: Opportunity, f: AdvancedFilters, tab: 'per-te
 
 function buildServerParams(search: string, f: AdvancedFilters): string {
   const p: Record<string, string> = {};
-  if (search.trim()) p.search = search.trim();
+  const { detectedTypes, remainingSearch } = extractTypesFromSearch(search);
+  if (remainingSearch) p.search = remainingSearch;
   if (f.company) p.company = f.company;
   if (f.location) p.location = f.location;
   if (f.onlyRemote) p.isRemote = 'true';
   if (f.onlyAbroad) p.isAbroad = 'true';
   if (f.englishLevels.length) p.englishLevel = f.englishLevels.join(',');
   if (f.deadline) p.deadline = f.deadline;
-  if (f.opportunityTypes.length) p.type = f.opportunityTypes.join(',');
+  const allTypes = [...new Set([...f.opportunityTypes, ...detectedTypes])];
+  if (allTypes.length) p.type = allTypes.join(',');
   const qs = new URLSearchParams(p).toString();
   return qs ? `&${qs}` : '';
 }
@@ -554,9 +556,49 @@ function FilterSection({ label, children }: { label: string; children: React.Rea
   );
 }
 
+const TYPE_ALIASES: Record<string, string> = {
+  'summer program': 'SUMMER_PROGRAM',
+  'summership': 'SUMMER_PROGRAM',
+  'summer school': 'SUMMER_PROGRAM',
+  'summer': 'SUMMER_PROGRAM',
+  'internship': 'INTERNSHIP',
+  'hackathon': 'HACKATHON',
+  'hackaton': 'HACKATHON',
+  'stage': 'STAGE',
+  'fellowship': 'FELLOWSHIP',
+  'exchange': 'EXCHANGE',
+  'scambio': 'EXCHANGE',
+  'volontariato': 'VOLUNTEERING',
+  'volunteering': 'VOLUNTEERING',
+  'evento': 'EVENT',
+  'event': 'EVENT',
+  'bootcamp': 'BOOTCAMP',
+  'competition': 'COMPETITION',
+  'competizione': 'COMPETITION',
+  'research': 'RESEARCH',
+  'ricerca': 'RESEARCH',
+  'conference': 'CONFERENCE',
+  'conferenza': 'CONFERENCE',
+  'extracurricular': 'EXTRACURRICULAR',
+};
+
+function extractTypesFromSearch(query: string): { detectedTypes: string[]; remainingSearch: string } {
+  const detectedTypes: string[] = [];
+  let remaining = query.trim().toLowerCase();
+  const sortedAliases = Object.entries(TYPE_ALIASES).sort((a, b) => b[0].length - a[0].length);
+  for (const [alias, type] of sortedAliases) {
+    if (remaining.includes(alias)) {
+      if (!detectedTypes.includes(type)) detectedTypes.push(type);
+      remaining = remaining.replace(alias, '').replace(/\s+/g, ' ').trim();
+    }
+  }
+  return { detectedTypes, remainingSearch: remaining };
+}
+
 const OPPORTUNITY_TYPE_CHIPS = [
   { label: 'Internship / Stage',      types: ['INTERNSHIP', 'STAGE'] },
   { label: 'Summer School',           types: ['SUMMER_PROGRAM'] },
+  { label: 'Fellowship',              types: ['FELLOWSHIP'] },
   { label: 'Events',                  types: ['EVENT'] },
   { label: 'Hackathon & Competition', types: ['HACKATHON', 'COMPETITION'] },
   { label: 'Exchange & Volunteering', types: ['EXCHANGE', 'VOLUNTEERING'] },
@@ -746,10 +788,10 @@ export default function HomePage() {
   function mapOpportunity(opp: any, extras?: Partial<Opportunity>): Opportunity {
     return {
       id: opp.id, title: opp.title,
-      company: opp.company || opp.universityName || opp.university?.name || '',
+      company: opp.company || opp.organizer || opp.universityName || opp.university?.name || '',
       badge: `${opp.type}${opp.isRemote ? ' • REMOTE' : ''}`,
       description: opp.description || '', matchScore: opp.matchScore || 0,
-      location: opp.location || opp.universityCity || opp.university?.city || '',
+      location: opp.location || opp.city || opp.universityCity || opp.university?.city || '',
       about: opp.about || '', url: opp.url || '', type: opp.type || '',
       remote: opp.isRemote || false, isAbroad: opp.isAbroad || false,
       skills: opp.tags || [], requiredEnglishLevel: opp.requiredEnglishLevel || '',

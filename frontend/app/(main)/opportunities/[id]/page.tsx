@@ -45,11 +45,11 @@ function mapRaw(o: any): Opportunity {
   return {
     id: o.id,
     title: o.title,
-    company: o.company || o.universityName || '',
+    company: o.company || o.organizer || o.universityName || '',
     type: o.type || '',
     description: o.description || '',
     matchScore: o.matchScore || 0,
-    location: o.location || '',
+    location: o.location || o.city || o.universityCity || '',
     about: o.about || '',
     url: o.url || '',
     remote: o.isRemote || o.remote || false,

@@ -5,6 +5,7 @@ import { getHybridMatchedOpportunitiesFull, getNewOpportunitiesFull, scoreOpport
 import { trackInteraction } from '../services/interaction.service';
 import { cacheGet, cacheSet, cacheDel } from '../lib/cache';
 import { translateOpportunities } from '../services/opportunityTranslation.service';
+import { resolveLocationFilter } from '../services/locationFilter';
 
 const VALID_LANGS = new Set(['en', 'es', 'fr', 'zh']);
 
@@ -92,8 +93,14 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       params.push(`%${company}%`); idx++;
     }
     if (location) {
-      conditions.push(`o."location" ILIKE $${idx}`);
-      params.push(`%${location}%`); idx++;
+      const { iso, term } = resolveLocationFilter(location);
+      if (iso) {
+        conditions.push(`(o."location" ILIKE $${idx} OR o."city" ILIKE $${idx + 1} OR o."country" = $${idx + 2})`);
+        params.push(`%${term}%`, `%${term}%`, iso); idx += 3;
+      } else {
+        conditions.push(`(o."location" ILIKE $${idx} OR o."city" ILIKE $${idx + 1})`);
+        params.push(`%${term}%`, `%${term}%`); idx += 2;
+      }
     }
     if (req.query.isRemote === 'true') { conditions.push(`o."isRemote" = $${idx}`); params.push(true); idx++; }
     if (req.query.isAbroad === 'true') { conditions.push(`o."isAbroad" = $${idx}`); params.push(true); idx++; }
@@ -139,7 +146,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     const [opportunities, countResult] = await Promise.all([
       prisma.$queryRawUnsafe<any[]>(
         `SELECT o."id", o."title", o."description", o."about", o."url", o."type",
-                o."universityId", o."company", o."location", o."isRemote", o."isAbroad",
+                o."universityId", o."company", o."organizer", o."location", o."city", o."country", o."isRemote", o."isAbroad",
                 o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
                 o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
                 u."name" as "universityName", u."city" as "universityCity",
