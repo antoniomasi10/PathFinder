@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import prisma from '../lib/prisma';
-import { getHybridMatchedOpportunities, getNewOpportunities, scoreOpportunity, OppFilters } from '../services/matchingEngine';
+import { getHybridMatchedOpportunitiesFull, getNewOpportunitiesFull, scoreOpportunity, OppFilters } from '../services/matchingEngine';
 import { trackInteraction } from '../services/interaction.service';
 import { cacheGet, cacheSet, cacheDel } from '../lib/cache';
 import { translateOpportunities } from '../services/opportunityTranslation.service';
@@ -36,33 +36,39 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     if (englishLevel) filters.englishLevels = englishLevel.split(',').filter(Boolean);
     const deadline = (req.query.deadline as string || '');
     if (deadline) filters.deadline = deadline;
+    const typeParam = (req.query.type as string || '');
+    const typeFilters = typeParam ? typeParam.split(',').filter(Boolean) : [];
+    if (typeFilters.length) filters.types = typeFilters;
     const hasFilters = Object.keys(filters).length > 0;
 
     if (isNew === 'true') {
       const filterKey = hasFilters ? JSON.stringify(filters) : '';
-      const cacheKey = `cache:opps:new:${req.user!.userId}:${page}:${limit}:${filterKey}:${lang}`;
-      const cached = await cacheGet(cacheKey);
-      if (cached) { res.json(cached); return; }
-
-      const result = await getNewOpportunities(req.user!.userId, limit, skip, hasFilters ? filters : {});
-      if (lang !== 'it') await translateOpportunities(result.data, lang);
-      const payload = { data: result.data, total: result.total, page, totalPages: Math.ceil(result.total / limit) };
-      await cacheSet(cacheKey, payload, OPP_TTL);
-      res.json(payload);
+      // Snapshot cache: one entry holds the full ordered list. Pagination is a slice
+      // over the same snapshot, so an opp can never appear on two different pages
+      // within a snapshot window (TTL: OPP_TTL).
+      const cacheKey = `cache:opps:new:${req.user!.userId}:${filterKey}:${lang}`;
+      let snapshot = await cacheGet(cacheKey) as any[] | null;
+      if (!snapshot) {
+        snapshot = await getNewOpportunitiesFull(req.user!.userId, hasFilters ? filters : {});
+        if (lang !== 'it') await translateOpportunities(snapshot, lang);
+        await cacheSet(cacheKey, snapshot, OPP_TTL);
+      }
+      const data = snapshot.slice(skip, skip + limit);
+      res.json({ data, total: snapshot.length, page, totalPages: Math.ceil(snapshot.length / limit) });
       return;
     }
 
     if (matched === 'true') {
       const filterKey = hasFilters ? JSON.stringify(filters) : '';
-      const cacheKey = `cache:opps:matched:${req.user!.userId}:${page}:${limit}:${filterKey}:${lang}`;
-      const cached = await cacheGet(cacheKey);
-      if (cached) { res.json(cached); return; }
-
-      const result = await getHybridMatchedOpportunities(req.user!.userId, limit, skip, hasFilters ? filters : {});
-      if (lang !== 'it') await translateOpportunities(result.data, lang);
-      const payload = { data: result.data, total: result.total, page, totalPages: Math.ceil(result.total / limit) };
-      await cacheSet(cacheKey, payload, OPP_TTL);
-      res.json(payload);
+      const cacheKey = `cache:opps:matched:${req.user!.userId}:${filterKey}:${lang}`;
+      let snapshot = await cacheGet(cacheKey) as any[] | null;
+      if (!snapshot) {
+        snapshot = await getHybridMatchedOpportunitiesFull(req.user!.userId, hasFilters ? filters : {});
+        if (lang !== 'it') await translateOpportunities(snapshot, lang);
+        await cacheSet(cacheKey, snapshot, OPP_TTL);
+      }
+      const data = snapshot.slice(skip, skip + limit);
+      res.json({ data, total: snapshot.length, page, totalPages: Math.ceil(snapshot.length / limit) });
       return;
     }
 
@@ -110,6 +116,14 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
       conditions.push(`(o."deadline" >= $${idx} AND o."deadline" <= $${idx + 1})`);
       params.push(start, end); idx += 2;
+    }
+    if (typeFilters.length === 1) {
+      conditions.push(`o."type" = $${idx++}`);
+      params.push(typeFilters[0]);
+    } else if (typeFilters.length > 1) {
+      const placeholders = typeFilters.map(() => `$${idx++}`).join(', ');
+      conditions.push(`o."type" IN (${placeholders})`);
+      params.push(...typeFilters);
     }
 
     const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -229,22 +243,23 @@ router.get('/:id', authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
-// Track view interaction
+// Track view interaction.
+// Note: we intentionally do NOT invalidate the matched/new snapshot cache here —
+// freshness penalty and view multiplier should affect the NEXT browsing session,
+// not shuffle ranks mid-pagination (which causes cross-page duplicates).
 router.post('/:id/view', authMiddleware, async (req: Request, res: Response) => {
   try {
     trackInteraction(req.user!.userId, 'opportunity', req.params.id, 'view').catch(() => {});
-    invalidateUserOppCache(req.user!.userId);
     res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Track external link click
+// Track external link click (same caching rationale as /view).
 router.post('/:id/click', authMiddleware, async (req: Request, res: Response) => {
   try {
     trackInteraction(req.user!.userId, 'opportunity', req.params.id, 'click').catch(() => {});
-    invalidateUserOppCache(req.user!.userId);
     res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

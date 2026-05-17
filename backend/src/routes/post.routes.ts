@@ -9,6 +9,7 @@ import { uploadImages } from '../utils/imageUpload';
 import { moderateContent } from '../utils/moderation';
 import prisma from '../lib/prisma';
 import { trackInteraction } from '../services/interaction.service';
+import { captureServerEvent } from '../lib/analytics';
 
 const router = Router();
 
@@ -42,6 +43,7 @@ router.post('/', authMiddleware, validate(createPostSchema), async (req: Request
     const validImages = validateImages(images);
     const imageUrls = await uploadImages(validImages, 'posts');
     const post = await postService.createPost(req.user!.userId, content, imageUrls, mod.action === 'FLAG');
+    captureServerEvent(req.user!.userId, 'post_created', { postId: post.id, hasImages: imageUrls.length > 0 });
     res.status(201).json(post);
   } catch (err: any) {
     res.status(400).json({ error: err.message });

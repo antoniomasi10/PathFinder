@@ -35,7 +35,7 @@ export async function isTokenBlacklisted(token: string): Promise<boolean> {
 export async function trackUserToken(userId: string, token: string): Promise<void> {
   const key = `${USER_TOKENS_PREFIX}${userId}`;
   await redis.sadd(key, hashToken(token));
-  await redis.expire(key, 7 * 24 * 60 * 60); // 7 days (matches refresh token TTL)
+  await redis.expire(key, 14 * 24 * 60 * 60); // 14 days (matches refresh token TTL)
 }
 
 /**
@@ -46,7 +46,7 @@ export async function invalidateAllUserTokens(userId: string): Promise<void> {
   const tokenHashes = await redis.smembers(key);
   const pipeline = redis.pipeline();
   for (const hash of tokenHashes) {
-    pipeline.set(`${BLACKLIST_PREFIX}${hash}`, '1', 'EX', 7 * 24 * 60 * 60);
+    pipeline.set(`${BLACKLIST_PREFIX}${hash}`, '1', 'EX', 14 * 24 * 60 * 60);
   }
   pipeline.del(key);
   await pipeline.exec();

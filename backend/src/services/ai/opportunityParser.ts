@@ -1,25 +1,58 @@
 /**
  * AI-powered opportunity content parser.
  *
- * Extracts structured sections and deadline from raw scraped opportunity text using GPT-4o Mini.
- * Called once per new opportunity at import time — never re-processes existing records.
+ * Extracts structured sections, deadline, and inferred eligibility fields from raw
+ * scraped opportunity text using GPT-4o Mini. Output is forced in Italian regardless
+ * of source language. Called once per new opportunity at import time.
  *
  * If OPENAI_API_KEY is not set, all functions return null (graceful no-op).
- * On any API error the function returns null, never throws — the import batch must not fail
- * because of an AI call.
+ * On any API error the function returns null, never throws.
  */
 
 import OpenAI from 'openai';
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 
+const VALID_FIELDS = [
+  'COMPUTER_SCIENCE',
+  'ENGINEERING',
+  'MEDICINE',
+  'LIFE_SCIENCES',
+  'PHYSICAL_SCIENCES',
+  'MATHEMATICS',
+  'ECONOMICS',
+  'BUSINESS',
+  'LAW',
+  'POLITICAL_SCIENCE',
+  'HUMANITIES',
+  'DESIGN',
+  'ARCHITECTURE',
+  'PSYCHOLOGY',
+  'EDUCATION',
+  'ANY',
+] as const;
+export type FieldOfStudyValue = typeof VALID_FIELDS[number];
+const VALID_FIELDS_SET = new Set<string>(VALID_FIELDS);
+
 export interface StructuredContent {
   opportunityDescription: string | null;
   companyDescription: string | null;
   tasks: string[] | null;
-  deadline: string | null;        // ISO 8601 "YYYY-MM-DD", null se non trovata nel testo
-  minYearsRequired: number | null; // anni di esperienza lavorativa richiesti; null se entry-level/non specificato
+  deadline: string | null;        // ISO 8601 "YYYY-MM-DD"
+  minYearsRequired: number | null;
+  eligibleFields: FieldOfStudyValue[]; // inferred from text; [] = open to all
+  targetAudience: string | null;       // short Italian description, audit/UX
+  parsedLanguage: string | null;       // detected source language (e.g. "en", "it")
 }
+
+const LIMITS = {
+  descSentences: 3,
+  descWords: 60,
+  companySentences: 2,
+  companyWords: 40,
+  taskCount: 6,
+  taskWords: 12,
+} as const;
 
 let _client: OpenAI | null = null;
 
@@ -29,7 +62,6 @@ function getClient(): OpenAI | null {
   return _client;
 }
 
-/** Parsa una stringa ISO date e verifica che sia una data futura valida. */
 export function parseAIDate(s: string | null | undefined): Date | null {
   if (!s) return null;
   const d = new Date(s);
@@ -40,23 +72,108 @@ export function parseAIDate(s: string | null | undefined): Date | null {
 
 const SYSTEM_PROMPT = `Sei un assistente che estrae informazioni strutturate da descrizioni di opportunità (stage, fellowship, hackathon, conferenze, ecc.) per studenti universitari italiani.
 
-Data la descrizione grezza di un'opportunità, estrai in JSON:
-- "opportunityDescription": 2-4 frasi su cosa prevede l'opportunità (ruolo, programma, obiettivo). Null se non deducibile.
-- "companyDescription": 1-3 frasi su chi è l'azienda o l'organizzazione. Null se non c'è informazione sull'azienda.
-- "tasks": array di 3-7 frasi brevi (max 15 parole ciascuna) su cosa farà concretamente il partecipante. Null se non deducibile.
-- "deadline": data di scadenza per candidarsi in formato "YYYY-MM-DD". Null se non esplicitamente presente nel testo.
-- "minYearsRequired": numero intero di anni di esperienza lavorativa richiesti esplicitamente nel testo (es. "3+ years of experience", "minimum 4 anni di esperienza"). Null se il ruolo è entry-level, per studenti, o se non è specificata esperienza pregressa.
+REGOLA LINGUA (assoluta): rispondi SEMPRE in italiano, anche se il testo sorgente è in inglese, francese, spagnolo o altra lingua. Traduci tu i contenuti in italiano naturale e scorrevole. Non lasciare frasi nella lingua originale.
 
-Regole:
-- Mantieni la lingua dell'input (non tradurre dall'inglese all'italiano).
-- Scrivi in modo chiaro e diretto, senza marketing.
-- Se un campo non è deducibile dal testo, metti null (non inventare).
-- Per "deadline": estrai SOLO se il testo menziona esplicitamente una data di scadenza (es. "Deadline: April 30, 2026", "Apply by May 15", "Closing date: 30/06/2026"). Non inferire.
+Estrai un JSON con questi campi:
+- "opportunityDescription": cosa prevede l'opportunità (ruolo, programma, obiettivo). MASSIMO ${LIMITS.descSentences} frasi e ${LIMITS.descWords} parole totali. Chiaro, diretto, senza marketing. Null se non deducibile.
+- "companyDescription": chi è l'azienda/organizzazione. MASSIMO ${LIMITS.companySentences} frasi e ${LIMITS.companyWords} parole. Null se non c'è informazione.
+- "tasks": array di MASSIMO ${LIMITS.taskCount} bullet (minimo 3). Ogni bullet inizia con un verbo all'infinito (es. "Sviluppare", "Analizzare") ed è MASSIMO ${LIMITS.taskWords} parole. Null se non deducibile.
+- "deadline": data di scadenza per candidarsi in formato "YYYY-MM-DD". Estrai SOLO se il testo la menziona esplicitamente (es. "Deadline: April 30, 2026", "Apply by May 15"). Null altrimenti. Non inventare.
+- "minYearsRequired": intero, anni di esperienza lavorativa richiesti esplicitamente (es. "3+ years of experience"). Null se entry-level, per studenti, o non specificato.
+- "eligibleFields": array di campi di studio richiesti per candidarsi. Usa SOLO questi valori esatti: ${VALID_FIELDS.join(', ')}. Sii CONSERVATIVO: se l'opportunità è specifica di un dominio tecnico (es. ingegneria, medicina, design), DEVI inserire il/i campo/i corrispondenti. Lascia [] SOLO se è davvero aperta a qualsiasi studente universitario. Esempi: stage di sviluppo software → ["COMPUTER_SCIENCE","ENGINEERING"]; programma di marketing → ["BUSINESS","ECONOMICS"]; ricerca biomedica → ["MEDICINE","LIFE_SCIENCES"]; hackathon generalista aperto a tutti → [].
+- "targetAudience": una frase breve in italiano che descrive il pubblico target (es. "Studenti di ingegneria magistrale", "Qualsiasi studente universitario", "Studenti di business o economia"). Null se davvero non deducibile.
+- "parsedLanguage": codice ISO 2 lettere della lingua sorgente del testo di input (es. "en", "it", "fr", "es"). Mai null.
+
+Regole generali:
+- Se un campo non è deducibile, metti null (non inventare).
+- Non superare MAI i limiti di lunghezza indicati. Se devi tagliare, taglia.
 - Rispondi SOLO con JSON valido, nessun testo aggiuntivo.`;
 
 const DEADLINE_ONLY_PROMPT = `Estrai la data di scadenza per candidarsi (application deadline) dal testo dell'opportunità.
 Rispondi SOLO con JSON: { "deadline": "YYYY-MM-DD" } oppure { "deadline": null } se non è esplicitamente presente.
 Non inventare date. Estrai solo se il testo le menziona chiaramente.`;
+
+function countWords(s: string): number {
+  return s.trim().split(/\s+/).filter(Boolean).length;
+}
+
+function countSentences(s: string): number {
+  return s.split(/[.!?]+\s/).filter(t => t.trim().length > 0).length;
+}
+
+interface ValidationIssue {
+  field: string;
+  reason: string;
+}
+
+function validateStructured(s: StructuredContent): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  if (s.opportunityDescription) {
+    const w = countWords(s.opportunityDescription);
+    const sent = countSentences(s.opportunityDescription);
+    if (w > LIMITS.descWords) issues.push({ field: 'opportunityDescription', reason: `${w} parole > ${LIMITS.descWords}` });
+    if (sent > LIMITS.descSentences) issues.push({ field: 'opportunityDescription', reason: `${sent} frasi > ${LIMITS.descSentences}` });
+  }
+  if (s.companyDescription) {
+    const w = countWords(s.companyDescription);
+    const sent = countSentences(s.companyDescription);
+    if (w > LIMITS.companyWords) issues.push({ field: 'companyDescription', reason: `${w} parole > ${LIMITS.companyWords}` });
+    if (sent > LIMITS.companySentences) issues.push({ field: 'companyDescription', reason: `${sent} frasi > ${LIMITS.companySentences}` });
+  }
+  if (s.tasks) {
+    if (s.tasks.length > LIMITS.taskCount) {
+      issues.push({ field: 'tasks', reason: `${s.tasks.length} bullet > ${LIMITS.taskCount}` });
+    }
+    s.tasks.forEach((t, i) => {
+      const w = countWords(t);
+      if (w > LIMITS.taskWords) issues.push({ field: `tasks[${i}]`, reason: `${w} parole > ${LIMITS.taskWords}` });
+    });
+  }
+  return issues;
+}
+
+function normalizeRaw(raw: unknown): StructuredContent {
+  const p = (raw ?? {}) as Record<string, unknown>;
+  const fields = Array.isArray(p.eligibleFields)
+    ? (p.eligibleFields as unknown[])
+        .filter((v): v is string => typeof v === 'string')
+        .map(v => v.trim().toUpperCase())
+        .filter((v): v is FieldOfStudyValue => VALID_FIELDS_SET.has(v))
+    : [];
+  return {
+    opportunityDescription: typeof p.opportunityDescription === 'string' ? p.opportunityDescription.trim() : null,
+    companyDescription: typeof p.companyDescription === 'string' ? p.companyDescription.trim() : null,
+    tasks: Array.isArray(p.tasks)
+      ? (p.tasks as unknown[]).filter((t): t is string => typeof t === 'string' && t.trim().length > 0).map(t => t.trim())
+      : null,
+    deadline: typeof p.deadline === 'string' ? p.deadline : null,
+    minYearsRequired: typeof p.minYearsRequired === 'number' ? Math.round(p.minYearsRequired) : null,
+    eligibleFields: fields,
+    targetAudience: typeof p.targetAudience === 'string' ? p.targetAudience.trim() : null,
+    parsedLanguage: typeof p.parsedLanguage === 'string' ? p.parsedLanguage.trim().toLowerCase().slice(0, 5) : null,
+  };
+}
+
+async function callLLM(
+  client: OpenAI,
+  userContent: string,
+  extraSystem?: string,
+): Promise<StructuredContent | null> {
+  const system = extraSystem ? `${SYSTEM_PROMPT}\n\n${extraSystem}` : SYSTEM_PROMPT;
+  const response = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: userContent },
+    ],
+    max_tokens: 700,
+    temperature: 0.2,
+  });
+  const raw = response.choices[0]?.message?.content;
+  if (!raw) return null;
+  return normalizeRaw(JSON.parse(raw));
+}
 
 export async function parseOpportunityContent(
   title: string,
@@ -70,48 +187,54 @@ export async function parseOpportunityContent(
     return null;
   }
 
+  // Cap input length to avoid runaway token usage on pathological scrapes.
+  const MAX_DESC_CHARS = 8000;
+  const safeDesc = description.length > MAX_DESC_CHARS ? description.slice(0, MAX_DESC_CHARS) : description;
+  const safeAbout = about && about.length > 2000 ? about.slice(0, 2000) : about;
+
   const userContent = [
     `Titolo: ${title}`,
     company ? `Azienda/Organizzazione: ${company}` : null,
-    `Descrizione:\n${description}`,
-    about ? `Info aggiuntive:\n${about}` : null,
+    `Descrizione:\n${safeDesc}`,
+    safeAbout ? `Info aggiuntive:\n${safeAbout}` : null,
   ]
     .filter(Boolean)
     .join('\n\n');
 
   try {
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: userContent },
-      ],
-      max_tokens: 650,
-      temperature: 0.2,
-    });
+    let parsed = await callLLM(client, userContent);
+    if (!parsed) return null;
 
-    const raw = response.choices[0]?.message?.content;
-    if (!raw) return null;
+    let issues = validateStructured(parsed);
+    if (issues.length > 0) {
+      logger.debug(`[OpportunityParser] "${title}" violates limits: ${issues.map(i => `${i.field}(${i.reason})`).join(', ')} — retrying with compression hint`);
+      const compressionHint = `IMPORTANTE: il tentativo precedente ha sforato questi limiti: ${issues.map(i => `${i.field} (${i.reason})`).join('; ')}. Rispetta TASSATIVAMENTE i limiti di lunghezza questa volta. Taglia il superfluo.`;
+      const retried = await callLLM(client, userContent, compressionHint);
+      if (retried) {
+        const retryIssues = validateStructured(retried);
+        // Prefer retry only if it has fewer (or zero) issues
+        if (retryIssues.length < issues.length) {
+          parsed = retried;
+          issues = retryIssues;
+        }
+      }
+    }
 
-    const parsed = JSON.parse(raw) as Partial<StructuredContent>;
-    return {
-      opportunityDescription: typeof parsed.opportunityDescription === 'string' ? parsed.opportunityDescription : null,
-      companyDescription: typeof parsed.companyDescription === 'string' ? parsed.companyDescription : null,
-      tasks: Array.isArray(parsed.tasks) ? parsed.tasks.filter((t): t is string => typeof t === 'string') : null,
-      deadline: typeof parsed.deadline === 'string' ? parsed.deadline : null,
-      minYearsRequired: typeof parsed.minYearsRequired === 'number' ? Math.round(parsed.minYearsRequired) : null,
-    };
+    // Hard-truncate any remaining over-length tasks rather than dropping them.
+    if (parsed.tasks) {
+      parsed.tasks = parsed.tasks.slice(0, LIMITS.taskCount).map(t => {
+        const words = t.split(/\s+/);
+        return words.length > LIMITS.taskWords ? words.slice(0, LIMITS.taskWords).join(' ') : t;
+      });
+    }
+
+    return parsed;
   } catch (err) {
     logger.warn(`[OpportunityParser] Failed to parse opportunity "${title}": ${err}`);
     return null;
   }
 }
 
-/**
- * Lightweight function that extracts only the deadline from opportunity text.
- * Used by the backfill script — cheaper prompt (50 tokens output vs 650).
- */
 export async function extractDeadlineFromText(
   title: string,
   description: string,

@@ -7,6 +7,7 @@ import QueryProvider from '@/components/QueryProvider';
 import { LanguageProvider } from '@/lib/language';
 import { PrivacyProvider } from '@/lib/privacy';
 import CookieBanner from '@/components/CookieBanner';
+import AnalyticsProvider from '@/components/AnalyticsProvider';
 import Script from 'next/script';
 
 const ONESIGNAL_APP_ID = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID || '';
@@ -58,14 +59,16 @@ export default function RootLayout({
             strategy="afterInteractive"
           />
         )}
-        <QueryProvider>
-          <LanguageProvider>
-            <PrivacyProvider>
-              <AuthProvider>{children}</AuthProvider>
-            </PrivacyProvider>
-          </LanguageProvider>
-          <CookieBanner />
-        </QueryProvider>
+        <AnalyticsProvider>
+          <QueryProvider>
+            <LanguageProvider>
+              <PrivacyProvider>
+                <AuthProvider>{children}</AuthProvider>
+              </PrivacyProvider>
+            </LanguageProvider>
+            <CookieBanner />
+          </QueryProvider>
+        </AnalyticsProvider>
       </body>
     </html>
   );
