@@ -334,11 +334,58 @@ export async function extractOpportunitySkills(
   }
 }
 
+const TRANSLATE_SYSTEM_PROMPT = `Sei un traduttore professionista. Traduci il testo fornito in italiano naturale e scorrevole.
+Regole:
+- Mantieni titoli di lavoro, nomi propri, brand e acronimi nella forma originale (es. "Software Engineer", "Goldman Sachs", "MIT").
+- Se il testo è GIÀ in italiano, restituiscilo invariato.
+- NON aggiungere commenti, prefissi o suffissi.
+- Preserva la formattazione (newline, elenchi puntati, paragrafi).
+- Rispondi SOLO con JSON valido: { "title": "...", "description": "..." }`;
+
+/**
+ * Translates an opportunity's title and description to Italian via OpenAI.
+ * Returns null on error or when OPENAI_API_KEY is not set — never throws.
+ */
+export async function translateOpportunityToItalian(
+  title: string,
+  description: string,
+): Promise<{ title: string; description: string } | null> {
+  const client = getClient();
+  if (!client) return null;
+
+  const userContent = JSON.stringify({ title, description: description.slice(0, 6000) });
+
+  try {
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: TRANSLATE_SYSTEM_PROMPT },
+        { role: 'user', content: userContent },
+      ],
+      max_tokens: 2000,
+      temperature: 0.1,
+    });
+
+    const raw = response.choices[0]?.message?.content;
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as { title?: unknown; description?: unknown };
+    const t = typeof parsed.title === 'string' ? parsed.title.trim() : null;
+    const d = typeof parsed.description === 'string' ? parsed.description.trim() : null;
+    if (!t || !d) return null;
+    return { title: t, description: d };
+  } catch (err) {
+    logger.warn(`[OpportunityParser] translate failed for "${title}": ${err}`);
+    return null;
+  }
+}
+
 /**
  * Boot-time backfill: processes up to `limit` active opportunities that have no
  * extractedSkills yet. Runs in the background — never throws, never blocks startup.
  */
-export async function backfillExtractedSkillsBoot(limit = 50): Promise<void> {
+export async function backfillExtractedSkillsBoot(limit = 200): Promise<void> {
   if (!process.env.OPENAI_API_KEY) return;
 
   const now = new Date();
@@ -354,15 +401,21 @@ export async function backfillExtractedSkillsBoot(limit = 50): Promise<void> {
 
   if (!opps.length) return;
 
-  logger.info(`[SkillsBackfill] Processing ${opps.length} opportunities at boot`);
+  const CONCURRENCY = 5;
+  logger.info(`[SkillsBackfill] Processing ${opps.length} opportunities at boot (concurrency=${CONCURRENCY})`);
 
-  for (const opp of opps) {
-    try {
-      const skills = await extractOpportunitySkills(opp.title, opp.description, opp.about);
-      await prisma.opportunity.update({ where: { id: opp.id }, data: { extractedSkills: skills } });
-    } catch {
-      // Non-fatal — will be retried on next boot
-    }
+  for (let i = 0; i < opps.length; i += CONCURRENCY) {
+    const chunk = opps.slice(i, i + CONCURRENCY);
+    await Promise.all(
+      chunk.map(async (opp) => {
+        try {
+          const skills = await extractOpportunitySkills(opp.title, opp.description, opp.about);
+          await prisma.opportunity.update({ where: { id: opp.id }, data: { extractedSkills: skills } });
+        } catch {
+          // Non-fatal — will be retried on next boot
+        }
+      }),
+    );
   }
 
   logger.info('[SkillsBackfill] Boot backfill complete');

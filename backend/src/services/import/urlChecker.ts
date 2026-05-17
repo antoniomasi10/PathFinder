@@ -12,8 +12,12 @@ const BOT_UA = 'Mozilla/5.0 (compatible; PathFinder-Bot/1.0; +https://pathfinder
 const HARD_GONE_STATUSES = new Set([404, 410]);
 // Statuses likely caused by anti-bot protection — not a signal the page is gone.
 const ANTI_BOT_STATUSES = new Set([403, 429]);
+// Consecutive hard-gone hits required before marking BROKEN.
+const BROKEN_STREAK_THRESHOLD = 3;
 
-async function checkUrl(url: string): Promise<'ACTIVE' | 'BROKEN' | 'SKIP'> {
+// 'GONE' = 404/410 this round (increment streak, only BROKEN at threshold).
+// 'BROKEN' here is no longer returned directly by checkUrl — kept for type clarity.
+async function checkUrl(url: string): Promise<'ACTIVE' | 'GONE' | 'SKIP'> {
   try {
     const res = await axios({
       method: 'HEAD',
@@ -38,12 +42,12 @@ async function checkUrl(url: string): Promise<'ACTIVE' | 'BROKEN' | 'SKIP'> {
       });
       if (getRes.status >= 200 && getRes.status < 400) return 'ACTIVE';
       if (ANTI_BOT_STATUSES.has(getRes.status)) return 'SKIP';
-      if (HARD_GONE_STATUSES.has(getRes.status)) return 'BROKEN';
+      if (HARD_GONE_STATUSES.has(getRes.status)) return 'GONE';
       return 'SKIP';
     }
 
     if (ANTI_BOT_STATUSES.has(res.status)) return 'SKIP';
-    if (HARD_GONE_STATUSES.has(res.status)) return 'BROKEN';
+    if (HARD_GONE_STATUSES.has(res.status)) return 'GONE';
     // Other 4xx/5xx: ambiguous — don't mark broken, retry next cycle
     return 'SKIP';
   } catch {
@@ -64,10 +68,10 @@ export async function runUrlCheckBatch(limit = 200): Promise<{
 }> {
   const cutoff = new Date(Date.now() - RECHECK_INTERVAL_DAYS * 24 * 60 * 60 * 1000);
 
-  // All sources are checked — curated included. Anti-bot 403/429 now return SKIP (not BROKEN),
-  // so legitimate curated opportunities behind Cloudflare stay visible.
-  const opps = await prisma.$queryRawUnsafe<{ id: string; url: string }[]>(
-    `SELECT id, url FROM "Opportunity"
+  // All sources are checked — curated included. Anti-bot 403/429 return SKIP (not BROKEN),
+  // and hard-gone (404/410) requires BROKEN_STREAK_THRESHOLD consecutive hits before marking BROKEN.
+  const opps = await prisma.$queryRawUnsafe<{ id: string; url: string; source: string | null; urlBrokenStreak: number }[]>(
+    `SELECT id, url, source, "urlBrokenStreak" FROM "Opportunity"
      WHERE url IS NOT NULL
        AND (
          "urlStatus" IS NULL
@@ -82,27 +86,39 @@ export async function runUrlCheckBatch(limit = 200): Promise<{
     limit,
   );
 
-  let checked = 0, active = 0, broken = 0, skipped = 0;
+  let checked = 0, active = 0, broken = 0, gonePending = 0, skipped = 0;
 
   for (const opp of opps) {
     const status = await checkUrl(opp.url);
 
-    await prisma.opportunity.update({
-      where: { id: opp.id },
-      data: {
-        ...(status !== 'SKIP' ? { urlStatus: status } : {}),
-        urlCheckedAt: new Date(),
-      },
-    });
+    const updateData: any = { urlCheckedAt: new Date() };
+    if (status === 'ACTIVE') {
+      updateData.urlStatus = 'ACTIVE';
+      updateData.urlBrokenStreak = 0;
+      active++;
+    } else if (status === 'GONE') {
+      const newStreak = (opp.urlBrokenStreak ?? 0) + 1;
+      updateData.urlBrokenStreak = newStreak;
+      if (newStreak >= BROKEN_STREAK_THRESHOLD) {
+        updateData.urlStatus = 'BROKEN';
+        if (opp.source === 'curated') {
+          logger.warn(`[URLChecker] Curated marked BROKEN after ${newStreak} consecutive hard-gone checks: ${opp.id} ${opp.url}`);
+        }
+        broken++;
+      } else {
+        gonePending++;
+      }
+    } else {
+      // 'SKIP': leave urlStatus and urlBrokenStreak as-is, only update urlCheckedAt.
+      skipped++;
+    }
+
+    await prisma.opportunity.update({ where: { id: opp.id }, data: updateData });
 
     checked++;
-    if (status === 'ACTIVE') active++;
-    else if (status === 'BROKEN') broken++;
-    else skipped++;
-
     if (checked < opps.length) await sleep(DELAY_MS);
   }
 
-  logger.info('[URLChecker] Batch complete', { checked, active, broken, skipped });
+  logger.info('[URLChecker] Batch complete', { checked, active, broken, gonePending, skipped });
   return { checked, active, broken, skipped };
 }

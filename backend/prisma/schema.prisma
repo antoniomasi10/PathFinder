@@ -216,6 +216,8 @@ model Opportunity {
   id                   String          @id @default(uuid())
   title                String
   description          String
+  titleIt              String?         // Italian translation (DeepL); null = not yet translated
+  descriptionIt        String?         // Italian translation (DeepL); null = not yet translated
   about                String?
   url                  String?
   type                 OpportunityType
@@ -278,6 +280,7 @@ model Opportunity {
   // --- URL health ---
   urlStatus            String?         @default("UNCHECKED") // UNCHECKED | ACTIVE | BROKEN
   urlCheckedAt         DateTime?
+  urlBrokenStreak      Int             @default(0) // consecutive 404/410 checks; mark BROKEN only at >=3
 
   @@index([universityId])
   @@index([type])

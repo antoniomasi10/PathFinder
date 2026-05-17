@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/lib/language';
 import api from '@/lib/api';
 import BottomNav from '@/components/BottomNav';
 import { isValidExternalUrl } from '@/lib/urlValidation';
@@ -41,13 +42,15 @@ interface Opportunity {
   structuredContent?: StructuredContent | null;
 }
 
-function mapRaw(o: any): Opportunity {
+function mapRaw(o: any, useIt = false): Opportunity {
+  const title = useIt && o.titleIt ? o.titleIt : o.title;
+  const description = useIt && o.descriptionIt ? o.descriptionIt : (o.description || '');
   return {
     id: o.id,
-    title: o.title,
+    title,
     company: o.company || o.organizer || o.universityName || '',
     type: o.type || '',
-    description: o.description || '',
+    description,
     matchScore: o.matchScore || 0,
     location: o.location || o.city || o.universityCity || '',
     about: o.about || '',
@@ -144,6 +147,8 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
   const { id } = params;
   const router = useRouter();
   const { savedIds, toggleSave } = useSavedOpportunities();
+  const { language } = useLanguage();
+  const useIt = language === 'Italiano';
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
   const [relatedOpps, setRelatedOpps] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,14 +157,14 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
     try {
       const cached = sessionStorage.getItem(`opp_${id}`);
       if (cached) {
-        setOpportunity(mapRaw(JSON.parse(cached)));
+        setOpportunity(mapRaw(JSON.parse(cached), useIt));
         setLoading(false);
       }
     } catch {}
 
     api.get(`/opportunities/${id}`)
       .then(({ data }) => {
-        const fresh = mapRaw(data);
+        const fresh = mapRaw(data, useIt);
         // Preserve matchScore from sessionStorage cache (computed by hybrid engine in list view).
         // The GET /:id route uses a simplified scorer that can return inflated values.
         setOpportunity(prev => ({ ...fresh, matchScore: prev?.matchScore || fresh.matchScore }));
@@ -171,10 +176,10 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
     api.get('/opportunities?matched=true&page=1&limit=6')
       .then(({ data }) => {
         const items = Array.isArray(data.data || data) ? (data.data || data) : [];
-        setRelatedOpps(items.filter((o: any) => String(o.id) !== String(id)).slice(0, 5).map(mapRaw));
+        setRelatedOpps(items.filter((o: any) => String(o.id) !== String(id)).slice(0, 5).map((o: any) => mapRaw(o, useIt)));
       })
       .catch(() => {});
-  }, [id]);
+  }, [id, useIt]);
 
   if (loading && !opportunity) return <LoadingSkeleton />;
 

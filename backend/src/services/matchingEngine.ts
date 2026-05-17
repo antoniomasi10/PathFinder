@@ -2,7 +2,7 @@ import { UserProfile, User, Opportunity, GpaRange, EnglishLevel, UserInteraction
 import prisma from '../lib/prisma';
 import type { UserSkills, SkillEntry } from './skills.service';
 import { normalizeFieldToEnum, isSeniorRole } from './import/utils';
-import { resolveLocationFilter } from './locationFilter';
+import { resolveLocationTokens } from './locationFilter';
 import { logger } from '../utils/logger';
 
 export interface OppFilters {
@@ -24,12 +24,15 @@ function applyOppFilters(items: any[], f: OppFilters): any[] {
     }
     if (f.company && !(opp.company || '').toLowerCase().includes(f.company.toLowerCase())) return false;
     if (f.location) {
-      const { iso, term } = resolveLocationFilter(f.location);
-      const t = term.toLowerCase();
-      const matchesLocation = (opp.location || '').toLowerCase().includes(t);
-      const matchesCity = (opp.city || '').toLowerCase().includes(t);
-      const matchesCountry = iso ? (opp.country || '').toUpperCase() === iso : false;
-      if (!matchesLocation && !matchesCity && !matchesCountry) return false;
+      const tokens = resolveLocationTokens(f.location);
+      const anyMatch = tokens.some(({ iso, term }) => {
+        const t = term.toLowerCase();
+        const matchesLocation = (opp.location || '').toLowerCase().includes(t);
+        const matchesCity = (opp.city || '').toLowerCase().includes(t);
+        const matchesCountry = iso ? (opp.country || '').toUpperCase() === iso : false;
+        return matchesLocation || matchesCity || matchesCountry;
+      });
+      if (!anyMatch) return false;
     }
     if (f.isRemote !== undefined && Boolean(opp.isRemote) !== f.isRemote) return false;
     if (f.isAbroad !== undefined && Boolean(opp.isAbroad) !== f.isAbroad) return false;
@@ -653,7 +656,7 @@ export async function getHybridMatchedOpportunitiesFull(
     // Stage 1: Candidate retrieval — all opportunities with vector similarity
     // Explicitly list columns to avoid selecting the Unsupported vector column
     candidates = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT o."id", o."title", o."description", o."about", o."url", o."type",
+      `SELECT o."id", o."title", o."description", o."titleIt", o."descriptionIt", o."about", o."url", o."type",
               o."universityId", o."company", o."organizer", o."location", o."isRemote", o."isAbroad",
               o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
               o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
@@ -688,7 +691,7 @@ export async function getHybridMatchedOpportunitiesFull(
     // Fallback: get all opportunities (Phase 1 behavior)
     // Use raw query to avoid Prisma failing on the Unsupported vector column
     candidates = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT o."id", o."title", o."description", o."about", o."url", o."type",
+      `SELECT o."id", o."title", o."description", o."titleIt", o."descriptionIt", o."about", o."url", o."type",
               o."universityId", o."company", o."organizer", o."location", o."isRemote", o."isAbroad",
               o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
               o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
@@ -757,6 +760,8 @@ export async function getHybridMatchedOpportunitiesFull(
       id: opp.id,
       title: opp.title,
       description: opp.description,
+      titleIt: opp.titleIt,
+      descriptionIt: opp.descriptionIt,
       about: opp.about,
       url: opp.url,
       type: opp.type,
@@ -944,6 +949,8 @@ export async function getNewOpportunitiesFull(
       id: opp.id,
       title: opp.title,
       description: opp.description,
+      titleIt: opp.titleIt,
+      descriptionIt: opp.descriptionIt,
       about: opp.about,
       url: opp.url,
       type: opp.type,

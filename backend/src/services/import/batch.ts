@@ -16,7 +16,6 @@ import { logger } from '../../utils/logger';
 import { buildDedupKey, isSeniorRole } from './utils';
 import { parseOpportunityContent, parseAIDate, extractOpportunitySkills } from '../ai/opportunityParser';
 import { classifyOpportunityCluster } from '../ai/clusterClassifier';
-import { translateToItalian } from '../translation.service';
 
 export interface OpportunityRecord {
   id: string;
@@ -171,7 +170,9 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
       const chunk = filteredCreate.slice(i, i + PARSE_CONCURRENCY);
       await Promise.all(
         chunk.map(async (r) => {
-          const [structured, clusters, skills, translated] = await Promise.all([
+          // Use allSettled so a single AI failure doesn't lose the others' results.
+          // Translation runs separately in the nightly translation job (writes to titleIt/descriptionIt).
+          const results = await Promise.allSettled([
             parseOpportunityContent(r.title, r.description, null, r.company),
             classifyOpportunityCluster({
               title: r.title,
@@ -181,8 +182,10 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
               eligibleFields: (r as any).eligibleFields ?? [],
             }),
             extractOpportunitySkills(r.title, r.description, null),
-            translateToItalian([r.title, r.description]),
           ]);
+          const structured = results[0].status === 'fulfilled' ? results[0].value : null;
+          const clusters = results[1].status === 'fulfilled' ? results[1].value : null;
+          const skills = results[2].status === 'fulfilled' ? results[2].value : [];
           const updateData: any = {};
           if (structured) {
             updateData.structuredContent = structured;
@@ -210,10 +213,6 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
           if (skills.length > 0) {
             updateData.extractedSkills = skills;
           }
-          // Save Italian translation if DeepL changed the text
-          const [itTitle, itDesc] = translated;
-          if (itTitle && itTitle !== r.title) updateData.title = itTitle;
-          if (itDesc && itDesc !== r.description) updateData.description = itDesc;
           if (Object.keys(updateData).length > 0) {
             await prisma.opportunity.update({
               where: { id: r.id },

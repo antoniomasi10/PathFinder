@@ -1,11 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import prisma from '../lib/prisma';
-import { getHybridMatchedOpportunitiesFull, getNewOpportunitiesFull, scoreOpportunity, OppFilters } from '../services/matchingEngine';
+import { getHybridMatchedOpportunities, getHybridMatchedOpportunitiesFull, getNewOpportunitiesFull, scoreOpportunity, OppFilters } from '../services/matchingEngine';
 import { trackInteraction } from '../services/interaction.service';
 import { cacheGet, cacheSet, cacheDel } from '../lib/cache';
 import { translateOpportunities } from '../services/opportunityTranslation.service';
-import { resolveLocationFilter } from '../services/locationFilter';
+import { resolveLocationTokens } from '../services/locationFilter';
 
 const VALID_LANGS = new Set(['en', 'es', 'fr', 'zh']);
 
@@ -93,14 +93,20 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       params.push(`%${company}%`); idx++;
     }
     if (location) {
-      const { iso, term } = resolveLocationFilter(location);
-      if (iso) {
-        conditions.push(`(o."location" ILIKE $${idx} OR o."city" ILIKE $${idx + 1} OR o."country" = $${idx + 2})`);
-        params.push(`%${term}%`, `%${term}%`, iso); idx += 3;
-      } else {
-        conditions.push(`(o."location" ILIKE $${idx} OR o."city" ILIKE $${idx + 1})`);
-        params.push(`%${term}%`, `%${term}%`); idx += 2;
+      // Tokenize the input so "Roma Italia" or "Berlin, DE" resolve each piece.
+      // Per-token clauses are OR'd together so any match qualifies.
+      const tokens = resolveLocationTokens(location);
+      const orClauses: string[] = [];
+      for (const { iso, term } of tokens) {
+        if (iso) {
+          orClauses.push(`(o."location" ILIKE $${idx} OR o."city" ILIKE $${idx + 1} OR o."country" = $${idx + 2})`);
+          params.push(`%${term}%`, `%${term}%`, iso); idx += 3;
+        } else {
+          orClauses.push(`(o."location" ILIKE $${idx} OR o."city" ILIKE $${idx + 1})`);
+          params.push(`%${term}%`, `%${term}%`); idx += 2;
+        }
       }
+      if (orClauses.length) conditions.push(`(${orClauses.join(' OR ')})`);
     }
     if (req.query.isRemote === 'true') { conditions.push(`o."isRemote" = $${idx}`); params.push(true); idx++; }
     if (req.query.isAbroad === 'true') { conditions.push(`o."isAbroad" = $${idx}`); params.push(true); idx++; }
@@ -145,7 +151,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
     const [opportunities, countResult] = await Promise.all([
       prisma.$queryRawUnsafe<any[]>(
-        `SELECT o."id", o."title", o."description", o."about", o."url", o."type",
+        `SELECT o."id", o."title", o."description", o."titleIt", o."descriptionIt", o."about", o."url", o."type",
                 o."universityId", o."company", o."organizer", o."location", o."city", o."country", o."isRemote", o."isAbroad",
                 o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
                 o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
@@ -181,18 +187,34 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 // Same user + same calendar day (Europe/Rome) → same opportunity guaranteed.
 router.get('/daily', authMiddleware, async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.userId;
     const romeDateStr = new Date().toLocaleDateString('sv', { timeZone: 'Europe/Rome' }); // YYYY-MM-DD
-    const cacheKey = `cache:opp:daily:${req.user!.userId}:${romeDateStr}`;
+    const cacheKey = `cache:opp:daily:${userId}:${romeDateStr}`;
+    const historyKey = `cache:opp:daily:history:${userId}`;
 
     const cached = await cacheGet<any>(cacheKey);
     if (cached) { res.json(cached); return; }
 
-    const result = await getHybridMatchedOpportunities(req.user!.userId, 30, 0, {});
-    if (!result.data.length) { res.json(null); return; }
+    // Exclude opps the user has interacted with in the last 7 days
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const recentInteractions = await prisma.userInteraction.findMany({
+      where: { userId, targetType: 'opportunity', createdAt: { gte: sevenDaysAgo } },
+      select: { targetId: true },
+    });
+    const interactedIds = new Set(recentInteractions.map(i => i.targetId));
 
-    // Re-sort by matchScore — freshness/MMR reordering from the pipeline can displace
-    // the highest-scoring opportunity. Always show the top match as the daily.
-    const daily = [...result.data].sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0))[0];
+    // Exclude opps shown as daily in the last 7 days (cross-day variety)
+    const history = (await cacheGet<{ date: string; oppId: string }[]>(historyKey)) ?? [];
+    const recentDailyIds = new Set(history.map(h => h.oppId));
+
+    const result = await getHybridMatchedOpportunities(userId, 50, 0, {});
+    const candidates = result.data.filter(o => !interactedIds.has(o.id) && !recentDailyIds.has(o.id));
+    const pool = candidates.length > 0 ? candidates : result.data; // fallback if all filtered out
+    if (!pool.length) { res.json(null); return; }
+
+    // Top by matchScore — re-sort because the pipeline applies MMR/freshness that
+    // can displace the highest-scoring opp.
+    const daily = [...pool].sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0))[0];
 
     // TTL = seconds remaining until midnight Rome time
     const romeNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Rome' }));
@@ -200,6 +222,11 @@ router.get('/daily', authMiddleware, async (req: Request, res: Response) => {
     const ttl = Math.max(60, Math.floor((endOfDay.getTime() - romeNow.getTime()) / 1000));
 
     await cacheSet(cacheKey, daily, ttl);
+
+    // Push to history (keep last 7 entries), 8-day TTL
+    const updatedHistory = [{ date: romeDateStr, oppId: daily.id }, ...history.filter(h => h.oppId !== daily.id)].slice(0, 7);
+    await cacheSet(historyKey, updatedHistory, 8 * 24 * 60 * 60);
+
     res.json(daily);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
