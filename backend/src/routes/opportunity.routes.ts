@@ -167,14 +167,11 @@ router.get('/daily', authMiddleware, async (req: Request, res: Response) => {
     if (cached) { res.json(cached); return; }
 
     const result = await getHybridMatchedOpportunities(req.user!.userId, 30, 0, {});
-    const pool = result.data;
-    if (!pool.length) { res.json(null); return; }
+    if (!result.data.length) { res.json(null); return; }
 
-    // Deterministic index: hash(userId + date) mod pool size
-    const seedStr = req.user!.userId + romeDateStr;
-    let hash = 0;
-    for (let i = 0; i < seedStr.length; i++) hash = ((hash << 5) - hash + seedStr.charCodeAt(i)) | 0;
-    const daily = pool[Math.abs(hash) % pool.length];
+    // Re-sort by matchScore — freshness/MMR reordering from the pipeline can displace
+    // the highest-scoring opportunity. Always show the top match as the daily.
+    const daily = [...result.data].sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0))[0];
 
     // TTL = seconds remaining until midnight Rome time
     const romeNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Rome' }));
