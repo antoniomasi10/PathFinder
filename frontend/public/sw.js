@@ -1,1 +1,10 @@
-importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    self.registration.unregister().then(() =>
+      self.clients.matchAll({ type: 'window' }).then((clients) =>
+        clients.forEach((client) => client.navigate(client.url))
+      )
+    )
+  );
+});

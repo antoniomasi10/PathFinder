@@ -555,7 +555,7 @@ export default function NetworkingPage() {
   }, [selectedUser, selectedGroup]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     requestAnimationFrame(() => window.scrollTo(0, 0));
   }, [messages]);
 
@@ -641,7 +641,7 @@ export default function NetworkingPage() {
   }, [selectedGroup]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     requestAnimationFrame(() => window.scrollTo(0, 0));
   }, [groupMessages]);
 
@@ -978,11 +978,11 @@ export default function NetworkingPage() {
 
   return (
     <div className={selectedUser || selectedGroup
-      ? 'fixed inset-0 z-[60] flex flex-col overflow-hidden'
+      ? 'fixed top-0 left-0 right-0 z-[60] overflow-hidden'
       : ''
     } style={
       selectedUser || selectedGroup
-        ? { backgroundColor: '#fbf8ff' }
+        ? { backgroundColor: '#fbf8ff', bottom: 64 }
         : { backgroundColor: '#fbf8ff', minHeight: '100vh' }
     }>
 
@@ -1368,13 +1368,14 @@ export default function NetworkingPage() {
 
       {/* Direct Chat View */}
       {tab === 'messaggi' && selectedUser && (
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative', backgroundColor: '#fbf8ff' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden', backgroundColor: '#fbf8ff' }}>
           <ChatHeader
             type="individual"
             user={{ id: selectedUser.id, name: selectedUser.name, avatar: selectedUser.avatar, university: selectedUser.university }}
             onBack={() => { setSelectedUser(null); loadConversations(); }}
             onPress={() => router.push(`/profile/${selectedUser.id}`)}
           />
+          <div className="max-w-lg mx-auto w-full" style={{ height: '100%', display: 'grid', gridTemplateRows: '1fr auto', overflow: 'hidden', position: 'relative' }}>
 
           {/* Watermark logo */}
           <svg
@@ -1386,7 +1387,7 @@ export default function NetworkingPage() {
             xmlns="http://www.w3.org/2000/svg"
             style={{
               position: 'absolute',
-              top: 64,
+              top: 0,
               left: 0,
               width: '100%',
               height: 'auto',
@@ -1406,11 +1407,12 @@ export default function NetworkingPage() {
               minHeight: 0,
               overflowY: 'auto',
               paddingTop: 80,
-              paddingBottom: 100,
+              paddingBottom: 80,
               paddingLeft: 16,
               paddingRight: 16,
               display: 'flex',
               flexDirection: 'column',
+              justifyContent: 'flex-start',
               gap: 16,
               position: 'relative',
               zIndex: 1,
@@ -1506,7 +1508,8 @@ export default function NetworkingPage() {
           </div>
 
           {/* Input bar */}
-          <div style={{ flexShrink: 0, position: 'relative', zIndex: 2, padding: '8px 16px 16px', backgroundColor: '#fbf8ff' }}>
+          <div style={{ position: 'fixed', bottom: 64, left: 0, right: 0, zIndex: 65, backgroundColor: '#fbf8ff' }}>
+          <div style={{ maxWidth: 512, margin: '0 auto', padding: '8px 16px 12px' }}>
             {chatImages.length > 0 && (
               <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 8, paddingBottom: 4 }} className="scrollbar-hide">
                 {chatImages.map((img, i) => (
@@ -1595,18 +1598,21 @@ export default function NetworkingPage() {
               </div>
             )}
           </div>
+          </div>
+          </div>
         </div>
       )}
 
       {/* Group Chat View */}
       {tab === 'messaggi' && selectedGroup && !selectedUser && (
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative', backgroundColor: '#fbf8ff' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, overflow: 'hidden', backgroundColor: '#fbf8ff' }}>
           <ChatHeader
             type="group"
             group={{ id: selectedGroup.id, name: selectedGroup.name, image: selectedGroup.image }}
             onBack={() => { setSelectedGroup(null); loadConversations(); }}
             onPress={openGroupOptions}
           />
+          <div className="max-w-lg mx-auto w-full" style={{ height: '100%', display: 'grid', gridTemplateRows: '1fr auto', overflow: 'hidden', position: 'relative' }}>
 
           {/* Watermark logo */}
           <svg
@@ -1618,7 +1624,7 @@ export default function NetworkingPage() {
             xmlns="http://www.w3.org/2000/svg"
             style={{
               position: 'absolute',
-              top: 64,
+              top: 0,
               left: 0,
               width: '100%',
               height: 'auto',
@@ -1638,11 +1644,12 @@ export default function NetworkingPage() {
               minHeight: 0,
               overflowY: 'auto',
               paddingTop: 80,
-              paddingBottom: 100,
+              paddingBottom: 80,
               paddingLeft: 16,
               paddingRight: 16,
               display: 'flex',
               flexDirection: 'column',
+              justifyContent: 'flex-start',
               gap: 16,
               position: 'relative',
               zIndex: 1,
@@ -1710,7 +1717,8 @@ export default function NetworkingPage() {
           </div>
 
           {/* Input bar */}
-          <div style={{ flexShrink: 0, position: 'relative', zIndex: 2, padding: '8px 16px 16px', backgroundColor: '#fbf8ff' }}>
+          <div style={{ position: 'fixed', bottom: 64, left: 0, right: 0, zIndex: 65, backgroundColor: '#fbf8ff' }}>
+          <div style={{ maxWidth: 512, margin: '0 auto', padding: '8px 16px 12px' }}>
             {chatImages.length > 0 && (
               <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 8, paddingBottom: 4 }} className="scrollbar-hide">
                 {chatImages.map((img, i) => (
@@ -1792,6 +1800,8 @@ export default function NetworkingPage() {
                 <PaperPlane size={16} strokeWidth={1.5} color="white" />
               </button>
             </div>
+          </div>
+          </div>
           </div>
         </div>
       )}

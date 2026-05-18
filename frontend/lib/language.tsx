@@ -2651,15 +2651,11 @@ function getStoredLanguage(): Language {
 }
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('Italiano');
+  const [language, setLang] = useState<Language>(getStoredLanguage);
   const t = TRANSLATIONS[language];
 
-  useEffect(() => {
-    setLanguageState(getStoredLanguage());
-  }, []);
-
   const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
+    setLang(lang);
     try { localStorage.setItem(LANG_STORAGE_KEY, lang); } catch {}
   };
 

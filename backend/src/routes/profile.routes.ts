@@ -6,6 +6,7 @@ import { saveQuestionnaire, getProfile, getProfileForViewer, updateProfile, dele
 import { updateUserEmbedding } from '../services/embedding.service';
 import { getSmartFriendSuggestions } from '../services/similarity.service';
 import { cacheGet, cacheSet, cacheDel } from '../lib/cache';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -58,6 +59,7 @@ router.get('/me', authMiddleware, async (req: Request, res: Response) => {
     }
     res.json(profile);
   } catch (err: any) {
+    logger.error('getProfile error', { error: err.message, code: err.code });
     res.status(500).json({ error: err.message });
   }
 });
