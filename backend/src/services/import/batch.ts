@@ -14,7 +14,7 @@ import { FieldOfStudy, OpportunityFormat, OpportunityType } from '@prisma/client
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { buildDedupKey, isSeniorRole } from './utils';
-import { parseOpportunityContent, parseAIDate } from '../ai/opportunityParser';
+import { parseOpportunityContent, parseAIDate, extractOpportunitySkills } from '../ai/opportunityParser';
 import { classifyOpportunityCluster } from '../ai/clusterClassifier';
 
 export interface OpportunityRecord {
@@ -170,7 +170,9 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
       const chunk = filteredCreate.slice(i, i + PARSE_CONCURRENCY);
       await Promise.all(
         chunk.map(async (r) => {
-          const [structured, clusters] = await Promise.all([
+          // Use allSettled so a single AI failure doesn't lose the others' results.
+          // Translation runs separately in the nightly translation job (writes to titleIt/descriptionIt).
+          const results = await Promise.allSettled([
             parseOpportunityContent(r.title, r.description, null, r.company),
             classifyOpportunityCluster({
               title: r.title,
@@ -179,7 +181,11 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
               tags: r.tags ?? [],
               eligibleFields: (r as any).eligibleFields ?? [],
             }),
+            extractOpportunitySkills(r.title, r.description, null),
           ]);
+          const structured = results[0].status === 'fulfilled' ? results[0].value : null;
+          const clusters = results[1].status === 'fulfilled' ? results[1].value : null;
+          const skills = results[2].status === 'fulfilled' ? results[2].value : [];
           const updateData: any = {};
           if (structured) {
             updateData.structuredContent = structured;
@@ -203,6 +209,9 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
           if (clusters) {
             updateData.clusterScores = clusters.scores;
             updateData.clusterPrimary = clusters.primary;
+          }
+          if (skills.length > 0) {
+            updateData.extractedSkills = skills;
           }
           if (Object.keys(updateData).length > 0) {
             await prisma.opportunity.update({

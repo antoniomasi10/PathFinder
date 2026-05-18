@@ -10,6 +10,7 @@
  */
 
 import OpenAI from 'openai';
+import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 
 const VALID_FIELDS = [
@@ -271,4 +272,151 @@ export async function extractDeadlineFromText(
     logger.warn(`[OpportunityParser] extractDeadline failed for "${title}": ${err}`);
     return null;
   }
+}
+
+const SKILLS_SYSTEM_PROMPT = `Sei un assistente che estrae competenze richieste da descrizioni di opportunità per studenti universitari italiani.
+
+Data la descrizione di un'opportunità, estrai le competenze concrete richieste o preferite.
+Rispondi SOLO con JSON: { "skills": ["Competenza 1", "Competenza 2", ...] }
+
+Regole:
+- Massimo 5 competenze.
+- Solo competenze REALI e SPECIFICHE (es. "Excel avanzato", "Python", "Public speaking", "Analisi dati", "Project management", "Lingua tedesca B2", "Adobe Photoshop").
+- NON includere parole vaghe o generiche come "teamwork", "motivazione", "dinamismo", "flessibilità", "passione", "proattività", "team", "junior", "senior".
+- NON includere requisiti di studio/anno (quelli sono prerequisiti, non competenze).
+- Mantieni la lingua dell'opportunità (se è in inglese, scrivi in inglese).
+- Se non ci sono competenze specifiche identificabili, ritorna array vuoto: { "skills": [] }.
+- Rispondi SOLO con JSON valido.`;
+
+/**
+ * Extracts up to 5 concrete required skills from an opportunity description.
+ * Returns an empty array if none found or on error — never throws.
+ */
+export async function extractOpportunitySkills(
+  title: string,
+  description: string,
+  about?: string | null,
+): Promise<string[]> {
+  const client = getClient();
+  if (!client) return [];
+
+  const userContent = [
+    `Titolo: ${title}`,
+    `Descrizione:\n${description.slice(0, 3000)}`,
+    about ? `Info aggiuntive:\n${about.slice(0, 1000)}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
+  try {
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: SKILLS_SYSTEM_PROMPT },
+        { role: 'user', content: userContent },
+      ],
+      max_tokens: 150,
+      temperature: 0.1,
+    });
+
+    const raw = response.choices[0]?.message?.content;
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw) as { skills?: unknown };
+    if (!Array.isArray(parsed.skills)) return [];
+    return parsed.skills
+      .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+      .slice(0, 5);
+  } catch (err) {
+    logger.warn(`[OpportunityParser] extractSkills failed for "${title}": ${err}`);
+    return [];
+  }
+}
+
+const TRANSLATE_SYSTEM_PROMPT = `Sei un traduttore professionista. Traduci il testo fornito in italiano naturale e scorrevole.
+Regole:
+- Mantieni titoli di lavoro, nomi propri, brand e acronimi nella forma originale (es. "Software Engineer", "Goldman Sachs", "MIT").
+- Se il testo è GIÀ in italiano, restituiscilo invariato.
+- NON aggiungere commenti, prefissi o suffissi.
+- Preserva la formattazione (newline, elenchi puntati, paragrafi).
+- Rispondi SOLO con JSON valido: { "title": "...", "description": "..." }`;
+
+/**
+ * Translates an opportunity's title and description to Italian via OpenAI.
+ * Returns null on error or when OPENAI_API_KEY is not set — never throws.
+ */
+export async function translateOpportunityToItalian(
+  title: string,
+  description: string,
+): Promise<{ title: string; description: string } | null> {
+  const client = getClient();
+  if (!client) return null;
+
+  const userContent = JSON.stringify({ title, description: description.slice(0, 6000) });
+
+  try {
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: TRANSLATE_SYSTEM_PROMPT },
+        { role: 'user', content: userContent },
+      ],
+      max_tokens: 2000,
+      temperature: 0.1,
+    });
+
+    const raw = response.choices[0]?.message?.content;
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as { title?: unknown; description?: unknown };
+    const t = typeof parsed.title === 'string' ? parsed.title.trim() : null;
+    const d = typeof parsed.description === 'string' ? parsed.description.trim() : null;
+    if (!t || !d) return null;
+    return { title: t, description: d };
+  } catch (err) {
+    logger.warn(`[OpportunityParser] translate failed for "${title}": ${err}`);
+    return null;
+  }
+}
+
+/**
+ * Boot-time backfill: processes up to `limit` active opportunities that have no
+ * extractedSkills yet. Runs in the background — never throws, never blocks startup.
+ */
+export async function backfillExtractedSkillsBoot(limit = 200): Promise<void> {
+  if (!process.env.OPENAI_API_KEY) return;
+
+  const now = new Date();
+  const opps = await prisma.opportunity.findMany({
+    where: {
+      extractedSkills: { isEmpty: true },
+      OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+    },
+    select: { id: true, title: true, description: true, about: true },
+    take: limit,
+    orderBy: { postedAt: 'desc' },
+  });
+
+  if (!opps.length) return;
+
+  const CONCURRENCY = 5;
+  logger.info(`[SkillsBackfill] Processing ${opps.length} opportunities at boot (concurrency=${CONCURRENCY})`);
+
+  for (let i = 0; i < opps.length; i += CONCURRENCY) {
+    const chunk = opps.slice(i, i + CONCURRENCY);
+    await Promise.all(
+      chunk.map(async (opp) => {
+        try {
+          const skills = await extractOpportunitySkills(opp.title, opp.description, opp.about);
+          await prisma.opportunity.update({ where: { id: opp.id }, data: { extractedSkills: skills } });
+        } catch {
+          // Non-fatal — will be retried on next boot
+        }
+      }),
+    );
+  }
+
+  logger.info('[SkillsBackfill] Boot backfill complete');
 }

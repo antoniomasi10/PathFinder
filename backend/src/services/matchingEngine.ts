@@ -2,6 +2,7 @@ import { UserProfile, User, Opportunity, GpaRange, EnglishLevel, UserInteraction
 import prisma from '../lib/prisma';
 import type { UserSkills, SkillEntry } from './skills.service';
 import { normalizeFieldToEnum, isSeniorRole } from './import/utils';
+import { resolveLocationTokens } from './locationFilter';
 import { logger } from '../utils/logger';
 
 export interface OppFilters {
@@ -22,7 +23,17 @@ function applyOppFilters(items: any[], f: OppFilters): any[] {
       if (!(opp.title || '').toLowerCase().includes(q) && !(opp.company || '').toLowerCase().includes(q)) return false;
     }
     if (f.company && !(opp.company || '').toLowerCase().includes(f.company.toLowerCase())) return false;
-    if (f.location && !(opp.location || '').toLowerCase().includes(f.location.toLowerCase())) return false;
+    if (f.location) {
+      const tokens = resolveLocationTokens(f.location);
+      const anyMatch = tokens.some(({ iso, term }) => {
+        const t = term.toLowerCase();
+        const matchesLocation = (opp.location || '').toLowerCase().includes(t);
+        const matchesCity = (opp.city || '').toLowerCase().includes(t);
+        const matchesCountry = iso ? (opp.country || '').toUpperCase() === iso : false;
+        return matchesLocation || matchesCity || matchesCountry;
+      });
+      if (!anyMatch) return false;
+    }
     if (f.isRemote !== undefined && Boolean(opp.isRemote) !== f.isRemote) return false;
     if (f.isAbroad !== undefined && Boolean(opp.isAbroad) !== f.isAbroad) return false;
     if (f.englishLevels?.length && (!opp.requiredEnglishLevel || !f.englishLevels.includes(opp.requiredEnglishLevel))) return false;
@@ -645,8 +656,8 @@ export async function getHybridMatchedOpportunitiesFull(
     // Stage 1: Candidate retrieval — all opportunities with vector similarity
     // Explicitly list columns to avoid selecting the Unsupported vector column
     candidates = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT o."id", o."title", o."description", o."about", o."url", o."type",
-              o."universityId", o."company", o."location", o."isRemote", o."isAbroad",
+      `SELECT o."id", o."title", o."description", o."titleIt", o."descriptionIt", o."about", o."url", o."type",
+              o."universityId", o."company", o."organizer", o."location", o."isRemote", o."isAbroad",
               o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
               o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
               o."eligibleFields", o."country", o."city", o."region", o."format",
@@ -680,8 +691,8 @@ export async function getHybridMatchedOpportunitiesFull(
     // Fallback: get all opportunities (Phase 1 behavior)
     // Use raw query to avoid Prisma failing on the Unsupported vector column
     candidates = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT o."id", o."title", o."description", o."about", o."url", o."type",
-              o."universityId", o."company", o."location", o."isRemote", o."isAbroad",
+      `SELECT o."id", o."title", o."description", o."titleIt", o."descriptionIt", o."about", o."url", o."type",
+              o."universityId", o."company", o."organizer", o."location", o."isRemote", o."isAbroad",
               o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
               o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
               o."eligibleFields", o."country", o."city", o."region", o."format",
@@ -749,13 +760,18 @@ export async function getHybridMatchedOpportunitiesFull(
       id: opp.id,
       title: opp.title,
       description: opp.description,
+      titleIt: opp.titleIt,
+      descriptionIt: opp.descriptionIt,
       about: opp.about,
       url: opp.url,
       type: opp.type,
       universityId: opp.universityId,
       university,
       company: opp.company,
+      organizer: opp.organizer,
       location: opp.location,
+      city: opp.city,
+      country: opp.country,
       isRemote: opp.isRemote,
       isAbroad: opp.isAbroad,
       requiredEnglishLevel: opp.requiredEnglishLevel,
@@ -857,7 +873,7 @@ export async function getNewOpportunitiesFull(
         },
       ],
     },
-    { OR: [{ urlStatus: null }, { urlStatus: { not: 'BROKEN' } }, { source: 'curated' }] },
+    { OR: [{ urlStatus: null }, { urlStatus: { not: 'BROKEN' } }] },
   ];
 
   // Hard filter: users who explicitly don't want to relocate never see in-person abroad opportunities
@@ -933,13 +949,18 @@ export async function getNewOpportunitiesFull(
       id: opp.id,
       title: opp.title,
       description: opp.description,
+      titleIt: opp.titleIt,
+      descriptionIt: opp.descriptionIt,
       about: opp.about,
       url: opp.url,
       type: opp.type,
       universityId: opp.universityId,
       university: opp.university,
       company: opp.company,
+      organizer: opp.organizer,
       location: opp.location,
+      city: opp.city,
+      country: opp.country,
       isRemote: opp.isRemote,
       isAbroad: opp.isAbroad,
       requiredEnglishLevel: opp.requiredEnglishLevel,

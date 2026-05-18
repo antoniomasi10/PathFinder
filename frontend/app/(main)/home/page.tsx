@@ -80,14 +80,16 @@ function matchesClientFilters(opp: Opportunity, f: AdvancedFilters, tab: 'per-te
 
 function buildServerParams(search: string, f: AdvancedFilters): string {
   const p: Record<string, string> = {};
-  if (search.trim()) p.search = search.trim();
+  const { detectedTypes, remainingSearch } = extractTypesFromSearch(search);
+  if (remainingSearch) p.search = remainingSearch;
   if (f.company) p.company = f.company;
   if (f.location) p.location = f.location;
   if (f.onlyRemote) p.isRemote = 'true';
   if (f.onlyAbroad) p.isAbroad = 'true';
   if (f.englishLevels.length) p.englishLevel = f.englishLevels.join(',');
   if (f.deadline) p.deadline = f.deadline;
-  if (f.opportunityTypes.length) p.type = f.opportunityTypes.join(',');
+  const allTypes = [...new Set([...f.opportunityTypes, ...detectedTypes])];
+  if (allTypes.length) p.type = allTypes.join(',');
   const qs = new URLSearchParams(p).toString();
   return qs ? `&${qs}` : '';
 }
@@ -554,13 +556,67 @@ function FilterSection({ label, children }: { label: string; children: React.Rea
   );
 }
 
+// Aliases that auto-detect an opportunity type from the search box.
+// Polysemic words (event, research, ricerca, stage alone) are excluded — they appear
+// too often in titles/descriptions without being filter intent.
+const TYPE_ALIASES: Record<string, string> = {
+  'summer program': 'SUMMER_PROGRAM',
+  'summership': 'SUMMER_PROGRAM',
+  'summer school': 'SUMMER_PROGRAM',
+  'internship': 'INTERNSHIP',
+  'hackathon': 'HACKATHON',
+  'hackaton': 'HACKATHON',
+  'fellowship': 'FELLOWSHIP',
+  'exchange': 'EXCHANGE',
+  'scambio': 'EXCHANGE',
+  'volontariato': 'VOLUNTEERING',
+  'volunteering': 'VOLUNTEERING',
+  'bootcamp': 'BOOTCAMP',
+  'competition': 'COMPETITION',
+  'competizione': 'COMPETITION',
+  'conference': 'CONFERENCE',
+  'conferenza': 'CONFERENCE',
+  'extracurricular': 'EXTRACURRICULAR',
+};
+
+// Escape regex specials, then build a word-boundary matcher.
+// For multi-word aliases, "word boundary" means each end of the phrase
+// must sit on a non-letter character (or string boundary).
+function escapeForRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function extractTypesFromSearch(query: string): { detectedTypes: string[]; remainingSearch: string } {
+  const detectedTypes: string[] = [];
+  let remaining = query.trim();
+  // Sort by length so multi-word aliases match before single words.
+  const sortedAliases = Object.entries(TYPE_ALIASES).sort((a, b) => b[0].length - a[0].length);
+  for (const [alias, type] of sortedAliases) {
+    const re = new RegExp(`(^|[^\\p{L}])${escapeForRegex(alias)}(?=[^\\p{L}]|$)`, 'iu');
+    if (re.test(remaining)) {
+      if (!detectedTypes.includes(type)) detectedTypes.push(type);
+      remaining = remaining.replace(re, '$1').replace(/\s+/g, ' ').trim();
+    }
+  }
+  return { detectedTypes, remainingSearch: remaining.toLowerCase() };
+}
+
 const OPPORTUNITY_TYPE_CHIPS = [
   { label: 'Internship / Stage',      types: ['INTERNSHIP', 'STAGE'] },
   { label: 'Summer School',           types: ['SUMMER_PROGRAM'] },
+  { label: 'Fellowship',              types: ['FELLOWSHIP'] },
   { label: 'Events',                  types: ['EVENT'] },
   { label: 'Hackathon & Competition', types: ['HACKATHON', 'COMPETITION'] },
   { label: 'Exchange & Volunteering', types: ['EXCHANGE', 'VOLUNTEERING'] },
 ] as const;
+
+const TYPE_LABELS: Record<string, string> = {
+  INTERNSHIP: 'Internship', STAGE: 'Stage', SUMMER_PROGRAM: 'Summer Program',
+  FELLOWSHIP: 'Fellowship', HACKATHON: 'Hackathon', COMPETITION: 'Competition',
+  EXCHANGE: 'Exchange', VOLUNTEERING: 'Volunteering', BOOTCAMP: 'Bootcamp',
+  CONFERENCE: 'Conference', EXTRACURRICULAR: 'Extracurricular',
+  EVENT: 'Event', RESEARCH: 'Research',
+};
 
 function FilterSheet({ open, draft, matchCount, filterCategories, tab, t, onUpdate, onToggleBadge, onReset, onApply, onClose }: {
   open: boolean; draft: AdvancedFilters; matchCount: number;
@@ -744,12 +800,16 @@ export default function HomePage() {
   }, []);
 
   function mapOpportunity(opp: any, extras?: Partial<Opportunity>): Opportunity {
+    // For Italian users, prefer the Italian translation when present.
+    const useIt = language === 'Italiano';
+    const displayTitle = useIt && opp.titleIt ? opp.titleIt : opp.title;
+    const displayDesc = useIt && opp.descriptionIt ? opp.descriptionIt : (opp.description || '');
     return {
-      id: opp.id, title: opp.title,
-      company: opp.company || opp.universityName || opp.university?.name || '',
+      id: opp.id, title: displayTitle,
+      company: opp.company || opp.organizer || opp.universityName || opp.university?.name || '',
       badge: `${opp.type}${opp.isRemote ? ' • REMOTE' : ''}`,
-      description: opp.description || '', matchScore: opp.matchScore || 0,
-      location: opp.location || opp.universityCity || opp.university?.city || '',
+      description: displayDesc, matchScore: opp.matchScore || 0,
+      location: opp.location || opp.city || opp.universityCity || opp.university?.city || '',
       about: opp.about || '', url: opp.url || '', type: opp.type || '',
       remote: opp.isRemote || false, isAbroad: opp.isAbroad || false,
       skills: opp.tags || [], requiredEnglishLevel: opp.requiredEnglishLevel || '',
@@ -1020,6 +1080,29 @@ const viewedRef = useRef<Set<string>>(new Set());
               </button>
             </div>
 
+            {/* Auto-detected types from the search box — transparency chip so users see why results are filtered. */}
+            {searchQuery.trim() && (() => {
+              const { detectedTypes } = extractTypesFromSearch(searchQuery);
+              if (!detectedTypes.length) return null;
+              return (
+                <div className="flex flex-wrap items-center gap-1.5 mt-2 px-2">
+                  <span className="text-[11px]" style={{ color: '#acb0ce' }}>Auto-detected:</span>
+                  {detectedTypes.map((t) => (
+                    <span key={t} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold"
+                      style={{ backgroundColor: '#eef0ff', color: '#4a4bd7' }}>
+                      {TYPE_LABELS[t] ?? t}
+                    </span>
+                  ))}
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="text-[11px] underline"
+                    style={{ color: '#acb0ce' }}
+                  >
+                    clear
+                  </button>
+                </div>
+              );
+            })()}
             {showHistory && (
               <SearchHistoryDropdown history={searchHistory} onSelect={(term) => { setSearchQuery(term); setActiveSuggestionIndex(-1); }} onRemove={removeFromHistory} onClear={clearHistory} />
             )}

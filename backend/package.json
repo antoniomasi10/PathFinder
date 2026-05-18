@@ -36,7 +36,9 @@
     "backfill:structured-content": "ts-node --transpile-only scripts/backfill-structured-content.ts",
     "backfill:deadlines": "ts-node --transpile-only scripts/backfill-deadlines.ts",
     "backfill:expire-senior": "ts-node --transpile-only scripts/backfill-expire-senior.ts",
-    "sync:deadlines-from-structured": "ts-node --transpile-only scripts/sync-deadlines-from-structured.ts"
+    "sync:deadlines-from-structured": "ts-node --transpile-only scripts/sync-deadlines-from-structured.ts",
+    "backfill:extracted-skills": "ts-node --transpile-only src/scripts/backfillExtractedSkills.ts",
+    "cleanup:urls": "ts-node --transpile-only src/scripts/runUrlCleanup.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -53,7 +55,6 @@
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "csv-parse": "^6.2.1",
-    "deepl-node": "^1.26.0",
     "dotenv": "^17.3.1",
     "express": "^4.19.2",
     "express-rate-limit": "^8.3.1",

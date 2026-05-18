@@ -44,6 +44,8 @@ import { startImportScheduler } from './services/import/scheduler';
 import { bulkGenerateEmbeddings } from './services/embedding.service';
 import { startRetentionCleanupJob } from './services/cleanup.service';
 import { runUrlCheckBatch } from './services/import/urlChecker';
+import { backfillExtractedSkillsBoot } from './services/ai/opportunityParser';
+import { startTranslationScheduler } from './services/translationJob';
 import { cacheDel } from './lib/cache';
 import { startCampaignScheduler } from './services/campaignScheduler';
 
@@ -211,6 +213,7 @@ httpServer.listen(PORT, () => {
   startImportScheduler();
   startRetentionCleanupJob();
   startCampaignScheduler();
+  startTranslationScheduler();
   // Backfill embeddings for records that don't have one yet (runs in background)
   bulkGenerateEmbeddings().catch((err) => {
     logger.error('Embedding backfill failed:', err);
@@ -219,6 +222,10 @@ httpServer.listen(PORT, () => {
   setTimeout(() => {
     runUrlCheckBatch(50).catch((err) => logger.error('URL check boot batch failed:', err));
   }, 30_000);
+  // Backfill AI-extracted skills for opportunities that don't have them yet (60s delay)
+  setTimeout(() => {
+    backfillExtractedSkillsBoot(200).catch((err) => logger.error('Skills backfill boot failed:', err));
+  }, 60_000);
 });
 
 export { io };
