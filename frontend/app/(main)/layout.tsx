@@ -89,7 +89,7 @@ function PushPromptModal() {
 
 const FULLSCREEN_ROUTES: string[] = [];
 // Routes that manage their own header (TopBar hidden, BottomNav still shown by layout)
-const CUSTOM_HEADER_ROUTES = ['/networking', '/profile', '/notifications', '/profile/skills'];
+const CUSTOM_HEADER_ROUTES = ['/networking', '/profile', '/notifications', '/profile/skills', '/settings'];
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -97,23 +97,25 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const hasCustomHeader = CUSTOM_HEADER_ROUTES.some(r => pathname.startsWith(r));
 
   return (
-    <ToastProvider>
-      <NotificationProvider>
-      <SavedOpportunitiesProvider>
-        <SavedCoursesProvider>
-        <SkillsPromptProvider>
-        <div className="min-h-screen" style={{ backgroundColor: '#fbf8ff' }}>
-          {!isFullscreen && !hasCustomHeader && <TopBar />}
-          <main className={`${isFullscreen ? '' : 'pb-20'} max-w-lg mx-auto`}>
-            <ErrorBoundary FallbackComponent={ErrorFallback}>{children}</ErrorBoundary>
-          </main>
-          {!isFullscreen && <BottomNav />}
-          {!isFullscreen && <PushPromptModal />}
-        </div>
-        </SkillsPromptProvider>
-        </SavedCoursesProvider>
-      </SavedOpportunitiesProvider>
-      </NotificationProvider>
-    </ToastProvider>
+    <ErrorBoundary FallbackComponent={ErrorFallback}>
+      <ToastProvider>
+        <NotificationProvider>
+          <SavedOpportunitiesProvider>
+            <SavedCoursesProvider>
+              <SkillsPromptProvider>
+                <div className="min-h-screen" style={{ backgroundColor: '#fbf8ff' }}>
+                  {!isFullscreen && !hasCustomHeader && <TopBar />}
+                  <main className={`${isFullscreen ? '' : 'pb-20'} max-w-lg mx-auto`}>
+                    <ErrorBoundary FallbackComponent={ErrorFallback}>{children}</ErrorBoundary>
+                  </main>
+                  {!isFullscreen && <BottomNav />}
+                  {!isFullscreen && <PushPromptModal />}
+                </div>
+              </SkillsPromptProvider>
+            </SavedCoursesProvider>
+          </SavedOpportunitiesProvider>
+        </NotificationProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }

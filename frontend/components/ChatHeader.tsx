@@ -40,6 +40,12 @@ export default function ChatHeader(props: ChatHeaderProps) {
         backgroundColor: '#fbf8ff',
         borderBottom: '1px solid rgba(172,176,206,0.3)',
         boxShadow: '0px 1px 1px rgba(0,0,0,0.05)',
+      }}
+    >
+      <div style={{
+        maxWidth: 512,
+        margin: '0 auto',
+        height: '100%',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -144,6 +150,7 @@ export default function ChatHeader(props: ChatHeaderProps) {
         )}
       </button>
 
+    </div>
     </div>
   );
 }
