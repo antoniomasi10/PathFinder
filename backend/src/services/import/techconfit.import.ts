@@ -185,7 +185,7 @@ export async function importTechConfitOpportunities(): Promise<{
           location: location ?? null,
           isAbroad,
           isRemote,
-          type: 'CONFERENCE',
+          type: 'EVENT',
           tags: ['techconfit', 'conference', 'italy', 'tech'],
           postedAt: startDate,
           expiresAt: endDate ?? startDate,

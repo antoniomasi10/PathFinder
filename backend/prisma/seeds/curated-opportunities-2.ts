@@ -133,7 +133,7 @@ const opportunities = [
   {
     title: 'European Youth Parliament — National Selection Italy',
     description: "L'European Youth Parliament (EYP) è una delle più grandi associazioni giovanili indipendenti d'Europa. Le sessioni nazionali italiane raccolgono 100+ studenti universitari per 3 giorni di dibattiti parlamentari su temi europei. Partecipazione gratuita, viaggio a carico del partecipante.",
-    type: 'CONFERENCE' as const,
+    type: 'EVENT' as const,
     url: 'https://eyp.it/',
     organizer: 'EYP Italia',
     location: 'Italy (rotates)',
@@ -175,7 +175,7 @@ const opportunities = [
   {
     title: 'Forum Economico di Trento (Festival dell\'Economia)',
     description: "Il Festival dell'Economia di Trento è uno dei principali eventi di divulgazione economica in Italia, con economisti, policy maker e imprenditori di fama internazionale. Ingresso gratuito per studenti universitari. Ideale per studenti di economia, scienze politiche e management.",
-    type: 'CONFERENCE' as const,
+    type: 'EVENT' as const,
     url: 'https://www.festivaleconomia.it/',
     organizer: 'Provincia Autonoma di Trento',
     location: 'Trento, Italy',

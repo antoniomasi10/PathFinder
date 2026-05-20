@@ -75,7 +75,6 @@ export function fallbackClassify(opp: {
       break;
     case 'EXTRACURRICULAR':
     case 'EVENT':
-    case 'CONFERENCE':
       scores.Creativo = 0.7;
       scores.Sociale = 0.6;
       scores.Explorer = 0.5;

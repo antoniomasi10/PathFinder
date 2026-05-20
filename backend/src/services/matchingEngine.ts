@@ -14,6 +14,7 @@ export interface OppFilters {
   englishLevels?: string[];
   deadline?: string;
   types?: string[];
+  formats?: string[];
 }
 
 function applyOppFilters(items: any[], f: OppFilters): any[] {
@@ -46,6 +47,7 @@ function applyOppFilters(items: any[], f: OppFilters): any[] {
       if (f.deadline === 'month' && (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear())) return false;
     }
     if (f.types?.length && !f.types.includes(opp.type)) return false;
+    if (f.formats?.length && !f.formats.includes(opp.format || '')) return false;
     return true;
   });
 }
@@ -80,8 +82,8 @@ const ENGLISH_ORDER: Record<EnglishLevel, number> = {
 // Interest → preferred opportunity types (ordered: first = top match)
 const INTEREST_TYPE_MAP: Record<string, OpportunityType[]> = {
   tech:               ['INTERNSHIP', 'STAGE', 'HACKATHON', 'BOOTCAMP', 'RESEARCH'],
-  business:           ['FELLOWSHIP', 'INTERNSHIP', 'SUMMER_PROGRAM', 'COMPETITION', 'CONFERENCE'],
-  creative:           ['EXTRACURRICULAR', 'EVENT', 'CONFERENCE', 'BOOTCAMP'],
+  business:           ['FELLOWSHIP', 'INTERNSHIP', 'SUMMER_PROGRAM', 'COMPETITION', 'EVENT'],
+  creative:           ['EXTRACURRICULAR', 'EVENT', 'BOOTCAMP'],
   sport:              ['EXTRACURRICULAR', 'EVENT', 'COMPETITION'],
   general:            ['STAGE', 'EVENT', 'EXTRACURRICULAR'],
   // onboarding InterestSelection values
@@ -90,22 +92,22 @@ const INTEREST_TYPE_MAP: Record<string, OpportunityType[]> = {
   data_science:       ['RESEARCH', 'HACKATHON', 'INTERNSHIP', 'COMPETITION'],
   mobile_dev:         ['INTERNSHIP', 'STAGE', 'HACKATHON', 'BOOTCAMP'],
   ricerca_scientifica:['RESEARCH', 'FELLOWSHIP', 'EXCHANGE', 'SUMMER_PROGRAM'],
-  business_strategy:  ['FELLOWSHIP', 'COMPETITION', 'SUMMER_PROGRAM', 'CONFERENCE'],
+  business_strategy:  ['FELLOWSHIP', 'COMPETITION', 'SUMMER_PROGRAM', 'EVENT'],
   finance:            ['INTERNSHIP', 'FELLOWSHIP', 'COMPETITION'],
   sustainability:     ['VOLUNTEERING', 'RESEARCH', 'EXCHANGE', 'FELLOWSHIP'],
-  marketing:          ['INTERNSHIP', 'STAGE', 'EVENT', 'CONFERENCE'],
-  law_policy:         ['FELLOWSHIP', 'COMPETITION', 'CONFERENCE', 'EXCHANGE'],
+  marketing:          ['INTERNSHIP', 'STAGE', 'EVENT'],
+  law_policy:         ['FELLOWSHIP', 'COMPETITION', 'EVENT', 'EXCHANGE'],
   healthcare:         ['RESEARCH', 'VOLUNTEERING', 'EXCHANGE', 'INTERNSHIP'],
 };
 
 // Cluster tag → preferred opportunity types (ordered: first = top match)
 const CLUSTER_TYPE_MAP: Record<string, OpportunityType[]> = {
   Analista:     ['INTERNSHIP', 'STAGE', 'RESEARCH', 'HACKATHON', 'COMPETITION'],
-  Creativo:     ['EXTRACURRICULAR', 'EVENT', 'CONFERENCE', 'BOOTCAMP'],
-  Leader:       ['FELLOWSHIP', 'INTERNSHIP', 'COMPETITION', 'CONFERENCE', 'SUMMER_PROGRAM'],
-  Imprenditore: ['FELLOWSHIP', 'STAGE', 'SUMMER_PROGRAM', 'COMPETITION', 'CONFERENCE'],
-  Sociale:      ['EXTRACURRICULAR', 'EVENT', 'VOLUNTEERING', 'EXCHANGE', 'CONFERENCE'],
-  Explorer:     ['EXCHANGE', 'SUMMER_PROGRAM', 'CONFERENCE', 'EVENT', 'RESEARCH', 'FELLOWSHIP'],
+  Creativo:     ['EXTRACURRICULAR', 'EVENT', 'BOOTCAMP'],
+  Leader:       ['FELLOWSHIP', 'INTERNSHIP', 'COMPETITION', 'EVENT', 'SUMMER_PROGRAM'],
+  Imprenditore: ['FELLOWSHIP', 'STAGE', 'SUMMER_PROGRAM', 'COMPETITION', 'EVENT'],
+  Sociale:      ['EXTRACURRICULAR', 'EVENT', 'VOLUNTEERING', 'EXCHANGE'],
+  Explorer:     ['EXCHANGE', 'SUMMER_PROGRAM', 'EVENT', 'RESEARCH', 'FELLOWSHIP'],
 };
 
 // ---------------------------------------------------------------------------
@@ -140,7 +142,6 @@ const SCORING_PROFILES: Record<OpportunityType, ScoringProfile> = {
   COMPETITION:    { interest:15, cluster:15, gpa:5,  english:15, relocate:10, year:5,  fieldMatchBonus:15, costBonus:5,  deadlineUrgencyBonus:10, locationMatchBonus:5  },
   EXCHANGE:       { interest:10, cluster:15, gpa:10, english:25, relocate:15, year:10, fieldMatchBonus:5,  costBonus:0,  deadlineUrgencyBonus:10, locationMatchBonus:0  },
   VOLUNTEERING:   { interest:10, cluster:20, gpa:0,  english:15, relocate:15, year:5,  fieldMatchBonus:10, costBonus:5,  deadlineUrgencyBonus:5,  locationMatchBonus:15 },
-  CONFERENCE:     { interest:20, cluster:10, gpa:0,  english:10, relocate:10, year:0,  fieldMatchBonus:10, costBonus:15, deadlineUrgencyBonus:5,  locationMatchBonus:20 },
   BOOTCAMP:       { interest:20, cluster:10, gpa:5,  english:10, relocate:10, year:5,  fieldMatchBonus:15, costBonus:15, deadlineUrgencyBonus:0,  locationMatchBonus:10 },
   RESEARCH:       { interest:15, cluster:10, gpa:25, english:20, relocate:10, year:0,  fieldMatchBonus:15, costBonus:0,  deadlineUrgencyBonus:5,  locationMatchBonus:0  },
 };
@@ -672,12 +673,12 @@ export async function getHybridMatchedOpportunitiesFull(
        WHERE usr.id = $1
          AND (o."expiresAt" IS NULL OR o."expiresAt" > NOW())
          AND (
-           o."type" IN ('EVENT', 'CONFERENCE')
+           o."type" IN ('EVENT')
            OR o."deadline" IS NULL
            OR o."deadline" > NOW()
          )
          AND (
-           o."type" NOT IN ('EVENT', 'CONFERENCE')
+           o."type" NOT IN ('EVENT')
            OR o."endDate" IS NULL
            OR o."endDate" >= CURRENT_DATE
          )
@@ -704,12 +705,12 @@ export async function getHybridMatchedOpportunitiesFull(
        LEFT JOIN "University" u ON o."universityId" = u."id"
        WHERE (o."expiresAt" IS NULL OR o."expiresAt" > NOW())
          AND (
-           o."type" IN ('EVENT', 'CONFERENCE')
+           o."type" IN ('EVENT')
            OR o."deadline" IS NULL
            OR o."deadline" > NOW()
          )
          AND (
-           o."type" NOT IN ('EVENT', 'CONFERENCE')
+           o."type" NOT IN ('EVENT')
            OR o."endDate" IS NULL
            OR o."endDate" >= CURRENT_DATE
          )
@@ -851,7 +852,7 @@ export async function getNewOpportunitiesFull(
   if (filters.englishLevels?.length) where.requiredEnglishLevel = { in: filters.englishLevels as any };
 
   // Always exclude expired listings, past-deadline, and broken-URL opportunities.
-  // EVENT/CONFERENCE types use endDate (not deadline) — they don't have an application deadline.
+  // EVENT type uses endDate (not deadline) — events don't have an application deadline.
   // Curated rows are exempt from urlStatus=BROKEN (manually verified; urlChecker false-positives).
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
   const nowTs = new Date();
@@ -861,13 +862,13 @@ export async function getNewOpportunitiesFull(
       OR: [
         {
           AND: [
-            { type: { in: ['EVENT', 'CONFERENCE'] } },
+            { type: { in: ['EVENT'] } },
             { OR: [{ endDate: null }, { endDate: { gte: todayStart } }] },
           ],
         },
         {
           AND: [
-            { type: { notIn: ['EVENT', 'CONFERENCE'] } },
+            { type: { notIn: ['EVENT'] } },
             { OR: [{ deadline: null }, { deadline: { gt: nowTs } }] },
           ],
         },
@@ -1041,7 +1042,6 @@ function getMatchReason(profile: any, user: any, opp: any, skills?: UserSkills |
     EXCHANGE:       'Esperienza internazionale consigliata per te',
     SUMMER_PROGRAM: 'Programma estivo in linea con i tuoi interessi',
     COMPETITION:    'Metti alla prova le tue competenze',
-    CONFERENCE:     'Espandi la tua rete professionale',
     VOLUNTEERING:   'In linea con i tuoi valori',
     BOOTCAMP:       'Accelera le tue competenze pratiche',
   };

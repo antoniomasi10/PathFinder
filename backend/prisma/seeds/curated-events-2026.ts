@@ -85,7 +85,7 @@ const events = [
   {
     title: 'Codemotion Milano 2026 — Developer Conference',
     description: 'Codemotion è la più grande conferenza per sviluppatori in Italia, con talk su AI, cloud, web, mobile, DevOps e molto altro. Centinaia di speaker internazionali, workshop pratici e opportunità di networking con le principali aziende tech. Biglietti a pagamento ma con sconti studenti disponibili; alcuni slot sono gratuiti.',
-    type: 'CONFERENCE' as const,
+    type: 'EVENT' as const,
     url: 'https://conferences.codemotion.com/milan2026/',
     organizer: 'Codemotion',
     location: 'Milano, Italy',

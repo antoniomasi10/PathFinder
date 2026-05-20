@@ -302,7 +302,7 @@ export async function importConfsTechOpportunities(): Promise<{
           location: isRemote ? 'Online' : conf.city ? `${conf.city}${conf.country ? `, ${conf.country}` : ''}` : null,
           isAbroad,
           isRemote,
-          type: 'CONFERENCE',
+          type: 'EVENT',
           tags,
           postedAt: startDate,
           expiresAt: endDate,

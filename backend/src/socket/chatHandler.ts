@@ -21,13 +21,21 @@ const groupMessageSchema = z.object({
   message: 'Messaggio o immagine obbligatori',
 });
 
-const directMessageSchema = z.object({
-  receiverId: z.string().uuid(),
-  content: z.string().max(5000),
-  images: z.array(z.string()).max(5).optional(),
-}).refine((d) => d.content.trim().length > 0 || (d.images && d.images.length > 0), {
-  message: 'Messaggio o immagine obbligatori',
-});
+const directMessageSchema = z.union([
+  z.object({
+    receiverId: z.string().uuid(),
+    type: z.undefined().or(z.literal('text')),
+    content: z.string().min(1).max(5000),
+    images: z.array(z.string()).max(5).optional(),
+  }),
+  z.object({
+    receiverId: z.string().uuid(),
+    type: z.literal('opportunity'),
+    opportunityId: z.string().uuid(),
+    content: z.string().optional(),
+    images: z.array(z.string()).max(5).optional(),
+  }),
+]);
 
 async function checkRateLimit(userId: string): Promise<boolean> {
   try {
@@ -181,7 +189,11 @@ export function setupChatSocket(io: Server) {
         socket.emit('error', { message: 'Dati messaggio non validi' });
         return;
       }
-      const { receiverId, content, images } = parsed.data;
+      const msg = parsed.data as any;
+      const { receiverId, images } = msg;
+      const msgType: 'text' | 'opportunity' = msg.type === 'opportunity' ? 'opportunity' : 'text';
+      const content: string = msgType === 'opportunity' ? '' : (msg.content || '');
+      const opportunityId: string | undefined = msgType === 'opportunity' ? msg.opportunityId : undefined;
 
       if (!(await checkRateLimit(userId))) {
         socket.emit('error', { message: 'Troppi messaggi, riprova tra poco' });
@@ -222,8 +234,10 @@ export function setupChatSocket(io: Server) {
           data: {
             senderId: userId,
             receiverId,
-            content: sanitizeText(content),
+            content: msgType === 'opportunity' ? '' : sanitizeText(content || ''),
             images: imageUrls,
+            type: msgType === 'opportunity' ? 'OPPORTUNITY' : 'TEXT',
+            ...(opportunityId ? { opportunityId } : {}),
           },
           include: {
             sender: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
