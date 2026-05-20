@@ -38,12 +38,6 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
           provider: data.provider ?? 'LOCAL',
           university: data.university,
         });
-        identify(data.id, {
-          email: data.email,
-          universityId: data.university?.id,
-          profileCompleted: data.profileCompleted,
-        });
-
         if (!data.emailVerified && pathname !== '/verify-email') {
           router.replace('/verify-email');
         } else if (data.emailVerified && !data.profileCompleted && pathname !== '/onboarding') {
@@ -60,6 +54,16 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      identify(user.id, {
+        email: user.email,
+        universityId: user.university?.id,
+        profileCompleted: user.profileCompleted,
+      });
+    }
+  }, [user]);
 
   const logout = () => {
     bffPost('/api/bff/logout').catch(() => {});

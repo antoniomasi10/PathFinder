@@ -88,7 +88,7 @@ export async function initOneSignal(): Promise<void> {
 
         // If permission already granted in a previous session, ensure we register the existing id.
         if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-          const id = await waitForSubscriptionId(OneSignal, 5000);
+          const id = await waitForSubscriptionId(OneSignal, 15000);
           if (id) {
             await registerPlayerIdWithBackend(id);
           } else {
@@ -163,7 +163,7 @@ export async function requestOneSignalPermission(): Promise<boolean> {
         } catch (e) {
           log('warn', 'optIn.failed', e);
         }
-        const id = await waitForSubscriptionId(OneSignal, 5000);
+        const id = await waitForSubscriptionId(OneSignal, 15000);
         if (id) {
           await registerPlayerIdWithBackend(id);
           resolve(true);
