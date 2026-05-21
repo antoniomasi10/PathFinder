@@ -196,7 +196,7 @@ export async function importDevelopersEventsOpportunities(): Promise<{
           location,
           isAbroad,
           isRemote,
-          type: ['CONFERENCE', 'EVENT', 'HACKATHON', 'COMPETITION'].includes(type) ? type : 'CONFERENCE',
+          type: ['EVENT', 'HACKATHON', 'COMPETITION'].includes(type) ? type : 'EVENT',
           tags,
           postedAt: startDate,
           expiresAt: endDate ?? startDate,

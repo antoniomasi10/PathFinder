@@ -40,6 +40,9 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     const typeParam = (req.query.type as string || '');
     const typeFilters = typeParam ? typeParam.split(',').filter(Boolean) : [];
     if (typeFilters.length) filters.types = typeFilters;
+    const formatParam = (req.query.format as string || '');
+    const formatFilters = formatParam ? formatParam.split(',').filter(Boolean) : [];
+    if (formatFilters.length) filters.formats = formatFilters;
     const hasFilters = Object.keys(filters).length > 0;
 
     if (isNew === 'true') {
@@ -76,9 +79,9 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     // Plain explore: build dynamic WHERE for raw SQL (avoids Unsupported vector column)
     const conditions: string[] = [
       `(o."expiresAt" IS NULL OR o."expiresAt" > NOW())`,
-      // For EVENT/CONFERENCE, deadline is meaningless — visibility is bounded by endDate.
-      `(o."type" IN ('EVENT', 'CONFERENCE') OR o."deadline" IS NULL OR o."deadline" > NOW())`,
-      `(o."type" NOT IN ('EVENT', 'CONFERENCE') OR o."endDate" IS NULL OR o."endDate" >= CURRENT_DATE)`,
+      // For EVENT, deadline is meaningless — visibility is bounded by endDate.
+      `(o."type" IN ('EVENT') OR o."deadline" IS NULL OR o."deadline" > NOW())`,
+      `(o."type" NOT IN ('EVENT') OR o."endDate" IS NULL OR o."endDate" >= CURRENT_DATE)`,
       `(o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN')`,
     ];
     const params: any[] = [limit, skip];
@@ -137,6 +140,14 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       const placeholders = typeFilters.map(() => `$${idx++}`).join(', ');
       conditions.push(`o."type" IN (${placeholders})`);
       params.push(...typeFilters);
+    }
+    if (formatFilters.length === 1) {
+      conditions.push(`o."format" = $${idx++}`);
+      params.push(formatFilters[0]);
+    } else if (formatFilters.length > 1) {
+      const placeholders = formatFilters.map(() => `$${idx++}`).join(', ');
+      conditions.push(`o."format" IN (${placeholders})`);
+      params.push(...formatFilters);
     }
 
     const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';

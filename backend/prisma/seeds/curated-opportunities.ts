@@ -179,7 +179,7 @@ const opportunities = [
   {
     title: 'Web Marketing Festival — Rimini',
     description: "Il WMF è il più grande evento italiano sull'innovazione digitale, marketing, AI e startup. Tre giorni di talk, workshop, e networking a Rimini con oltre 60.000 partecipanti. Accesso gratuito con registrazione anticipata.",
-    type: 'CONFERENCE' as const,
+    type: 'EVENT' as const,
     url: 'https://www.webmarketingfestival.it/',
     organizer: 'Web Marketing Festival',
     location: 'Rimini, Italy',
@@ -201,7 +201,7 @@ const opportunities = [
   {
     title: 'TEDxMilano',
     description: 'TEDxMilano riunisce speaker, innovatori e creativi in un formato ispirato ai TED Talks. Ogni edizione esplora temi trasversali: tecnologia, scienze, arti, business e imprenditoria sociale. Ideale per studenti universitari alla ricerca di ispirazione e networking.',
-    type: 'CONFERENCE' as const,
+    type: 'EVENT' as const,
     url: 'https://tedxmilano.com/',
     organizer: 'TEDxMilano',
     location: 'Milan, Italy',
@@ -271,7 +271,7 @@ const opportunities = [
   {
     title: 'Harvard HPAIR — Asia Pacific Student Leaders Conference',
     description: 'Harvard Project for Asian and International Relations (HPAIR) brings together 600+ student leaders from 50+ countries for a week-long conference in Asia. Focus: leadership, international policy, business, and technology. Partial need-based financial aid available.',
-    type: 'CONFERENCE' as const,
+    type: 'EVENT' as const,
     url: 'https://www.hpair.org/',
     organizer: 'Harvard HPAIR',
     isAbroad: true,

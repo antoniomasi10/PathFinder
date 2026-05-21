@@ -36,11 +36,21 @@ export const resetPasswordSchema = z.object({
     .regex(/[0-9]/, 'La password deve contenere almeno un numero'),
 });
 
-export const sendMessageSchema = z.object({
-  receiverId: z.string().uuid('ID destinatario non valido'),
-  content: z.string().min(1, 'Il messaggio non può essere vuoto').max(5000),
-  images: z.array(z.string()).max(5).optional(),
-});
+export const sendMessageSchema = z.union([
+  z.object({
+    receiverId: z.string().uuid('ID destinatario non valido'),
+    type: z.undefined().or(z.literal('text')),
+    content: z.string().min(1, 'Il messaggio non può essere vuoto').max(5000),
+    images: z.array(z.string()).max(5).optional(),
+  }),
+  z.object({
+    receiverId: z.string().uuid('ID destinatario non valido'),
+    type: z.literal('opportunity'),
+    opportunityId: z.string().uuid('ID opportunità non valido'),
+    content: z.string().optional(),
+    images: z.array(z.string()).max(5).optional(),
+  }),
+]);
 
 export const createPostSchema = z.object({
   content: z.string().min(1, 'Il contenuto non può essere vuoto').max(10000),

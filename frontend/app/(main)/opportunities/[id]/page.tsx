@@ -11,9 +11,10 @@ import { track } from '@/lib/analytics';
 import { getOpportunityTypeColor } from '@/lib/opportunityColors';
 import DeadlineLabel, { OpenLabel } from '@/components/DeadlineLabel';
 import {
-  ArrowLeft, Share, ClockIcon, Bookmark, Star, Users, MapPin,
-  FileText, Briefcase, Bulb, CircleCheck, ExternalLink, Target,
+  ArrowLeft, ClockIcon, Bookmark, Star, Users, MapPin,
+  FileText, Briefcase, Bulb, CircleCheck, ExternalLink, Target, PaperPlane,
 } from '@/components/icons';
+import ShareOpportunityModal from '@/components/ShareOpportunityModal';
 
 interface StructuredContent {
   opportunityDescription: string | null;
@@ -152,6 +153,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
   const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
   const [relatedOpps, setRelatedOpps] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   useEffect(() => {
     try {
@@ -294,18 +296,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
           </svg>
         </div>
 
-        <button
-          className="flex items-center justify-center rounded-full active:opacity-70"
-          style={{ width: 40, height: 40 }}
-          aria-label="Condividi"
-          onClick={() => {
-            if (navigator.share) {
-              navigator.share({ title: opportunity.title, text: `${opportunity.title} — ${opportunity.company}`, url: window.location.href }).catch(() => {});
-            }
-          }}
-        >
-          <Share size={20} strokeWidth={2} color="#2c3149" />
-        </button>
+        <div style={{ width: 40 }} />
       </header>
 
       {/* ── Scrollable content ─────────────────────────────────────── */}
@@ -621,7 +612,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
       </div>
 
       {/* ── Fixed CTA ─────────────────────────────────────────────── */}
-      <div className="fixed z-30 left-0 right-0 max-w-lg mx-auto px-5" style={{ bottom: 80 }}>
+      <div className="fixed z-30 left-0 right-0 max-w-lg mx-auto px-5 flex gap-3" style={{ bottom: 80 }}>
         <button
           onClick={() => {
             if (!hasUrl) return;
@@ -630,7 +621,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
             window.open(opportunity.url, '_blank', 'noopener,noreferrer');
           }}
           disabled={!hasUrl}
-          className="w-full flex items-center justify-center gap-2 rounded-[24px] font-bold text-[18px] active:opacity-80 transition-opacity"
+          className="flex-1 flex items-center justify-center gap-2 rounded-[24px] font-bold text-[18px] active:opacity-80 transition-opacity"
           style={{
             padding: '16px 2px',
             backgroundColor: hasUrl ? '#615fe2' : '#c4c5ef',
@@ -642,9 +633,29 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
           {hasUrl ? "Vai all'opportunità" : 'Link non disponibile'}
           {hasUrl && <ExternalLink size={15} strokeWidth={2} color="#fbf7ff" />}
         </button>
+        <button
+          onClick={() => setShowShareModal(true)}
+          className="flex items-center justify-center rounded-[24px] active:opacity-80 transition-opacity flex-shrink-0"
+          style={{
+            width: 56,
+            height: 56,
+            backgroundColor: '#f3f2ff',
+            border: '1px solid #dde1ff',
+          }}
+          aria-label="Condividi in chat"
+        >
+          <PaperPlane size={20} strokeWidth={2} color="#615fe2" />
+        </button>
       </div>
 
       <BottomNav />
+
+      <ShareOpportunityModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        opportunityId={opportunity.id}
+        opportunityTitle={opportunity.title}
+      />
     </div>
   );
 }
