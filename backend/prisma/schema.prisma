@@ -40,7 +40,6 @@ enum OpportunityType {
   VOLUNTEERING
   BOOTCAMP
   RESEARCH
-  CONFERENCE
 }
 
 enum OpportunityFormat {
