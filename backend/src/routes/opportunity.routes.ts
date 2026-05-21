@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import prisma from '../lib/prisma';
-import { getHybridMatchedOpportunities, getHybridMatchedOpportunitiesFull, getNewOpportunitiesFull, scoreOpportunity, OppFilters } from '../services/matchingEngine';
+import { getHybridMatchedOpportunities, getHybridMatchedOpportunitiesFull, getNewOpportunitiesFull, getRelatedOpportunities, scoreOpportunity, OppFilters } from '../services/matchingEngine';
 import { trackInteraction } from '../services/interaction.service';
 import { cacheGet, cacheSet, cacheDel } from '../lib/cache';
 import { translateOpportunities } from '../services/opportunityTranslation.service';
@@ -252,6 +252,18 @@ function invalidateUserOppCache(userId: string): void {
     cacheDel(`cache:opps:new:${userId}:*`),
   ]).catch(() => {});
 }
+
+// Get opportunities semantically related to a given opportunity, re-ranked by user match score.
+// Must appear before /:id to avoid Express treating "related" as an id parameter.
+router.get('/:id/related', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 5, 10);
+    const related = await getRelatedOpportunities(req.user!.userId, req.params.id, limit);
+    res.json({ data: related, total: related.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Get single opportunity by id
 router.get('/:id', authMiddleware, async (req: Request, res: Response) => {

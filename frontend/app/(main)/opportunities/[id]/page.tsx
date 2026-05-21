@@ -173,10 +173,10 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
       })
       .catch(() => setLoading(false));
 
-    api.get('/opportunities?matched=true&page=1&limit=6')
+    api.get(`/opportunities/${id}/related?limit=5`)
       .then(({ data }) => {
         const items = Array.isArray(data.data || data) ? (data.data || data) : [];
-        setRelatedOpps(items.filter((o: any) => String(o.id) !== String(id)).slice(0, 5).map((o: any) => mapRaw(o, useIt)));
+        setRelatedOpps(items.map((o: any) => mapRaw(o, useIt)));
       })
       .catch(() => {});
   }, [id, useIt]);

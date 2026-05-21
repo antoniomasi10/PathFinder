@@ -588,6 +588,173 @@ export async function getHybridMatchedOpportunities(
 }
 
 /**
+ * Returns opportunities semantically similar to a given opportunity, re-ranked by user match score.
+ *
+ * Pipeline:
+ *  1. Fetch the reference opportunity's embedding.
+ *  2. Find the 30 most similar opportunities via pgvector cosine distance (opp-to-opp).
+ *  3. Re-rank with scoreOpportunity + feedback boost.
+ *  4. Apply freshness penalty + MMR diversification.
+ *  5. Return top `limit` results.
+ *
+ * Falls back to getHybridMatchedOpportunitiesFull if the reference has no embedding.
+ */
+export async function getRelatedOpportunities(
+  userId: string,
+  opportunityId: string,
+  limit: number = 5,
+): Promise<any[]> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { profile: true },
+  });
+
+  // Step 1: fetch the reference embedding
+  const refRows = await prisma.$queryRawUnsafe<{ embedding: string | null }[]>(
+    `SELECT embedding::text FROM "Opportunity" WHERE id = $1`,
+    opportunityId,
+  );
+  const refEmbedding = refRows[0]?.embedding ?? null;
+
+  // Fallback: no embedding on reference opportunity → return generic top-matches
+  if (!refEmbedding) {
+    const fallback = await getHybridMatchedOpportunitiesFull(userId, {});
+    return fallback.filter((o: any) => String(o.id) !== String(opportunityId)).slice(0, limit);
+  }
+
+  // Build hard filters (same logic as getHybridMatchedOpportunitiesFull)
+  let relocFilter = '';
+  if (user?.cityLock && user.city) {
+    const safeCity = user.city.replace(/'/g, "''");
+    relocFilter = `AND (o."isRemote" = true OR lower(o."city") = lower('${safeCity}'))`;
+  } else if (user?.regionLock && user.region) {
+    const safeRegion = user.region.replace(/'/g, "''");
+    relocFilter = `AND (o."isRemote" = true OR lower(o."region") = lower('${safeRegion}'))`;
+  } else if (user?.willingToRelocate === 'NO') {
+    relocFilter = `AND (o."isRemote" = true OR o."country" = 'IT' OR (o."country" IS NULL AND o."isAbroad" = false))`;
+  }
+
+  const seniorLeakFilter = `
+    AND NOT (
+      lower(o."title") ~ '(^|[^a-z])(senior|sr\\.?|director|head of|vp|vice president|lead|principal|staff|chief|cto|ceo|cmo|coo|cpo|manager|responsabile)([^a-z]|$)'
+      AND NOT lower(o."title") ~ '(^|[^a-z])(intern|interns|internship|internships|stage|tirocinio|stagista|trainee|junior|graduate program|werkstudent|apprenti|alternance|stagiaire|praktikant|borsista)([^a-z]|$)'
+    )
+    AND NOT lower(o."title") ~ '\\d+\\+? *(years?|anni?) +(of +)?(experience|esperienza)'`;
+
+  // Step 2: find top 30 candidates by content similarity (opp-to-opp, not user-to-opp)
+  const candidates = await prisma.$queryRawUnsafe<any[]>(
+    `SELECT o."id", o."title", o."description", o."titleIt", o."descriptionIt", o."about", o."url", o."type",
+            o."universityId", o."company", o."organizer", o."location", o."isRemote", o."isAbroad",
+            o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
+            o."postedAt", o."expiresAt", o."source", o."sourceId", o."lastSyncedAt",
+            o."eligibleFields", o."country", o."city", o."region", o."format",
+            o."clusterScores", o."clusterPrimary", o."minYearOfStudy", o."maxYearOfStudy",
+            o."cost", o."hasScholarship",
+            u."name" as "universityName", u."city" as "universityCity",
+            u."id" as "uniId", u."logoUrl" as "universityLogoUrl",
+            1 - (o.embedding <=> $1::vector) AS "contentSimilarity"
+     FROM "Opportunity" o
+     LEFT JOIN "University" u ON o."universityId" = u."id"
+     WHERE o.id != $2
+       AND o.embedding IS NOT NULL
+       AND (o."expiresAt" IS NULL OR o."expiresAt" > NOW())
+       AND (
+         o."type" IN ('EVENT', 'CONFERENCE')
+         OR o."deadline" IS NULL
+         OR o."deadline" > NOW()
+       )
+       AND (
+         o."type" NOT IN ('EVENT', 'CONFERENCE')
+         OR o."endDate" IS NULL
+         OR o."endDate" >= CURRENT_DATE
+       )
+       AND (o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN' OR o."source" = 'curated')
+       ${relocFilter}
+       ${seniorLeakFilter}
+     ORDER BY o.embedding <=> $1::vector
+     LIMIT 30`,
+    refEmbedding,
+    opportunityId,
+  );
+
+  if (candidates.length === 0) {
+    const fallback = await getHybridMatchedOpportunitiesFull(userId, {});
+    return fallback.filter((o: any) => String(o.id) !== String(opportunityId)).slice(0, limit);
+  }
+
+  // Step 3: get user interactions for feedback scoring
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  const interactions = user
+    ? await prisma.userInteraction.findMany({
+        where: { userId, targetType: 'opportunity', createdAt: { gte: ninetyDaysAgo } },
+      })
+    : [];
+
+  const userSkills = user ? parseUserSkills(user.skills) : null;
+
+  // Step 4: re-rank with match score + content similarity
+  const scored = candidates.map((opp) => {
+    const contentSim = (opp.contentSimilarity as number) ?? 0;
+    const university = opp.uniId
+      ? { id: opp.uniId, name: opp.universityName, city: opp.universityCity, logoUrl: opp.universityLogoUrl }
+      : null;
+
+    let matchScore: number;
+    if (user?.profile) {
+      const baseScore = scoreOpportunity(user.profile, user, opp, userSkills);
+      const feedbackBoost = computeFeedbackBoost(interactions, opp);
+      // 60% user match, 40% content similarity — content similarity is primary driver here
+      matchScore = baseScore * 0.6 + contentSim * 100 * 0.4 + feedbackBoost;
+    } else {
+      // No profile: rank purely by content similarity
+      matchScore = contentSim * 100;
+    }
+
+    return {
+      id: opp.id,
+      title: opp.title,
+      description: opp.description,
+      titleIt: opp.titleIt,
+      descriptionIt: opp.descriptionIt,
+      about: opp.about,
+      url: opp.url,
+      type: opp.type,
+      universityId: opp.universityId,
+      university,
+      company: opp.company,
+      organizer: opp.organizer,
+      location: opp.location,
+      city: opp.city,
+      country: opp.country,
+      isRemote: opp.isRemote,
+      isAbroad: opp.isAbroad,
+      requiredEnglishLevel: opp.requiredEnglishLevel,
+      minGpa: opp.minGpa,
+      tags: opp.tags,
+      deadline: opp.deadline,
+      postedAt: opp.postedAt,
+      expiresAt: opp.expiresAt,
+      source: opp.source,
+      sourceId: opp.sourceId,
+      clusterPrimary: opp.clusterPrimary ?? null,
+      matchScore: Math.max(0, Math.min(100, Math.round(matchScore))),
+    };
+  });
+
+  // Step 5: freshness penalty
+  const viewedIds = new Set(interactions.filter((i) => i.action === 'view').map((i) => i.targetId));
+  const clickedIds = new Set(interactions.filter((i) => i.action === 'click').map((i) => i.targetId));
+  const adjusted = applyFreshnessPenalty(scored, viewedIds, clickedIds);
+
+  adjusted.sort((a, b) => b.matchScore - a.matchScore || a.id.localeCompare(b.id));
+
+  // MMR on the full list (small window since we only return a few items)
+  const ranked = diversifyMMR(adjusted, adjusted.length, 0.7, 3);
+
+  return ranked.slice(0, limit);
+}
+
+/**
  * Returns the full ranked & diversified list of matched opportunities (no pagination).
  * The route layer caches this snapshot and paginates by slicing — guarantees that
  * page N never contains items already shown on a previous page within the same snapshot.
