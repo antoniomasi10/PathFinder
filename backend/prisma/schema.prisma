@@ -40,6 +40,7 @@ enum OpportunityType {
   VOLUNTEERING
   BOOTCAMP
   RESEARCH
+  CONFERENCE
 }
 
 enum OpportunityFormat {
@@ -304,7 +305,7 @@ model Opportunity {
 
 model University {
   id            String        @id @default(uuid())
-  name          String
+  name          String        @unique
   shortName     String?
   city          String
   country       String        @default("Italia")
