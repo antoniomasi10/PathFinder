@@ -12,6 +12,7 @@ import ChatHeader from '@/components/ChatHeader';
 import ActionMenu from '@/components/ActionMenu';
 import NewChatModal from '@/components/NewChatModal';
 import ImageLightbox from '@/components/ImageLightbox';
+import OpportunityMessageCard from '@/components/OpportunityMessageCard';
 import { isValidImageUrl } from '@/lib/urlValidation';
 import { checkWarn } from '@/lib/moderation';
 import { Plus, UserIcon, ChatDots, CloseSm, CloseMd, ImageIcon, PaperPlane, Check, Heart, Chat, Send, Flag, MoreHorizontal, Trash, Search, Filter } from '@/components/icons';
@@ -54,6 +55,8 @@ interface Message {
   images?: string[];
   sentAt: string;
   sender: { id: string; name: string; avatar?: string };
+  type?: 'TEXT' | 'OPPORTUNITY';
+  opportunityId?: string;
 }
 
 interface Post {
@@ -397,7 +400,7 @@ export default function NetworkingPage() {
         }
         const updated = [...prev];
         const conv = { ...updated[idx] };
-        conv.lastMessage = msg.content || (msg.images?.length ? '📷 Foto' : '');
+        conv.lastMessage = msg.type === 'OPPORTUNITY' ? '📎 Opportunità condivisa' : (msg.content || (msg.images?.length ? '📷 Foto' : ''));
         conv.lastMessageAt = msg.sentAt;
         if (!isChatOpen) {
           conv.unread += 1;
@@ -1464,42 +1467,46 @@ export default function NetworkingPage() {
                     </div>
                   )}
                   <div style={{ display: 'flex', justifyContent: isMine ? 'flex-end' : 'flex-start' }}>
-                    <div style={{
-                      maxWidth: '75%',
-                      backgroundColor: isMine ? '#4a4bd7' : '#e4e7ff',
-                      borderRadius: 24,
-                      paddingLeft: 16,
-                      paddingRight: 16,
-                      paddingTop: msg.images && msg.images.length > 0 ? 6 : 12,
-                      paddingBottom: msg.images && msg.images.length > 0 ? 6 : 12,
-                      boxShadow: '0px 1px 1px rgba(0,0,0,0.05)',
-                    }}>
-                      {msg.images && msg.images.length > 0 && (
-                        <div style={{ display: msg.images.length === 1 ? 'block' : 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4, marginBottom: msg.content ? 6 : 0 }}>
-                          {msg.images.map((img, i) => (
-                            <button
-                              key={i}
-                              onClick={() => setLightbox({ images: msg.images!, index: i })}
-                              style={{ display: 'block', overflow: 'hidden', borderRadius: 16, gridColumn: msg.images!.length % 2 !== 0 && i === msg.images!.length - 1 ? 'span 2' : undefined }}
-                            >
-                              <img src={img} alt="" style={{ width: '100%', objectFit: 'cover', maxHeight: msg.images!.length === 1 ? 256 : 128, borderRadius: 16 }} />
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      {msg.content && (
-                        <p style={{
-                          fontFamily: 'var(--font-plus-jakarta)',
-                          fontWeight: 400,
-                          fontSize: 14,
-                          lineHeight: '20px',
-                          color: isMine ? '#fbf7ff' : '#000000',
-                          margin: 0,
-                        }}>
-                          {msg.content}
-                        </p>
-                      )}
-                    </div>
+                    {msg.type === 'OPPORTUNITY' && msg.opportunityId ? (
+                      <OpportunityMessageCard opportunityId={msg.opportunityId} isMine={isMine} />
+                    ) : (
+                      <div style={{
+                        maxWidth: '75%',
+                        backgroundColor: isMine ? '#4a4bd7' : '#e4e7ff',
+                        borderRadius: 24,
+                        paddingLeft: 16,
+                        paddingRight: 16,
+                        paddingTop: msg.images && msg.images.length > 0 ? 6 : 12,
+                        paddingBottom: msg.images && msg.images.length > 0 ? 6 : 12,
+                        boxShadow: '0px 1px 1px rgba(0,0,0,0.05)',
+                      }}>
+                        {msg.images && msg.images.length > 0 && (
+                          <div style={{ display: msg.images.length === 1 ? 'block' : 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4, marginBottom: msg.content ? 6 : 0 }}>
+                            {msg.images.map((img, i) => (
+                              <button
+                                key={i}
+                                onClick={() => setLightbox({ images: msg.images!, index: i })}
+                                style={{ display: 'block', overflow: 'hidden', borderRadius: 16, gridColumn: msg.images!.length % 2 !== 0 && i === msg.images!.length - 1 ? 'span 2' : undefined }}
+                              >
+                                <img src={img} alt="" style={{ width: '100%', objectFit: 'cover', maxHeight: msg.images!.length === 1 ? 256 : 128, borderRadius: 16 }} />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {msg.content && (
+                          <p style={{
+                            fontFamily: 'var(--font-plus-jakarta)',
+                            fontWeight: 400,
+                            fontSize: 14,
+                            lineHeight: '20px',
+                            color: isMine ? '#fbf7ff' : '#000000',
+                            margin: 0,
+                          }}>
+                            {msg.content}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               );

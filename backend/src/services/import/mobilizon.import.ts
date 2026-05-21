@@ -254,7 +254,7 @@ export async function importMobilizonOpportunities(): Promise<{
           location,
           isAbroad,
           isRemote,
-          type: ['EVENT', 'CONFERENCE', 'HACKATHON', 'EXTRACURRICULAR', 'VOLUNTEERING'].includes(type) ? type : 'EVENT',
+          type: ['EVENT', 'HACKATHON', 'EXTRACURRICULAR', 'VOLUNTEERING'].includes(type) ? type : 'EVENT',
           tags,
           postedAt: startDate,
           expiresAt: endDate ?? startDate,

@@ -38,7 +38,6 @@ enum OpportunityType {
   COMPETITION
   EXCHANGE
   VOLUNTEERING
-  CONFERENCE
   BOOTCAMP
   RESEARCH
 }
@@ -110,6 +109,11 @@ enum FriendRequestStatus {
 enum GroupMemberRole {
   CREATOR
   MEMBER
+}
+
+enum MessageType {
+  TEXT
+  OPPORTUNITY
 }
 
 enum Role {
@@ -236,6 +240,7 @@ model Opportunity {
   postedAt             DateTime        @default(now())
   expiresAt            DateTime?
   savedBy              User[]          @relation("SavedOpportunities")
+  sharedInMessages     PathMatesMessage[]
   source               String?         // e.g. "EURES", "Stage4eu" — CC BY 4.0 attribution
   sourceId             String?         // e.g. "eures-12345" — null = manual/seed
   lastSyncedAt         DateTime?       // last time this record was refreshed by import
@@ -350,10 +355,13 @@ model PathMatesMessage {
   receiver   User?           @relation("ReceivedMessages", fields: [receiverId], references: [id])
   groupId    String?
   group      PathMatesGroup? @relation(fields: [groupId], references: [id])
-  content    String
-  images     String[]        @default([])
-  sentAt     DateTime        @default(now())
-  readAt     DateTime?
+  content       String
+  images        String[]        @default([])
+  type          MessageType     @default(TEXT)
+  opportunityId String?
+  opportunity   Opportunity?    @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  sentAt        DateTime        @default(now())
+  readAt        DateTime?
 
   @@index([senderId])
   @@index([receiverId])

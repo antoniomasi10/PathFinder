@@ -312,7 +312,7 @@ export default function ProfilePage() {
             </defs>
           </svg>
 
-          {/* Avatar â€” overlapping hero, centered */}
+          {/* Avatar — overlapping hero, centered */}
           <div style={{
             position: 'absolute',
             bottom: -64,
@@ -359,11 +359,11 @@ export default function ProfilePage() {
           )}
           {profile.courseOfStudy && (
             <p style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 400, fontSize: 12, lineHeight: '24px', color: 'rgba(89,94,120,0.6)', margin: 0 }}>
-              {profile.courseOfStudy}{profile.yearOfStudy ? ` â€¢ ${profile.yearOfStudy}Â° anno` : ''}
+              {profile.courseOfStudy}{profile.yearOfStudy ? ` • ${profile.yearOfStudy}° anno` : ''}
             </p>
           )}
 
-          {/* Core skills (principali â€” purple) */}
+          {/* Core skills (principali — purple) */}
           {coreSkills && coreSkills.length > 0 && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
               {coreSkills.map((skill) => (
@@ -387,7 +387,7 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Side skills (secondarie â€” grey, smaller) */}
+          {/* Side skills (secondarie — grey, smaller) */}
           {sideSkills && sideSkills.length > 0 && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
               {sideSkills.map((skill) => (
@@ -472,7 +472,7 @@ export default function ProfilePage() {
               {savedOpps.length}
             </span>
             <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 500, fontSize: 14, lineHeight: '20px', color: '#595e78', textTransform: 'uppercase', letterSpacing: '0.7px', textAlign: 'center', width: '100%' }}>
-              OPPORTUNITÃ€ SALVATE
+              OPPORTUNITÀ SALVATE
             </span>
           </button>
         </div>
@@ -488,7 +488,7 @@ export default function ProfilePage() {
             <div className="flex items-center gap-2 bg-[#fff8e6] rounded-xl px-4 py-2.5 border border-[rgba(251,191,36,0.3)]">
               <EyeOff size={16} color="#595e78" className="flex-shrink-0" />
               <p className="text-xs text-[#595e78]">
-                Profilo <span className="text-[#2c3149] font-medium">privato</span> â€” visibile solo ai Pathmates
+                Profilo <span className="text-[#2c3149] font-medium">privato</span> — visibile solo ai Pathmates
               </p>
             </div>
           )}

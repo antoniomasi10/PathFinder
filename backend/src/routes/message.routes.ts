@@ -37,7 +37,7 @@ router.get('/conversations', authMiddleware, async (req: Request, res: Response)
         const partner = msg.senderId === userId ? msg.receiver : msg.sender;
         convMap.set(partnerId, {
           user: partner,
-          lastMessage: msg.images && msg.images.length > 0 && !msg.content ? '📷 Foto' : msg.content,
+          lastMessage: msg.type === 'OPPORTUNITY' ? '📎 Opportunità condivisa' : (msg.images && msg.images.length > 0 && !msg.content ? '📷 Foto' : msg.content),
           lastMessageAt: msg.sentAt,
           unread: msg.receiverId === userId && !msg.readAt ? 1 : 0,
         });
@@ -185,7 +185,8 @@ router.post('/group/:groupId', authMiddleware, async (req: Request, res: Respons
 router.post('/', authMiddleware, validate(sendMessageSchema), async (req: Request, res: Response) => {
   try {
     const senderId = req.user!.userId;
-    const { receiverId, content, images } = req.body;
+    const { receiverId, content, images, type, opportunityId } = req.body as any;
+    const msgType: 'text' | 'opportunity' = type === 'opportunity' ? 'opportunity' : 'text';
 
     // Check receiver's messagePrivacy
     const receiver = await prisma.user.findUnique({
@@ -222,14 +223,16 @@ router.post('/', authMiddleware, validate(sendMessageSchema), async (req: Reques
       data: {
         senderId,
         receiverId,
-        content,
+        content: msgType === 'opportunity' ? '' : (content || ''),
         images: imageUrls,
+        type: msgType === 'opportunity' ? 'OPPORTUNITY' : 'TEXT',
+        ...(msgType === 'opportunity' && opportunityId ? { opportunityId } : {}),
       },
       include: {
         sender: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
       },
     });
-    captureServerEvent(senderId, 'message_sent', { channel: 'rest', hasImages: imageUrls.length > 0 });
+    captureServerEvent(senderId, 'message_sent', { channel: 'rest', hasImages: imageUrls.length > 0, type: msgType });
     res.status(201).json(message);
   } catch (err: any) {
     res.status(400).json({ error: err.message });

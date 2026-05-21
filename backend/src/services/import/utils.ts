@@ -199,8 +199,8 @@ export function mapOpportunityType(title: string, jobTypes?: string[] | null): O
   // --- Conference / event ---
   if (t.includes('conference') || t.includes('conferenza') ||
       t.includes('congresso') || t.includes('symposium') ||
-      t.includes('forum') || t.includes('summit') && !t.includes('intern')) return 'CONFERENCE';
-  if (t.includes('tedx') || t.includes('ted talk') || t.includes('meetup') ||
+      t.includes('forum') || t.includes('summit') && !t.includes('intern') ||
+      t.includes('tedx') || t.includes('ted talk') || t.includes('meetup') ||
       t.includes('networking event') || t.includes('open day')) return 'EVENT';
 
   // --- Exchange / volunteer ---

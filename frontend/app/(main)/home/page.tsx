@@ -23,6 +23,7 @@ interface Opportunity {
   about: string;
   url?: string;
   type: string;
+  format: string;
   remote: boolean;
   isAbroad?: boolean;
   skills: string[];
@@ -39,7 +40,7 @@ function isCCBYSource(source?: string): boolean {
 }
 
 interface AdvancedFilters {
-  badges: Record<string, string[]>;
+  formats: string[];
   company: string;
   location: string;
   minScore: number;
@@ -53,7 +54,7 @@ interface AdvancedFilters {
 }
 
 const DEFAULT_FILTERS: AdvancedFilters = {
-  badges: {}, company: '', location: '', minScore: 0, maxScore: 100,
+  formats: [], company: '', location: '', minScore: 0, maxScore: 100,
   deadline: '', onlyRemote: false, onlyAbroad: false, onlyNew: false,
   englishLevels: [], opportunityTypes: [],
 };
@@ -66,12 +67,7 @@ function matchesSearch(opp: Opportunity, q: string): boolean {
 }
 
 function matchesClientFilters(opp: Opportunity, f: AdvancedFilters, tab: 'per-te' | 'esplora'): boolean {
-  const badge = opp.badge.toLowerCase();
-  const type = opp.type.toLowerCase();
-  for (const values of Object.values(f.badges)) {
-    if (values.length === 0) continue;
-    if (!values.some((v) => badge.includes(v) || type.includes(v))) return false;
-  }
+  if (f.formats.length > 0 && !f.formats.includes((opp.format || '').toUpperCase())) return false;
   if (opp.matchScore < f.minScore || opp.matchScore > f.maxScore) return false;
   if (f.onlyNew && tab !== 'per-te' && !opp.isNew) return false;
   if (f.opportunityTypes.length > 0 && !f.opportunityTypes.includes(opp.type.toUpperCase())) return false;
@@ -87,6 +83,7 @@ function buildServerParams(search: string, f: AdvancedFilters): string {
   if (f.onlyRemote) p.isRemote = 'true';
   if (f.onlyAbroad) p.isAbroad = 'true';
   if (f.englishLevels.length) p.englishLevel = f.englishLevels.join(',');
+  if (f.formats.length) p.format = f.formats.join(',');
   if (f.deadline) p.deadline = f.deadline;
   const allTypes = [...new Set([...f.opportunityTypes, ...detectedTypes])];
   if (allTypes.length) p.type = allTypes.join(',');
@@ -96,7 +93,7 @@ function buildServerParams(search: string, f: AdvancedFilters): string {
 
 function hasAnyFilter(f: AdvancedFilters): boolean {
   return (
-    Object.values(f.badges).some((arr) => arr.length > 0) ||
+    f.formats.length > 0 ||
     !!f.company || !!f.location || f.minScore > 1 || f.maxScore < 100 ||
     !!f.deadline || f.onlyRemote || f.onlyAbroad || f.onlyNew ||
     f.englishLevels.length > 0 || f.opportunityTypes.length > 0
@@ -135,24 +132,6 @@ function getSuggestions(query: string, perTe: Opportunity[], esplora: Opportunit
     .slice(0, 6);
 }
 
-/* ── Filter config ───────────────────────────────────────────────── */
-
-function getFilterCategories(t: ReturnType<typeof useLanguage>['t']) {
-  return [
-    { id: 'tipo', label: t.home.filterType, options: [
-      { label: t.home.filterFullTime, value: 'full-time' },
-      { label: t.home.filterPartTime, value: 'part-time' },
-      { label: t.home.filterWorkshop, value: 'workshop' },
-      { label: t.home.filterInternship, value: 'intern' },
-      { label: t.home.filterEducation, value: 'education' },
-    ]},
-    { id: 'modalita', label: t.home.filterMode, options: [
-      { label: t.home.filterRemote, value: 'remote' },
-      { label: t.home.filterInPerson, value: 'in-person' },
-      { label: t.home.filterHybrid, value: 'hybrid' },
-    ]},
-  ];
-}
 
 const ENGLISH_LEVELS = [
   { label: 'A2', value: 'A2' }, { label: 'B1-B2', value: 'B1_B2' },
@@ -574,8 +553,8 @@ const TYPE_ALIASES: Record<string, string> = {
   'bootcamp': 'BOOTCAMP',
   'competition': 'COMPETITION',
   'competizione': 'COMPETITION',
-  'conference': 'CONFERENCE',
-  'conferenza': 'CONFERENCE',
+  'conference': 'EVENT',
+  'conferenza': 'EVENT',
   'extracurricular': 'EXTRACURRICULAR',
 };
 
@@ -605,7 +584,7 @@ const OPPORTUNITY_TYPE_CHIPS = [
   { label: 'Internship / Stage',      types: ['INTERNSHIP', 'STAGE'] },
   { label: 'Summer School',           types: ['SUMMER_PROGRAM'] },
   { label: 'Fellowship',              types: ['FELLOWSHIP'] },
-  { label: 'Events',                  types: ['EVENT'] },
+  { label: 'Events & Conference',      types: ['EVENT'] },
   { label: 'Hackathon & Competition', types: ['HACKATHON', 'COMPETITION'] },
   { label: 'Exchange & Volunteering', types: ['EXCHANGE', 'VOLUNTEERING'] },
 ] as const;
@@ -614,15 +593,15 @@ const TYPE_LABELS: Record<string, string> = {
   INTERNSHIP: 'Internship', STAGE: 'Stage', SUMMER_PROGRAM: 'Summer Program',
   FELLOWSHIP: 'Fellowship', HACKATHON: 'Hackathon', COMPETITION: 'Competition',
   EXCHANGE: 'Exchange', VOLUNTEERING: 'Volunteering', BOOTCAMP: 'Bootcamp',
-  CONFERENCE: 'Conference', EXTRACURRICULAR: 'Extracurricular',
-  EVENT: 'Event', RESEARCH: 'Research',
+  EXTRACURRICULAR: 'Extracurricular',
+  EVENT: 'Event / Conference', RESEARCH: 'Research',
 };
 
-function FilterSheet({ open, draft, matchCount, filterCategories, tab, t, onUpdate, onToggleBadge, onReset, onApply, onClose }: {
+function FilterSheet({ open, draft, matchCount, tab, t, onUpdate, onReset, onApply, onClose }: {
   open: boolean; draft: AdvancedFilters; matchCount: number;
-  filterCategories: ReturnType<typeof getFilterCategories>; tab: 'per-te' | 'esplora';
+  tab: 'per-te' | 'esplora';
   t: ReturnType<typeof useLanguage>['t'];
-  onUpdate: (partial: Partial<AdvancedFilters>) => void; onToggleBadge: (catId: string, value: string) => void;
+  onUpdate: (partial: Partial<AdvancedFilters>) => void;
   onReset: () => void; onApply: () => void; onClose: () => void;
 }) {
   const deadlineOptions: Array<{ label: string; value: AdvancedFilters['deadline'] }> = [
@@ -684,7 +663,7 @@ function FilterSheet({ open, draft, matchCount, filterCategories, tab, t, onUpda
             {tab === 'esplora' && <Toggle label={t.home.filterOnlyNew} active={draft.onlyNew} onToggle={() => onUpdate({ onlyNew: !draft.onlyNew })} />}
           </div>
           <div className="h-px" style={{ backgroundColor: '#f3f2ff' }} />
-          <FilterSection label={t.home.filterOpportunityType}>
+          <FilterSection label={t.home.filterType}>
             <div className="flex flex-wrap gap-2">
               {OPPORTUNITY_TYPE_CHIPS.map(({ label, types }) => {
                 const active = (types as readonly string[]).some((type) => draft.opportunityTypes.includes(type));
@@ -711,13 +690,18 @@ function FilterSheet({ open, draft, matchCount, filterCategories, tab, t, onUpda
             </div>
           </FilterSection>
           <div className="h-px" style={{ backgroundColor: '#f3f2ff' }} />
-          {filterCategories.map((cat) => (
-            <FilterSection key={cat.id} label={cat.label}>
-              <div className="flex flex-wrap gap-2">
-                {cat.options.map((opt) => <Chip key={opt.value} label={opt.label} active={(draft.badges[cat.id] ?? []).includes(opt.value)} onToggle={() => onToggleBadge(cat.id, opt.value)} />)}
-              </div>
-            </FilterSection>
-          ))}
+          <FilterSection label={`${t.home.filterMode}`}>
+            <div className="flex flex-wrap gap-2">
+              {([
+                { label: t.home.filterRemote, value: 'ONLINE' },
+                { label: t.home.filterInPerson, value: 'IN_PERSON' },
+                { label: t.home.filterHybrid, value: 'HYBRID' },
+              ] as const).map(({ label, value }) => (
+                <Chip key={value} label={label} active={draft.formats.includes(value)}
+                  onToggle={() => onUpdate({ formats: draft.formats.includes(value) ? draft.formats.filter((v) => v !== value) : [...draft.formats, value] })} />
+              ))}
+            </div>
+          </FilterSection>
           <div className="h-px" style={{ backgroundColor: '#f3f2ff' }} />
           <FilterSection label={t.home.filterEnglishLevel}>
             <div className="flex flex-wrap gap-2">
@@ -750,8 +734,6 @@ export default function HomePage() {
   const { savedIds, savedOpps, toggleSave } = useSavedOpportunities();
   const { t, language } = useLanguage();
   const langCode = LANG_CODE[language];
-  const filterCategories = getFilterCategories(t);
-
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loadingOpps, setLoadingOpps] = useState(true);
   const [perTePage, setPerTePage] = useState(1);
@@ -811,6 +793,7 @@ export default function HomePage() {
       description: displayDesc, matchScore: opp.matchScore || 0,
       location: opp.location || opp.city || opp.universityCity || opp.university?.city || '',
       about: opp.about || '', url: opp.url || '', type: opp.type || '',
+      format: opp.format || '',
       remote: opp.isRemote || false, isAbroad: opp.isAbroad || false,
       skills: opp.tags || [], requiredEnglishLevel: opp.requiredEnglishLevel || '',
       matchReason: opp.matchReason || '', deadline: opp.deadline || opp.expiresAt || '',
@@ -937,14 +920,8 @@ export default function HomePage() {
   useEffect(() => { refreshParamsRef.current = { searchQuery, appliedFilters }; }, [searchQuery, appliedFilters]);
 
   function updateDraft(partial: Partial<AdvancedFilters>) { setDraftFilters((prev) => ({ ...prev, ...partial })); }
-  function toggleDraftBadge(catId: string, value: string) {
-    setDraftFilters((prev) => {
-      const current = prev.badges[catId] ?? [];
-      return { ...prev, badges: { ...prev.badges, [catId]: current.includes(value) ? current.filter((v) => v !== value) : [...current, value] } };
-    });
-  }
   function openFilterSheet() {
-    setDraftFilters({ ...appliedFilters, badges: Object.fromEntries(Object.entries(appliedFilters.badges).map(([k, v]) => [k, [...v]])) });
+    setDraftFilters({ ...appliedFilters, formats: [...appliedFilters.formats] });
     setFilterOpen(true);
   }
 
@@ -967,7 +944,7 @@ export default function HomePage() {
 
   const hasActiveFilters = hasAnyFilter(appliedFilters);
   const activeFilterCount = (
-    Object.values(appliedFilters.badges).flat().length +
+    appliedFilters.formats.length +
     (appliedFilters.company ? 1 : 0) + (appliedFilters.location ? 1 : 0) +
     (appliedFilters.minScore > 1 ? 1 : 0) + (appliedFilters.maxScore < 100 ? 1 : 0) +
     (appliedFilters.deadline ? 1 : 0) + (appliedFilters.onlyRemote ? 1 : 0) +
@@ -1195,9 +1172,9 @@ const viewedRef = useRef<Set<string>>(new Set());
       {/* ── Filter sheet ──────────────────────────────────────────── */}
       <FilterSheet
         open={filterOpen} draft={draftFilters}
-        matchCount={draftMatchCount} filterCategories={filterCategories}
+        matchCount={draftMatchCount}
         tab={tab} t={t}
-        onUpdate={updateDraft} onToggleBadge={toggleDraftBadge}
+        onUpdate={updateDraft}
         onReset={() => setDraftFilters({ ...DEFAULT_FILTERS })}
         onApply={applyFilters} onClose={() => setFilterOpen(false)}
       />
