@@ -82,7 +82,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       // For EVENT, deadline is meaningless — visibility is bounded by endDate.
       `(o."type" IN ('EVENT') OR o."deadline" IS NULL OR o."deadline" > NOW())`,
       `(o."type" NOT IN ('EVENT') OR o."endDate" IS NULL OR o."endDate" >= CURRENT_DATE)`,
-      `(o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN')`,
+      `(o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN' OR o."source" = 'curated')`,
     ];
     const params: any[] = [limit, skip];
     let idx = 3;

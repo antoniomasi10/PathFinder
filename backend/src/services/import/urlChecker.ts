@@ -68,11 +68,13 @@ export async function runUrlCheckBatch(limit = 200): Promise<{
 }> {
   const cutoff = new Date(Date.now() - RECHECK_INTERVAL_DAYS * 24 * 60 * 60 * 1000);
 
-  // All sources are checked — curated included. Anti-bot 403/429 return SKIP (not BROKEN),
-  // and hard-gone (404/410) requires BROKEN_STREAK_THRESHOLD consecutive hits before marking BROKEN.
+  // Curated rows are excluded: they're manually verified annually by the team,
+  // and the urlChecker produces too many false positives on Italian event sites
+  // (CDN/anti-bot/seasonal redirects). The seed re-run is the source of truth for these.
   const opps = await prisma.$queryRawUnsafe<{ id: string; url: string; source: string | null; urlBrokenStreak: number }[]>(
     `SELECT id, url, source, "urlBrokenStreak" FROM "Opportunity"
      WHERE url IS NOT NULL
+       AND (source IS NULL OR source != 'curated')
        AND (
          "urlStatus" IS NULL
          OR "urlStatus" = 'UNCHECKED'

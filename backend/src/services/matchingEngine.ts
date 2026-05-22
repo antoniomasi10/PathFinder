@@ -781,7 +781,7 @@ export async function getHybridMatchedOpportunitiesFull(
               u."id" as "uniId", u."logoUrl" as "universityLogoUrl"
        FROM "Opportunity" o
        LEFT JOIN "University" u ON o."universityId" = u."id"
-       WHERE (o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN')
+       WHERE (o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN' OR o."source" = 'curated')
        ORDER BY o."postedAt" DESC, o."id" ASC`,
     );
     return opps;
@@ -1041,7 +1041,7 @@ export async function getNewOpportunitiesFull(
         },
       ],
     },
-    { OR: [{ urlStatus: null }, { urlStatus: { not: 'BROKEN' } }] },
+    { OR: [{ urlStatus: null }, { urlStatus: { not: 'BROKEN' } }, { source: 'curated' }] },
   ];
 
   // Hard filter: users who explicitly don't want to relocate never see in-person abroad opportunities
