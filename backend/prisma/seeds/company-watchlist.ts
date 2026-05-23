@@ -77,7 +77,7 @@ const companies: Array<{
   { name: 'KPMG Italy', careersUrl: 'https://home.kpmg/it/it/home/careers.html', sector: 'Tech & Consulting', tier: 'large' },
   { name: 'PwC Italy', careersUrl: 'https://www.pwc.com/it/it/careers.html', sector: 'Tech & Consulting', tier: 'large' },
   { name: 'IBM Italy', careersUrl: 'https://www.ibm.com/it-it/employment/', sector: 'Tech & Consulting', tier: 'large' },
-  { name: 'Bending Spoons', careersUrl: 'https://bendingspoons.com/careers.html', sector: 'Tech & Consulting', tier: 'medium' },
+  { name: 'Bending Spoons', careersUrl: 'https://jobs.bendingspoons.com/', sector: 'Tech & Consulting', tier: 'medium' },
   { name: 'Satispay', careersUrl: 'https://jobs.satispay.com/', sector: 'Tech & Consulting', tier: 'medium' },
   { name: 'Scalapay', careersUrl: 'https://www.scalapay.com/en/careers', sector: 'Tech & Consulting', tier: 'medium' },
   { name: 'Musixmatch', careersUrl: 'https://musixmatch.com/careers', sector: 'Tech & Consulting', tier: 'medium' },
