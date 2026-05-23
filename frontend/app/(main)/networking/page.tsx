@@ -15,6 +15,7 @@ import ImageLightbox from '@/components/ImageLightbox';
 import OpportunityMessageCard from '@/components/OpportunityMessageCard';
 import { isValidImageUrl } from '@/lib/urlValidation';
 import { checkWarn } from '@/lib/moderation';
+import AvatarWithFallback from '@/components/AvatarWithFallback';
 import { Plus, UserIcon, ChatDots, CloseSm, CloseMd, ImageIcon, PaperPlane, Check, Heart, Chat, Send, Flag, MoreHorizontal, Trash, Search, Filter } from '@/components/icons';
 
 interface Conversation {
@@ -1125,12 +1126,7 @@ export default function NetworkingPage() {
                       onClick={() => router.push(`/profile/${u.id}`)}
                       style={{ display: 'flex', alignItems: 'center', gap: 16, textAlign: 'left' }}
                     >
-                      <div style={{ flexShrink: 0, width: 50, height: 50, borderRadius: '50%', overflow: 'hidden', backgroundColor: '#dde1ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {u.avatar && isValidImageUrl(u.avatar)
-                          ? <img src={u.avatar} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          : <span style={{ fontSize: 18, fontWeight: 700, color: '#4a4bd7' }}>{u.name[0]}</span>
-                        }
-                      </div>
+                      <AvatarWithFallback src={u.avatar} name={u.name} size={50} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ fontWeight: 600, fontSize: 14, color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.name}</p>
                         <p style={{ fontSize: 12, color: '#595e78', fontFamily: 'var(--font-plus-jakarta)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -1211,26 +1207,7 @@ export default function NetworkingPage() {
                             {/* White bottom section */}
                             <div style={{ backgroundColor: 'white', paddingTop: 42, paddingBottom: 14, paddingLeft: 12, paddingRight: 12 }}>
                             {/* Avatar — on the card wrapper, spanning the colored/white boundary */}
-                            <div style={{
-                              position: 'absolute',
-                              top: 88,
-                              left: '50%',
-                              transform: 'translateX(-50%)',
-                              width: 64,
-                              height: 64,
-                              borderRadius: '50%',
-                              overflow: 'hidden',
-                              border: '3px solid white',
-                              zIndex: 3,
-                            }}>
-                              {person.avatar && isValidImageUrl(person.avatar) ? (
-                                <img src={person.avatar} alt={person.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              ) : (
-                                <div style={{ width: '100%', height: '100%', backgroundColor: '#dde1ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  <span style={{ fontSize: 22, fontWeight: 700, color: '#4a4bd7' }}>{person.name[0]}</span>
-                                </div>
-                              )}
-                            </div>
+                            <AvatarWithFallback src={person.avatar} name={person.name} size={64} style={{ position: 'absolute', top: 88, left: '50%', transform: 'translateX(-50%)', border: '3px solid white', zIndex: 3 }} />
                               <p style={{ fontSize: 14, fontWeight: 700, color: '#2c3149', lineHeight: '20px', fontFamily: 'var(--font-plus-jakarta)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', margin: 0 }}>
                                 {person.name}
                               </p>
@@ -1312,15 +1289,7 @@ export default function NetworkingPage() {
                               <span style={{ fontWeight: 700, fontSize: 16, color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>{conv.name?.[0] ?? 'G'}</span>
                             </div>
                           ) : (
-                            <div style={{ width: 50, height: 50, borderRadius: '50%', flexShrink: 0, overflow: 'hidden', backgroundColor: '#dde1ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {conv.avatar && isValidImageUrl(conv.avatar) ? (
-                                <img src={conv.avatar} alt={conv.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              ) : conv.name ? (
-                                <span style={{ fontWeight: 700, fontSize: 16, color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>{conv.name[0]}</span>
-                              ) : (
-                                <UserIcon size={22} color="#acb0ce" strokeWidth={1.5} />
-                              )}
-                            </div>
+                            <AvatarWithFallback src={conv.avatar} name={conv.name} size={50} />
                           )}
 
                           {/* Content */}
