@@ -45,6 +45,9 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     if (formatFilters.length) filters.formats = formatFilters;
     const hasFilters = Object.keys(filters).length > 0;
 
+    const minScoreParam = parseFloat(req.query.minScore as string);
+    const maxScoreParam = parseFloat(req.query.maxScore as string);
+
     if (isNew === 'true') {
       const filterKey = hasFilters ? JSON.stringify(filters) : '';
       // Snapshot cache: one entry holds the full ordered list. Pagination is a slice
@@ -56,6 +59,14 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
         snapshot = await getNewOpportunitiesFull(req.user!.userId, hasFilters ? filters : {});
         if (lang !== 'it') await translateOpportunities(snapshot, lang);
         await cacheSet(cacheKey, snapshot, OPP_TTL);
+      }
+      if (!isNaN(minScoreParam) || !isNaN(maxScoreParam)) {
+        snapshot = snapshot.filter((o: any) => {
+          const score = o.matchScore ?? 0;
+          if (!isNaN(minScoreParam) && score < minScoreParam) return false;
+          if (!isNaN(maxScoreParam) && score > maxScoreParam) return false;
+          return true;
+        });
       }
       const data = snapshot.slice(skip, skip + limit);
       res.json({ data, total: snapshot.length, page, totalPages: Math.ceil(snapshot.length / limit) });
@@ -70,6 +81,14 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
         snapshot = await getHybridMatchedOpportunitiesFull(req.user!.userId, hasFilters ? filters : {});
         if (lang !== 'it') await translateOpportunities(snapshot, lang);
         await cacheSet(cacheKey, snapshot, OPP_TTL);
+      }
+      if (!isNaN(minScoreParam) || !isNaN(maxScoreParam)) {
+        snapshot = snapshot.filter((o: any) => {
+          const score = o.matchScore ?? 0;
+          if (!isNaN(minScoreParam) && score < minScoreParam) return false;
+          if (!isNaN(maxScoreParam) && score > maxScoreParam) return false;
+          return true;
+        });
       }
       const data = snapshot.slice(skip, skip + limit);
       res.json({ data, total: snapshot.length, page, totalPages: Math.ceil(snapshot.length / limit) });

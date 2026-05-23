@@ -85,6 +85,8 @@ function buildServerParams(search: string, f: AdvancedFilters): string {
   if (f.englishLevels.length) p.englishLevel = f.englishLevels.join(',');
   if (f.formats.length) p.format = f.formats.join(',');
   if (f.deadline) p.deadline = f.deadline;
+  if (f.minScore > 1) p.minScore = String(f.minScore);
+  if (f.maxScore < 100) p.maxScore = String(f.maxScore);
   const allTypes = [...new Set([...f.opportunityTypes, ...detectedTypes])];
   if (allTypes.length) p.type = allTypes.join(',');
   const qs = new URLSearchParams(p).toString();
@@ -598,7 +600,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 function FilterSheet({ open, draft, matchCount, tab, t, onUpdate, onReset, onApply, onClose }: {
-  open: boolean; draft: AdvancedFilters; matchCount: number;
+  open: boolean; draft: AdvancedFilters; matchCount: string;
   tab: 'per-te' | 'esplora';
   t: ReturnType<typeof useLanguage>['t'];
   onUpdate: (partial: Partial<AdvancedFilters>) => void;
@@ -916,6 +918,8 @@ export default function HomePage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [draftFilters, setDraftFilters] = useState<AdvancedFilters>({ ...DEFAULT_FILTERS });
   const [appliedFilters, setAppliedFilters] = useState<AdvancedFilters>({ ...DEFAULT_FILTERS });
+  const [draftTotalCount, setDraftTotalCount] = useState<number | null>(null);
+  const [draftCountLoading, setDraftCountLoading] = useState(false);
 
   useEffect(() => { refreshParamsRef.current = { searchQuery, appliedFilters }; }, [searchQuery, appliedFilters]);
 
@@ -934,6 +938,24 @@ export default function HomePage() {
     return () => { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (!filterOpen) return;
+    setDraftCountLoading(true);
+    const qs = buildServerParams(searchQuery, draftFilters);
+    const t = setTimeout(async () => {
+      try {
+        const res = await api.get(`/opportunities?matched=true&page=1&limit=1&lang=${langCode}${qs}`);
+        setDraftTotalCount(res.data.total ?? null);
+      } catch {
+        setDraftTotalCount(null);
+      } finally {
+        setDraftCountLoading(false);
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftFilters, filterOpen, searchQuery]);
 
   function applyFilters() {
     const newFilters = { ...draftFilters };
@@ -999,8 +1021,24 @@ const viewedRef = useRef<Set<string>>(new Set());
   const perTeFiltered = combinedPool
     .filter((o) => matchesClientFilters(o, appliedFilters, 'per-te'));
   const esploraFiltered = perTeFiltered; // alias mantenuto per compatibilità FilterSheet
-  const draftMatchCount = combinedPool
-    .filter((o) => matchesClientFilters(o, draftFilters, 'per-te')).length;
+
+  function formatCountRange(n: number): string {
+    if (n === 0) return '0';
+    if (n <= 10) return String(n);
+    if (n <= 50) return '10+';
+    if (n <= 100) return '50+';
+    if (n <= 250) return '100+';
+    if (n <= 500) return '250+';
+    if (n <= 750) return '500+';
+    if (n <= 1000) return '750+';
+    if (n <= 1500) return '1.000+';
+    if (n <= 2000) return '1.500+';
+    if (n <= 3000) return '2.000+';
+    if (n <= 5000) return '3.000+';
+    return '5.000+';
+  }
+  const draftCountDisplay = draftCountLoading ? '…' : draftTotalCount !== null ? formatCountRange(draftTotalCount) : '…';
+
   const topOpportunity = combinedPool
     .filter((o) => matchesClientFilters(o, appliedFilters, 'per-te'))[0] ?? null;
 
@@ -1172,7 +1210,7 @@ const viewedRef = useRef<Set<string>>(new Set());
       {/* ── Filter sheet ──────────────────────────────────────────── */}
       <FilterSheet
         open={filterOpen} draft={draftFilters}
-        matchCount={draftMatchCount}
+        matchCount={draftCountDisplay}
         tab={tab} t={t}
         onUpdate={updateDraft}
         onReset={() => setDraftFilters({ ...DEFAULT_FILTERS })}
