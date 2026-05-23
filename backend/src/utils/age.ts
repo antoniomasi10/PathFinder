@@ -11,6 +11,10 @@ export function parseAndValidateBirthDate(raw: string): Date {
   if (isNaN(date.getTime())) {
     throw new Error('Data di nascita non valida');
   }
+  const [year, month, day] = raw.split('-').map(Number);
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() + 1 !== month || date.getUTCDate() !== day) {
+    throw new Error('Data di nascita non valida');
+  }
   if (date > new Date()) {
     throw new Error('La data di nascita non può essere nel futuro');
   }

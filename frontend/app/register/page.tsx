@@ -171,7 +171,7 @@ export default function RegisterPage() {
     }
     const birthDate = `${birthYear}-${birthMonth.padStart(2, '0')}-${birthDay.padStart(2, '0')}`;
     const birth = new Date(birthDate);
-    if (isNaN(birth.getTime())) {
+    if (isNaN(birth.getTime()) || birth.getUTCDate() !== day || birth.getUTCMonth() + 1 !== month) {
       setBirthDateError('Data di nascita non valida');
       return;
     }

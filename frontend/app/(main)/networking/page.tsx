@@ -497,6 +497,7 @@ export default function NetworkingPage() {
     socket.on('group_message_sent', handleGroupMessageSent);
     socket.on('message_error', handleMessageError);
     socket.on('error', handleMessageError);
+    socket.on('error', handleGroupMessageError);
 
     return () => {
       socket.off('new_message', handleNewMessage);
@@ -505,6 +506,7 @@ export default function NetworkingPage() {
       socket.off('group_message_sent', handleGroupMessageSent);
       socket.off('message_error', handleMessageError);
       socket.off('error', handleMessageError);
+      socket.off('error', handleGroupMessageError);
     };
   }, [tab, loadConversations]);
 
