@@ -1,23 +1,17 @@
 import prisma from '../lib/prisma';
 import redis from '../lib/redis';
 import { logger } from '../utils/logger';
-import { getHybridMatchedOpportunities } from './matchingEngine';
-import { renderWeeklyDigest, renderExpiringAlert } from './emailTemplates.service';
-import nodemailer from 'nodemailer';
+import { getHybridMatchedOpportunities, scoreOpportunity } from './matchingEngine';
+import {
+  renderWeeklyDigest,
+  renderExpiringAlert,
+  renderDailyOpportunity,
+  renderSpotRecommendation,
+} from './emailTemplates.service';
+import { sendEmailToUser } from './oneSignal.service';
+import type { UserSkills } from './skills.service';
 
 const APP_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-const FROM_NAME = process.env.EMAIL_FROM_NAME || 'COhA';
-const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'info@cohaapp.com';
-
-const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
-const transporter = smtpConfigured
-  ? nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    })
-  : null;
 
 function getISOWeek(date: Date): { week: number; year: number } {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -34,20 +28,23 @@ async function acquireLock(key: string, ttlSeconds: number): Promise<boolean> {
   return result === 'OK';
 }
 
-async function sendEmail(to: string, subject: string, html: string): Promise<void> {
-  if (!transporter) return;
-  await transporter.sendMail({
-    from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
-    to,
-    subject,
-    html,
-  });
-}
-
 async function logEmailSent(userId: string, type: string, weekNumber?: number, year?: number): Promise<void> {
   await prisma.emailLog.create({
     data: { userId, type, weekNumber, year },
   });
+}
+
+function parseUserSkills(raw: unknown): UserSkills | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const obj = raw as Record<string, unknown>;
+  return {
+    core: Array.isArray(obj.core) ? obj.core : null,
+    side: Array.isArray(obj.side) ? obj.side : [],
+    promptShownAt: (obj.promptShownAt as string) || null,
+    promptDismissedAt: (obj.promptDismissedAt as string) || null,
+    definedAt: (obj.definedAt as string) || null,
+    lastUpdatedAt: (obj.lastUpdatedAt as string) || null,
+  };
 }
 
 // ── Weekly Digest ────────────────────────────────────────────
@@ -77,7 +74,7 @@ export async function runWeeklyDigest(): Promise<void> {
         },
       },
     },
-    select: { id: true, email: true, name: true },
+    select: { id: true, name: true },
   });
 
   logger.info('Weekly digest targets', { count: users.length, week, year });
@@ -119,7 +116,7 @@ export async function runWeeklyDigest(): Promise<void> {
             unsubscribeUrl: `${APP_URL}/profile#notifications`,
           });
 
-          await sendEmail(user.email, subject, html);
+          await sendEmailToUser(user.id, subject, html);
           await logEmailSent(user.id, 'weekly_digest', week, year);
           sent++;
         } catch (err) {
@@ -150,12 +147,10 @@ export async function runExpiringAlert(): Promise<void> {
   const in7d = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  // Fetch users with saved opportunities expiring in 5-7 days
-  // who haven't already been alerted today and have opted in
   const rows = await prisma.$queryRawUnsafe<
-    Array<{ userId: string; email: string; name: string; oppId: string; title: string; company: string | null; organizer: string | null; city: string | null; isRemote: boolean; deadline: Date; hasScholarship: boolean; type: string }>
+    Array<{ userId: string; name: string; oppId: string; title: string; company: string | null; organizer: string | null; city: string | null; isRemote: boolean; deadline: Date; hasScholarship: boolean; type: string }>
   >(
-    `SELECT u.id as "userId", u.email, u.name,
+    `SELECT u.id as "userId", u.name,
             o.id as "oppId", o.title, o.company, o.organizer, o.city,
             o."isRemote", o.deadline, o."hasScholarship", o.type::text
      FROM "User" u
@@ -176,11 +171,10 @@ export async function runExpiringAlert(): Promise<void> {
     in5d, in7d, startOfToday
   );
 
-  // Group by user
-  const byUser = new Map<string, { email: string; name: string; opps: any[] }>();
+  const byUser = new Map<string, { name: string; opps: any[] }>();
   for (const row of rows) {
     if (!byUser.has(row.userId)) {
-      byUser.set(row.userId, { email: row.email, name: row.name, opps: [] });
+      byUser.set(row.userId, { name: row.name, opps: [] });
     }
     byUser.get(row.userId)!.opps.push({
       id: row.oppId,
@@ -204,7 +198,7 @@ export async function runExpiringAlert(): Promise<void> {
   for (let i = 0; i < entries.length; i += BATCH) {
     const batch = entries.slice(i, i + BATCH);
     await Promise.allSettled(
-      batch.map(async ([userId, { email, name, opps }]) => {
+      batch.map(async ([userId, { name, opps }]) => {
         try {
           const { subject, html } = renderExpiringAlert({
             firstName: name,
@@ -213,7 +207,7 @@ export async function runExpiringAlert(): Promise<void> {
             preferencesUrl: `${APP_URL}/profile#notifications`,
             unsubscribeUrl: `${APP_URL}/profile#notifications`,
           });
-          await sendEmail(email, subject, html);
+          await sendEmailToUser(userId, subject, html);
           await logEmailSent(userId, 'expiring_alert');
           sent++;
         } catch (err) {
@@ -227,4 +221,209 @@ export async function runExpiringAlert(): Promise<void> {
   }
 
   logger.info('Expiring alert complete', { sent, total: byUser.size });
+}
+
+// ── Daily Opportunity ────────────────────────────────────────
+
+export async function runDailyOpportunity(): Promise<void> {
+  const today = new Date().toISOString().slice(0, 10);
+  const lockKey = `campaign:daily_opportunity:${today}`;
+
+  if (!(await acquireLock(lockKey, 3600))) {
+    logger.info('Daily opportunity already running on another instance, skipping');
+    return;
+  }
+
+  const startOfToday = new Date(today);
+
+  const users = await prisma.user.findMany({
+    where: {
+      emailVerified: true,
+      marketingConsent: true,
+      profileCompleted: true,
+      notificationPreference: {
+        emailDaily: true,
+      },
+      emailLogs: {
+        none: {
+          type: 'daily_opportunity',
+          sentAt: { gte: startOfToday },
+        },
+      },
+    },
+    select: { id: true, name: true },
+  });
+
+  logger.info('Daily opportunity targets', { count: users.length, date: today });
+
+  const BATCH = 50;
+  let sent = 0;
+  let skipped = 0;
+
+  for (let i = 0; i < users.length; i += BATCH) {
+    const batch = users.slice(i, i + BATCH);
+    await Promise.allSettled(
+      batch.map(async (user) => {
+        try {
+          const { data: rawOpps } = await getHybridMatchedOpportunities(user.id, 5, 0);
+          const opps = rawOpps
+            .filter((o: any) => (o.matchScore ?? o.hybridScore ?? 0) >= 60)
+            .slice(0, 3)
+            .map((o: any) => ({
+              id: o.id,
+              title: o.title,
+              company: o.company,
+              organizer: o.organizer,
+              city: o.city,
+              isRemote: o.isRemote ?? false,
+              deadline: o.deadline ? new Date(o.deadline) : null,
+              hasScholarship: o.hasScholarship ?? false,
+              type: o.type,
+              matchScore: Math.round(o.matchScore ?? o.hybridScore ?? 0),
+              url: o.url,
+            }));
+
+          if (opps.length < 1) { skipped++; return; }
+
+          const { subject, html } = renderDailyOpportunity({
+            firstName: user.name,
+            opportunities: opps,
+            appUrl: APP_URL,
+            preferencesUrl: `${APP_URL}/profile#notifications`,
+            unsubscribeUrl: `${APP_URL}/profile#notifications`,
+          });
+
+          await sendEmailToUser(user.id, subject, html);
+          await logEmailSent(user.id, 'daily_opportunity');
+          sent++;
+        } catch (err) {
+          logger.warn('Daily opportunity failed for user', { userId: user.id, error: String(err) });
+        }
+      })
+    );
+    if (i + BATCH < users.length) {
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  }
+
+  logger.info('Daily opportunity complete', { sent, skipped, total: users.length });
+}
+
+// ── Spot Recommendation ──────────────────────────────────────
+
+export async function runSpotRecommendation(): Promise<void> {
+  const today = new Date().toISOString().slice(0, 10);
+  const lockKey = `campaign:spot_recommendation:${today}`;
+
+  if (!(await acquireLock(lockKey, 3600))) {
+    logger.info('Spot recommendation already running on another instance, skipping');
+    return;
+  }
+
+  const now = new Date();
+  const startOfToday = new Date(today);
+
+  // Fetch opportunities imported today
+  const newOpps = await prisma.opportunity.findMany({
+    where: {
+      postedAt: { gte: startOfToday },
+      AND: [
+        { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+        { OR: [{ deadline: null }, { deadline: { gt: now } }] },
+      ],
+    },
+  });
+
+  if (newOpps.length === 0) {
+    logger.info('Spot recommendation: no new opportunities today', { date: today });
+    return;
+  }
+
+  logger.info('Spot recommendation: new opportunities', { count: newOpps.length, date: today });
+
+  // Fetch eligible users with their profile
+  const users = await prisma.user.findMany({
+    where: {
+      emailVerified: true,
+      marketingConsent: true,
+      profileCompleted: true,
+      notificationPreference: {
+        emailSpot: true,
+      },
+      emailLogs: {
+        none: {
+          type: 'spot_recommendation',
+          sentAt: { gte: startOfToday },
+        },
+      },
+    },
+    include: {
+      profile: true,
+    },
+  });
+
+  logger.info('Spot recommendation targets', { count: users.length });
+
+  const BATCH = 50;
+  let sent = 0;
+  let skipped = 0;
+
+  for (let i = 0; i < users.length; i += BATCH) {
+    const batch = users.slice(i, i + BATCH);
+    await Promise.allSettled(
+      batch.map(async (user) => {
+        try {
+          if (!user.profile) { skipped++; return; }
+
+          const userSkills = parseUserSkills(user.skills);
+
+          // Score each new opportunity for this user
+          let bestScore = 0;
+          let bestOpp: typeof newOpps[0] | null = null;
+
+          for (const opp of newOpps) {
+            const score = scoreOpportunity(user.profile as any, user as any, opp as any, userSkills);
+            if (score > bestScore) {
+              bestScore = score;
+              bestOpp = opp;
+            }
+          }
+
+          if (bestScore < 80 || !bestOpp) { skipped++; return; }
+
+          const { subject, html } = renderSpotRecommendation({
+            firstName: user.name,
+            opportunity: {
+              id: bestOpp.id,
+              title: bestOpp.title,
+              company: bestOpp.company,
+              organizer: bestOpp.organizer,
+              city: bestOpp.city,
+              isRemote: bestOpp.isRemote ?? false,
+              deadline: bestOpp.deadline ? new Date(bestOpp.deadline) : null,
+              hasScholarship: bestOpp.hasScholarship ?? false,
+              type: bestOpp.type,
+              matchScore: Math.round(bestScore),
+              url: bestOpp.url,
+            },
+            matchScore: Math.round(bestScore),
+            appUrl: APP_URL,
+            preferencesUrl: `${APP_URL}/settings/security`,
+            unsubscribeUrl: `${APP_URL}/settings/security`,
+          });
+
+          await sendEmailToUser(user.id, subject, html);
+          await logEmailSent(user.id, 'spot_recommendation');
+          sent++;
+        } catch (err) {
+          logger.warn('Spot recommendation failed for user', { userId: user.id, error: String(err) });
+        }
+      })
+    );
+    if (i + BATCH < users.length) {
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  }
+
+  logger.info('Spot recommendation complete', { sent, skipped, total: users.length });
 }

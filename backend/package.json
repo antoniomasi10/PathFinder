@@ -38,19 +38,20 @@
     "backfill:expire-senior": "ts-node --transpile-only scripts/backfill-expire-senior.ts",
     "sync:deadlines-from-structured": "ts-node --transpile-only scripts/sync-deadlines-from-structured.ts",
     "backfill:extracted-skills": "ts-node --transpile-only src/scripts/backfillExtractedSkills.ts",
-    "cleanup:urls": "ts-node --transpile-only src/scripts/runUrlCleanup.ts"
+    "cleanup:urls": "ts-node --transpile-only src/scripts/runUrlCleanup.ts",
+    "cleanup:universities": "ts-node --transpile-only scripts/cleanup-university-duplicates.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1028.0",
-    "axios": "^1.7.9",
     "@aws-sdk/s3-request-presigner": "^3.1024.0",
     "@prisma/client": "^5.14.0",
     "@sentry/node": "^10.53.1",
     "@socket.io/redis-adapter": "^8.3.0",
     "@xenova/transformers": "^2.17.2",
+    "axios": "^1.7.9",
     "bcrypt": "^5.1.1",
     "cloudinary": "^2.9.0",
     "cookie-parser": "^1.4.6",
@@ -66,7 +67,7 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.3",
     "openai": "^6.37.0",
-    "playwright": "^1.59.1",
+    "playwright": "^1.60.0",
     "posthog-node": "^5.34.2",
     "sanitize-html": "^2.17.2",
     "socket.io": "^4.7.5",

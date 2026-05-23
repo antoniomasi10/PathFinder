@@ -77,6 +77,10 @@ async function logImport(source: string, type: string, fn: () => Promise<number>
 // University import
 // ---------------------------------------------------------------------------
 
+function normalizeName(s: string): string {
+  return s.trim().replace(/\s+/g, ' ');
+}
+
 export async function importUniversities(): Promise<{ imported: number; source: string }> {
   logger.info('[MUR] University import starting (CSV download)...');
   const now = new Date();
@@ -104,18 +108,17 @@ export async function importUniversities(): Promise<{ imported: number; source: 
         if (!validated) continue;
 
         const sid = `mur-${code}`;
+        const normalizedName = normalizeName(validated.name);
         await prisma.university.upsert({
-          where: { id: sid },
+          where: { name: normalizedName },
           update: {
-            name: validated.name,
             city: validated.city,
             isActive: true,
             sourceId: sid,
             lastSyncedAt: now,
           },
           create: {
-            id: sid,
-            name: validated.name,
+            name: normalizedName,
             city: validated.city,
             country: 'Italia',
             sourceId: sid,

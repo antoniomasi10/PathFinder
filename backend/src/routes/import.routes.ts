@@ -3,6 +3,7 @@
  * All endpoints require ADMIN role.
  */
 import { Router, Request, Response } from 'express';
+import prisma from '../lib/prisma';
 import { verifiedMiddleware } from '../middleware/auth';
 import { adminMiddleware } from '../middleware/admin';
 import { importUniversities, importCourses } from '../services/import/mur.import';
@@ -16,6 +17,12 @@ import { importBestCoursesOpportunities } from '../services/import/best-courses.
 import { importConfsTechOpportunities } from '../services/import/confstech.import';
 import { runCleanup, getDataFreshnessStats } from '../services/import/cleanup.service';
 import { upsertManualOpportunity } from '../services/import/manual.import';
+import {
+  importCompanyWatchlistOpportunities,
+  importSingleCompany,
+  checkRobotsTxt,
+  findAndAnalyzeTos,
+} from '../services/import/company-watchlist.import';
 import { resetDedupCache } from '../services/import/validation';
 
 const router = Router();
@@ -85,6 +92,93 @@ router.post('/confstech', ...adminAuth, async (_req: Request, res: Response) => 
 router.post('/manual', ...adminAuth, async (req: Request, res: Response) => {
   try { res.json(await upsertManualOpportunity(req.body)); }
   catch (err: any) { res.status(400).json({ error: err.message }); }
+});
+
+// GET /api/import/watchlist — list companies with compliance status
+router.get('/watchlist', ...adminAuth, async (req: Request, res: Response) => {
+  try {
+        const { sector, tier, tosAllowed, isActive } = req.query;
+    const where: any = {};
+    if (sector) where.sector = sector;
+    if (tier) where.tier = tier;
+    if (tosAllowed !== undefined) where.tosAllowed = tosAllowed === 'true' ? true : tosAllowed === 'false' ? false : null;
+    if (isActive !== undefined) where.isActive = isActive === 'true';
+    const companies = await prisma.companyWatchlist.findMany({
+      where,
+      orderBy: [{ sector: 'asc' }, { tier: 'asc' }, { name: 'asc' }],
+    });
+    res.json(companies);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/import/watchlist — add company and trigger robots+ToS check
+router.post('/watchlist', ...adminAuth, async (req: Request, res: Response) => {
+  try {
+        const { name, careersUrl, sector, tier } = req.body;
+    if (!name || !careersUrl || !sector || !tier) {
+      return res.status(400).json({ error: 'name, careersUrl, sector, tier are required' });
+    }
+    const now = new Date();
+    const [robotsAllowed, tosResult] = await Promise.all([
+      checkRobotsTxt(careersUrl),
+      findAndAnalyzeTos(careersUrl),
+    ]);
+    const company = await prisma.companyWatchlist.create({
+      data: {
+        name,
+        careersUrl,
+        sector,
+        tier,
+        robotsAllowed,
+        robotsCheckedAt: now,
+        tosAllowed: tosResult.allowed,
+        tosAnalyzedAt: now,
+        tosNotes: tosResult.notes,
+        tosPageNotFound: tosResult.pageNotFound,
+        addedBy: (req as any).user?.id,
+      },
+    });
+    res.json(company);
+  } catch (err: any) { res.status(400).json({ error: err.message }); }
+});
+
+// PATCH /api/import/watchlist/:id — update company (manual override)
+router.patch('/watchlist/:id', ...adminAuth, async (req: Request, res: Response) => {
+  try {
+        const { tosAllowed, isActive, robotsAllowed } = req.body;
+    const data: any = {};
+    if (typeof tosAllowed === 'boolean') data.tosAllowed = tosAllowed;
+    if (typeof isActive === 'boolean') data.isActive = isActive;
+    if (typeof robotsAllowed === 'boolean') data.robotsAllowed = robotsAllowed;
+    const company = await prisma.companyWatchlist.update({
+      where: { id: req.params.id },
+      data,
+    });
+    res.json(company);
+  } catch (err: any) { res.status(400).json({ error: err.message }); }
+});
+
+// DELETE /api/import/watchlist/:id — remove company
+router.delete('/watchlist/:id', ...adminAuth, async (req: Request, res: Response) => {
+  try {
+        await prisma.companyWatchlist.delete({ where: { id: req.params.id } });
+    res.json({ ok: true });
+  } catch (err: any) { res.status(400).json({ error: err.message }); }
+});
+
+// POST /api/import/watchlist/run — trigger full watchlist import
+// Must be registered BEFORE /:id/run to avoid Express treating "run" as an id.
+router.post('/watchlist/run', ...adminAuth, async (_req: Request, res: Response) => {
+  try { res.json(await importCompanyWatchlistOpportunities()); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/import/watchlist/:id/run — trigger single company import
+router.post('/watchlist/:id/run', ...adminAuth, async (req: Request, res: Response) => {
+  try {
+    const result = await importSingleCompany(req.params.id);
+    res.json(result);
+  } catch (err: any) { res.status(400).json({ error: err.message }); }
 });
 
 // POST /api/import/cleanup

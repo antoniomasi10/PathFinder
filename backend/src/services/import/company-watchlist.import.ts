@@ -1,0 +1,828 @@
+/**
+ * Company Watchlist Importer
+ *
+ * Monitors a curated list of Italian companies (medium/large) for internship
+ * and stage openings on their careers pages. Unlike the ATS-based importers,
+ * this handles companies that use Workday, SAP SuccessFactors, or custom career
+ * sites not covered by our 6 supported ATS connectors.
+ *
+ * Flow per company:
+ *  1. Check robots.txt (automated, respects Disallow rules)
+ *  2. Locate and analyse ToS page via OpenAI (checks for scraping prohibition)
+ *  3. Fetch careers page HTML
+ *  4. Extract internship listings via OpenAI
+ *  5. Validate + batchUpsert using existing pipeline
+ *
+ * Compliance checks (robots.txt + ToS) are cached for 30 days.
+ * Runs weekly Wednesday 05:30 via scheduler.ts.
+ *
+ * NOTE: Workday is intentionally NOT supported — ToS prohibits automated access.
+ */
+
+import prisma from '../../lib/prisma';
+import { logger } from '../../utils/logger';
+import OpenAI from 'openai';
+import { chromium, Page } from 'playwright';
+import { CompanyWatchlist } from '@prisma/client';
+import { validateOpportunity } from './validation';
+import { batchUpsertOpportunities, OpportunityRecord } from './batch';
+import { extractCountryCode, mapOpportunityType, fetchWithRetry, stripHtml } from './utils';
+
+// ---------------------------------------------------------------------------
+// Configuration
+// ---------------------------------------------------------------------------
+
+const FETCH_DELAY_MS = 2000;
+const ROBOTS_CHECK_INTERVAL_DAYS = 30;
+const TOS_CHECK_INTERVAL_DAYS = 30;
+const MAX_HTML_CHARS = 40000; // ~12k tokens after strip
+
+let _client: OpenAI | null = null;
+
+function getClient(): OpenAI | null {
+  if (!process.env.OPENAI_API_KEY) return null;
+  if (!_client) _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return _client;
+}
+
+// ---------------------------------------------------------------------------
+// Headless browser fetch
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true if the HTML contains enough job-listing signals to be worth
+ * passing to the LLM extractor. Used to detect marketing/landing pages that
+ * link out to a separate job board.
+ */
+function hasJobContent(html: string): boolean {
+  const lower = html.toLowerCase();
+  const signals = ['intern', 'stage', 'tirocinio', 'trainee', 'graduate program', 'junior role'];
+  return signals.some(s => lower.includes(s));
+}
+
+/**
+ * Scans the current page for a link to an external or sub-domain job board
+ * (e.g. "See jobs & apply → jobs.company.com"). Returns the best candidate
+ * URL or null if none found.
+ */
+async function findJobsBoardLink(page: Page, currentUrl: string): Promise<string | null> {
+  try {
+    const currentOrigin = new URL(currentUrl).origin;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const links: { href: string; text: string }[] = await page.$$eval(
+      'a[href]',
+      /* istanbul ignore next */ (els: any[]) =>
+        els.map((e: any) => ({
+          href: e.href as string,
+          text: (e.textContent as string ?? '').trim().toLowerCase(),
+        })),
+    );
+
+    const JOB_BOARD_PATTERNS = [/\/jobs\b/, /\/open-positions/, /\/careers\/jobs/, /\/job-openings/];
+    const JOB_TEXT_PATTERNS = ['see jobs', 'view jobs', 'open positions', 'all jobs', 'job openings', 'apply now'];
+
+    for (const { href, text } of links) {
+      if (!href || href === currentUrl) continue;
+      // Subdomain job board (e.g. jobs.company.com)
+      try {
+        const linkOrigin = new URL(href).origin;
+        if (linkOrigin !== currentOrigin && linkOrigin.includes(new URL(currentUrl).hostname.split('.').slice(-2).join('.'))) {
+          return href;
+        }
+      } catch { /* invalid URL */ }
+      // URL path patterns
+      if (JOB_BOARD_PATTERNS.some(p => p.test(href))) return href;
+      // CTA text patterns
+      if (JOB_TEXT_PATTERNS.some(p => text.includes(p))) return href;
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+/**
+ * Tries to click common cookie consent accept buttons (OneTrust, Cookiebot,
+ * and generic text-based buttons) so content is not blocked by consent walls.
+ */
+async function acceptCookieConsent(page: Page): Promise<void> {
+  const selectors = [
+    '#onetrust-accept-btn-handler',
+    '.onetrust-accept-btn-handler',
+    '#CybotCookiebotDialogBodyButtonAccept',
+    '#accept-all-cookies',
+    '[id*="accept"][id*="cookie" i]',
+    '[class*="accept"][class*="cookie" i]',
+    'button[aria-label*="Accept all" i]',
+    'button[aria-label*="Accetta" i]',
+  ];
+
+  for (const sel of selectors) {
+    try {
+      const el = page.locator(sel).first();
+      if (await el.isVisible({ timeout: 1500 })) {
+        await el.click({ timeout: 2000 });
+        return;
+      }
+    } catch { /* not present */ }
+  }
+
+  // Text-based fallback
+  try {
+    const buttons = await page.$$('button');
+    for (const btn of buttons) {
+      const text = ((await btn.textContent()) ?? '').trim().toLowerCase();
+      if (
+        text === 'accetta' ||
+        text === 'accetta tutto' ||
+        text === 'accept all' ||
+        text === 'accept cookies' ||
+        text === 'i accept'
+      ) {
+        await btn.click();
+        return;
+      }
+    }
+  } catch { /* ignore */ }
+}
+
+/**
+ * Fetches a URL using a headless Chromium browser. Handles:
+ * - Cookie consent banners (OneTrust, Cookiebot, generic)
+ * - SPA / JS-rendered content (scroll-to-trigger lazy loading)
+ * - Inline iframe job boards (Greenhouse, Lever, etc.)
+ * Falls back to empty string on any error.
+ */
+export async function fetchWithHeadlessBrowser(url: string): Promise<string> {
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--disable-blink-features=AutomationControlled', '--no-sandbox'],
+  });
+  try {
+    const context = await browser.newContext({
+      userAgent:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      locale: 'it-IT',
+      viewport: { width: 1280, height: 800 },
+      timezoneId: 'Europe/Rome',
+    });
+
+    // Remove navigator.webdriver flag to avoid basic bot detection
+    await context.addInitScript(/* istanbul ignore next */ () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      Object.defineProperty((globalThis as any).navigator, 'webdriver', { get: () => false });
+    });
+
+    const page = await context.newPage();
+
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+    // Accept cookie consent before content is revealed
+    await acceptCookieConsent(page);
+
+    // Wait for post-consent JS rendering
+    await page.waitForTimeout(2500);
+
+    // Scroll to trigger lazy-loaded job listings
+    await page.evaluate(/* istanbul ignore next */ () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (globalThis as any).window.scrollTo(0, (globalThis as any).document.body.scrollHeight / 2);
+    });
+    await page.waitForTimeout(1000);
+    await page.evaluate(/* istanbul ignore next */ () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (globalThis as any).window.scrollTo(0, (globalThis as any).document.body.scrollHeight);
+    });
+    await page.waitForTimeout(1500);
+
+    let html = await page.content();
+
+    // If the page looks like a marketing/landing page (no job keywords), try to follow
+    // "View Jobs" / "Apply" links to the actual job board sub-page or subdomain.
+    if (!hasJobContent(html)) {
+      const jobsUrl = await findJobsBoardLink(page, url);
+      if (jobsUrl && jobsUrl !== url) {
+        logger.info(`[CompanyWatchlist] Following jobs link: ${url} → ${jobsUrl}`);
+        await page.goto(jobsUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await acceptCookieConsent(page);
+        await page.waitForTimeout(2500);
+        await page.evaluate(/* istanbul ignore next */ () => {
+          (globalThis as any).window.scrollTo(0, (globalThis as any).document.body.scrollHeight);
+        });
+        await page.waitForTimeout(1500);
+        html = await page.content();
+      }
+    }
+
+    // Some ATS boards (Greenhouse, Lever) render inside iframes — append their content
+    for (const frame of page.frames()) {
+      if (frame === page.mainFrame()) continue;
+      try {
+        const frameHtml = await frame.content();
+        if (frameHtml.length > 300) {
+          const lower = frameHtml.toLowerCase();
+          if (
+            lower.includes('intern') ||
+            lower.includes('stage') ||
+            lower.includes('junior') ||
+            lower.includes('trainee') ||
+            lower.includes('graduate')
+          ) {
+            html += '\n<!-- FRAME -->\n' + frameHtml;
+          }
+        }
+      } catch { /* cross-origin frame — skip */ }
+    }
+
+    return html;
+  } catch (err) {
+    logger.warn(`[CompanyWatchlist] Playwright fetch failed for ${url}: ${err}`);
+    return '';
+  } finally {
+    await browser.close();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// robots.txt check
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches and parses robots.txt for the given URL's origin.
+ * Returns true if our bot is allowed to access the careers path,
+ * false if explicitly disallowed.
+ * On fetch error, defaults to true (benefit of the doubt).
+ */
+export async function checkRobotsTxt(careersUrl: string): Promise<boolean> {
+  try {
+    const origin = new URL(careersUrl).origin;
+    const robotsUrl = `${origin}/robots.txt`;
+
+    const res = await fetchWithRetry(robotsUrl, {
+      timeoutMs: 10000,
+      retries: 1,
+      headers: { 'Accept': 'text/plain' },
+      logTag: '[CompanyWatchlist] robots.txt',
+    });
+
+    if (!res.ok) {
+      logger.warn(`[CompanyWatchlist] robots.txt not found for ${origin} (${res.status}) — allowing`);
+      return true;
+    }
+
+    const text = await res.text();
+    const careersPath = new URL(careersUrl).pathname;
+
+    return isAllowedByRobots(text, careersPath);
+  } catch (err) {
+    logger.warn(`[CompanyWatchlist] robots.txt fetch failed: ${err} — allowing`);
+    return true;
+  }
+}
+
+/**
+ * Parses robots.txt text and checks if the given path is allowed
+ * under User-agent: * or User-agent: COhA.
+ */
+function isAllowedByRobots(robotsTxt: string, path: string): boolean {
+  const lines = robotsTxt.split('\n').map(l => l.trim());
+
+  // Collect rules per agent block to avoid mixing rules across different agents.
+  // We only apply blocks whose User-agent matches us (* or coha), not googlebot.
+  type Block = { agents: string[]; allow: string[]; disallow: string[] };
+  const blocks: Block[] = [];
+  let current: Block | null = null;
+
+  for (const line of lines) {
+    if (line.toLowerCase().startsWith('user-agent:')) {
+      const agent = line.slice('user-agent:'.length).trim().toLowerCase();
+      if (!current) {
+        current = { agents: [agent], allow: [], disallow: [] };
+      } else if (current.allow.length === 0 && current.disallow.length === 0) {
+        // Multiple consecutive User-agent lines belong to the same block
+        current.agents.push(agent);
+      } else {
+        blocks.push(current);
+        current = { agents: [agent], allow: [], disallow: [] };
+      }
+      continue;
+    }
+    if (!current) continue;
+    if (line.toLowerCase().startsWith('disallow:')) {
+      const p = line.slice('disallow:'.length).trim();
+      if (p) current.disallow.push(p);
+    } else if (line.toLowerCase().startsWith('allow:')) {
+      const p = line.slice('allow:'.length).trim();
+      if (p) current.allow.push(p);
+    } else if (line === '') {
+      // Blank line ends the current block
+      blocks.push(current);
+      current = null;
+    }
+  }
+  if (current) blocks.push(current);
+
+  // Apply only blocks that match our bot (* or coha), not googlebot
+  for (const block of blocks) {
+    const applies = block.agents.some(a => a === '*' || a === 'coha');
+    if (!applies) continue;
+
+    // Allow takes precedence over Disallow within the same block
+    for (const p of block.allow) {
+      if (path.startsWith(p)) return true;
+    }
+    for (const p of block.disallow) {
+      if (p === '/' || path.startsWith(p)) return false;
+    }
+  }
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// ToS analysis via LLM
+// ---------------------------------------------------------------------------
+
+const TOS_LINK_PATTERNS = [
+  '/terms', '/legal', '/tos', '/terms-of-service', '/terms-of-use',
+  '/termini', '/condizioni', '/privacy-policy', '/note-legali',
+  '/condizioni-di-utilizzo', '/termini-di-servizio',
+];
+
+const TOS_LINK_REGEX = /href=["']([^"']*(?:terms|legal|tos|termini|condizioni|note-legali)[^"']*?)["']/gi;
+
+/**
+ * Fetches the homepage of the careers URL's domain, finds the ToS page link,
+ * fetches the ToS text, and uses OpenAI to determine if scraping is allowed.
+ */
+export async function findAndAnalyzeTos(careersUrl: string): Promise<{
+  allowed: boolean | null;
+  notes: string;
+  pageNotFound: boolean;
+}> {
+  const client = getClient();
+  if (!client) {
+    logger.warn('[CompanyWatchlist] No OpenAI API key — skipping ToS analysis, allowing by default');
+    return { allowed: true, notes: 'OpenAI not configured — skipped', pageNotFound: false };
+  }
+
+  try {
+    const origin = new URL(careersUrl).origin;
+
+    // Fetch homepage to find ToS link
+    const homeRes = await fetchWithRetry(origin, {
+      timeoutMs: 15000,
+      retries: 1,
+      headers: { 'Accept': 'text/html' },
+      logTag: '[CompanyWatchlist] homepage',
+    });
+
+    if (!homeRes.ok) {
+      return { allowed: null, notes: `Homepage returned ${homeRes.status}`, pageNotFound: true };
+    }
+
+    const homeHtml = await homeRes.text();
+    const tosUrl = extractTosUrl(homeHtml, origin);
+
+    if (!tosUrl) {
+      return { allowed: null, notes: 'ToS page link not found in homepage', pageNotFound: true };
+    }
+
+    // Fetch ToS page
+    const tosRes = await fetchWithRetry(tosUrl, {
+      timeoutMs: 15000,
+      retries: 1,
+      headers: { 'Accept': 'text/html' },
+      logTag: '[CompanyWatchlist] ToS',
+    });
+
+    if (!tosRes.ok) {
+      return { allowed: null, notes: `ToS page returned ${tosRes.status}`, pageNotFound: true };
+    }
+
+    const tosHtml = await tosRes.text();
+    const tosText = stripHtml(tosHtml).slice(0, 8000);
+
+    if (tosText.length < 100) {
+      return { allowed: null, notes: 'ToS page content too short to analyse', pageNotFound: true };
+    }
+
+    // Analyse with OpenAI
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      response_format: { type: 'json_object' },
+      messages: [
+        {
+          role: 'system',
+          content: `You are a legal compliance assistant. Determine whether the Terms of Service explicitly prohibits automated/programmatic access, web scraping, or crawling.
+
+Answer with JSON only: { "allowed": true/false, "confidence": "high"/"medium"/"low", "reason": "..." }
+
+Rules:
+- "allowed: false" ONLY if there is EXPLICIT prohibition of scraping, crawling, or automated access
+- "allowed: true" if the ToS is silent on the matter or permissive
+- Keep "reason" under 100 characters`,
+        },
+        {
+          role: 'user',
+          content: `Terms of Service:\n\n${tosText}`,
+        },
+      ],
+      max_tokens: 150,
+      temperature: 0,
+    });
+
+    const raw = response.choices[0]?.message?.content ?? '{}';
+    const result = JSON.parse(raw) as { allowed?: boolean; confidence?: string; reason?: string };
+
+    return {
+      allowed: result.allowed ?? true,
+      notes: `[${result.confidence ?? '?'}] ${result.reason ?? ''}`.slice(0, 500),
+      pageNotFound: false,
+    };
+  } catch (err) {
+    logger.warn(`[CompanyWatchlist] ToS analysis failed: ${err}`);
+    return { allowed: null, notes: `Error: ${String(err).slice(0, 200)}`, pageNotFound: true };
+  }
+}
+
+function extractTosUrl(html: string, origin: string): string | null {
+  // Try known patterns first
+  for (const pattern of TOS_LINK_PATTERNS) {
+    const idx = html.toLowerCase().indexOf(`href="${pattern}`);
+    if (idx !== -1) {
+      const end = html.indexOf('"', idx + 6);
+      if (end !== -1) {
+        const href = html.slice(idx + 6, end);
+        return href.startsWith('http') ? href : `${origin}${href}`;
+      }
+    }
+  }
+
+  // Regex fallback
+  const matches = [...html.matchAll(TOS_LINK_REGEX)];
+  if (matches.length > 0) {
+    const href = matches[0][1];
+    return href.startsWith('http') ? href : `${origin}${href}`;
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Opportunity extraction via LLM
+// ---------------------------------------------------------------------------
+
+interface RawLLMOpportunity {
+  title?: string;
+  url?: string;
+  location?: string;
+  type?: string;
+  deadline?: string | null;
+}
+
+const EXTRACT_SYSTEM_PROMPT = `You are a job listing extractor. Extract all student-relevant positions from a careers page.
+
+Only include: internship, stage, tirocinio, trainee, apprenticeship, graduate roles, junior roles, entry-level roles.
+Exclude: senior, manager, director, lead, principal, staff, head of, VP, C-suite roles.
+
+Return JSON in this exact shape: { "positions": [ { "title": "...", "url": "...", "location": "...", "type": "INTERNSHIP|STAGE|FELLOWSHIP|EXTRACURRICULAR", "deadline": "YYYY-MM-DD or null" } ] }
+
+If no relevant positions found, return { "positions": [] }.
+The content uses format "Job title (url)" — extract the URL from the parentheses. Use absolute URLs only.
+If a position has no URL, omit the url field.`;
+
+/**
+ * Converts anchor tags to "text (url)" format with absolute URLs resolved against
+ * baseUrl, then strips remaining HTML. This ensures the LLM sees job listing URLs
+ * that are embedded as <a href="..."> in the source.
+ */
+function htmlLinksToText(html: string, baseUrl: string): string {
+  const linkified = html.replace(
+    /<a\s[^>]*?href=["']([^"'>]+)["'][^>]*?>([\s\S]*?)<\/a>/gi,
+    (_: string, href: string, inner: string) => {
+      const text = inner.replace(/<[^>]+>/g, '').trim();
+      if (!text) return inner;
+      let absHref = href;
+      try { absHref = new URL(href, baseUrl).href; } catch { /* keep */ }
+      return `${text} (${absHref})`;
+    },
+  );
+  return stripHtml(linkified);
+}
+
+export async function extractOpportunitiesWithLLM(
+  html: string,
+  company: CompanyWatchlist,
+): Promise<RawLLMOpportunity[]> {
+  const client = getClient();
+  if (!client) return [];
+
+  try {
+    // Focus on <main> if present, otherwise full body
+    const scopedHtml = (() => {
+      const m = html.match(/<main[\s\S]*?>([\s\S]*?)<\/main>/i);
+      return m ? m[1] : html;
+    })();
+
+    // Convert links to text (preserving URLs) before stripping HTML
+    let text = htmlLinksToText(scopedHtml, company.careersUrl);
+    text = text.slice(0, MAX_HTML_CHARS);
+
+    if (text.length < 50) return [];
+
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: EXTRACT_SYSTEM_PROMPT },
+        {
+          role: 'user',
+          content: `Company: ${company.name}\n\nCareers page content:\n\n${text}`,
+        },
+      ],
+      max_tokens: 2000,
+      temperature: 0,
+    });
+
+    const raw = response.choices[0]?.message?.content ?? '{}';
+    const parsed = JSON.parse(raw);
+
+    // Handle array, {positions:[...]}, {opportunities:[...]}, {jobs:[...]} shapes
+    const items: RawLLMOpportunity[] = Array.isArray(parsed)
+      ? parsed
+      : (Array.isArray(parsed.positions) ? parsed.positions
+        : Array.isArray(parsed.opportunities) ? parsed.opportunities
+        : Array.isArray(parsed.jobs) ? parsed.jobs
+        : []);
+
+    return items.filter(i => typeof i.title === 'string' && i.title.length > 3);
+  } catch (err) {
+    logger.warn(`[CompanyWatchlist] LLM extraction failed for ${company.name}: ${err}`);
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Main import orchestration
+// ---------------------------------------------------------------------------
+
+export async function importCompanyWatchlistOpportunities(): Promise<{
+  imported: number;
+  skipped: number;
+  complianceBlocked: number;
+  source: string;
+}> {
+  logger.info('[CompanyWatchlist] Starting import...');
+  const now = new Date();
+
+  const log = await prisma.importLog.create({
+    data: { source: 'company-watchlist', type: 'opportunities', status: 'running', startedAt: now },
+  });
+
+  try {
+    const companies = await prisma.companyWatchlist.findMany({
+      where: { isActive: true },
+      orderBy: { lastSyncedAt: { sort: 'asc', nulls: 'first' } },
+    });
+
+    let imported = 0;
+    let skipped = 0;
+    let complianceBlocked = 0;
+    const records: OpportunityRecord[] = [];
+
+    for (const company of companies) {
+      try {
+        const allowed = await processCompanyCompliance(company, now);
+        if (!allowed) {
+          complianceBlocked++;
+          continue;
+        }
+
+        // Fetch careers page with headless browser (handles SPAs and JS-rendered pages)
+        const html = await fetchWithHeadlessBrowser(company.careersUrl);
+
+        if (!html) {
+          logger.warn(`[CompanyWatchlist] ${company.name}: empty HTML from headless fetch`);
+          await prisma.companyWatchlist.update({
+            where: { id: company.id },
+            data: { lastSyncedAt: now },
+          });
+          await new Promise(r => setTimeout(r, FETCH_DELAY_MS));
+          continue;
+        }
+        const rawOpportunities = await extractOpportunitiesWithLLM(html, company);
+
+        let companySkipped = 0;
+        for (const raw of rawOpportunities) {
+          if (!raw.title) { skipped++; companySkipped++; continue; }
+
+          // Fall back to careers page URL when the LLM couldn't extract an individual URL
+          const opportunityUrl = raw.url || company.careersUrl;
+          const location = raw.location || company.name;
+          const countryCode = extractCountryCode(location) || 'IT';
+          const isAbroad = countryCode !== 'IT';
+          const isRemote = location.toLowerCase().includes('remote') ||
+                           location.toLowerCase().includes('remoto');
+
+          const sourceId = `company-watchlist-${company.id}-${Buffer.from(raw.title + opportunityUrl).toString('base64').slice(0, 20)}`;
+
+          const validated = validateOpportunity({
+            title: `${raw.title} — ${company.name}`,
+            description: `${raw.title} presso ${company.name}. ${raw.location || ''}`.trim(),
+            company: company.name,
+            url: opportunityUrl,
+            location,
+            isAbroad,
+            isRemote,
+            expiresAt: null,
+            deadline: raw.deadline ? new Date(raw.deadline) : null,
+          }, 'company-watchlist');
+
+          if (!validated) { skipped++; companySkipped++; continue; }
+
+          records.push({
+            id: sourceId,
+            title: validated.title,
+            description: validated.description,
+            company: company.name,
+            url: validated.url ?? null,
+            location: validated.location || null,
+            isAbroad: validated.isAbroad,
+            isRemote: validated.isRemote,
+            type: mapOpportunityType(raw.title, raw.type ? [raw.type] : null),
+            tags: [company.sector, company.tier],
+            postedAt: now,
+            expiresAt: null,
+            deadline: raw.deadline ? new Date(raw.deadline) : null,
+            source: 'CompanyWatchlist',
+            sourceId,
+            lastSyncedAt: now,
+            country: countryCode || null,
+          });
+        }
+
+        await prisma.companyWatchlist.update({
+          where: { id: company.id },
+          data: { lastSyncedAt: now },
+        });
+
+        logger.info(`[CompanyWatchlist] ${company.name}: ${rawOpportunities.length} found, ${rawOpportunities.length - companySkipped} valid`);
+        await new Promise(r => setTimeout(r, FETCH_DELAY_MS));
+      } catch (err) {
+        logger.warn(`[CompanyWatchlist] ${company.name} failed: ${err}`);
+      }
+    }
+
+    await batchUpsertOpportunities(records);
+    imported = records.length;
+
+    await prisma.importLog.update({
+      where: { id: log.id },
+      data: {
+        status: 'success',
+        count: imported,
+        finishedAt: new Date(),
+        metadata: { skipped, complianceBlocked, total: companies.length },
+      },
+    });
+
+    logger.info(`[CompanyWatchlist] Done: imported=${imported}, skipped=${skipped}, compliance_blocked=${complianceBlocked}`);
+    return { imported, skipped, complianceBlocked, source: 'company-watchlist' };
+  } catch (err: any) {
+    await prisma.importLog.update({
+      where: { id: log.id },
+      data: { status: 'failed', error: String(err).slice(0, 500), finishedAt: new Date() },
+    });
+    logger.error(`[CompanyWatchlist] Import failed: ${err}`);
+    return { imported: 0, skipped: 0, complianceBlocked: 0, source: 'failed' };
+  }
+}
+
+/**
+ * Checks and updates compliance state (robots.txt + ToS) for a company.
+ * Returns true if the company is allowed to be scraped.
+ * Re-checks every 30 days; uses cached values otherwise.
+ */
+async function processCompanyCompliance(company: CompanyWatchlist, now: Date): Promise<boolean> {
+  const robotsExpired = !company.robotsCheckedAt ||
+    daysSince(company.robotsCheckedAt, now) > ROBOTS_CHECK_INTERVAL_DAYS;
+  const tosExpired = !company.tosAnalyzedAt ||
+    daysSince(company.tosAnalyzedAt, now) > TOS_CHECK_INTERVAL_DAYS;
+
+  const updates: Partial<CompanyWatchlist> = {};
+
+  if (robotsExpired) {
+    const robotsAllowed = await checkRobotsTxt(company.careersUrl);
+    updates.robotsAllowed = robotsAllowed;
+    updates.robotsCheckedAt = now;
+    if (!robotsAllowed) {
+      logger.info(`[CompanyWatchlist] ${company.name}: robots.txt disallows scraping`);
+    }
+  }
+
+  if (tosExpired) {
+    const tos = await findAndAnalyzeTos(company.careersUrl);
+    updates.tosAllowed = tos.allowed;
+    updates.tosAnalyzedAt = now;
+    updates.tosNotes = tos.notes;
+    updates.tosPageNotFound = tos.pageNotFound;
+    if (tos.allowed === false) {
+      logger.info(`[CompanyWatchlist] ${company.name}: ToS prohibits scraping — ${tos.notes}`);
+    } else if (tos.allowed === null) {
+      logger.info(`[CompanyWatchlist] ${company.name}: ToS status unknown — ${tos.notes}`);
+    }
+  }
+
+  if (Object.keys(updates).length > 0) {
+    await prisma.companyWatchlist.update({
+      where: { id: company.id },
+      data: updates as any,
+    });
+    // Use updated values for the current run
+    Object.assign(company, updates);
+  }
+
+  // Block if explicitly disallowed
+  if (company.robotsAllowed === false) return false;
+  if (company.tosAllowed === false) return false;
+  // Block if ToS is unknown (null = not found or error)
+  if (company.tosAllowed === null && (updates.tosAllowed !== undefined || !tosExpired)) {
+    return false;
+  }
+
+  return true;
+}
+
+function daysSince(date: Date, now: Date): number {
+  return (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24);
+}
+
+// ---------------------------------------------------------------------------
+// Single-company import (used by admin endpoint)
+// ---------------------------------------------------------------------------
+
+export async function importSingleCompany(companyId: string): Promise<{
+  imported: number;
+  skipped: number;
+  allowed: boolean;
+}> {
+  const company = await prisma.companyWatchlist.findUnique({ where: { id: companyId } });
+  if (!company) throw new Error(`Company ${companyId} not found`);
+
+  const now = new Date();
+  const allowed = await processCompanyCompliance(company, now);
+  if (!allowed) return { imported: 0, skipped: 0, allowed: false };
+
+  const html = await fetchWithHeadlessBrowser(company.careersUrl);
+  if (!html) return { imported: 0, skipped: 0, allowed: true };
+  const rawOpportunities = await extractOpportunitiesWithLLM(html, company);
+  const records: OpportunityRecord[] = [];
+  let skipped = 0;
+
+  for (const raw of rawOpportunities) {
+    if (!raw.title) { skipped++; continue; }
+
+    const opportunityUrl = raw.url || company.careersUrl;
+    const location = raw.location || company.name;
+    const countryCode = extractCountryCode(location) || 'IT';
+    const sourceId = `company-watchlist-${company.id}-${Buffer.from(raw.title + opportunityUrl).toString('base64').slice(0, 20)}`;
+
+    const validated = validateOpportunity({
+      title: `${raw.title} — ${company.name}`,
+      description: `${raw.title} presso ${company.name}. ${raw.location || ''}`.trim(),
+      company: company.name,
+      url: opportunityUrl,
+      location,
+      isAbroad: countryCode !== 'IT',
+      isRemote: location.toLowerCase().includes('remote') || location.toLowerCase().includes('remoto'),
+      expiresAt: null,
+      deadline: raw.deadline ? new Date(raw.deadline) : null,
+    }, 'company-watchlist');
+
+    if (!validated) { skipped++; continue; }
+
+    records.push({
+      id: sourceId,
+      title: validated.title,
+      description: validated.description,
+      company: company.name,
+      url: validated.url ?? null,
+      location: validated.location || null,
+      isAbroad: validated.isAbroad,
+      isRemote: validated.isRemote,
+      type: mapOpportunityType(raw.title, raw.type ? [raw.type] : null),
+      tags: [company.sector, company.tier],
+      postedAt: now,
+      source: 'CompanyWatchlist',
+      sourceId,
+      lastSyncedAt: now,
+      country: countryCode || null,
+    });
+  }
+
+  await batchUpsertOpportunities(records);
+  await prisma.companyWatchlist.update({
+    where: { id: company.id },
+    data: { lastSyncedAt: now },
+  });
+
+  return { imported: records.length, skipped, allowed: true };
+}

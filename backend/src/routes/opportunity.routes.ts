@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import prisma from '../lib/prisma';
-import { getHybridMatchedOpportunities, getHybridMatchedOpportunitiesFull, getNewOpportunitiesFull, scoreOpportunity, OppFilters } from '../services/matchingEngine';
+import { getHybridMatchedOpportunities, getHybridMatchedOpportunitiesFull, getNewOpportunitiesFull, getRelatedOpportunities, scoreOpportunity, OppFilters } from '../services/matchingEngine';
 import { trackInteraction } from '../services/interaction.service';
 import { cacheGet, cacheSet, cacheDel } from '../lib/cache';
 import { translateOpportunities } from '../services/opportunityTranslation.service';
@@ -45,6 +45,9 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     if (formatFilters.length) filters.formats = formatFilters;
     const hasFilters = Object.keys(filters).length > 0;
 
+    const minScoreParam = parseFloat(req.query.minScore as string);
+    const maxScoreParam = parseFloat(req.query.maxScore as string);
+
     if (isNew === 'true') {
       const filterKey = hasFilters ? JSON.stringify(filters) : '';
       // Snapshot cache: one entry holds the full ordered list. Pagination is a slice
@@ -56,6 +59,14 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
         snapshot = await getNewOpportunitiesFull(req.user!.userId, hasFilters ? filters : {});
         if (lang !== 'it') await translateOpportunities(snapshot, lang);
         await cacheSet(cacheKey, snapshot, OPP_TTL);
+      }
+      if (!isNaN(minScoreParam) || !isNaN(maxScoreParam)) {
+        snapshot = snapshot.filter((o: any) => {
+          const score = o.matchScore ?? 0;
+          if (!isNaN(minScoreParam) && score < minScoreParam) return false;
+          if (!isNaN(maxScoreParam) && score > maxScoreParam) return false;
+          return true;
+        });
       }
       const data = snapshot.slice(skip, skip + limit);
       res.json({ data, total: snapshot.length, page, totalPages: Math.ceil(snapshot.length / limit) });
@@ -71,6 +82,14 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
         if (lang !== 'it') await translateOpportunities(snapshot, lang);
         await cacheSet(cacheKey, snapshot, OPP_TTL);
       }
+      if (!isNaN(minScoreParam) || !isNaN(maxScoreParam)) {
+        snapshot = snapshot.filter((o: any) => {
+          const score = o.matchScore ?? 0;
+          if (!isNaN(minScoreParam) && score < minScoreParam) return false;
+          if (!isNaN(maxScoreParam) && score > maxScoreParam) return false;
+          return true;
+        });
+      }
       const data = snapshot.slice(skip, skip + limit);
       res.json({ data, total: snapshot.length, page, totalPages: Math.ceil(snapshot.length / limit) });
       return;
@@ -82,7 +101,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       // For EVENT, deadline is meaningless — visibility is bounded by endDate.
       `(o."type" IN ('EVENT') OR o."deadline" IS NULL OR o."deadline" > NOW())`,
       `(o."type" NOT IN ('EVENT') OR o."endDate" IS NULL OR o."endDate" >= CURRENT_DATE)`,
-      `(o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN')`,
+      `(o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN' OR o."source" = 'curated')`,
     ];
     const params: any[] = [limit, skip];
     let idx = 3;
@@ -263,6 +282,18 @@ function invalidateUserOppCache(userId: string): void {
     cacheDel(`cache:opps:new:${userId}:*`),
   ]).catch(() => {});
 }
+
+// Get opportunities semantically related to a given opportunity, re-ranked by user match score.
+// Must appear before /:id to avoid Express treating "related" as an id parameter.
+router.get('/:id/related', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 5, 10);
+    const related = await getRelatedOpportunities(req.user!.userId, req.params.id, limit);
+    res.json({ data: related, total: related.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Get single opportunity by id
 router.get('/:id', authMiddleware, async (req: Request, res: Response) => {

@@ -97,6 +97,7 @@ export default function NetworkingPage() {
   const [tab, setTab] = useState<'messaggi' | 'esplora'>('messaggi');
   const [unifiedConversations, setUnifiedConversations] = useState<UnifiedConversation[]>([]);
   const [selectedUser, setSelectedUser] = useState<{ id: string; name: string; avatar?: string; university?: string; canMessage?: boolean } | null>(null);
+  const [chatOpenedFromExternal, setChatOpenedFromExternal] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<{ id: string; name: string; memberCount: number; image?: string } | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [groupMessages, setGroupMessages] = useState<Message[]>([]);
@@ -245,6 +246,7 @@ export default function NetworkingPage() {
       setTab('messaggi');
       setSelectedGroup(null);
       setChatImages([]);
+      setChatOpenedFromExternal(true);
       setSelectedUser({ id: openChatId, name: decodeURIComponent(openChatName), avatar: openChatAvatar ? decodeURIComponent(openChatAvatar) || undefined : undefined });
       router.replace('/networking');
     }
@@ -917,6 +919,7 @@ export default function NetworkingPage() {
     if (conv.type === 'direct' && conv.userId) {
       setSelectedGroup(null);
       setChatImages([]);
+      setChatOpenedFromExternal(false);
       setSelectedUser({ id: conv.userId, name: conv.name, avatar: conv.avatar });
     } else if (conv.type === 'group' && conv.groupId) {
       setSelectedUser(null);
@@ -1375,7 +1378,15 @@ export default function NetworkingPage() {
           <ChatHeader
             type="individual"
             user={{ id: selectedUser.id, name: selectedUser.name, avatar: selectedUser.avatar, university: selectedUser.university }}
-            onBack={() => { setSelectedUser(null); loadConversations(); }}
+            onBack={() => {
+              if (chatOpenedFromExternal) {
+                setChatOpenedFromExternal(false);
+                router.back();
+              } else {
+                setSelectedUser(null);
+                loadConversations();
+              }
+            }}
             onPress={() => router.push(`/profile/${selectedUser.id}`)}
           />
           <div className="max-w-lg mx-auto w-full" style={{ height: '100%', display: 'grid', gridTemplateRows: '1fr auto', overflow: 'hidden', position: 'relative' }}>

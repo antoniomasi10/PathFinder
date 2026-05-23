@@ -48,6 +48,7 @@ import { importOpportunityDeskOpportunities } from './opportunity-desk.import';
 import { importDevelopersEventsOpportunities } from './developers-events.import';
 import { importTechConfitOpportunities } from './techconfit.import';
 import { importMobilizonOpportunities } from './mobilizon.import';
+import { importCompanyWatchlistOpportunities } from './company-watchlist.import';
 import { runCleanup } from './cleanup.service';
 import { runUrlCheckBatch } from './urlChecker';
 import { alertImportFailure } from './alerting';
@@ -100,6 +101,11 @@ export function startImportScheduler() {
   // Weekly Wednesday: Stage4eu (03:30)
   cron.schedule('30 3 * * 3', () => {
     runWithAlert('Stage4eu', 'stage4eu', 'opportunities', importStage4euOpportunities);
+  });
+
+  // Weekly Wednesday: Company Watchlist LLM-assisted scraping (05:30)
+  cron.schedule('30 5 * * 3', () => {
+    runWithAlert('CompanyWatchlist', 'company-watchlist', 'opportunities', importCompanyWatchlistOpportunities);
   });
 
   // Weekly Thursday: Greenhouse internships (03:30)
@@ -203,7 +209,7 @@ export function startImportScheduler() {
   logger.info('  EU Youth: Mon 03:30 | SmartRecruiters: Mon 04:00 | HackClub: Mon 04:30');
   logger.info('  Arbeitnow: Tue 03:30 | RemoteOK: Tue 04:00');
   logger.info('  ConfsTech: Wed 03:00 (tech conferences, MIT license)');
-  logger.info('  Stage4eu: Wed 03:30');
+  logger.info('  Stage4eu: Wed 03:30 | CompanyWatchlist: Wed 05:30');
   logger.info('  Greenhouse: Thu 03:30 | Jobicy: Thu 04:00');
   logger.info('  Lever: Fri 03:30 | FashionUnited: Fri 04:00');
   logger.info('  Ashby: Sat 03:30 | Workable: Sat 04:00');

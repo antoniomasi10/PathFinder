@@ -43,12 +43,24 @@ const opportunitySchema = z.object({
 
 export type ValidatedOpportunity = z.infer<typeof opportunitySchema>;
 
+function isLinkedInUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+    return host === 'linkedin.com' || host.endsWith('.linkedin.com');
+  } catch {
+    return false;
+  }
+}
+
 export function validateOpportunity(data: Record<string, any>, source: string): ValidatedOpportunity | null {
   try {
     // Pre-process
     if (data.url && typeof data.url === 'string') {
       if (!data.url.startsWith('http://') && !data.url.startsWith('https://')) {
         data.url = null;
+      } else if (isLinkedInUrl(data.url)) {
+        logger.debug(`[Validation] Blocked LinkedIn URL for ${source}: ${data.url.slice(0, 80)}`);
+        return null;
       }
     }
     for (const dateField of ['expiresAt', 'startDate', 'endDate'] as const) {

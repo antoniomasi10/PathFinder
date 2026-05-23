@@ -161,8 +161,9 @@ model User {
   passwordResetExpiry DateTime?
   tosConsentAt        DateTime?
   privacyConsentAt    DateTime?
-  marketingConsent    Boolean   @default(false)
-  oneSignalPlayerId   String?
+  marketingConsent       Boolean   @default(false)
+  oneSignalPlayerId      String?
+  oneSignalEmailPlayerId String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -304,7 +305,7 @@ model Opportunity {
 
 model University {
   id            String        @id @default(uuid())
-  name          String
+  name          String        @unique
   shortName     String?
   city          String
   country       String        @default("Italia")
@@ -523,6 +524,8 @@ model NotificationPreference {
   system         Boolean @default(true)
   emailDigest    Boolean @default(true)
   emailAlerts    Boolean @default(true)
+  emailSpot      Boolean @default(true)
+  emailDaily     Boolean @default(true)
 }
 
 model PushSubscription {
@@ -617,4 +620,30 @@ model UserInteraction {
   @@index([userId, targetType])
   @@index([targetId, targetType])
   @@index([userId, targetType, action])
+}
+
+model CompanyWatchlist {
+  id               String    @id @default(cuid())
+  name             String
+  careersUrl       String    @unique
+  sector           String
+  tier             String    // "large" | "medium"
+
+  robotsAllowed    Boolean?
+  robotsCheckedAt  DateTime?
+
+  tosAllowed       Boolean?
+  tosAnalyzedAt    DateTime?
+  tosNotes         String?
+  tosPageNotFound  Boolean   @default(false)
+
+  lastSyncedAt     DateTime?
+  isActive         Boolean   @default(true)
+  addedBy          String?
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([isActive])
+  @@index([tosAllowed])
 }
