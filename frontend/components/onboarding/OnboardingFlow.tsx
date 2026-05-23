@@ -88,16 +88,13 @@ export default function OnboardingFlow({ onAvatarSelected }: OnboardingFlowProps
     [questionId],
   );
 
-  const handleInterestsContinue = useCallback(async (interests: SelectedInterest[]) => {
+  const handleInterestsContinue = useCallback((interests: SelectedInterest[]) => {
     setSelectedInterests(interests);
-    // Save interests to backend
-    try {
-      await api.patch('/profile/me', { interests });
-    } catch (err) {
-      console.error('Failed to save interests:', err);
-    }
     setDirection(1);
     setCurrentStep((s) => s + 1);
+    api.patch('/profile/me', { interests }).catch((err) => {
+      console.error('Failed to save interests:', err);
+    });
   }, []);
 
   const handleInterestsBack = useCallback(() => {
