@@ -475,16 +475,36 @@ export default function NetworkingPage() {
       });
     };
 
+    const handleMessageError = () => {
+      setMessages((prev) => {
+        const idx = prev.findLastIndex((m) => m.id.length < 20);
+        if (idx === -1) return prev;
+        return prev.filter((_, i) => i !== idx);
+      });
+    };
+
+    const handleGroupMessageError = () => {
+      setGroupMessages((prev) => {
+        const idx = prev.findLastIndex((m) => m.id.length < 20);
+        if (idx === -1) return prev;
+        return prev.filter((_, i) => i !== idx);
+      });
+    };
+
     socket.on('new_message', handleNewMessage);
     socket.on('new_group_message', handleNewGroupMessage);
     socket.on('message_sent', handleMessageSent);
     socket.on('group_message_sent', handleGroupMessageSent);
+    socket.on('message_error', handleMessageError);
+    socket.on('error', handleMessageError);
 
     return () => {
       socket.off('new_message', handleNewMessage);
       socket.off('new_group_message', handleNewGroupMessage);
       socket.off('message_sent', handleMessageSent);
       socket.off('group_message_sent', handleGroupMessageSent);
+      socket.off('message_error', handleMessageError);
+      socket.off('error', handleMessageError);
     };
   }, [tab, loadConversations]);
 
@@ -497,7 +517,7 @@ export default function NetworkingPage() {
         prev.map((c) => c.id === `direct-${selectedUser.id}` ? { ...c, unread: 0 } : c),
       );
     }
-  }, [selectedUser]);
+  }, [selectedUser?.id]);
 
   useEffect(() => {
     if (selectedUser) {
@@ -1191,6 +1211,7 @@ export default function NetworkingPage() {
                               borderRadius: 20,
                               boxShadow: '0 4px 16px rgba(0,0,0,0.13)',
                               overflow: 'hidden',
+                              isolation: 'isolate',
                               border: 'none',
                               cursor: 'pointer',
                               background: 'none',
