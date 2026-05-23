@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api, { bffPost, setAccessToken } from '@/lib/api';
@@ -86,8 +86,13 @@ export default function RegisterPage() {
   const [courseOfStudy, setCourseOfStudy] = useState('');
   const [accepted, setAccepted] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
-  const [birthDate, setBirthDate] = useState('');
+  const [birthDay, setBirthDay] = useState('');
+  const [birthMonth, setBirthMonth] = useState('');
+  const [birthYear, setBirthYear] = useState('');
   const [birthDateError, setBirthDateError] = useState('');
+  const dayRef = useRef<HTMLInputElement>(null);
+  const monthRef = useRef<HTMLInputElement>(null);
+  const yearRef = useRef<HTMLInputElement>(null);
   const [universities, setUniversities] = useState<University[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -107,6 +112,44 @@ export default function RegisterPage() {
   };
   const passwordValid = Object.values(passwordChecks).every(Boolean);
 
+  const handleDayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 2);
+    setBirthDay(val);
+    setBirthDateError('');
+    if (val.length === 2 || (val.length === 1 && parseInt(val) > 3)) {
+      monthRef.current?.focus();
+    }
+  };
+
+  const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 2);
+    setBirthMonth(val);
+    setBirthDateError('');
+    if (val.length === 2 || (val.length === 1 && parseInt(val) > 1)) {
+      yearRef.current?.focus();
+    }
+  };
+
+  const handleYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+    setBirthYear(val);
+    setBirthDateError('');
+  };
+
+  const handleDayKeyDown = (_e: React.KeyboardEvent<HTMLInputElement>) => {};
+
+  const handleMonthKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && birthMonth === '') {
+      dayRef.current?.focus();
+    }
+  };
+
+  const handleYearKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && birthYear === '') {
+      monthRef.current?.focus();
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -114,13 +157,21 @@ export default function RegisterPage() {
     if (!universityId) { setError('Seleziona la tua università'); return; }
     if (!courseOfStudy.trim()) { setError('Inserisci il tuo corso di studi'); return; }
     if (!accepted) { setError('Devi accettare i Termini di Servizio per continuare'); return; }
-    // Validate age
-    if (!birthDate) {
-      setBirthDateError('Inserisci la tua data di nascita');
+    // Validate birth date
+    if (!birthDay || !birthMonth || !birthYear || birthYear.length < 4) {
+      setBirthDateError('Inserisci la tua data di nascita completa');
       return;
     }
+    const day = parseInt(birthDay, 10);
+    const month = parseInt(birthMonth, 10);
+    const year = parseInt(birthYear, 10);
+    if (day < 1 || day > 31 || month < 1 || month > 12) {
+      setBirthDateError('Data di nascita non valida');
+      return;
+    }
+    const birthDate = `${birthYear}-${birthMonth.padStart(2, '0')}-${birthDay.padStart(2, '0')}`;
     const birth = new Date(birthDate);
-    if (isNaN(birth.getTime())) {
+    if (isNaN(birth.getTime()) || birth.getUTCDate() !== day || birth.getUTCMonth() + 1 !== month) {
       setBirthDateError('Data di nascita non valida');
       return;
     }
@@ -292,14 +343,43 @@ export default function RegisterPage() {
 
             {/* Data di nascita */}
             <InputField label="DATA DI NASCITA">
-              <input
-                type="date"
-                value={birthDate}
-                onChange={(e) => { setBirthDate(e.target.value); setBirthDateError(''); }}
-                max={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
-                required
-                className="w-full bg-[#fbf8ff] border border-[#c7c4d6] rounded-[24px] px-5 py-3.5 text-sm text-[#2c3149] focus:outline-none focus:ring-2 focus:ring-[#615fe2]/30 focus:border-[#615fe2] transition-all"
-              />
+              <div className="flex items-center gap-1.5 w-full bg-[#fbf8ff] border border-[#c7c4d6] rounded-[24px] px-5 py-3.5 focus-within:ring-2 focus-within:ring-[#615fe2]/30 focus-within:border-[#615fe2] transition-all">
+                <input
+                  ref={dayRef}
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="GG"
+                  maxLength={2}
+                  value={birthDay}
+                  onChange={handleDayChange}
+                  onKeyDown={handleDayKeyDown}
+                  className="w-7 bg-transparent text-center text-sm text-[#2c3149] placeholder:text-[#c7c4d6] focus:outline-none"
+                />
+                <span className="text-[#c7c4d6] text-sm select-none">/</span>
+                <input
+                  ref={monthRef}
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="MM"
+                  maxLength={2}
+                  value={birthMonth}
+                  onChange={handleMonthChange}
+                  onKeyDown={handleMonthKeyDown}
+                  className="w-7 bg-transparent text-center text-sm text-[#2c3149] placeholder:text-[#c7c4d6] focus:outline-none"
+                />
+                <span className="text-[#c7c4d6] text-sm select-none">/</span>
+                <input
+                  ref={yearRef}
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="AAAA"
+                  maxLength={4}
+                  value={birthYear}
+                  onChange={handleYearChange}
+                  onKeyDown={handleYearKeyDown}
+                  className="w-14 bg-transparent text-center text-sm text-[#2c3149] placeholder:text-[#c7c4d6] focus:outline-none"
+                />
+              </div>
               {birthDateError && (
                 <p className="text-xs text-red-500 pl-1 mt-1">{birthDateError}</p>
               )}
