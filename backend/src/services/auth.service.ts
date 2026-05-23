@@ -2,6 +2,7 @@ import prisma from '../lib/prisma';
 import { hashPassword, comparePassword } from '../utils/password';
 import { generateAccessToken, generateRefreshToken, JwtPayload } from '../utils/jwt';
 import { sendVerificationEmail, sendPasswordResetEmail, generateOTP } from './email.service';
+import { registerEmailPlayer } from './oneSignal.service';
 import { OAuth2Client } from 'google-auth-library';
 import { logger } from '../utils/logger';
 import { parseAndValidateBirthDate } from '../utils/age';
@@ -159,6 +160,11 @@ export async function verifyEmail(userId: string, code: string) {
       data: { emailVerified: true },
     }),
   ]);
+
+  // Register email in OneSignal email channel (fire-and-forget)
+  prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+    .then(u => { if (u?.email) registerEmailPlayer(userId, u.email); })
+    .catch(() => {});
 
   return { message: 'Email verificata con successo' };
 }
@@ -329,6 +335,9 @@ export async function googleAuth(idToken: string) {
     });
     logger.info('New user created via Google OAuth', { userId: user.id });
   }
+
+  // Register email in OneSignal email channel (fire-and-forget — idempotent)
+  registerEmailPlayer(user.id, user.email).catch(() => {});
 
   const payload: JwtPayload = { userId: user.id, email: user.email, role: user.role };
   return {

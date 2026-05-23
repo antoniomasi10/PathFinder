@@ -86,10 +86,14 @@ export default function SecurityPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
+  const [emailSpot, setEmailSpot] = useState(true);
 
   useEffect(() => {
     api.get('/profile/me').then(({ data }) => {
       setMarketingConsent(data.marketingConsent ?? false);
+    }).catch(() => {});
+    api.get('/notifications/preferences').then(({ data }) => {
+      setEmailSpot(data.emailSpot ?? true);
     }).catch(() => {});
   }, []);
 
@@ -214,6 +218,27 @@ export default function SecurityPage() {
               }}
             />
           </div>
+          {marketingConsent && (
+            <>
+              <div className={divider} />
+              <div className="flex items-center justify-between py-1">
+                <div className="flex items-center gap-3">
+                  <div className={iconWrap}><Bell size={20} color="#615fe2" /></div>
+                  <div>
+                    <span className="text-sm text-[#2c3149] font-medium">Raccomandazioni spot</span>
+                    <p className="text-xs text-[#747995]">Avvisi immediati per opportunità ad alto match (≥80%)</p>
+                  </div>
+                </div>
+                <Toggle
+                  value={emailSpot}
+                  onChange={v => {
+                    setEmailSpot(v);
+                    api.put('/notifications/preferences', { emailSpot: v }).catch(() => setEmailSpot(!v));
+                  }}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         {/* Account */}

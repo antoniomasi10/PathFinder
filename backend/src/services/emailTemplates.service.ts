@@ -120,7 +120,7 @@ function baseTemplate(title: string, preheader: string, body: string): string {
         </td></tr>
         <!-- Footer -->
         <tr><td align="center" style="padding-top:24px;color:#4B5563;font-size:12px;line-height:1.6;">
-          &copy; ${new Date().getFullYear()} PathFinder. Tutti i diritti riservati.<br>
+          &copy; ${new Date().getFullYear()} COhA. Tutti i diritti riservati.<br>
         </td></tr>
       </table>
     </td></tr>
@@ -260,4 +260,89 @@ export function renderExpiringAlert(data: ExpiringAlertData): { subject: string;
     </table>`;
 
   return { subject, html: baseTemplate(subject, `Non perdere queste opportunità in scadenza`, body) };
+}
+
+// ── Daily Opportunity ────────────────────────────────────────
+
+export interface DailyOpportunityData {
+  firstName: string;
+  opportunities: OpportunityCard[];
+  appUrl: string;
+  preferencesUrl: string;
+  unsubscribeUrl: string;
+}
+
+export function renderDailyOpportunity(data: DailyOpportunityData): { subject: string; html: string } {
+  const n = data.opportunities.length;
+  const subject = `☀️ Le tue opportunità di oggi, ${data.firstName}`;
+  const cards = data.opportunities.map((opp) => renderOpportunityCard(opp, data.appUrl, true)).join('');
+
+  const body = `
+    <h1 style="color:#FFFFFF;font-size:22px;font-weight:700;margin:0 0 8px;text-align:center;">Buongiorno, ${data.firstName}!</h1>
+    <p style="color:#9CA3AF;font-size:14px;text-align:center;margin:0 0 24px;">
+      Ecco ${n === 1 ? "l'opportunità" : `le ${n} opportunità`} selezionata${n === 1 ? '' : 'e'} per te oggi.
+    </p>
+    ${cards}
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;">
+      <tr><td style="border-top:1px solid rgba(255,255,255,0.1);padding-top:20px;" align="center">
+        <a href="${data.appUrl}/home" style="display:inline-block;border:1px solid #4F46E5;color:#818CF8;font-size:13px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">
+          Scopri tutte le opportunità →
+        </a>
+      </td></tr>
+      <tr><td align="center" style="padding-top:20px;">
+        <p style="color:#4B5563;font-size:12px;margin:0;line-height:1.6;">
+          Hai ricevuto questa email perché hai attivato il digest di opportunità.<br>
+          <a href="${data.preferencesUrl}" style="color:#6B7280;text-decoration:underline;">Gestisci preferenze</a>
+          &nbsp;·&nbsp;
+          <a href="${data.unsubscribeUrl}" style="color:#6B7280;text-decoration:underline;">Cancella iscrizione</a>
+        </p>
+      </td></tr>
+    </table>`;
+
+  return { subject, html: baseTemplate(subject, `Nuove opportunità ti aspettano oggi`, body) };
+}
+
+// ── Spot Recommendation ──────────────────────────────────────
+
+export interface SpotRecommendationData {
+  firstName: string;
+  opportunity: OpportunityCard;
+  matchScore: number;
+  appUrl: string;
+  preferencesUrl: string;
+  unsubscribeUrl: string;
+}
+
+export function renderSpotRecommendation(data: SpotRecommendationData): { subject: string; html: string } {
+  const subject = `⚡ Match ${data.matchScore}%: "${data.opportunity.title}" — solo per te`;
+  const scoreColor = matchScoreColor(data.matchScore);
+  const card = renderOpportunityCard(data.opportunity, data.appUrl, true);
+
+  const body = `
+    <div style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:16px 20px;margin-bottom:24px;text-align:center;">
+      <span style="color:#10B981;font-size:22px;">⚡</span>
+      <h1 style="color:#10B981;font-size:20px;font-weight:700;margin:8px 0 4px;">Match del ${data.matchScore}%</h1>
+      <p style="color:#6EE7B7;font-size:13px;margin:0;">Questa nuova opportunità è altamente compatibile con il tuo profilo.</p>
+    </div>
+    <p style="color:#9CA3AF;font-size:14px;margin:0 0 20px;">
+      Ciao <strong style="color:#fff;">${data.firstName}</strong>, abbiamo trovato qualcosa che fa esattamente per te.
+    </p>
+    ${card}
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;">
+      <tr><td style="border-top:1px solid rgba(255,255,255,0.1);padding-top:20px;">
+        <p style="color:#6B7280;font-size:12px;text-align:center;margin:0 0 16px;font-style:italic;">
+          Le opportunità fresche raccolgono candidature più rapidamente. Non aspettare!
+        </p>
+      </td></tr>
+      <tr><td align="center" style="padding-top:8px;">
+        <p style="color:#4B5563;font-size:12px;margin:0;line-height:1.6;">
+          Hai ricevuto questa email perché hai attivato le raccomandazioni spot.<br>
+          <a href="${data.preferencesUrl}" style="color:#6B7280;text-decoration:underline;">Gestisci preferenze</a>
+          &nbsp;·&nbsp;
+          <a href="${data.unsubscribeUrl}" style="color:#6B7280;text-decoration:underline;">Cancella iscrizione</a>
+        </p>
+      </td></tr>
+    </table>`;
+
+  return { subject, html: baseTemplate(subject, `Match ${data.matchScore}% trovato per te`, body) };
 }

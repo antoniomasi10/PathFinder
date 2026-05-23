@@ -81,7 +81,7 @@ function baseTemplate(title: string, body: string): string {
       ${body}
     </div>
     <div class="footer">
-      &copy; ${new Date().getFullYear()} PathFinder. Tutti i diritti riservati.
+      &copy; ${new Date().getFullYear()} COhA. Tutti i diritti riservati.
     </div>
   </div>
 </body>
