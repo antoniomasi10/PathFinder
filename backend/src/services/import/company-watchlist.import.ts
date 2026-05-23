@@ -284,33 +284,54 @@ export async function checkRobotsTxt(careersUrl: string): Promise<boolean> {
  */
 function isAllowedByRobots(robotsTxt: string, path: string): boolean {
   const lines = robotsTxt.split('\n').map(l => l.trim());
-  let active = false;
-  const disallowedPaths: string[] = [];
-  const allowedPaths: string[] = [];
+
+  // Collect rules per agent block to avoid mixing rules across different agents.
+  // We only apply blocks whose User-agent matches us (* or coha), not googlebot.
+  type Block = { agents: string[]; allow: string[]; disallow: string[] };
+  const blocks: Block[] = [];
+  let current: Block | null = null;
 
   for (const line of lines) {
     if (line.toLowerCase().startsWith('user-agent:')) {
       const agent = line.slice('user-agent:'.length).trim().toLowerCase();
-      active = agent === '*' || agent === 'coha' || agent === 'googlebot';
+      if (!current) {
+        current = { agents: [agent], allow: [], disallow: [] };
+      } else if (current.allow.length === 0 && current.disallow.length === 0) {
+        // Multiple consecutive User-agent lines belong to the same block
+        current.agents.push(agent);
+      } else {
+        blocks.push(current);
+        current = { agents: [agent], allow: [], disallow: [] };
+      }
       continue;
     }
-    if (!active) continue;
+    if (!current) continue;
     if (line.toLowerCase().startsWith('disallow:')) {
       const p = line.slice('disallow:'.length).trim();
-      if (p) disallowedPaths.push(p);
-    }
-    if (line.toLowerCase().startsWith('allow:')) {
+      if (p) current.disallow.push(p);
+    } else if (line.toLowerCase().startsWith('allow:')) {
       const p = line.slice('allow:'.length).trim();
-      if (p) allowedPaths.push(p);
+      if (p) current.allow.push(p);
+    } else if (line === '') {
+      // Blank line ends the current block
+      blocks.push(current);
+      current = null;
     }
   }
+  if (current) blocks.push(current);
 
-  // Allow rules take precedence over disallow
-  for (const p of allowedPaths) {
-    if (path.startsWith(p)) return true;
-  }
-  for (const p of disallowedPaths) {
-    if (p === '/' || path.startsWith(p)) return false;
+  // Apply only blocks that match our bot (* or coha), not googlebot
+  for (const block of blocks) {
+    const applies = block.agents.some(a => a === '*' || a === 'coha');
+    if (!applies) continue;
+
+    // Allow takes precedence over Disallow within the same block
+    for (const p of block.allow) {
+      if (path.startsWith(p)) return true;
+    }
+    for (const p of block.disallow) {
+      if (p === '/' || path.startsWith(p)) return false;
+    }
   }
   return true;
 }
@@ -589,8 +610,9 @@ export async function importCompanyWatchlistOpportunities(): Promise<{
         }
         const rawOpportunities = await extractOpportunitiesWithLLM(html, company);
 
+        let companySkipped = 0;
         for (const raw of rawOpportunities) {
-          if (!raw.title) { skipped++; continue; }
+          if (!raw.title) { skipped++; companySkipped++; continue; }
 
           // Fall back to careers page URL when the LLM couldn't extract an individual URL
           const opportunityUrl = raw.url || company.careersUrl;
@@ -614,7 +636,7 @@ export async function importCompanyWatchlistOpportunities(): Promise<{
             deadline: raw.deadline ? new Date(raw.deadline) : null,
           }, 'company-watchlist');
 
-          if (!validated) { skipped++; continue; }
+          if (!validated) { skipped++; companySkipped++; continue; }
 
           records.push({
             id: sourceId,
@@ -642,7 +664,7 @@ export async function importCompanyWatchlistOpportunities(): Promise<{
           data: { lastSyncedAt: now },
         });
 
-        logger.info(`[CompanyWatchlist] ${company.name}: ${rawOpportunities.length} found, ${rawOpportunities.length - skipped} valid`);
+        logger.info(`[CompanyWatchlist] ${company.name}: ${rawOpportunities.length} found, ${rawOpportunities.length - companySkipped} valid`);
         await new Promise(r => setTimeout(r, FETCH_DELAY_MS));
       } catch (err) {
         logger.warn(`[CompanyWatchlist] ${company.name} failed: ${err}`);

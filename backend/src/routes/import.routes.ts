@@ -166,18 +166,19 @@ router.delete('/watchlist/:id', ...adminAuth, async (req: Request, res: Response
   } catch (err: any) { res.status(400).json({ error: err.message }); }
 });
 
+// POST /api/import/watchlist/run — trigger full watchlist import
+// Must be registered BEFORE /:id/run to avoid Express treating "run" as an id.
+router.post('/watchlist/run', ...adminAuth, async (_req: Request, res: Response) => {
+  try { res.json(await importCompanyWatchlistOpportunities()); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
 // POST /api/import/watchlist/:id/run — trigger single company import
 router.post('/watchlist/:id/run', ...adminAuth, async (req: Request, res: Response) => {
   try {
     const result = await importSingleCompany(req.params.id);
     res.json(result);
   } catch (err: any) { res.status(400).json({ error: err.message }); }
-});
-
-// POST /api/import/watchlist/run — trigger full watchlist import
-router.post('/watchlist/run', ...adminAuth, async (_req: Request, res: Response) => {
-  try { res.json(await importCompanyWatchlistOpportunities()); }
-  catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // POST /api/import/cleanup

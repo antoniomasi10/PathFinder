@@ -242,7 +242,7 @@ export async function runDailyOpportunity(): Promise<void> {
       marketingConsent: true,
       profileCompleted: true,
       notificationPreference: {
-        emailDigest: true,
+        emailDaily: true,
       },
       emailLogs: {
         none: {

@@ -525,6 +525,7 @@ model NotificationPreference {
   emailDigest    Boolean @default(true)
   emailAlerts    Boolean @default(true)
   emailSpot      Boolean @default(true)
+  emailDaily     Boolean @default(true)
 }
 
 model PushSubscription {

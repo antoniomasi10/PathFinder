@@ -623,14 +623,16 @@ export async function getRelatedOpportunities(
     return fallback.filter((o: any) => String(o.id) !== String(opportunityId)).slice(0, limit);
   }
 
-  // Build hard filters (same logic as getHybridMatchedOpportunitiesFull)
+  // Build hard filters using parameterized values to avoid SQL injection.
+  // $1 = embedding, $2 = opportunityId; extra params start at $3.
+  const extraParams: string[] = [];
   let relocFilter = '';
   if (user?.cityLock && user.city) {
-    const safeCity = user.city.replace(/'/g, "''");
-    relocFilter = `AND (o."isRemote" = true OR lower(o."city") = lower('${safeCity}'))`;
+    extraParams.push(user.city);
+    relocFilter = `AND (o."isRemote" = true OR lower(o."city") = lower($${2 + extraParams.length}))`;
   } else if (user?.regionLock && user.region) {
-    const safeRegion = user.region.replace(/'/g, "''");
-    relocFilter = `AND (o."isRemote" = true OR lower(o."region") = lower('${safeRegion}'))`;
+    extraParams.push(user.region);
+    relocFilter = `AND (o."isRemote" = true OR lower(o."region") = lower($${2 + extraParams.length}))`;
   } else if (user?.willingToRelocate === 'NO') {
     relocFilter = `AND (o."isRemote" = true OR o."country" = 'IT' OR (o."country" IS NULL AND o."isAbroad" = false))`;
   }
@@ -676,6 +678,7 @@ export async function getRelatedOpportunities(
      LIMIT 30`,
     refEmbedding,
     opportunityId,
+    ...extraParams,
   );
 
   if (candidates.length === 0) {

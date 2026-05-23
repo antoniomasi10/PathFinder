@@ -75,8 +75,7 @@ export async function sendEmailToUser(userId: string, subject: string, html: str
     if (!user?.oneSignalEmailPlayerId) return;
     await callOneSignal('/notifications', {
       app_id: APP_ID,
-      channel_for_external_user_ids: 'email',
-      include_external_user_ids: [userId],
+      include_player_ids: [user.oneSignalEmailPlayerId],
       email_subject: subject,
       email_body: html,
     });
