@@ -620,3 +620,29 @@ model UserInteraction {
   @@index([targetId, targetType])
   @@index([userId, targetType, action])
 }
+
+model CompanyWatchlist {
+  id               String    @id @default(cuid())
+  name             String
+  careersUrl       String    @unique
+  sector           String
+  tier             String    // "large" | "medium"
+
+  robotsAllowed    Boolean?
+  robotsCheckedAt  DateTime?
+
+  tosAllowed       Boolean?
+  tosAnalyzedAt    DateTime?
+  tosNotes         String?
+  tosPageNotFound  Boolean   @default(false)
+
+  lastSyncedAt     DateTime?
+  isActive         Boolean   @default(true)
+  addedBy          String?
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([isActive])
+  @@index([tosAllowed])
+}
