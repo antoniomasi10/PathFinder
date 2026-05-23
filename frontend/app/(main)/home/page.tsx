@@ -729,8 +729,18 @@ function FilterSheet({ open, draft, matchCount, tab, t, onUpdate, onReset, onApp
 
 export default function HomePage() {
   const router = useRouter();
+  const restoredStateRef = useRef<{ appliedFilters: AdvancedFilters; searchQuery: string } | null>(
+    (() => {
+      if (typeof window === 'undefined') return null;
+      try {
+        const saved = sessionStorage.getItem('home_state');
+        if (saved) { sessionStorage.removeItem('home_state'); return JSON.parse(saved); }
+      } catch {}
+      return null;
+    })()
+  );
   const [tab] = useState<'per-te' | 'esplora'>('per-te');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(restoredStateRef.current?.searchQuery ?? '');
   const [searchFocused, setSearchFocused] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
   const { savedIds, savedOpps, toggleSave } = useSavedOpportunities();
@@ -910,14 +920,16 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    loadPerTePage(1, '', DEFAULT_FILTERS);
-    loadEsploraPage(1, '', DEFAULT_FILTERS);
+    const initFilters = restoredStateRef.current?.appliedFilters ?? DEFAULT_FILTERS;
+    const initQuery = restoredStateRef.current?.searchQuery ?? '';
+    loadPerTePage(1, initQuery, initFilters);
+    loadEsploraPage(1, initQuery, initFilters);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [filterOpen, setFilterOpen] = useState(false);
-  const [draftFilters, setDraftFilters] = useState<AdvancedFilters>({ ...DEFAULT_FILTERS });
-  const [appliedFilters, setAppliedFilters] = useState<AdvancedFilters>({ ...DEFAULT_FILTERS });
+  const [draftFilters, setDraftFilters] = useState<AdvancedFilters>(restoredStateRef.current?.appliedFilters ?? { ...DEFAULT_FILTERS });
+  const [appliedFilters, setAppliedFilters] = useState<AdvancedFilters>(restoredStateRef.current?.appliedFilters ?? { ...DEFAULT_FILTERS });
   const [draftTotalCount, setDraftTotalCount] = useState<number | null>(null);
   const [draftCountLoading, setDraftCountLoading] = useState(false);
 
@@ -977,7 +989,10 @@ export default function HomePage() {
 const viewedRef = useRef<Set<string>>(new Set());
   function handleOpen(opp: Opportunity) {
     if (!viewedRef.current.has(opp.id)) { viewedRef.current.add(opp.id); api.post(`/opportunities/${opp.id}/view`).catch(() => {}); }
-    try { sessionStorage.setItem(`opp_${opp.id}`, JSON.stringify(opp)); } catch {}
+    try {
+      sessionStorage.setItem('home_state', JSON.stringify({ appliedFilters, searchQuery }));
+      sessionStorage.setItem(`opp_${opp.id}`, JSON.stringify(opp));
+    } catch {}
     router.push(`/opportunities/${opp.id}`);
   }
 
