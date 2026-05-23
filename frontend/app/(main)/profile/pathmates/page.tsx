@@ -147,7 +147,7 @@ export default function PathmatesPage() {
           className="font-bold text-[28px] leading-[36px] mb-6"
           style={{ color: '#191b27', fontFamily: 'var(--font-plus-jakarta)' }}
         >
-          I tuoi Pathmates
+          Persone connesse
         </h1>
 
         {loading ? (
