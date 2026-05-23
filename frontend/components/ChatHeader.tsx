@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { isValidImageUrl } from '@/lib/urlValidation';
 import { ChevronLeft } from '@/components/icons';
 
@@ -27,6 +28,9 @@ export default function ChatHeader(props: ChatHeaderProps) {
   const name = type === 'individual' ? props.user.name : props.group.name;
   const avatar = type === 'individual' ? props.user.avatar : props.group.image;
   const university = type === 'individual' ? props.user.university : undefined;
+
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  useEffect(() => { setAvatarFailed(false); }, [avatar]);
 
   return (
     <div
@@ -88,8 +92,8 @@ export default function ChatHeader(props: ChatHeaderProps) {
       >
         {loading ? (
           <div style={{ width: 32, height: 32, backgroundColor: '#e4e7ff', borderRadius: '50%' }} />
-        ) : avatar && isValidImageUrl(avatar) ? (
-          <img src={avatar} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : avatar && isValidImageUrl(avatar) && !avatarFailed ? (
+          <img src={avatar} alt={name} onError={() => setAvatarFailed(true)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <span style={{ fontFamily: 'var(--font-plus-jakarta)', fontWeight: 700, fontSize: 13, color: '#4a4bd7' }}>
             {name?.[0] ?? '?'}
