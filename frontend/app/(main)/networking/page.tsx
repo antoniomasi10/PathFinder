@@ -494,7 +494,6 @@ export default function NetworkingPage() {
         return prev.filter((_, i) => i !== idx);
       });
       console.error('[message_error]', data?.message);
-      if (data?.message) alert(data.message);
     };
 
     const handleGroupMessageError = (data?: { message?: string }) => {
@@ -504,7 +503,6 @@ export default function NetworkingPage() {
         return prev.filter((_, i) => i !== idx);
       });
       console.error('[group_message_error]', data?.message);
-      if (data?.message) alert(data.message);
     };
 
     const handleSocketConnect = () => { loadConversations(); };
