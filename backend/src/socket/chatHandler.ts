@@ -24,7 +24,7 @@ const groupMessageSchema = z.object({
 const directMessageSchema = z.union([
   z.object({
     receiverId: z.string().uuid(),
-    type: z.undefined().or(z.literal('text')),
+    type: z.literal('text').optional(),
     content: z.string().max(5000),
     images: z.array(z.string()).max(5).optional(),
   }).refine((d) => d.content.trim().length > 0 || (d.images && d.images.length > 0), {
