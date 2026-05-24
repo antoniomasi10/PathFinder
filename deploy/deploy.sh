@@ -7,7 +7,7 @@ set -euo pipefail
 # =====================================================
 
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-ENV_FILE="/opt/COhA/.env"
+ENV_FILE="/opt/coha/.env"
 
 echo "=== COhA Deploy ==="
 echo "App directory: ${APP_DIR}"

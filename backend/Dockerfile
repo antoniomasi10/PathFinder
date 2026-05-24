@@ -26,7 +26,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-RUN npm install --omit=dev
+RUN npm install --omit=dev --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 --fetch-retries=5
 RUN npx prisma generate
 
 COPY --from=builder /app/dist ./dist
