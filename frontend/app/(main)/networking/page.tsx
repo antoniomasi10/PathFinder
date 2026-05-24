@@ -487,20 +487,24 @@ export default function NetworkingPage() {
       });
     };
 
-    const handleMessageError = () => {
+    const handleMessageError = (data?: { message?: string }) => {
       setMessages((prev) => {
         const idx = prev.findLastIndex((m) => m.id.length < 20);
         if (idx === -1) return prev;
         return prev.filter((_, i) => i !== idx);
       });
+      console.error('[message_error]', data?.message);
+      if (data?.message) alert(data.message);
     };
 
-    const handleGroupMessageError = () => {
+    const handleGroupMessageError = (data?: { message?: string }) => {
       setGroupMessages((prev) => {
         const idx = prev.findLastIndex((m) => m.id.length < 20);
         if (idx === -1) return prev;
         return prev.filter((_, i) => i !== idx);
       });
+      console.error('[group_message_error]', data?.message);
+      if (data?.message) alert(data.message);
     };
 
     const handleSocketConnect = () => { loadConversations(); };
@@ -511,7 +515,7 @@ export default function NetworkingPage() {
     socket.on('message_sent', handleMessageSent);
     socket.on('group_message_sent', handleGroupMessageSent);
     socket.on('message_error', handleMessageError);
-    socket.on('message_error', handleGroupMessageError);
+    socket.on('group_message_error', handleGroupMessageError);
 
     return () => {
       socket.off('connect', handleSocketConnect);
@@ -520,7 +524,7 @@ export default function NetworkingPage() {
       socket.off('message_sent', handleMessageSent);
       socket.off('group_message_sent', handleGroupMessageSent);
       socket.off('message_error', handleMessageError);
-      socket.off('message_error', handleGroupMessageError);
+      socket.off('group_message_error', handleGroupMessageError);
     };
   }, [tab, loadConversations]);
 

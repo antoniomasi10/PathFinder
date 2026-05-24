@@ -145,13 +145,13 @@ export function setupChatSocket(io: Server) {
       // Validate input with Zod
       const parsed = groupMessageSchema.safeParse(data);
       if (!parsed.success) {
-        socket.emit('message_error', { message: 'Dati messaggio non validi' });
+        socket.emit('group_message_error', { message: 'Dati messaggio non validi' });
         return;
       }
       const { groupId, content, images } = parsed.data;
 
       if (!(await checkRateLimit(userId))) {
-        socket.emit('message_error', { message: 'Troppi messaggi, riprova tra poco' });
+        socket.emit('group_message_error', { message: 'Troppi messaggi, riprova tra poco' });
         return;
       }
       try {
@@ -159,7 +159,7 @@ export function setupChatSocket(io: Server) {
           where: { groupId_userId: { groupId, userId } },
         });
         if (!membership) {
-          socket.emit('message_error', { message: 'Non sei membro di questo gruppo' });
+          socket.emit('group_message_error', { message: 'Non sei membro di questo gruppo' });
           return;
         }
 
@@ -180,7 +180,8 @@ export function setupChatSocket(io: Server) {
         socket.to(`group:${groupId}`).emit('new_group_message', message);
         socket.emit('group_message_sent', message);
       } catch (err) {
-        socket.emit('message_error', { message: 'Errore nell\'invio del messaggio di gruppo' });
+        logger.error('send_group_message failed', { error: String(err) });
+        socket.emit('group_message_error', { message: 'Errore nell\'invio del messaggio di gruppo' });
       }
     });
 
@@ -249,6 +250,7 @@ export function setupChatSocket(io: Server) {
         chatNs.to(`user:${receiverId}`).emit('new_message', message);
         socket.emit('message_sent', message);
       } catch (err) {
+        logger.error('send_message failed', { error: String(err) });
         socket.emit('message_error', { message: 'Errore nell\'invio del messaggio' });
       }
     });
