@@ -106,6 +106,7 @@ export default function NetworkingPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [newPost, setNewPost] = useState('');
   const [loading, setLoading] = useState(true);
+  const [convError, setConvError] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [showNewChat, setShowNewChat] = useState(false);
@@ -300,6 +301,7 @@ export default function NetworkingPage() {
 
   const loadConversations = useCallback(async () => {
     setLoading(true);
+    setConvError(false);
     try {
       const [convRes, groupRes] = await Promise.all([
         api.get('/messages/conversations'),
@@ -312,7 +314,8 @@ export default function NetworkingPage() {
       setConvPage(1);
       setUnifiedConversations(buildUnifiedList(convData, groupRes.data, pinned));
     } catch (err) {
-      // silent;
+      console.error('loadConversations error:', err);
+      setConvError(true);
     } finally {
       setLoading(false);
     }
@@ -355,6 +358,12 @@ export default function NetworkingPage() {
   useEffect(() => {
     loadSuggestions();
   }, []);
+
+  useEffect(() => {
+    if (!convError) return;
+    const timer = setTimeout(() => { loadConversations(); }, 5000);
+    return () => clearTimeout(timer);
+  }, [convError, loadConversations]);
 
   // Auto-open chat when coming from profile page
   useEffect(() => {
@@ -494,22 +503,24 @@ export default function NetworkingPage() {
       });
     };
 
+    const handleSocketConnect = () => { loadConversations(); };
+
+    socket.on('connect', handleSocketConnect);
     socket.on('new_message', handleNewMessage);
     socket.on('new_group_message', handleNewGroupMessage);
     socket.on('message_sent', handleMessageSent);
     socket.on('group_message_sent', handleGroupMessageSent);
     socket.on('message_error', handleMessageError);
-    socket.on('error', handleMessageError);
-    socket.on('error', handleGroupMessageError);
+    socket.on('message_error', handleGroupMessageError);
 
     return () => {
+      socket.off('connect', handleSocketConnect);
       socket.off('new_message', handleNewMessage);
       socket.off('new_group_message', handleNewGroupMessage);
       socket.off('message_sent', handleMessageSent);
       socket.off('group_message_sent', handleGroupMessageSent);
       socket.off('message_error', handleMessageError);
-      socket.off('error', handleMessageError);
-      socket.off('error', handleGroupMessageError);
+      socket.off('message_error', handleGroupMessageError);
     };
   }, [tab, loadConversations]);
 
@@ -603,23 +614,23 @@ export default function NetworkingPage() {
   const sendMessage = async () => {
     if (!newMessage.trim() && chatImages.length === 0) return;
     if (!selectedUser) return;
-    try {
-      const socket = getSocket();
-      const images = chatImages.length > 0 ? chatImages : undefined;
-      socket.emit('send_message', { receiverId: selectedUser.id, content: newMessage || '', images });
-      setMessages((prev) => [...prev, {
-        id: Date.now().toString(),
-        senderId: user!.id,
-        content: newMessage || '',
-        images: images || [],
-        sentAt: new Date().toISOString(),
-        sender: { id: user!.id, name: user!.name },
-      }]);
-      setNewMessage('');
-      setChatImages([]);
-    } catch (err) {
-      // silent;
+    const socket = getSocket();
+    if (!socket.connected) {
+      alert('Connessione in corso, riprova tra qualche secondo.');
+      return;
     }
+    const images = chatImages.length > 0 ? chatImages : undefined;
+    socket.emit('send_message', { receiverId: selectedUser.id, content: newMessage || '', images });
+    setMessages((prev) => [...prev, {
+      id: Date.now().toString(),
+      senderId: user!.id,
+      content: newMessage || '',
+      images: images || [],
+      sentAt: new Date().toISOString(),
+      sender: { id: user!.id, name: user!.name },
+    }]);
+    setNewMessage('');
+    setChatImages([]);
   };
 
   const loadGroupMessages = async (groupId: string) => {
@@ -1269,8 +1280,22 @@ export default function NetworkingPage() {
                   </div>
                 ) : unifiedConversations.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                    <p style={{ fontSize: 14, color: '#acb0ce', fontFamily: 'var(--font-plus-jakarta)' }}>Nessun messaggio ancora</p>
-                    <p style={{ fontSize: 12, color: '#acb0ce', fontFamily: 'var(--font-plus-jakarta)', marginTop: 4 }}>Connettiti con altri studenti per iniziare</p>
+                    {convError ? (
+                      <>
+                        <p style={{ fontSize: 14, color: '#acb0ce', fontFamily: 'var(--font-plus-jakarta)' }}>Errore nel caricamento</p>
+                        <button
+                          onClick={loadConversations}
+                          style={{ marginTop: 8, fontSize: 12, color: '#4F46E5', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-plus-jakarta)', textDecoration: 'underline' }}
+                        >
+                          Riprova
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <p style={{ fontSize: 14, color: '#acb0ce', fontFamily: 'var(--font-plus-jakarta)' }}>Nessun messaggio ancora</p>
+                        <p style={{ fontSize: 12, color: '#acb0ce', fontFamily: 'var(--font-plus-jakarta)', marginTop: 4 }}>Connettiti con altri studenti per iniziare</p>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1867,8 +1892,8 @@ export default function NetworkingPage() {
                     const cs = connectionStatuses[u.id];
                     return (
                       <div key={u.id} className="bg-[#1a1b2e] rounded-2xl p-4 flex items-center gap-3" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
-                        <button onClick={() => router.push(`/profile/${u.id}`)} className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 shrink-0 overflow-hidden">
-                          {u.avatar ? <img src={u.avatar} alt={u.name} className="w-full h-full object-cover" /> : <span className="text-white text-lg font-medium">{u.name[0]}</span>}
+                        <button onClick={() => router.push(`/profile/${u.id}`)} className="shrink-0">
+                          <AvatarWithFallback src={u.avatar} name={u.name} size={48} />
                         </button>
                         <button className="flex-1 min-w-0 text-left" onClick={() => router.push(`/profile/${u.id}`)}>
                           <p className="text-white font-medium text-sm truncate">{u.name}</p>
@@ -1981,16 +2006,12 @@ export default function NetworkingPage() {
                       const avatar = isDeleted ? null : (post.author.id === user?.id
                         ? (user?.avatar ?? post.author.avatar)
                         : post.author.avatar);
-                      return (
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold overflow-hidden shrink-0 ${isDeleted ? 'bg-[#1E293B]' : 'bg-primary/20 text-primary'}`}>
-                          {isDeleted ? (
-                            <UserIcon size={20} color="#475569" strokeWidth={1.5} />
-                          ) : avatar ? (
-                            <img src={avatar} alt={post.author.name} className="w-full h-full object-cover" />
-                          ) : (
-                            post.author.name[0]
-                          )}
+                      return isDeleted ? (
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[#1E293B] shrink-0">
+                          <UserIcon size={20} color="#475569" strokeWidth={1.5} />
                         </div>
+                      ) : (
+                        <AvatarWithFallback src={avatar} name={post.author.name} size={40} style={{ flexShrink: 0 }} />
                       );
                     })()}
                     <div>
@@ -2251,14 +2272,14 @@ export default function NetworkingPage() {
                   <div key={c.id} className="flex gap-3 group">
                     <button
                       onClick={() => c.author?.id && c.author.id !== user?.id && router.push(`/profile/${c.author.id}`)}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden ${c.author?.name ? 'bg-primary/20' : 'bg-[#1E293B]'}`}
+                      className="flex-shrink-0"
                     >
                       {!c.author?.name ? (
-                        <UserIcon size={16} color="#475569" strokeWidth={1.5} />
-                      ) : c.author.avatar ? (
-                        <img src={c.author.avatar} alt="" className="w-full h-full object-cover" />
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#1E293B]">
+                          <UserIcon size={16} color="#475569" strokeWidth={1.5} />
+                        </div>
                       ) : (
-                        <span className="text-xs font-bold text-primary">{c.author.name.charAt(0)}</span>
+                        <AvatarWithFallback src={c.author.avatar} name={c.author.name} size={32} />
                       )}
                     </button>
                     <div className="flex-1 min-w-0">
