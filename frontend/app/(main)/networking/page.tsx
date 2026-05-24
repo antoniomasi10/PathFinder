@@ -1098,7 +1098,7 @@ export default function NetworkingPage() {
                 placeholder="Search people..."
                 style={{
                   width: '100%',
-                  backgroundColor: '#fbf8ff',
+                  backgroundColor: 'white',
                   border: '1px solid #e4e7ff',
                   borderRadius: 9999,
                   padding: '16px 49px',

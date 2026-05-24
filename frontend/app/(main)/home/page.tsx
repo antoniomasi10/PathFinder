@@ -1084,7 +1084,7 @@ const viewedRef = useRef<Set<string>>(new Set());
               </div>
               <input
                 type="text"
-                placeholder="Search internships, jobs..."
+                placeholder="Search internships, conferences..."
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setActiveSuggestionIndex(-1); }}
                 onFocus={() => setSearchFocused(true)}
