@@ -143,6 +143,7 @@ export async function getSmartFriendSuggestions(
     select: {
       id: true,
       name: true,
+      surname: true,
       avatar: true,
       avatarBgColor: true,
       courseOfStudy: true,
@@ -283,6 +284,7 @@ async function getRandomSuggestions(userId: string, limit: number): Promise<Frie
     select: {
       id: true,
       name: true,
+      surname: true,
       avatar: true,
       avatarBgColor: true,
       courseOfStudy: true,

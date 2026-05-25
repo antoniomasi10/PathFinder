@@ -9,6 +9,7 @@ import { Search } from '@/components/icons';
 interface User {
   id: string;
   name: string;
+  surname?: string;
   avatar?: string;
   courseOfStudy?: string;
   university?: { name: string; shortName?: string };
@@ -76,7 +77,7 @@ export default function NewChatModal({ isOpen, onClose, onUserSelected }: NewCha
     const selected = users.find((u) => u.id === selectedUserId);
     if (selected) {
       window.history.back();
-      onUserSelected({ id: selected.id, name: selected.name, avatar: selected.avatar });
+      onUserSelected({ id: selected.id, name: [selected.name, selected.surname].filter(Boolean).join(' '), avatar: selected.avatar });
     }
   };
 
@@ -164,13 +165,13 @@ export default function NewChatModal({ isOpen, onClose, onUserSelected }: NewCha
                     {u.avatar && isValidImageUrl(u.avatar) ? (
                       <img src={u.avatar} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      <span style={{ fontSize: 16, fontWeight: 700, color: '#615fe2' }}>{u.name[0]}</span>
+                      <span style={{ fontSize: 16, fontWeight: 700, color: '#615fe2' }}>{u.name[0].toUpperCase()}</span>
                     )}
                   </div>
 
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontWeight: 600, fontSize: 14, color: '#2c3149', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</p>
+                    <p style={{ fontWeight: 600, fontSize: 14, color: '#2c3149', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{[u.name, u.surname].filter(Boolean).join(' ')}</p>
                     {u.university?.name && (
                       <p style={{ fontSize: 11, color: '#747995', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {u.university.shortName || u.university.name}{u.courseOfStudy ? ` · ${u.courseOfStudy}` : ''}

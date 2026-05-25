@@ -19,7 +19,7 @@ import AvatarWithFallback from '@/components/AvatarWithFallback';
 import { Plus, UserIcon, ChatDots, CloseSm, CloseMd, ImageIcon, PaperPlane, Check, Heart, Chat, Send, Flag, MoreHorizontal, Trash, Search, Filter } from '@/components/icons';
 
 interface Conversation {
-  user: { id: string; name: string; avatar?: string };
+  user: { id: string; name: string; surname?: string; avatar?: string };
   lastMessage: string;
   lastMessageAt: string;
   unread: number;
@@ -152,7 +152,7 @@ export default function NetworkingPage() {
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [searchProfileResults, setSearchProfileResults] = useState<{
-    id: string; name: string; avatar?: string; courseOfStudy?: string; yearOfStudy?: number;
+    id: string; name: string; surname?: string; avatar?: string; courseOfStudy?: string; yearOfStudy?: number;
     university?: { name: string; shortName?: string }; profile?: { clusterTag?: string };
   }[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -161,7 +161,7 @@ export default function NetworkingPage() {
   const [coreSkillArea, setCoreSkillArea] = useState<string | null>(null);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
   const [suggestedProfiles, setSuggestedProfiles] = useState<{
-    id: string; name: string; avatar?: string; courseOfStudy?: string; yearOfStudy?: number;
+    id: string; name: string; surname?: string; avatar?: string; courseOfStudy?: string; yearOfStudy?: number;
     university?: { name: string; shortName?: string }; profile?: { clusterTag?: string };
   }[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
@@ -267,7 +267,7 @@ export default function NetworkingPage() {
     const directItems: UnifiedConversation[] = conversations.map((conv) => ({
       id: `direct-${conv.user.id}`,
       type: 'direct' as const,
-      name: conv.user.name,
+      name: [conv.user.name, conv.user.surname].filter(Boolean).join(' '),
       avatar: conv.user.avatar,
       lastMessage: conv.lastMessage,
       lastMessageAt: conv.lastMessageAt,
@@ -561,7 +561,7 @@ export default function NetworkingPage() {
         .then(({ data }) => {
           setSelectedUser({
             id: data.id,
-            name: data.name,
+            name: [data.name, data.surname].filter(Boolean).join(' '),
             avatar: data.avatar,
             university: data.university?.name,
           });
@@ -1163,7 +1163,7 @@ export default function NetworkingPage() {
                     >
                       <AvatarWithFallback src={u.avatar} name={u.name} size={50} />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 600, fontSize: 14, color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.name}</p>
+                        <p style={{ fontWeight: 600, fontSize: 14, color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{[u.name, u.surname].filter(Boolean).join(' ')}</p>
                         <p style={{ fontSize: 12, color: '#595e78', fontFamily: 'var(--font-plus-jakarta)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {u.university?.name}{u.courseOfStudy ? ` · ${u.courseOfStudy}` : ''}
                         </p>
@@ -1245,7 +1245,7 @@ export default function NetworkingPage() {
                             {/* Avatar — on the card wrapper, spanning the colored/white boundary */}
                             <AvatarWithFallback src={person.avatar} name={person.name} size={64} style={{ position: 'absolute', top: 88, left: '50%', transform: 'translateX(-50%)', border: '3px solid white', zIndex: 3 }} />
                               <p style={{ fontSize: 14, fontWeight: 700, color: '#2c3149', lineHeight: '20px', fontFamily: 'var(--font-plus-jakarta)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', margin: 0 }}>
-                                {person.name}
+                                {[person.name, person.surname].filter(Boolean).join(' ')}
                               </p>
                               <p style={{ fontSize: 11, color: '#595e78', lineHeight: '16px', marginTop: 3, fontFamily: 'var(--font-plus-jakarta)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                                 {person.university?.name}

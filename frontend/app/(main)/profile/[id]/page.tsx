@@ -236,7 +236,7 @@ export default function UserProfilePage() {
     if (!profile) return;
     localStorage.setItem(
       'openChatWith',
-      JSON.stringify({ id: profile.id, name: profile.name, avatar: profile.avatar })
+      JSON.stringify({ id: profile.id, name: [profile.name, profile.surname].filter(Boolean).join(' '), avatar: profile.avatar })
     );
     router.push('/networking');
   };
