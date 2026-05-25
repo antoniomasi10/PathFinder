@@ -1,3 +1,114 @@
+// Italian ↔ English aliases for city/country names commonly stored in English in the DB.
+// When a user types an Italian name, we also search for its English form and vice versa.
+const TERM_ALIASES: Record<string, string[]> = {
+  // Italian cities → English
+  'milano': ['milan'], 'roma': ['rome'], 'torino': ['turin'], 'napoli': ['naples'],
+  'firenze': ['florence'], 'venezia': ['venice'], 'genova': ['genoa'],
+  'padova': ['padua'], 'londra': ['london'], 'berlino': ['berlin'],
+  'parigi': ['paris'], 'monaco': ['munich', 'münchen'], 'amburgo': ['hamburg'],
+  'francoforte': ['frankfurt'], 'colonia': ['cologne'], 'barcellona': ['barcelona'],
+  'siviglia': ['seville'], 'lisbona': ['lisbon'], 'varsavia': ['warsaw'],
+  'cracovia': ['krakow'], 'praga': ['prague'], 'atene': ['athens'],
+  'stoccolma': ['stockholm'], 'zurigo': ['zurich'], 'ginevra': ['geneva'],
+  'losanna': ['lausanne'], 'pechino': ['beijing'], 'gerusalemme': ['jerusalem'],
+  // English cities → Italian
+  'milan': ['milano'], 'rome': ['roma'], 'turin': ['torino'], 'naples': ['napoli'],
+  'florence': ['firenze'], 'venice': ['venezia'], 'genoa': ['genova'],
+  'padua': ['padova'], 'london': ['londra'], 'berlin': ['berlino'],
+  'paris': ['parigi'], 'munich': ['monaco', 'münchen'], 'hamburg': ['amburgo'],
+  'frankfurt': ['francoforte'], 'cologne': ['colonia'], 'barcelona': ['barcellona'],
+  'seville': ['siviglia'], 'lisbon': ['lisbona'], 'warsaw': ['varsavia'],
+  'krakow': ['cracovia'], 'prague': ['praga'], 'athens': ['atene'],
+  'stockholm': ['stoccolma'], 'zurich': ['zurigo'], 'geneva': ['ginevra'],
+  'lausanne': ['losanna'], 'beijing': ['pechino'], 'jerusalem': ['gerusalemme'],
+  // Country names Italian → English (for location strings stored in English)
+  'italia': ['italy'], 'germania': ['germany'], 'francia': ['france'],
+  'spagna': ['spain'], 'belgio': ['belgium'], 'svizzera': ['switzerland'],
+  'olanda': ['netherlands'], 'paesi bassi': ['netherlands'],
+  'danimarca': ['denmark'], 'norvegia': ['norway'], 'svezia': ['sweden'],
+  'finlandia': ['finland'], 'portogallo': ['portugal'], 'irlanda': ['ireland'],
+  'polonia': ['poland'], 'grecia': ['greece'], 'ungheria': ['hungary'],
+  'romania': ['romania'], 'croazia': ['croatia'], 'slovacchia': ['slovakia'],
+  'giappone': ['japan'], 'cina': ['china'], 'corea del sud': ['south korea'],
+  'brasile': ['brazil'], 'messico': ['mexico'],
+  // Country names English → Italian (less critical but symmetric)
+  'italy': ['italia'], 'germany': ['germania'], 'france': ['francia'],
+  'spain': ['spagna'], 'belgium': ['belgio'], 'switzerland': ['svizzera'],
+  'netherlands': ['olanda'], 'denmark': ['danimarca'], 'norway': ['norvegia'],
+  'sweden': ['svezia'], 'finland': ['finlandia'], 'portugal': ['portogallo'],
+  'ireland': ['irlanda'], 'poland': ['polonia'], 'greece': ['grecia'],
+  'hungary': ['ungheria'], 'croatia': ['croazia'], 'slovakia': ['slovacchia'],
+  'japan': ['giappone'], 'china': ['cina'], 'brazil': ['brasile'],
+  'mexico': ['messico'],
+};
+
+// Italian city → region (for proximity search).
+// Includes both Italian and English city names so lookups work regardless of form.
+const CITY_TO_REGION: Record<string, string> = {
+  // Lombardia
+  'milano': 'Lombardia', 'milan': 'Lombardia', 'bergamo': 'Lombardia', 'brescia': 'Lombardia',
+  'como': 'Lombardia', 'pavia': 'Lombardia', 'varese': 'Lombardia', 'monza': 'Lombardia',
+  'mantova': 'Lombardia', 'cremona': 'Lombardia', 'lecco': 'Lombardia', 'sondrio': 'Lombardia',
+  'lodi': 'Lombardia',
+  // Lazio
+  'roma': 'Lazio', 'rome': 'Lazio', 'latina': 'Lazio', 'frosinone': 'Lazio',
+  'rieti': 'Lazio', 'viterbo': 'Lazio',
+  // Piemonte
+  'torino': 'Piemonte', 'turin': 'Piemonte', 'novara': 'Piemonte', 'asti': 'Piemonte',
+  'alessandria': 'Piemonte', 'cuneo': 'Piemonte', 'biella': 'Piemonte', 'vercelli': 'Piemonte',
+  // Emilia-Romagna
+  'bologna': 'Emilia-Romagna', 'modena': 'Emilia-Romagna', 'parma': 'Emilia-Romagna',
+  'reggio emilia': 'Emilia-Romagna', 'rimini': 'Emilia-Romagna', 'ferrara': 'Emilia-Romagna',
+  'forlì': 'Emilia-Romagna', 'forli': 'Emilia-Romagna', 'cesena': 'Emilia-Romagna',
+  'piacenza': 'Emilia-Romagna', 'ravenna': 'Emilia-Romagna',
+  // Campania
+  'napoli': 'Campania', 'naples': 'Campania', 'salerno': 'Campania', 'caserta': 'Campania',
+  'avellino': 'Campania', 'benevento': 'Campania',
+  // Toscana
+  'firenze': 'Toscana', 'florence': 'Toscana', 'pisa': 'Toscana', 'siena': 'Toscana',
+  'lucca': 'Toscana', 'livorno': 'Toscana', 'arezzo': 'Toscana', 'pistoia': 'Toscana',
+  'prato': 'Toscana', 'grosseto': 'Toscana', 'massa': 'Toscana', 'carrara': 'Toscana',
+  // Puglia
+  'bari': 'Puglia', 'lecce': 'Puglia', 'taranto': 'Puglia', 'foggia': 'Puglia',
+  'brindisi': 'Puglia', 'andria': 'Puglia', 'barletta': 'Puglia', 'trani': 'Puglia',
+  // Sicilia
+  'palermo': 'Sicilia', 'catania': 'Sicilia', 'messina': 'Sicilia', 'siracusa': 'Sicilia',
+  'ragusa': 'Sicilia', 'trapani': 'Sicilia', 'agrigento': 'Sicilia', 'caltanissetta': 'Sicilia',
+  'enna': 'Sicilia',
+  // Liguria
+  'genova': 'Liguria', 'genoa': 'Liguria', 'la spezia': 'Liguria', 'savona': 'Liguria',
+  'imperia': 'Liguria',
+  // Veneto
+  'venezia': 'Veneto', 'venice': 'Veneto', 'padova': 'Veneto', 'padua': 'Veneto',
+  'verona': 'Veneto', 'vicenza': 'Veneto', 'treviso': 'Veneto', 'rovigo': 'Veneto',
+  'belluno': 'Veneto',
+  // Friuli-Venezia Giulia
+  'trieste': 'Friuli-Venezia Giulia', 'udine': 'Friuli-Venezia Giulia',
+  'pordenone': 'Friuli-Venezia Giulia', 'gorizia': 'Friuli-Venezia Giulia',
+  // Trentino-Alto Adige
+  'trento': 'Trentino-Alto Adige', 'bolzano': 'Trentino-Alto Adige',
+  // Calabria
+  'cosenza': 'Calabria', 'catanzaro': 'Calabria', 'reggio calabria': 'Calabria',
+  'crotone': 'Calabria', 'vibo valentia': 'Calabria',
+  // Sardegna
+  'cagliari': 'Sardegna', 'sassari': 'Sardegna', 'nuoro': 'Sardegna',
+  'oristano': 'Sardegna', 'olbia': 'Sardegna',
+  // Marche
+  'ancona': 'Marche', 'pesaro': 'Marche', 'macerata': 'Marche', 'fermo': 'Marche',
+  'ascoli piceno': 'Marche',
+  // Abruzzo
+  "l'aquila": 'Abruzzo', 'laquila': 'Abruzzo', 'pescara': 'Abruzzo',
+  'teramo': 'Abruzzo', 'chieti': 'Abruzzo',
+  // Molise
+  'campobasso': 'Molise', 'isernia': 'Molise',
+  // Basilicata
+  'potenza': 'Basilicata', 'matera': 'Basilicata',
+  // Umbria
+  'perugia': 'Umbria', 'terni': 'Umbria',
+  // Valle d'Aosta
+  "aosta": "Valle d'Aosta",
+};
+
 // Country name → ISO-3166-1 alpha-2.
 // Keep this list pragmatic: countries Italian students realistically apply to.
 const COUNTRY_MAP: Record<string, string> = {
@@ -123,12 +234,16 @@ const CITY_TO_COUNTRY: Record<string, string> = {
 export interface LocationResolution {
   iso: string | null;
   term: string;
+  aliases: string[];
+  region: string | null;
 }
 
 /**
- * Resolve a full search input into one or more {iso, term} tokens.
+ * Resolve a full search input into one or more {iso, term, aliases, region} tokens.
  * Tries the full input first (handles multi-word entries like "regno unito",
  * "new york"), then tokenizes by comma/whitespace and looks up each piece.
+ * aliases: alternative spellings (e.g. "milano" → ["milan"]) for DB ILIKE matching.
+ * region: Italian region if the term is a known Italian city, for proximity search.
  */
 export function resolveLocationTokens(input: string): LocationResolution[] {
   const trimmed = input.trim();
@@ -138,16 +253,33 @@ export function resolveLocationTokens(input: string): LocationResolution[] {
 
   const full = trimmed.toLowerCase();
   const fullIso = COUNTRY_MAP[full] ?? CITY_TO_COUNTRY[full] ?? null;
-  if (fullIso) out.push({ iso: fullIso, term: trimmed });
+  if (fullIso) {
+    out.push({
+      iso: fullIso,
+      term: trimmed,
+      aliases: TERM_ALIASES[full] ?? [],
+      region: CITY_TO_REGION[full] ?? null,
+    });
+  }
 
   const parts = trimmed.split(/[,;]|\s+/).map(p => p.trim()).filter(Boolean);
   for (const p of parts) {
     const norm = p.toLowerCase();
     const iso = COUNTRY_MAP[norm] ?? CITY_TO_COUNTRY[norm] ?? null;
     if (out.some(o => o.term.toLowerCase() === norm)) continue;
-    out.push({ iso, term: p });
+    out.push({
+      iso,
+      term: p,
+      aliases: TERM_ALIASES[norm] ?? [],
+      region: CITY_TO_REGION[norm] ?? null,
+    });
   }
   return out;
+}
+
+/** Returns the Italian region for a city name (Italian or English), or null. */
+export function getCityRegion(city: string): string | null {
+  return CITY_TO_REGION[city.trim().toLowerCase()] ?? null;
 }
 
 /** Back-compat single resolver — picks the first ISO match, else first token. */
