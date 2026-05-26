@@ -221,6 +221,7 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
                 ref={videoRef}
                 src={avatar.video}
                 className="w-full h-full object-cover"
+                style={{ pointerEvents: 'none' }}
                 preload="auto"
                 autoPlay
                 muted
