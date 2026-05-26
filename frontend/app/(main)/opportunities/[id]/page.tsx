@@ -14,7 +14,7 @@ import {
   ArrowLeft, ClockIcon, Bookmark, Star, Users, MapPin,
   FileText, Briefcase, Bulb, CircleCheck, ExternalLink, Target, PaperPlane,
 } from '@/components/icons';
-import ShareOpportunityModal from '@/components/ShareOpportunityModal';
+import ShareSheet from '@/components/ShareSheet';
 
 interface StructuredContent {
   opportunityDescription: string | null;
@@ -653,11 +653,12 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
 
       <BottomNav />
 
-      <ShareOpportunityModal
+      <ShareSheet
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
         opportunityId={opportunity.id}
         opportunityTitle={opportunity.title}
+        opportunityDescription={(opportunity.structuredContent?.opportunityDescription || opportunity.description || '').slice(0, 150)}
       />
     </div>
   );
