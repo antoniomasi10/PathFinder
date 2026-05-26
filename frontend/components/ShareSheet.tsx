@@ -28,17 +28,28 @@ export default function ShareSheet({ isOpen, onClose, opportunityId, opportunity
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState('');
+  const [phase, setPhase] = useState<'enter' | 'visible' | 'exit'>('enter');
+  const [mounted, setMounted] = useState(false);
 
   const canNativeShare = typeof navigator !== 'undefined' && !!navigator.share;
 
   const handleClose = useCallback((fromPopState = false) => {
     if (!fromPopState) window.history.back();
-    setSearch('');
-    onClose();
+    setPhase('exit');
+    setTimeout(() => {
+      setMounted(false);
+      setSearch('');
+      onClose();
+    }, 320);
   }, [onClose]);
 
   useEffect(() => {
     if (!isOpen) return;
+    setMounted(true);
+    setPhase('enter');
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setPhase('visible'));
+    });
     window.history.pushState({ modal: 'shareSheet' }, '');
     const handlePopState = () => handleClose(true);
     window.addEventListener('popstate', handlePopState);
@@ -92,7 +103,7 @@ export default function ShareSheet({ isOpen, onClose, opportunityId, opportunity
     }
   };
 
-  if (!isOpen) return null;
+  if (!mounted) return null;
 
   const filteredFriends = friends.filter((f) =>
     `${f.name} ${f.surname}`.toLowerCase().includes(search.toLowerCase())
@@ -105,7 +116,10 @@ export default function ShareSheet({ isOpen, onClose, opportunityId, opportunity
         position: 'fixed', inset: 0, zIndex: 60,
         display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
         backgroundColor: 'rgba(44,49,73,0.45)',
-        backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+        backdropFilter: phase === 'visible' ? 'blur(4px)' : 'blur(0px)',
+        WebkitBackdropFilter: phase === 'visible' ? 'blur(4px)' : 'blur(0px)',
+        opacity: phase === 'visible' ? 1 : 0,
+        transition: 'opacity 0.28s ease, backdrop-filter 0.28s ease',
         fontFamily: 'var(--font-plus-jakarta)',
       }}
     >
@@ -119,6 +133,8 @@ export default function ShareSheet({ isOpen, onClose, opportunityId, opportunity
           display: 'flex', flexDirection: 'column',
           overflow: 'hidden',
           boxShadow: '0 -8px 40px rgba(44,49,73,0.14)',
+          transform: phase === 'visible' ? 'translateY(0)' : 'translateY(100%)',
+          transition: 'transform 0.32s cubic-bezier(0.32, 0.72, 0, 1)',
         }}
       >
         {/* Header */}
