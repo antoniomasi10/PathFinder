@@ -1,5 +1,6 @@
 import { PrismaClient, GpaRange, EnglishLevel, WillingnessToRelocate, CourseType, OpportunityType, OpportunityFormat, FieldOfStudy } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { UNIVERSITY_COURSES } from './data/courses-data';
 
 if (process.env.NODE_ENV === 'production') {
   console.error('Seed non può essere eseguito in produzione!');
@@ -229,29 +230,24 @@ async function main() {
       { name: 'Università telematica San Raffaele Roma', shortName: 'Telematica San Raffaele', city: 'Roma', websiteUrl: 'https://www.sanraffaele.org' },
       { name: 'Università telematica IUL', shortName: 'IUL', city: 'Firenze', websiteUrl: 'https://www.iuline.it' },
       { name: 'Università telematica Giustino Fortunato', shortName: 'Telematica Giustino Fortunato', city: 'Benevento', websiteUrl: 'https://www.unifortunato.it' },
+      { name: 'Gran Sasso Science Institute', shortName: 'GSSI', city: "L'Aquila", websiteUrl: 'https://www.gssi.it' },
+      { name: 'SISSA – Scuola Internazionale Superiore di Studi Avanzati', shortName: 'SISSA', city: 'Trieste', websiteUrl: 'https://www.sissa.it' },
     ],
   });
 
   // ============ COURSES ============
-  const coursesData = [
-    { universityId: polimi.id, name: 'Ingegneria Informatica', type: CourseType.TRIENNALE },
-    { universityId: polimi.id, name: 'Computer Science and Engineering', type: CourseType.MAGISTRALE },
-    { universityId: polimi.id, name: 'Design della Comunicazione', type: CourseType.TRIENNALE },
-    { universityId: bologna.id, name: 'Informatica', type: CourseType.TRIENNALE },
-    { universityId: bologna.id, name: 'Economia e Commercio', type: CourseType.TRIENNALE },
-    { universityId: bologna.id, name: 'Giurisprudenza', type: CourseType.CICLO_UNICO },
-    { universityId: sapienza.id, name: 'Medicina e Chirurgia', type: CourseType.CICLO_UNICO },
-    { universityId: sapienza.id, name: 'Ingegneria Aerospaziale', type: CourseType.MAGISTRALE },
-    { universityId: torino.id, name: 'Economia Aziendale', type: CourseType.TRIENNALE },
-    { universityId: federicoII.id, name: 'Ingegneria Biomedica', type: CourseType.MAGISTRALE },
-    { universityId: firenze.id, name: 'Architettura', type: CourseType.CICLO_UNICO },
-    { universityId: polito.id, name: 'Ingegneria Meccanica', type: CourseType.TRIENNALE },
-    { universityId: caFoscari.id, name: 'Economia e Management', type: CourseType.TRIENNALE },
-    { universityId: padova.id, name: 'Psicologia', type: CourseType.TRIENNALE },
-    { universityId: pisa.id, name: 'Matematica', type: CourseType.TRIENNALE },
-  ];
+  const allUniversities = await prisma.university.findMany({ select: { id: true, name: true } });
+  const uniMap = Object.fromEntries(allUniversities.map(u => [u.name, u.id]));
 
-  await prisma.course.createMany({ data: coursesData });
+  const allCourses = Object.entries(UNIVERSITY_COURSES).flatMap(([uniName, courses]) => {
+    const universityId = uniMap[uniName];
+    if (!universityId) return [];
+    return courses.map(c => ({ ...c, universityId }));
+  });
+
+  for (let i = 0; i < allCourses.length; i += 100) {
+    await prisma.course.createMany({ data: allCourses.slice(i, i + 100) });
+  }
 
   // ============ MOCK OPPORTUNITIES ============
   const now = new Date('2026-05-09');
@@ -1487,8 +1483,8 @@ async function main() {
   ]);
 
   console.log('Seed completed successfully!');
-  console.log(`- ${universities.length + 83} universities (10 demo + 83 Italian universities)`);
-  console.log(`- ${coursesData.length} courses`);
+  console.log(`- ${allUniversities.length} universities totali`);
+  console.log(`- ${allCourses.length} corsi (per ${Object.keys(UNIVERSITY_COURSES).length} atenei)`);
   console.log('- 36 mock opportunities (all 13 types)');
   console.log(`- 5 demo users (password: Password123)`);
 }

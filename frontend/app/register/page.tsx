@@ -6,7 +6,6 @@ import Link from 'next/link';
 import api, { bffPost, setAccessToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import SearchableSelect from '@/components/SearchableSelect';
-import { italianCourses } from '@/data/italianCourses';
 
 const LOGO_SWASH = '/logo-coha-swash.svg';
 
@@ -94,6 +93,7 @@ export default function RegisterPage() {
   const monthRef = useRef<HTMLInputElement>(null);
   const yearRef = useRef<HTMLInputElement>(null);
   const [universities, setUniversities] = useState<University[]>([]);
+  const [courseOptions, setCourseOptions] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -101,6 +101,12 @@ export default function RegisterPage() {
 
   useEffect(() => {
     api.get('/universities').then(({ data }) => setUniversities(data)).catch(() => {});
+    api.get('/courses').then(({ data }) => {
+      const names = [...new Set<string>(data.map((c: { name: string }) => c.name))].sort((a, b) =>
+        a.localeCompare(b, 'it')
+      );
+      setCourseOptions(names);
+    }).catch(() => {});
   }, []);
 
   const passwordChecks = {
@@ -328,7 +334,7 @@ export default function RegisterPage() {
             {/* Corso di studi */}
             <InputField label="Corso di studi">
               <SearchableSelect
-                options={italianCourses.map((c) => ({ value: c, label: c }))}
+                options={courseOptions.map((c) => ({ value: c, label: c }))}
                 value={courseOfStudy}
                 onChange={setCourseOfStudy}
                 placeholder="Cerca il tuo corso di studi..."

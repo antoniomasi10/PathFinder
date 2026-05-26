@@ -50,6 +50,7 @@ export const italianCourses: string[] = [
   'Economia dello Sviluppo e della Cooperazione Internazionale',
   'Economia e Gestione dei Servizi Turistici',
   'Economia e Gestione delle Imprese',
+  'Economia & Big Data',
   'Trade e Consumer Marketing',
   'Business Administration',
   'International Business',
