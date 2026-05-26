@@ -195,7 +195,7 @@ export default function RegisterPage() {
         phone: phone || undefined,
         universityId, courseOfStudy, birthDate,
         tosConsent: true,
-        marketingConsent,
+        marketingConsent: !marketingConsent,
       });
       setAccessToken(data.accessToken);
       setUser(data.user);
@@ -425,7 +425,7 @@ export default function RegisterPage() {
                 />
               </div>
               <label htmlFor="marketing" className="text-sm text-[#464554] leading-[1.5] cursor-pointer">
-                Acconsento a ricevere comunicazioni di marketing e aggiornamenti sulle opportunità{' '}
+                Non acconsento a ricevere comunicazioni di marketing e aggiornamenti sulle opportunità{' '}
                 <span className="text-[10px] font-medium text-[#777585] tracking-[0.5px] uppercase">(opzionale)</span>
               </label>
             </div>
