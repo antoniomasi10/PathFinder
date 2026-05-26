@@ -1,22 +1,28 @@
-import nodemailer from 'nodemailer';
 import { logger } from '../utils/logger';
 
-const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+const API_KEY = process.env.BREVO_API_KEY || '';
+const FROM_NAME = process.env.BREVO_SENDER_NAME || 'COhA';
+const FROM_EMAIL = process.env.BREVO_SENDER_EMAIL || 'info@cohaapp.com';
 
-const transporter = smtpConfigured
-  ? nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    })
-  : null;
-
-const FROM_NAME = process.env.EMAIL_FROM_NAME || 'COhA';
-const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'info@cohaapp.com';
+async function sendBrevoEmail(to: string, subject: string, html: string, replyTo?: string): Promise<void> {
+  if (!API_KEY) return;
+  const body: Record<string, any> = {
+    sender: { name: FROM_NAME, email: FROM_EMAIL },
+    to: [{ email: to }],
+    subject,
+    htmlContent: html,
+  };
+  if (replyTo) body.replyTo = { email: replyTo };
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'api-key': API_KEY },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Brevo API error ${response.status}: ${text}`);
+  }
+}
 
 const LOGO_SVG = `<svg width="160" height="47" viewBox="0 0 278 81" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M154.883 54.5085C153.213 49.9054 152.268 47.1132 151.109 42.8142C150.567 43.3559 149.999 43.9021 149.373 44.4861L151.559 54.5085L154.329 67.5006C155.451 72.8814 156.169 75.681 158.576 80.1214H171.5C166.568 75.8072 163.751 73.0702 160.791 67.5006C158.506 63.2949 157.151 60.623 155.688 56.7357C155.425 56.0378 155.159 55.3007 154.883 54.5085Z" fill="#615FE2"/>
@@ -89,8 +95,6 @@ function baseTemplate(title: string, body: string): string {
 }
 
 export async function sendVerificationEmail(to: string, name: string, code: string): Promise<void> {
-  if (!transporter) return;
-
   const html = baseTemplate('Verifica la tua email', `
     <h2 class="title">Verifica la tua email</h2>
     <p class="text">Ciao <strong style="color:#fff">${name}</strong>, inserisci questo codice per verificare il tuo account:</p>
@@ -101,12 +105,7 @@ export async function sendVerificationEmail(to: string, name: string, code: stri
   `);
 
   try {
-    await transporter.sendMail({
-      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
-      to,
-      subject: `${code} - Codice di verifica COhA`,
-      html,
-    });
+    await sendBrevoEmail(to, `${code} - Codice di verifica COhA`, html);
     logger.info('Verification email sent', { to });
   } catch (error) {
     logger.error('Failed to send verification email', { to, error: String(error) });
@@ -114,8 +113,6 @@ export async function sendVerificationEmail(to: string, name: string, code: stri
 }
 
 export async function sendPasswordResetEmail(to: string, name: string, code: string): Promise<void> {
-  if (!transporter) return;
-
   const html = baseTemplate('Reimposta la tua password', `
     <h2 class="title">Reimposta la tua password</h2>
     <p class="text">Ciao <strong style="color:#fff">${name}</strong>, hai richiesto il reset della password. Usa questo codice:</p>
@@ -126,12 +123,7 @@ export async function sendPasswordResetEmail(to: string, name: string, code: str
   `);
 
   try {
-    await transporter.sendMail({
-      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
-      to,
-      subject: 'Reimposta la tua password - COhA',
-      html,
-    });
+    await sendBrevoEmail(to, 'Reimposta la tua password - COhA', html);
     logger.info('Password reset email sent', { to });
   } catch (error) {
     logger.error('Failed to send password reset email', { to, error: String(error) });
@@ -144,8 +136,6 @@ export async function sendContactEmail(
   subject: string,
   message: string,
 ): Promise<void> {
-  if (!transporter) return;
-
   const html = baseTemplate('Nuovo messaggio da Contattaci', `
     <h2 class="title">Nuovo messaggio di supporto</h2>
     <p class="text"><strong style="color:#fff">Da:</strong> ${userName} &lt;${userEmail}&gt;</p>
@@ -157,13 +147,7 @@ export async function sendContactEmail(
   `);
 
   try {
-    await transporter.sendMail({
-      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
-      to: 'info@cohaapp.com',
-      replyTo: `"${userName}" <${userEmail}>`,
-      subject: `[Contattaci] ${subject}`,
-      html,
-    });
+    await sendBrevoEmail('info@cohaapp.com', `[Contattaci] ${subject}`, html, userEmail);
     logger.info('Contact email sent', { from: userEmail });
   } catch (error) {
     logger.error('Failed to send contact email', { from: userEmail, error: String(error) });
@@ -176,8 +160,6 @@ export async function sendReportEmail(
   category: string,
   description: string,
 ): Promise<void> {
-  if (!transporter) return;
-
   const categoryLabels: Record<string, string> = {
     bug: 'Bug tecnico',
     content: 'Contenuto inappropriato',
@@ -197,13 +179,7 @@ export async function sendReportEmail(
   `);
 
   try {
-    await transporter.sendMail({
-      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
-      to: 'info@cohaapp.com',
-      replyTo: `"${userName}" <${userEmail}>`,
-      subject: `[Segnalazione] ${categoryLabel}`,
-      html,
-    });
+    await sendBrevoEmail('info@cohaapp.com', `[Segnalazione] ${categoryLabel}`, html, userEmail);
     logger.info('Report email sent', { from: userEmail, category });
   } catch (error) {
     logger.error('Failed to send report email', { from: userEmail, error: String(error) });

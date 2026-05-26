@@ -67,8 +67,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     setSocket(ns);
 
-    // Initialize OneSignal SDK (registers its own SW, attaches subscription listener).
-    // Idempotent and does NOT request permission — that requires a user gesture.
+    // Initialize Brevo Web Push SDK (idempotent, does NOT request permission).
     if (typeof window !== 'undefined' && isPushSupported()) {
       ensurePushInitialized().catch(() => {});
     }

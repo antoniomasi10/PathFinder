@@ -10,7 +10,7 @@ import CookieBanner from '@/components/CookieBanner';
 import AnalyticsProvider from '@/components/AnalyticsProvider';
 import Script from 'next/script';
 
-const ONESIGNAL_APP_ID = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID || '';
+const BREVO_APP_ID = process.env.NEXT_PUBLIC_BREVO_APP_ID || '';
 
 const sora = Sora({
   subsets: ['latin'],
@@ -53,9 +53,9 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="COhA" />
       </head>
       <body className={`${sora.variable} ${dmSans.variable} ${plusJakartaSans.variable} font-body antialiased`}>
-        {ONESIGNAL_APP_ID && (
+        {BREVO_APP_ID && (
           <Script
-            src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"
+            src="https://cdn.brevo.com/js/notifications.js"
             strategy="afterInteractive"
           />
         )}

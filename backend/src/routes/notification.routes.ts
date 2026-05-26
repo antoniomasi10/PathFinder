@@ -3,8 +3,7 @@ import { verifiedMiddleware as authMiddleware } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import * as notificationService from '../services/notification.service';
 import * as prefService from '../services/notificationPreference.service';
-import * as webPushService from '../services/webPush.service';
-import * as oneSignalService from '../services/oneSignal.service';
+import * as brevoService from '../services/brevo.service';
 
 const router = Router();
 
@@ -27,51 +26,17 @@ router.put('/preferences', authMiddleware, async (req: Request, res: Response) =
   }
 });
 
-// ── Push subscription ──────────────────────────────────────
-router.get('/push/vapid-key', (_req: Request, res: Response) => {
-  res.json({ publicKey: webPushService.getVapidPublicKey() });
-});
-
-router.post('/push/subscribe', authMiddleware, async (req: Request, res: Response) => {
+// ── Push subscription (Brevo) ──────────────────────────────
+router.post('/push/brevo-register', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const { subscription } = req.body;
-    if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
-      return res.status(400).json({ error: 'Invalid subscription object' });
-    }
-    await webPushService.saveSubscription(
-      req.user!.userId,
-      subscription,
-      req.headers['user-agent']
-    );
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.delete('/push/unsubscribe', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const { endpoint } = req.body;
-    if (!endpoint) return res.status(400).json({ error: 'endpoint required' });
-    await webPushService.removeSubscription(endpoint);
-    res.json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// POST /push/onesignal-register — save OneSignal player ID for the authenticated user
-router.post('/push/onesignal-register', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const { playerId } = req.body;
-    if (!playerId || typeof playerId !== 'string') {
-      return res.status(400).json({ error: 'playerId required' });
+    const { subscriberId } = req.body;
+    if (!subscriberId || typeof subscriberId !== 'string') {
+      return res.status(400).json({ error: 'subscriberId required' });
     }
     await prisma.user.update({
       where: { id: req.user!.userId },
-      data: { oneSignalPlayerId: playerId },
+      data: { brevoSubscriberId: subscriberId },
     });
-    await oneSignalService.setExternalUserId(playerId, req.user!.userId);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -81,21 +46,21 @@ router.post('/push/onesignal-register', authMiddleware, async (req: Request, res
 // POST /push/test — send a test push to the authenticated user
 router.post('/push/test', authMiddleware, async (req: Request, res: Response) => {
   try {
-    if (!oneSignalService.isOneSignalConfigured()) {
-      return res.status(503).json({ success: false, error: 'OneSignal non configurato sul server' });
+    if (!brevoService.isBrevoConfigured()) {
+      return res.status(503).json({ success: false, error: 'Brevo non configurato sul server' });
     }
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
-      select: { oneSignalPlayerId: true },
+      select: { brevoSubscriberId: true },
     });
-    if (!user?.oneSignalPlayerId) {
+    if (!user?.brevoSubscriberId) {
       return res.status(409).json({
         success: false,
         error: 'Nessun device registrato. Attiva le notifiche da questo dispositivo prima di inviare un test.',
       });
     }
-    await oneSignalService.sendPushToUser(req.user!.userId, {
-      title: 'PathFinder',
+    await brevoService.sendPushToUser(req.user!.userId, {
+      title: 'COhA',
       body: 'Le notifiche push funzionano correttamente!',
       url: '/notifications',
     });
@@ -110,7 +75,7 @@ router.get('/push/status', authMiddleware, async (req: Request, res: Response) =
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
-      select: { oneSignalPlayerId: true },
+      select: { brevoSubscriberId: true },
     });
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const recentCount = await prisma.notification.count({
@@ -122,8 +87,8 @@ router.get('/push/status', authMiddleware, async (req: Request, res: Response) =
       select: { createdAt: true, type: true },
     });
     res.json({
-      oneSignalConfigured: oneSignalService.isOneSignalConfigured(),
-      oneSignalPlayerId: user?.oneSignalPlayerId ?? null,
+      brevoConfigured: brevoService.isBrevoConfigured(),
+      brevoSubscriberId: user?.brevoSubscriberId ?? null,
       recentNotifications24h: recentCount,
       lastNotificationAt: lastNotification?.createdAt ?? null,
       lastNotificationType: lastNotification?.type ?? null,
