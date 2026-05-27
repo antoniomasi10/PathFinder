@@ -59,7 +59,8 @@ export async function cleanupTestData() {
   const ids = testUsers.map((u) => u.id);
   if (ids.length === 0) return;
 
-await prisma.notification.deleteMany({ where: { userId: { in: ids } } });
+  await prisma.pushSubscription.deleteMany({ where: { userId: { in: ids } } });
+  await prisma.notification.deleteMany({ where: { userId: { in: ids } } });
   await prisma.notificationPreference.deleteMany({ where: { userId: { in: ids } } });
   await prisma.postComment.deleteMany({ where: { authorId: { in: ids } } });
   await prisma.postLike.deleteMany({ where: { userId: { in: ids } } });

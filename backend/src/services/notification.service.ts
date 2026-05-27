@@ -2,7 +2,9 @@ import prisma from '../lib/prisma';
 import { NotificationType } from '@prisma/client';
 import { shouldNotify } from './notificationPreference.service';
 import { getOrCreatePreferences } from './notificationPreference.service';
-import { sendPushToUser as sendBrevoPushToUser, isBrevoConfigured } from './brevo.service';
+import { sendPushToUser as sendVapidPushToUser } from './webPush.service';
+import { sendPushToUser as sendOneSignalPushToUser, isOneSignalConfigured } from './oneSignal.service';
+import { TYPE_TITLES } from './webPush.service';
 import { cacheGet, cacheSet, cacheDel } from '../lib/cache';
 
 const NOTIF_COUNT_TTL = 30; // seconds
@@ -49,17 +51,29 @@ export async function createNotification(
     }
   } catch {}
 
-  // Send push notification via Brevo
+  // Send push notification — OneSignal if configured, VAPID fallback otherwise
   try {
     const prefs = await getOrCreatePreferences(userId);
-    if (prefs.pushEnabled && isBrevoConfigured()) {
-      await sendBrevoPushToUser(userId, {
-        title: 'COhA',
-        body: content,
-        url: linkTo || '/notifications',
-        data: { type, ...(data || {}) },
-        priority: ['OPPORTUNITY_DEADLINE', 'COURSE_DEADLINE', 'SYSTEM'].includes(type) ? 'high' : 'normal',
-      });
+    if (prefs.pushEnabled) {
+      if (isOneSignalConfigured()) {
+        const title = TYPE_TITLES[type] || 'PathFinder';
+        await sendOneSignalPushToUser(userId, {
+          title,
+          body: content,
+          url: linkTo || '/notifications',
+          data: { type, ...(data || {}) },
+          priority: ['OPPORTUNITY_DEADLINE', 'COURSE_DEADLINE', 'SYSTEM'].includes(type) ? 'high' : 'normal',
+        });
+      } else {
+        await sendVapidPushToUser(userId, {
+          body: content,
+          icon: icon || undefined,
+          url: linkTo || '/notifications',
+          type,
+          tag: type,
+          data: data || {},
+        });
+      }
     }
   } catch {}
 

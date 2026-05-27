@@ -8,7 +8,7 @@ import {
   renderDailyOpportunity,
   renderSpotRecommendation,
 } from './emailTemplates.service';
-import { sendEmailToUser } from './brevo.service';
+import { sendEmailToUser } from './oneSignal.service';
 import type { UserSkills } from './skills.service';
 
 const APP_URL = process.env.FRONTEND_URL || 'http://localhost:3000';

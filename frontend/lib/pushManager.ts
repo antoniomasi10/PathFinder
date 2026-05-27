@@ -1,10 +1,10 @@
 import api from '@/lib/api';
 import {
-  isBrevoAvailable,
-  initBrevo,
-  requestBrevoPermission,
-  optOutBrevo,
-} from '@/lib/brevoManager';
+  isOneSignalAvailable,
+  initOneSignal,
+  requestOneSignalPermission,
+  optOutOneSignal,
+} from '@/lib/oneSignalManager';
 
 export function isPushSupported(): boolean {
   return (
@@ -20,20 +20,29 @@ export function getPushPermissionState(): NotificationPermission | 'unsupported'
   return Notification.permission;
 }
 
+/**
+ * Initializes OneSignal SDK. Idempotent — safe to call multiple times.
+ * Does NOT request permission. The SDK registers its own service worker
+ * (/OneSignalSDKWorker.js) on init.
+ */
 export async function ensurePushInitialized(): Promise<void> {
-  if (!isPushSupported() || !isBrevoAvailable()) return;
-  await initBrevo();
+  if (!isPushSupported() || !isOneSignalAvailable()) return;
+  await initOneSignal();
 }
 
+/**
+ * MUST be called from a user gesture handler. Requests notification permission
+ * and registers the device with OneSignal + the backend.
+ */
 export async function subscribeToPush(): Promise<boolean> {
-  if (!isPushSupported() || !isBrevoAvailable()) return false;
-  return requestBrevoPermission();
+  if (!isPushSupported() || !isOneSignalAvailable()) return false;
+  return requestOneSignalPermission();
 }
 
 export async function unsubscribeFromPush(): Promise<boolean> {
-  if (!isPushSupported() || !isBrevoAvailable()) return false;
+  if (!isPushSupported() || !isOneSignalAvailable()) return false;
   try {
-    await optOutBrevo();
+    await optOutOneSignal();
     return true;
   } catch {
     return false;

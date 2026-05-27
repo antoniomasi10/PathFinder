@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { prisma, setupTestUsers, cleanupTestData, TestUsers } from './setup';
 import { createNotification, getNotifications, getUnreadCount, markAsRead, markAllAsRead, getBadgeCounts } from '../src/services/notification.service';
 import { getOrCreatePreferences, updatePreferences, shouldNotify } from '../src/services/notificationPreference.service';
-
+import { saveSubscription, removeSubscription, getVapidPublicKey } from '../src/services/webPush.service';
 
 let users: TestUsers;
 
@@ -296,6 +296,59 @@ describe('Notification Preferences', () => {
   });
 });
 
+// ── Push Subscription Management ────────────────────────────
+describe('Push Subscription Management', () => {
+  const testEndpoint = 'https://fcm.googleapis.com/fcm/send/__test_endpoint__';
+  const testKeys = { p256dh: 'test-p256dh-key', auth: 'test-auth-key' };
+
+  it('returns VAPID public key', () => {
+    const key = getVapidPublicKey();
+    expect(typeof key).toBe('string');
+    // Key should exist if .env is configured
+    if (process.env.VAPID_PUBLIC_KEY) {
+      expect(key.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('saves a push subscription', async () => {
+    const sub = await saveSubscription(users.userA.id, {
+      endpoint: testEndpoint,
+      keys: testKeys,
+    }, 'vitest-agent');
+
+    expect(sub.userId).toBe(users.userA.id);
+    expect(sub.endpoint).toBe(testEndpoint);
+    expect(sub.p256dh).toBe(testKeys.p256dh);
+    expect(sub.auth).toBe(testKeys.auth);
+    expect(sub.userAgent).toBe('vitest-agent');
+  });
+
+  it('upserts subscription on same endpoint', async () => {
+    const updatedKeys = { p256dh: 'updated-p256dh', auth: 'updated-auth' };
+    const sub = await saveSubscription(users.userA.id, {
+      endpoint: testEndpoint,
+      keys: updatedKeys,
+    });
+
+    expect(sub.p256dh).toBe('updated-p256dh');
+    expect(sub.auth).toBe('updated-auth');
+
+    // Should still be only one subscription with this endpoint
+    const count = await prisma.pushSubscription.count({
+      where: { endpoint: testEndpoint },
+    });
+    expect(count).toBe(1);
+  });
+
+  it('removes a push subscription', async () => {
+    await removeSubscription(testEndpoint);
+
+    const count = await prisma.pushSubscription.count({
+      where: { endpoint: testEndpoint },
+    });
+    expect(count).toBe(0);
+  });
+});
 
 // ── Notification Type Coverage ──────────────────────────────
 describe('All NotificationType values handled', () => {

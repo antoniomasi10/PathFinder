@@ -162,7 +162,8 @@ model User {
   tosConsentAt        DateTime?
   privacyConsentAt    DateTime?
   marketingConsent       Boolean   @default(false)
-  brevoSubscriberId      String?
+  oneSignalPlayerId      String?
+  oneSignalEmailPlayerId String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -184,6 +185,7 @@ model User {
   savedOpportunities     Opportunity[]      @relation("SavedOpportunities")
   savedCourses           Course[]           @relation("SavedCourses")
   notificationPreference NotificationPreference?
+  pushSubscriptions      PushSubscription[]
   badges                 UserBadge[]
   tracking               UserTracking[]
   verificationCodes      VerificationCode[]
@@ -524,6 +526,17 @@ model NotificationPreference {
   emailAlerts    Boolean @default(true)
   emailSpot      Boolean @default(true)
   emailDaily     Boolean @default(true)
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
 }
 
 model UserBadge {
