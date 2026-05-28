@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api, { bffPost, setAccessToken } from '@/lib/api';
@@ -98,15 +98,20 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { setUser } = useAuth();
+  const courseDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     api.get('/universities').then(({ data }) => setUniversities(data)).catch(() => {});
-    api.get('/courses').then(({ data }) => {
-      const names = [...new Set<string>(data.map((c: { name: string }) => c.name))].sort((a, b) =>
-        a.localeCompare(b, 'it')
-      );
-      setCourseOptions(names);
-    }).catch(() => {});
+  }, []);
+
+  const handleCourseSearch = useCallback((q: string) => {
+    if (courseDebounceRef.current) clearTimeout(courseDebounceRef.current);
+    if (!q.trim()) { setCourseOptions([]); return; }
+    courseDebounceRef.current = setTimeout(() => {
+      api.get(`/courses?q=${encodeURIComponent(q.trim())}`)
+        .then(({ data }) => setCourseOptions(data as string[]))
+        .catch(() => {});
+    }, 300);
   }, []);
 
   const passwordChecks = {
@@ -337,6 +342,7 @@ export default function RegisterPage() {
                 options={courseOptions.map((c) => ({ value: c, label: c }))}
                 value={courseOfStudy}
                 onChange={setCourseOfStudy}
+                onSearchChange={handleCourseSearch}
                 placeholder="Cerca il tuo corso di studi..."
                 required
                 allowCustom

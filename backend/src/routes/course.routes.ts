@@ -6,14 +6,19 @@ import { trackInteraction } from '../services/interaction.service';
 
 const router = Router();
 
-// GET /courses — list all courses
-router.get('/', async (_req: Request, res: Response) => {
+// GET /courses?q= — search course names (max 30, deduplicated). Returns string[].
+router.get('/', async (req: Request, res: Response) => {
   try {
-    const courses = await prisma.course.findMany({
-      include: { university: { select: { id: true, name: true, city: true } } },
+    const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+    if (!q) return res.json([]);
+    const rows = await prisma.course.findMany({
+      where: { name: { contains: q, mode: 'insensitive' } },
+      select: { name: true },
       orderBy: { name: 'asc' },
+      take: 150,
     });
-    res.json(courses);
+    const names = [...new Set(rows.map((r) => r.name))].slice(0, 30);
+    res.json(names);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

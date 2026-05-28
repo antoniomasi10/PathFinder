@@ -83,7 +83,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       ensurePushInitialized()
         .then(() => {
           // After init, check if user needs to re-enroll (e.g. after App ID change).
-          // Delay slightly so init settles, then skip if dismissed within last 24h.
+          // Delay slightly so init settles, then skip if dismissed within last 3 days.
           setTimeout(async () => {
             const dismissedAt = localStorage.getItem('pushReEnrollDismissedAt');
             if (dismissedAt && Date.now() - Number(dismissedAt) < 3 * 24 * 60 * 60 * 1000) return;
