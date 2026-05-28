@@ -24,7 +24,7 @@ export async function runStructuredContentBatch(limit = DEFAULT_LIMIT): Promise<
   const now = new Date();
   const opps = await prisma.opportunity.findMany({
     where: {
-      structuredContent: { equals: Prisma.JsonNull },
+      structuredContent: { equals: Prisma.DbNull },
       OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
     },
     select: { id: true, title: true, description: true, about: true, company: true },
