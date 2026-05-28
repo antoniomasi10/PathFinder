@@ -114,19 +114,29 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
       conditions.push(`o."company" ILIKE $${idx}`);
       params.push(`%${company}%`); idx++;
     }
-    if (location) {
-      // Tokenize the input so "Roma Italia" or "Berlin, DE" resolve each piece.
+    const locationTokens = location ? resolveLocationTokens(location) : [];
+    if (locationTokens.length) {
       // Per-token clauses are OR'd together so any match qualifies.
-      const tokens = resolveLocationTokens(location);
+      // aliases: Italian↔English alternates (e.g. "milano"→["milan"]) so both forms hit ILIKE.
       const orClauses: string[] = [];
-      for (const { iso, term } of tokens) {
-        if (iso) {
-          orClauses.push(`(o."location" ILIKE $${idx} OR o."city" ILIKE $${idx + 1} OR o."country" = $${idx + 2})`);
-          params.push(`%${term}%`, `%${term}%`, iso); idx += 3;
-        } else {
-          orClauses.push(`(o."location" ILIKE $${idx} OR o."city" ILIKE $${idx + 1})`);
-          params.push(`%${term}%`, `%${term}%`); idx += 2;
+      for (const { iso, term, aliases, region } of locationTokens) {
+        const allTerms = [term, ...aliases];
+        // Word-boundary regex: \m(roma|rome)\M prevents "Roma" from matching "Romania"
+        const escaped = allTerms.map(t => t.replace(/[$()*+.[\]?\\^{}|]/g, '\\$&'));
+        const rx = `\\m(${escaped.join('|')})\\M`;
+        // Reference the same $idx for both location and city — PostgreSQL allows reusing params
+        const termClauses = [`o."location" ~* $${idx}`, `o."city" ~* $${idx}`];
+        params.push(rx); idx++;
+        if (region) {
+          // City search: use region fallback so other cities never appear (e.g. Milan for "Roma")
+          termClauses.push(`o."region" = $${idx}`);
+          params.push(region); idx++;
+        } else if (iso) {
+          // Country search (e.g. "Italia"): use ISO country code
+          termClauses.push(`o."country" = $${idx}`);
+          params.push(iso); idx++;
         }
+        orClauses.push(`(${termClauses.join(' OR ')})`);
       }
       if (orClauses.length) conditions.push(`(${orClauses.join(' OR ')})`);
     }
@@ -171,13 +181,28 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
 
     const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    // Count params exclude $1/$2 (limit/skip)
+    // Count params exclude $1/$2 (limit/skip). Built before proximity params are appended.
     const countParams = params.slice(2);
-    const countConditions = conditions.map((c, i) => {
+    const countConditions = conditions.map((c) => {
       // Re-index from $1 for count query
       return c.replace(/\$(\d+)/g, (_, n) => `$${parseInt(n) - 2}`);
     });
     const countWhere = countConditions.length ? `WHERE ${countConditions.join(' AND ')}` : '';
+
+    // Proximity ORDER BY: when a known Italian city is searched, rank city→region→country→rest.
+    // Params are appended after WHERE params so they don't affect the count query.
+    const proximityToken = locationTokens.find(t => t.region !== null && t.iso !== null);
+    let orderByClause = `o."postedAt" DESC`;
+    if (proximityToken) {
+      const cityTerms = [proximityToken.term, ...proximityToken.aliases];
+      const escaped = cityTerms.map(t => t.replace(/[$()*+.[\]?\\^{}|]/g, '\\$&'));
+      const rx = `\\m(${escaped.join('|')})\\M`;
+      const rxIdx = idx; params.push(rx); idx++;
+      const regionIdx = idx; params.push(proximityToken.region!); idx++;
+      const isoIdx = idx; params.push(proximityToken.iso!); idx++;
+      // Reuse $rxIdx for both city and location — same word-boundary regex
+      orderByClause = `CASE WHEN (o."city" ~* $${rxIdx} OR o."location" ~* $${rxIdx}) THEN 1 WHEN o."region" = $${regionIdx} THEN 2 WHEN o."country" = $${isoIdx} THEN 3 ELSE 4 END ASC, o."postedAt" DESC`;
+    }
 
     const [opportunities, countResult] = await Promise.all([
       prisma.$queryRawUnsafe<any[]>(
@@ -190,7 +215,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
          FROM "Opportunity" o
          LEFT JOIN "University" u ON o."universityId" = u."id"
          ${whereClause}
-         ORDER BY o."postedAt" DESC
+         ORDER BY ${orderByClause}
          LIMIT $1 OFFSET $2`,
         ...params,
       ),

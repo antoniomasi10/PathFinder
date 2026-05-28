@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api, { bffPost, setAccessToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import SearchableSelect from '@/components/SearchableSelect';
-import { italianCourses } from '@/data/italianCourses';
 
 const LOGO_SWASH = '/logo-coha-swash.svg';
 
@@ -94,13 +93,25 @@ export default function RegisterPage() {
   const monthRef = useRef<HTMLInputElement>(null);
   const yearRef = useRef<HTMLInputElement>(null);
   const [universities, setUniversities] = useState<University[]>([]);
+  const [courseOptions, setCourseOptions] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { setUser } = useAuth();
+  const courseDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     api.get('/universities').then(({ data }) => setUniversities(data)).catch(() => {});
+  }, []);
+
+  const handleCourseSearch = useCallback((q: string) => {
+    if (courseDebounceRef.current) clearTimeout(courseDebounceRef.current);
+    if (!q.trim()) { setCourseOptions([]); return; }
+    courseDebounceRef.current = setTimeout(() => {
+      api.get(`/courses?q=${encodeURIComponent(q.trim())}`)
+        .then(({ data }) => setCourseOptions(data as string[]))
+        .catch(() => {});
+    }, 300);
   }, []);
 
   const passwordChecks = {
@@ -328,9 +339,10 @@ export default function RegisterPage() {
             {/* Corso di studi */}
             <InputField label="Corso di studi">
               <SearchableSelect
-                options={italianCourses.map((c) => ({ value: c, label: c }))}
+                options={courseOptions.map((c) => ({ value: c, label: c }))}
                 value={courseOfStudy}
                 onChange={setCourseOfStudy}
+                onSearchChange={handleCourseSearch}
                 placeholder="Cerca il tuo corso di studi..."
                 required
                 allowCustom

@@ -26,12 +26,17 @@ function applyOppFilters(items: any[], f: OppFilters): any[] {
     if (f.company && !(opp.company || '').toLowerCase().includes(f.company.toLowerCase())) return false;
     if (f.location) {
       const tokens = resolveLocationTokens(f.location);
-      const anyMatch = tokens.some(({ iso, term }) => {
-        const t = term.toLowerCase();
-        const matchesLocation = (opp.location || '').toLowerCase().includes(t);
-        const matchesCity = (opp.city || '').toLowerCase().includes(t);
-        const matchesCountry = iso ? (opp.country || '').toUpperCase() === iso : false;
-        return matchesLocation || matchesCity || matchesCountry;
+      const anyMatch = tokens.some(({ iso, term, aliases, region }) => {
+        const allTerms = [term, ...aliases];
+        // Word-boundary regex: \b(roma|rome)\b prevents "Roma" from matching "Romania"
+        const escaped = allTerms.map(t => t.replace(/[$()*+.[\]?\\^{}|]/g, '\\$&'));
+        const regex = new RegExp(`\\b(${escaped.join('|')})\\b`, 'i');
+        const matchesLocation = regex.test(opp.location || '');
+        const matchesCity = regex.test(opp.city || '');
+        // City search: fall back to region (not country) so "Roma" never surfaces Milan results
+        const matchesRegion = region ? (opp.region || '').toLowerCase() === region.toLowerCase() : false;
+        const matchesCountry = (!region && iso) ? (opp.country || '').toUpperCase() === iso : false;
+        return matchesLocation || matchesCity || matchesRegion || matchesCountry;
       });
       if (!anyMatch) return false;
     }

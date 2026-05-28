@@ -31,6 +31,7 @@ export default function SearchableSelect({
   required = false,
   disabled = false,
   allowCustom = false,
+  onSearchChange,
   inputClassName,
   dropdownClassName,
   optionClassName,
@@ -124,6 +125,7 @@ export default function SearchableSelect({
           setSearch(e.target.value);
           setIsOpen(true);
           setHighlightIndex(-1);
+          onSearchChange?.(e.target.value);
           if (allowCustom) {
             onChange(e.target.value);
           } else if (!e.target.value) {

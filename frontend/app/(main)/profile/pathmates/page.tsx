@@ -11,6 +11,7 @@ import BottomNav from '@/components/BottomNav';
 interface Friend {
   id: string;
   name: string;
+  surname?: string;
   avatar?: string;
   courseOfStudy?: string;
   university?: { name: string };
@@ -65,7 +66,7 @@ export default function PathmatesPage() {
   };
 
   const filteredFriends = friends.filter((f) =>
-    f.name.toLowerCase().includes(friendSearch.toLowerCase())
+    [f.name, f.surname].filter(Boolean).join(' ').toLowerCase().includes(friendSearch.toLowerCase())
   );
 
   const getInitials = (name: string) =>
@@ -202,7 +203,7 @@ export default function PathmatesPage() {
                       onClick={() => router.push(`/profile/${friend.id}`)}
                       className="flex-1 min-w-0 text-left"
                     >
-                      <p className="text-sm font-semibold text-[#2c3149] truncate">{friend.name}</p>
+                      <p className="text-sm font-semibold text-[#2c3149] truncate">{[friend.name, friend.surname].filter(Boolean).join(' ')}</p>
                       <p className="text-xs text-[#595e78] truncate">
                         {friend.courseOfStudy || friend.university?.name || ''}
                       </p>
@@ -210,7 +211,7 @@ export default function PathmatesPage() {
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {messagePrivacy !== 'Nessuno' && (
                         <button
-                          onClick={() => router.push(`/networking?openChat=${friend.id}&name=${encodeURIComponent(friend.name)}&avatar=${encodeURIComponent(friend.avatar || '')}`)}
+                          onClick={() => router.push(`/networking?openChat=${friend.id}&name=${encodeURIComponent([friend.name, friend.surname].filter(Boolean).join(' '))}&avatar=${encodeURIComponent(friend.avatar || '')}`)}
                           className="w-9 h-9 rounded-[22%] bg-[rgba(97,95,226,0.1)] flex items-center justify-center hover:bg-[rgba(97,95,226,0.15)] transition-colors"
                         >
                           <ChatDots size={20} color="#615fe2" />
@@ -258,7 +259,7 @@ export default function PathmatesPage() {
                         onClick={() => router.push(`/profile/${suggested.id}`)}
                         className="flex-1 min-w-0 text-left"
                       >
-                        <p className="text-sm font-semibold text-[#2c3149] truncate">{suggested.name}</p>
+                        <p className="text-sm font-semibold text-[#2c3149] truncate">{[suggested.name, suggested.surname].filter(Boolean).join(' ')}</p>
                         <p className="text-xs text-[#595e78] truncate">
                           {suggested.courseOfStudy || suggested.university?.name || ''}
                         </p>

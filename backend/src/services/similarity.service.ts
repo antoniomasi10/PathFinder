@@ -1,4 +1,7 @@
 import prisma from '../lib/prisma';
+import redis from '../lib/redis';
+
+const SEEN_SET_TTL = 30 * 24 * 60 * 60; // 30 days in seconds
 
 /**
  * Scores how similar two user profiles are (0-100).
@@ -140,6 +143,7 @@ export async function getSmartFriendSuggestions(
     select: {
       id: true,
       name: true,
+      surname: true,
       avatar: true,
       avatarBgColor: true,
       courseOfStudy: true,
@@ -241,7 +245,20 @@ export async function getSmartFriendSuggestions(
 
   scored.sort((a, b) => b.similarityScore - a.similarityScore);
 
-  return scored.slice(0, limit);
+  const seenSet = await getSuggestionSeenSet(userId);
+  const unseen = scored.filter((c) => !seenSet.has(c.id));
+
+  let result: typeof scored;
+  if (unseen.length >= limit) {
+    result = unseen.slice(0, limit);
+  } else {
+    // Pool exhausted — reset cycle and return top N from full pool
+    try { await redis.del(`suggestions:seen:${userId}`); } catch {}
+    result = scored.slice(0, limit);
+  }
+
+  await updateSuggestionSeenSet(userId, result.map((r) => r.id));
+  return result;
 }
 
 async function getRandomSuggestions(userId: string, limit: number): Promise<FriendSuggestion[]> {
@@ -267,15 +284,39 @@ async function getRandomSuggestions(userId: string, limit: number): Promise<Frie
     select: {
       id: true,
       name: true,
+      surname: true,
       avatar: true,
       avatarBgColor: true,
       courseOfStudy: true,
       university: { select: { name: true } },
     },
-    take: limit,
+    take: limit * 3,
   });
 
-  return users.map((u) => ({ ...u, similarityScore: 0 }));
+  return users
+    .map((u) => ({ ...u, similarityScore: 0 }))
+    .sort(() => Math.random() - 0.5)
+    .slice(0, limit);
+}
+
+async function getSuggestionSeenSet(userId: string): Promise<Set<string>> {
+  try {
+    const members = await redis.smembers(`suggestions:seen:${userId}`);
+    return new Set(members);
+  } catch {
+    return new Set();
+  }
+}
+
+async function updateSuggestionSeenSet(userId: string, shownIds: string[]): Promise<void> {
+  if (shownIds.length === 0) return;
+  try {
+    const key = `suggestions:seen:${userId}`;
+    await redis.sadd(key, ...shownIds);
+    await redis.expire(key, SEEN_SET_TTL);
+  } catch {
+    // non-fatal — suggestion rotation degrades gracefully
+  }
 }
 
 /**

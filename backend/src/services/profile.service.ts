@@ -563,7 +563,7 @@ export async function searchUsers(
   const users = await prisma.user.findMany({
     where: {
       AND: [
-        q ? { name: { contains: q, mode: 'insensitive' } } : {},
+        q ? { OR: [{ name: { contains: q, mode: 'insensitive' } }, { surname: { contains: q, mode: 'insensitive' } }] } : {},
         { profileCompleted: true },
         currentUserId ? { NOT: { id: currentUserId } } : {},
         clusterTag ? { profile: { clusterTag } } : {},
@@ -575,6 +575,7 @@ export async function searchUsers(
     select: {
       id: true,
       name: true,
+      surname: true,
       avatar: true,
       courseOfStudy: true,
       yearOfStudy: true,

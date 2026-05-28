@@ -24,8 +24,8 @@ router.get('/conversations', authMiddleware, async (req: Request, res: Response)
       },
       orderBy: { sentAt: 'desc' },
       include: {
-        sender: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
-        receiver: { select: { id: true, name: true, avatar: true, avatarBgColor: true } },
+        sender: { select: { id: true, name: true, surname: true, avatar: true, avatarBgColor: true } },
+        receiver: { select: { id: true, name: true, surname: true, avatar: true, avatarBgColor: true } },
       },
     });
 

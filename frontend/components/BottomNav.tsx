@@ -45,7 +45,7 @@ export default function BottomNav() {
 
   const badgeMap: Record<string, number> = {
     '/home': badgeCounts.opportunities,
-    '/networking': badgeCounts.networking,
+    '/networking': badgeCounts.chat,
   };
 
   return (

@@ -150,7 +150,7 @@ model User {
   regionLock          Boolean   @default(false)
   cityLock            Boolean   @default(false)
   profileCompleted    Boolean   @default(false)
-  publicProfile       Boolean   @default(false)
+  publicProfile       Boolean   @default(true)
   privacySavedOpps    String    @default("Pathmates")
   privacyPathmates    String    @default("Pathmates")
   messagePrivacy      String    @default("Pathmates")

@@ -14,6 +14,7 @@ export function applyRefreshCookie(res: NextResponse, token: string): void {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60,
+    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     path: '/',
   });
 }
