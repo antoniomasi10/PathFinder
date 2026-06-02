@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "analyze-project": {
+      "source": "lllllllama/rigorpilot-skills",
+      "sourceType": "github",
+      "skillPath": "skills/analyze-project/SKILL.md",
+      "computedHash": "48ecfe353adc804aa3893e7e9e3e9a940c7e443bbcaad3aaae670d0d87403271"
+    },
     "brainstorming": {
       "source": "obra/superpowers",
       "sourceType": "github",

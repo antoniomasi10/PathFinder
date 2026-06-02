@@ -298,7 +298,7 @@ function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => 
             style={{ boxShadow: '0px 4px 6px -1px rgba(0,0,0,0.1), 0px 2px 4px -2px rgba(0,0,0,0.1)' }}
           >
             <span className="text-[16px] sm:text-[18px] font-bold" style={{ color: '#4a4bd7' }}>
-              {opp.company.charAt(0).toUpperCase()}
+              {(opp.company || opp.title || '?').charAt(0).toUpperCase()}
             </span>
           </div>
           <div className="flex-1 min-w-0">
@@ -373,7 +373,7 @@ function OpportunityCard({ opp, isSaved, onSave, onOpen }: {
             style={{ width: 48, height: 48, backgroundColor: '#e4e7ff', border: '1px solid #ecedff', borderRadius: 16, padding: 1 }}
           >
             <span className="text-[16px] font-bold" style={{ color: '#4a4bd7' }}>
-              {opp.company.charAt(0).toUpperCase()}
+              {(opp.company || opp.title || '?').charAt(0).toUpperCase()}
             </span>
           </div>
           <div className="flex-1 min-w-0">
@@ -752,6 +752,8 @@ export default function HomePage() {
   const [perTeTotalPages, setPerTeTotalPages] = useState(1);
   const perTeTopRef = useRef<HTMLDivElement>(null);
 
+  const [dailyOpportunity, setDailyOpportunity] = useState<Opportunity | null>(null);
+
   const [newOpportunities, setNewOpportunities] = useState<Opportunity[]>([]);
   const [loadingNew, setLoadingNew] = useState(false);
   const [esploraPage, setEsploraPage] = useState(1);
@@ -924,6 +926,12 @@ export default function HomePage() {
     const initQuery = restoredStateRef.current?.searchQuery ?? '';
     loadPerTePage(1, initQuery, initFilters);
     loadEsploraPage(1, initQuery, initFilters);
+    api.get('/opportunities/daily').then((res) => {
+      if (res.data) {
+        const d = res.data;
+        setDailyOpportunity({ ...d, company: d.company ?? '', location: d.location ?? '' });
+      }
+    }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -941,23 +949,16 @@ export default function HomePage() {
     setFilterOpen(true);
   }
 
-  useEffect(() => {
-    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
-    searchDebounceRef.current = setTimeout(() => {
-      loadPerTePage(1, searchQuery, appliedFilters);
-      loadEsploraPage(1, searchQuery, appliedFilters);
-    }, 350);
-    return () => { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery]);
-
+  // Count preview for the filter panel — uses ?new=true so minScore/maxScore
+  // are evaluated against profile match scores (0-100), not hybrid scores
+  // (which cap lower for users without a vector embedding).
   useEffect(() => {
     if (!filterOpen) return;
     setDraftCountLoading(true);
     const qs = buildServerParams(searchQuery, draftFilters);
     const t = setTimeout(async () => {
       try {
-        const res = await api.get(`/opportunities?matched=true&page=1&limit=1&lang=${langCode}${qs}`);
+        const res = await api.get(`/opportunities?new=true&page=1&limit=1&lang=${langCode}${qs}`);
         setDraftTotalCount(res.data.total ?? null);
       } catch {
         setDraftTotalCount(null);
@@ -968,6 +969,17 @@ export default function HomePage() {
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftFilters, filterOpen, searchQuery]);
+
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      loadPerTePage(1, searchQuery, appliedFilters);
+      loadEsploraPage(1, searchQuery, appliedFilters);
+    }, 350);
+    return () => { if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
 
   function applyFilters() {
     const newFilters = { ...draftFilters };
@@ -1033,8 +1045,21 @@ const viewedRef = useRef<Set<string>>(new Set());
     return out;
   }, [opportunities, newOpportunities]);
 
+  // Primary source: /opportunities/daily endpoint (profile match score, full list scan).
+  // Fallback: highest-scoring item from merged feeds (used before daily loads or if null).
+  const topByScore = new Map<string, Opportunity>();
+  for (const o of [...newOpportunities, ...opportunities]) {
+    const ex = topByScore.get(o.id);
+    if (!ex || (o.matchScore ?? 0) > (ex.matchScore ?? 0)) topByScore.set(o.id, o);
+  }
+  const topOpportunityFallback = [...topByScore.values()]
+    .sort((a, b) => (b.matchScore ?? 0) - (a.matchScore ?? 0))
+    .find((o) => matchesClientFilters(o, appliedFilters, 'per-te')) ?? null;
+  const topOpportunity = dailyOpportunity ?? topOpportunityFallback;
+
   const perTeFiltered = combinedPool
-    .filter((o) => matchesClientFilters(o, appliedFilters, 'per-te'));
+    .filter((o) => matchesClientFilters(o, appliedFilters, 'per-te'))
+    .filter((o) => !topOpportunity || o.id !== topOpportunity.id);
   const esploraFiltered = perTeFiltered; // alias mantenuto per compatibilità FilterSheet
 
   function formatCountRange(n: number): string {
@@ -1053,9 +1078,6 @@ const viewedRef = useRef<Set<string>>(new Set());
     return '5.000+';
   }
   const draftCountDisplay = draftCountLoading ? '…' : draftTotalCount !== null ? formatCountRange(draftTotalCount) : '…';
-
-  const topOpportunity = combinedPool
-    .filter((o) => matchesClientFilters(o, appliedFilters, 'per-te'))[0] ?? null;
 
   const isLoading = loadingOpps && !opportunities.length;
 
