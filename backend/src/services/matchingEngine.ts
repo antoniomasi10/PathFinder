@@ -494,6 +494,16 @@ export function scoreOpportunity(
     }
   }
 
+  // 17. Required non-Italian/non-English language barrier.
+  // Italian is assumed known for all users; English is already scored in step 4.
+  // Any other required language (de, fr, es, zh, etc.) cannot be verified → hard penalty.
+  // Applies only when requiredLanguages has been extracted (not null) — null means
+  // the field was never processed, so we give the opportunity the benefit of the doubt.
+  const reqLangs = (oppAny.requiredLanguages as Array<{ lang: string }> | null);
+  if (Array.isArray(reqLangs) && reqLangs.some((l) => l.lang !== 'en' && l.lang !== 'it')) {
+    score = Math.round(score * 0.25);
+  }
+
   return Math.min(score, 100);
 }
 

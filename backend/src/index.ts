@@ -44,7 +44,7 @@ import { startImportScheduler } from './services/import/scheduler';
 import { bulkGenerateEmbeddings } from './services/embedding.service';
 import { startRetentionCleanupJob } from './services/cleanup.service';
 import { runUrlCheckBatch } from './services/import/urlChecker';
-import { backfillExtractedSkillsBoot } from './services/ai/opportunityParser';
+import { backfillExtractedSkillsBoot, backfillRequiredLanguagesBoot } from './services/ai/opportunityParser';
 import { startTranslationScheduler } from './services/translationJob';
 import { startStructuredContentScheduler, runStructuredContentBatch } from './services/structuredContentJob';
 import { cacheDel } from './lib/cache';
@@ -228,6 +228,10 @@ httpServer.listen(PORT, () => {
   setTimeout(() => {
     backfillExtractedSkillsBoot(200).catch((err) => logger.error('Skills backfill boot failed:', err));
   }, 60_000);
+  // Backfill required language extraction for opportunities that haven't been processed yet (75s delay)
+  setTimeout(() => {
+    backfillRequiredLanguagesBoot(200).catch((err) => logger.error('Languages backfill boot failed:', err));
+  }, 75_000);
   // Backfill structured content for opportunities that don't have it yet (90s delay)
   setTimeout(() => {
     runStructuredContentBatch(10_000).catch((err) => logger.error('Structured content backfill boot failed:', err));

@@ -14,7 +14,7 @@ import { FieldOfStudy, OpportunityFormat, OpportunityType } from '@prisma/client
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { buildDedupKey, isSeniorRole } from './utils';
-import { parseOpportunityContent, parseAIDate, extractOpportunitySkills } from '../ai/opportunityParser';
+import { parseOpportunityContent, parseAIDate, extractOpportunitySkills, extractRequiredLanguages } from '../ai/opportunityParser';
 import { classifyOpportunityCluster } from '../ai/clusterClassifier';
 
 export interface OpportunityRecord {
@@ -182,10 +182,12 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
               eligibleFields: (r as any).eligibleFields ?? [],
             }),
             extractOpportunitySkills(r.title, r.description, null),
+            extractRequiredLanguages(r.title, r.description, null),
           ]);
           const structured = results[0].status === 'fulfilled' ? results[0].value : null;
           const clusters = results[1].status === 'fulfilled' ? results[1].value : null;
           const skills = results[2].status === 'fulfilled' ? results[2].value : [];
+          const langs = results[3].status === 'fulfilled' ? results[3].value : null;
           const updateData: any = {};
           if (structured) {
             updateData.structuredContent = structured;
@@ -212,6 +214,11 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
           }
           if (skills.length > 0) {
             updateData.extractedSkills = skills;
+          }
+          // Store empty array (not null) when extraction ran and found nothing,
+          // so the backfill knows not to re-process this opportunity.
+          if (langs !== null) {
+            updateData.requiredLanguages = langs;
           }
           if (Object.keys(updateData).length > 0) {
             await prisma.opportunity.update({

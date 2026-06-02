@@ -10,6 +10,7 @@
  */
 
 import OpenAI from 'openai';
+import { Prisma } from '@prisma/client';
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 
@@ -332,6 +333,125 @@ export async function extractOpportunitySkills(
     logger.warn(`[OpportunityParser] extractSkills failed for "${title}": ${err}`);
     return [];
   }
+}
+
+const LANGUAGES_SYSTEM_PROMPT = `Sei un assistente che identifica i requisiti linguistici nelle descrizioni di opportunità per studenti universitari italiani.
+
+Data la descrizione di un'opportunità, identifica le lingue (diverse dall'italiano e dall'inglese) che il candidato DEVE o DOVREBBE conoscere per candidarsi o partecipare.
+
+Rispondi SOLO con JSON valido: { "languages": [{"lang": "de", "level": "B2"}, ...] }
+
+Regole:
+- Usa codici ISO 639-1 a due lettere (es. "de" per tedesco, "fr" per francese, "es" per spagnolo, "zh" per cinese).
+- Usa livelli CEFR (A1, A2, B1, B2, C1, C2) per il campo "level". Usa null se nessun livello è specificato.
+- NON includere italiano ("it") né inglese ("en") — sono gestiti separatamente.
+- Includi SOLO lingue esplicitamente richieste come requisiti, non la lingua in cui è scritto il testo.
+- Se non sono richieste altre lingue, restituisci: { "languages": [] }
+- Rispondi SOLO con JSON valido, nessun testo aggiuntivo.`;
+
+export interface RequiredLanguage {
+  lang: string;
+  level: string | null;
+}
+
+/**
+ * Extracts non-English/non-Italian language requirements from an opportunity.
+ * Returns an empty array if none found, or null if OPENAI_API_KEY is not set.
+ * Never throws.
+ */
+export async function extractRequiredLanguages(
+  title: string,
+  description: string,
+  about?: string | null,
+): Promise<RequiredLanguage[] | null> {
+  const client = getClient();
+  if (!client) return null;
+
+  const userContent = [
+    `Titolo: ${title}`,
+    `Descrizione:\n${description.slice(0, 3000)}`,
+    about ? `Info aggiuntive:\n${about.slice(0, 1000)}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
+  try {
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: LANGUAGES_SYSTEM_PROMPT },
+        { role: 'user', content: userContent },
+      ],
+      max_tokens: 150,
+      temperature: 0.1,
+    });
+
+    const raw = response.choices[0]?.message?.content;
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw) as { languages?: unknown };
+    if (!Array.isArray(parsed.languages)) return [];
+
+    return parsed.languages
+      .filter((l): l is Record<string, unknown> => typeof l === 'object' && l !== null)
+      .filter((l) => typeof l.lang === 'string' && l.lang.length === 2)
+      .map((l) => ({
+        lang: (l.lang as string).toLowerCase(),
+        level: typeof l.level === 'string' && l.level.trim() ? l.level.trim().toUpperCase() : null,
+      }))
+      .filter((l) => l.lang !== 'en' && l.lang !== 'it');
+  } catch (err) {
+    logger.warn(`[OpportunityParser] extractRequiredLanguages failed for "${title}": ${err}`);
+    return null;
+  }
+}
+
+/**
+ * Boot-time backfill: processes up to `limit` active opportunities that have
+ * requiredLanguages as null (never extracted). Runs in the background — never
+ * throws, never blocks startup.
+ */
+export async function backfillRequiredLanguagesBoot(limit = 200): Promise<void> {
+  if (!process.env.OPENAI_API_KEY) return;
+
+  const now = new Date();
+  const opps = await prisma.opportunity.findMany({
+    where: {
+      requiredLanguages: { equals: Prisma.DbNull },
+      OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+    },
+    select: { id: true, title: true, description: true, about: true },
+    take: limit,
+    orderBy: { postedAt: 'desc' },
+  });
+
+  if (!opps.length) return;
+
+  const CONCURRENCY = 5;
+  logger.info(`[LangBackfill] Processing ${opps.length} opportunities at boot (concurrency=${CONCURRENCY})`);
+
+  let updated = 0;
+  for (let i = 0; i < opps.length; i += CONCURRENCY) {
+    const chunk = opps.slice(i, i + CONCURRENCY);
+    await Promise.all(
+      chunk.map(async (opp) => {
+        try {
+          const langs = await extractRequiredLanguages(opp.title, opp.description, opp.about);
+          // Store empty array (not null) to mark as "processed, none found"
+          await prisma.opportunity.update({
+            where: { id: opp.id },
+            data: { requiredLanguages: (langs ?? []) as unknown as Prisma.InputJsonValue },
+          });
+          updated++;
+        } catch {
+          // Non-fatal — will be retried on next boot
+        }
+      }),
+    );
+  }
+
+  logger.info(`[LangBackfill] Boot backfill complete — ${updated}/${opps.length} updated`);
 }
 
 const TRANSLATE_SYSTEM_PROMPT = `Sei un traduttore professionista. Traduci il testo fornito in italiano naturale e scorrevole.
