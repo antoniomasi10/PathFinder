@@ -151,11 +151,11 @@ model User {
   cityLock            Boolean   @default(false)
   profileCompleted    Boolean   @default(false)
   publicProfile       Boolean   @default(true)
-  privacySavedOpps    String    @default("Pathmates")
-  privacyPathmates    String    @default("Pathmates")
+  privacySavedOpps    String    @default("Tutti")
+  privacyPathmates    String    @default("Tutti")
   messagePrivacy      String    @default("Pathmates")
-  privacySkills       String    @default("Pathmates")
-  privacyUniversity   String    @default("Pathmates")
+  privacySkills       String    @default("Tutti")
+  privacyUniversity   String    @default("Tutti")
   skills              Json      @default("{\"core\":null,\"side\":[],\"promptShownAt\":null,\"promptDismissedAt\":null,\"definedAt\":null,\"lastUpdatedAt\":null}")
   passwordResetToken  String?
   passwordResetExpiry DateTime?

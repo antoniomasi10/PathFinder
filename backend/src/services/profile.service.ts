@@ -270,6 +270,7 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
       bio: null,
       courseOfStudy: null,
       yearOfStudy: null,
+      skills: null,
       profile: null,
       savedOpportunities: null,
       pathmates: [],
@@ -296,6 +297,7 @@ export async function getProfileForViewer(ownerId: string, viewerId: string) {
     publicProfile: isPublic,
     privacySavedOpps: savedOppsVisibility ?? 'Pathmates',
     privacyPathmates,
+    skills: canSeeSkills ? user.skills : null,
     profile: canSeeSkills && user.profile
       ? { clusterTag: user.profile.clusterTag, passions: user.profile.passions }
       : null,
