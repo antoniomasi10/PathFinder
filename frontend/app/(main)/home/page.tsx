@@ -1057,7 +1057,7 @@ const viewedRef = useRef<Set<string>>(new Set());
     .find((o) => matchesClientFilters(o, appliedFilters, 'per-te')) ?? null;
   const topOpportunity = dailyOpportunity ?? topOpportunityFallback;
 
-  const perTeFiltered = combinedPool
+  const perTeFiltered = opportunities
     .filter((o) => matchesClientFilters(o, appliedFilters, 'per-te'))
     .filter((o) => !topOpportunity || o.id !== topOpportunity.id);
   const esploraFiltered = perTeFiltered; // alias mantenuto per compatibilità FilterSheet
