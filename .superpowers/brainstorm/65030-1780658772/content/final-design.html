@@ -1,0 +1,238 @@
+<h2>Design finale — Requisiti di Candidatura</h2>
+<p class="subtitle">Struttura A con AI contextualizzata. Seleziona per confermare.</p>
+
+<style>
+  body { font-family: -apple-system, sans-serif; }
+  .page-mock {
+    max-width: 480px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  }
+  .type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: #bcbcff;
+    color: #3730a3;
+    margin-bottom: 8px;
+    letter-spacing: 0.04em;
+  }
+  .opp-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 4px 0;
+  }
+  .opp-company {
+    font-size: 14px;
+    color: #64748b;
+    margin: 0 0 20px 0;
+  }
+  .section-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 12px 0;
+  }
+  .req-card {
+    background: #f3f2ff;
+    border: 1px solid #dde1ff;
+    border-radius: 16px;
+    padding: 20px;
+  }
+  .req-group { margin-bottom: 16px; }
+  .req-group:last-child { margin-bottom: 0; }
+  .req-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #6b6bd7;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .req-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 5px 0;
+  }
+  .req-check {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid #4a4bd7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .req-check::after {
+    content: '';
+    width: 6px;
+    height: 4px;
+    border-left: 2px solid #4a4bd7;
+    border-bottom: 2px solid #4a4bd7;
+    transform: rotate(-45deg) translate(1px, -1px);
+  }
+  .req-text {
+    font-size: 14px;
+    color: #1a1a2e;
+    line-height: 1.4;
+  }
+  .req-divider {
+    height: 1px;
+    background: #dde1ff;
+    margin: 12px 0 16px 0;
+  }
+
+  /* Not shown case */
+  .hidden-section {
+    background: #f8fafc;
+    border: 1px dashed #e2e8f0;
+    border-radius: 16px;
+    padding: 16px;
+    text-align: center;
+  }
+  .hidden-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: #f1f4e0;
+    color: #5a6b1a;
+    margin-bottom: 10px;
+  }
+  .hidden-text { font-size: 13px; color: #94a3b8; }
+
+  .split-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  .split-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #7c3aed;
+    background: #ede9ff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+</style>
+
+<div class="split-section">
+
+  <!-- Internship/Stage -->
+  <div>
+    <div class="split-label">✅ Mostrato per Stage / Internship</div>
+    <div class="page-mock">
+      <span class="type-badge">💼 STAGE</span>
+      <p class="opp-title">Data Analyst Intern</p>
+      <p class="opp-company">Eni S.p.A. · Milano</p>
+
+      <p class="section-title">Requisiti di candidatura <span class="ai-badge">✦ AI</span></p>
+
+      <div class="req-card">
+        <div class="req-group">
+          <div class="req-label">🛠 Competenze</div>
+          <div class="req-row">
+            <div class="req-check"></div>
+            <span class="req-text">Padronanza di Python e SQL per analizzare dataset nel settore energetico</span>
+          </div>
+          <div class="req-row">
+            <div class="req-check"></div>
+            <span class="req-text">Capacità di condurre ricerche di mercato e interpretare trend competitivi</span>
+          </div>
+          <div class="req-row">
+            <div class="req-check"></div>
+            <span class="req-text">Familiarità con strumenti di data visualization (Power BI o Tableau)</span>
+          </div>
+        </div>
+        <div class="req-divider"></div>
+        <div class="req-group">
+          <div class="req-label">🎓 Requisiti accademici</div>
+          <div class="req-row">
+            <div class="req-check"></div>
+            <span class="req-text">2° – 4° anno di corso</span>
+          </div>
+          <div class="req-row">
+            <div class="req-check"></div>
+            <span class="req-text">Media voti ≥ 25/30</span>
+          </div>
+          <div class="req-row">
+            <div class="req-check"></div>
+            <span class="req-text">Economia, Ingegneria, Informatica</span>
+          </div>
+        </div>
+        <div class="req-divider"></div>
+        <div class="req-group">
+          <div class="req-label">🌐 Lingue</div>
+          <div class="req-row">
+            <div class="req-check"></div>
+            <span class="req-text">Inglese B2 o superiore</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Event/Summer School -->
+  <div>
+    <div class="split-label">🚫 Non mostrato per Event / Summer School / Fellowship</div>
+    <div class="page-mock">
+      <span class="type-badge" style="background:#f1f4e0;color:#5a6b1a;">🌿 SUMMER SCHOOL</span>
+      <p class="opp-title">Global Leadership Academy 2025</p>
+      <p class="opp-company">Bocconi · Lugano</p>
+
+      <div class="hidden-section">
+        <div class="hidden-text">Nessun requisito formale — candidatura aperta a tutti gli studenti universitari</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top: 20px;">
+  <div class="options">
+    <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+      <div class="letter">✓</div>
+      <div class="content">
+        <h3>Approvo questo design</h3>
+        <p>Procedi con il design doc e il piano di implementazione</p>
+      </div>
+    </div>
+    <div class="option" data-choice="adjust" onclick="toggleSelect(this)">
+      <div class="letter">✎</div>
+      <div class="content">
+        <h3>Voglio modifiche</h3>
+        <p>Dimmi cosa cambiare prima di procedere</p>
+      </div>
+    </div>
+  </div>
+</div>

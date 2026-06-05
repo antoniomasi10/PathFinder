@@ -14,7 +14,7 @@ import { FieldOfStudy, OpportunityFormat, OpportunityType } from '@prisma/client
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 import { buildDedupKey, isSeniorRole } from './utils';
-import { parseOpportunityContent, parseAIDate, extractOpportunitySkills, extractRequiredLanguages } from '../ai/opportunityParser';
+import { parseOpportunityContent, parseAIDate, extractOpportunitySkills, extractRequiredLanguages, extractContextualizedSkills } from '../ai/opportunityParser';
 import { classifyOpportunityCluster } from '../ai/clusterClassifier';
 
 export interface OpportunityRecord {
@@ -219,6 +219,13 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
           // so the backfill knows not to re-process this opportunity.
           if (langs !== null) {
             updateData.requiredLanguages = langs;
+          }
+          // Generate contextualized skill descriptions for stage/internship only
+          if (r.type === 'STAGE' || r.type === 'INTERNSHIP') {
+            const contextSkills = await extractContextualizedSkills(r.title, r.description, skills, null).catch(() => []);
+            if (contextSkills.length > 0) {
+              updateData.contextualizedSkills = contextSkills;
+            }
           }
           if (Object.keys(updateData).length > 0) {
             await prisma.opportunity.update({

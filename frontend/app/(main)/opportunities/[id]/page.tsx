@@ -20,6 +20,7 @@ interface StructuredContent {
   opportunityDescription: string | null;
   companyDescription: string | null;
   tasks: string[] | null;
+  parsedLanguage: string | null;
 }
 
 interface Opportunity {
@@ -35,7 +36,13 @@ interface Opportunity {
   remote: boolean;
   skills: string[];
   extractedSkills: string[];
+  contextualizedSkills: string[];
   requiredEnglishLevel?: string;
+  minGpa?: string;
+  minYearOfStudy?: number;
+  maxYearOfStudy?: number;
+  eligibleFields?: string[];
+  requiredLanguages?: Array<{ lang: string; level: string | null }>;
   deadline: string;
   source?: string;
   savedCount?: number;
@@ -59,7 +66,13 @@ function mapRaw(o: any, useIt = false): Opportunity {
     remote: o.isRemote || o.remote || false,
     skills: o.tags || o.skills || [],
     extractedSkills: o.extractedSkills || [],
+    contextualizedSkills: o.contextualizedSkills || [],
     requiredEnglishLevel: o.requiredEnglishLevel || '',
+    minGpa: o.minGpa || undefined,
+    minYearOfStudy: o.minYearOfStudy ?? undefined,
+    maxYearOfStudy: o.maxYearOfStudy ?? undefined,
+    eligibleFields: o.eligibleFields || [],
+    requiredLanguages: Array.isArray(o.requiredLanguages) ? o.requiredLanguages : [],
     deadline: o.deadline || '',
     source: o.source || '',
     savedCount: o.savedCount,
@@ -74,6 +87,51 @@ function topPercentile(score: number): string {
   if (score >= 70) return '10%';
   return '20%';
 }
+
+const INTERNSHIP_TYPES = new Set(['STAGE', 'INTERNSHIP']);
+
+const GPA_LABELS: Record<string, string> = {
+  GPA_18_20: 'Media voti 18–20',
+  GPA_21_24: 'Media voti 21–24',
+  GPA_25_27: 'Media voti 25–27',
+  GPA_28_30: 'Media voti 28–30',
+};
+
+const ENGLISH_LABELS: Record<string, string> = {
+  A2: 'Inglese A2',
+  B1_B2: 'Inglese B1–B2',
+  C1: 'Inglese C1',
+  C2_PLUS: 'Inglese C2 o madrelingua',
+};
+
+const FIELD_LABELS: Record<string, string> = {
+  COMPUTER_SCIENCE: 'Informatica',
+  ENGINEERING: 'Ingegneria',
+  MEDICINE: 'Medicina',
+  ECONOMICS: 'Economia',
+  BUSINESS: 'Business / Management',
+  LAW: 'Giurisprudenza',
+  POLITICAL_SCIENCE: 'Scienze Politiche',
+  DESIGN: 'Design',
+  MATHEMATICS: 'Matematica',
+  HUMANITIES: 'Lettere / Scienze Umanistiche',
+  LIFE_SCIENCES: 'Scienze della Vita',
+  PHYSICAL_SCIENCES: 'Fisica',
+  ARCHITECTURE: 'Architettura',
+  PSYCHOLOGY: 'Psicologia',
+  EDUCATION: "Scienze dell'Educazione",
+};
+
+const LANG_NAMES: Record<string, string> = {
+  de: 'Tedesco',
+  fr: 'Francese',
+  es: 'Spagnolo',
+  zh: 'Cinese',
+  pt: 'Portoghese',
+  ru: 'Russo',
+  ja: 'Giapponese',
+  ar: 'Arabo',
+};
 
 function deterministicViewCount(id: string): number {
   const hash = id.split('').reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) | 0, 0);
@@ -208,14 +266,42 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
   const isSaved = savedIds.has(opportunity.id);
   const companyInitial = opportunity.company.charAt(0).toUpperCase() || '?';
 
-  // Prefer AI-extracted skills (clean, specific); fall back to raw tags only if none extracted
-  const skillsSource = (opportunity.extractedSkills ?? []).length > 0
-    ? opportunity.extractedSkills
-    : opportunity.skills.slice(0, 4);
-  const requirements: string[] = [
-    ...skillsSource,
-    ...(opportunity.requiredEnglishLevel ? [`Inglese ${opportunity.requiredEnglishLevel}`] : []),
-  ].slice(0, 6);
+  // --- Structured requirements (STAGE/INTERNSHIP only) ---
+  const competenzeRows = opportunity.contextualizedSkills ?? [];
+
+  const accademicoRows: string[] = [];
+  if (opportunity.minYearOfStudy && opportunity.maxYearOfStudy) {
+    accademicoRows.push(`${opportunity.minYearOfStudy}°–${opportunity.maxYearOfStudy}° anno di corso`);
+  } else if (opportunity.minYearOfStudy) {
+    accademicoRows.push(`Dal ${opportunity.minYearOfStudy}° anno di corso`);
+  }
+  if (opportunity.minGpa && GPA_LABELS[opportunity.minGpa]) {
+    accademicoRows.push(GPA_LABELS[opportunity.minGpa]);
+  }
+  const eligibleLabels = (opportunity.eligibleFields ?? [])
+    .filter(f => f !== 'ANY' && FIELD_LABELS[f])
+    .map(f => FIELD_LABELS[f]);
+  if (eligibleLabels.length > 0) accademicoRows.push(eligibleLabels.join(', '));
+
+  const lingueRows: string[] = [];
+  if (opportunity.requiredEnglishLevel && ENGLISH_LABELS[opportunity.requiredEnglishLevel]) {
+    lingueRows.push(ENGLISH_LABELS[opportunity.requiredEnglishLevel]);
+  }
+  (opportunity.requiredLanguages ?? []).forEach(({ lang, level }) => {
+    const name = LANG_NAMES[lang] ?? lang.toUpperCase();
+    lingueRows.push(level ? `${name} ${level}` : name);
+  });
+  const parsedLang = opportunity.structuredContent?.parsedLanguage;
+  if (parsedLang && parsedLang !== 'it' && parsedLang !== 'en') {
+    const alreadyCovered = (opportunity.requiredLanguages ?? []).some(l => l.lang === parsedLang);
+    if (!alreadyCovered) {
+      lingueRows.push(LANG_NAMES[parsedLang] ?? parsedLang.toUpperCase());
+    }
+  }
+
+  const showRequirements =
+    INTERNSHIP_TYPES.has(opportunity.type) &&
+    (competenzeRows.length > 0 || accademicoRows.length > 0 || lingueRows.length > 0);
 
   const hasUrl = !!opportunity.url && isValidExternalUrl(opportunity.url);
 
@@ -553,22 +639,55 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
             </div>
           ) : null}
 
-          {/* Requirements */}
-          {requirements.length > 0 && (
+          {/* Requirements — only for STAGE / INTERNSHIP */}
+          {showRequirements && (
             <div className="flex flex-col gap-4">
               <h2 className="text-[20px] font-bold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>
                 Requisiti di candidatura
               </h2>
               <div
-                className="flex flex-col gap-3 p-5 rounded-[16px]"
+                className="flex flex-col p-5 rounded-[16px]"
                 style={{ backgroundColor: '#f3f2ff', border: '1px solid #dde1ff' }}
               >
-                {requirements.map((req, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <CircleCheck size={18} strokeWidth={1.8} color="#4a4bd7" className="flex-shrink-0" />
-                    <p className="text-[16px]" style={{ color: '#595e78', fontFamily: 'var(--font-plus-jakarta)' }}>{req}</p>
+                {competenzeRows.length > 0 && (
+                  <div className="flex flex-col gap-1 mb-1">
+                    <p className="text-[10px] font-bold tracking-widest uppercase mb-2" style={{ color: '#6b6bd7' }}>🛠 Competenze</p>
+                    {competenzeRows.map((req, i) => (
+                      <div key={i} className="flex items-start gap-3 py-1">
+                        <CircleCheck size={18} strokeWidth={1.8} color="#4a4bd7" className="flex-shrink-0 mt-[1px]" />
+                        <p className="text-[14px] leading-snug" style={{ color: '#1a1a2e', fontFamily: 'var(--font-plus-jakarta)' }}>{req}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
+                {competenzeRows.length > 0 && accademicoRows.length > 0 && (
+                  <hr className="my-3" style={{ borderColor: '#dde1ff' }} />
+                )}
+                {accademicoRows.length > 0 && (
+                  <div className="flex flex-col gap-1 mb-1">
+                    <p className="text-[10px] font-bold tracking-widest uppercase mb-2" style={{ color: '#6b6bd7' }}>🎓 Requisiti accademici</p>
+                    {accademicoRows.map((req, i) => (
+                      <div key={i} className="flex items-start gap-3 py-1">
+                        <CircleCheck size={18} strokeWidth={1.8} color="#4a4bd7" className="flex-shrink-0 mt-[1px]" />
+                        <p className="text-[14px] leading-snug" style={{ color: '#1a1a2e', fontFamily: 'var(--font-plus-jakarta)' }}>{req}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(competenzeRows.length > 0 || accademicoRows.length > 0) && lingueRows.length > 0 && (
+                  <hr className="my-3" style={{ borderColor: '#dde1ff' }} />
+                )}
+                {lingueRows.length > 0 && (
+                  <div className="flex flex-col gap-1">
+                    <p className="text-[10px] font-bold tracking-widest uppercase mb-2" style={{ color: '#6b6bd7' }}>🌐 Lingue</p>
+                    {lingueRows.map((req, i) => (
+                      <div key={i} className="flex items-start gap-3 py-1">
+                        <CircleCheck size={18} strokeWidth={1.8} color="#4a4bd7" className="flex-shrink-0 mt-[1px]" />
+                        <p className="text-[14px] leading-snug" style={{ color: '#1a1a2e', fontFamily: 'var(--font-plus-jakarta)' }}>{req}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
