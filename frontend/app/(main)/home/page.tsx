@@ -51,12 +51,13 @@ interface AdvancedFilters {
   onlyNew: boolean;
   englishLevels: string[];
   opportunityTypes: string[];
+  sortBy: 'default' | 'affinity';
 }
 
 const DEFAULT_FILTERS: AdvancedFilters = {
   formats: [], company: '', location: '', minScore: 0, maxScore: 100,
   deadline: '', onlyRemote: false, onlyAbroad: false, onlyNew: false,
-  englishLevels: [], opportunityTypes: [],
+  englishLevels: [], opportunityTypes: [], sortBy: 'default',
 };
 
 /* ── Filter logic ────────────────────────────────────────────────── */
@@ -89,6 +90,7 @@ function buildServerParams(search: string, f: AdvancedFilters): string {
   if (f.maxScore < 100) p.maxScore = String(f.maxScore);
   const allTypes = [...new Set([...f.opportunityTypes, ...detectedTypes])];
   if (allTypes.length) p.type = allTypes.join(',');
+  if (f.sortBy === 'affinity') p.sortBy = 'affinity';
   const qs = new URLSearchParams(p).toString();
   return qs ? `&${qs}` : '';
 }
@@ -98,7 +100,8 @@ function hasAnyFilter(f: AdvancedFilters): boolean {
     f.formats.length > 0 ||
     !!f.company || !!f.location || f.minScore > 1 || f.maxScore < 100 ||
     !!f.deadline || f.onlyRemote || f.onlyAbroad || f.onlyNew ||
-    f.englishLevels.length > 0 || f.opportunityTypes.length > 0
+    f.englishLevels.length > 0 || f.opportunityTypes.length > 0 ||
+    f.sortBy !== 'default'
   );
 }
 
@@ -625,6 +628,13 @@ function FilterSheet({ open, draft, matchCount, tab, t, onUpdate, onReset, onApp
           <button onClick={onReset} className="text-sm font-semibold" style={{ color: '#4a4bd7' }}>{t.home.reset}</button>
         </div>
         <div className="px-5 pb-4 space-y-6 max-h-[68vh] overflow-y-auto no-scrollbar">
+          <FilterSection label={t.home.filterSortBy}>
+            <div className="flex gap-2">
+              <Chip label={t.home.filterSortDefault} active={draft.sortBy === 'default'} onToggle={() => onUpdate({ sortBy: 'default' })} />
+              <Chip label={t.home.filterSortAffinity} active={draft.sortBy === 'affinity'} onToggle={() => onUpdate({ sortBy: 'affinity' })} />
+            </div>
+          </FilterSection>
+          <div className="h-px" style={{ backgroundColor: '#f3f2ff' }} />
           <FilterSection label={t.home.filterCompany}>
             <div className="relative">
               <input type="text" placeholder={t.home.filterCompanyPlaceholder} value={draft.company}

@@ -45,6 +45,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     const formatFilters = formatParam ? formatParam.split(',').filter(Boolean) : [];
     if (formatFilters.length) filters.formats = formatFilters;
     const hasFilters = Object.keys(filters).length > 0;
+    const sortBy = (req.query.sortBy as string || '').trim();
 
     const minScoreParam = parseFloat(req.query.minScore as string);
     const maxScoreParam = parseFloat(req.query.maxScore as string);
@@ -69,6 +70,9 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
           return true;
         });
       }
+      if (sortBy === 'affinity') {
+        snapshot = [...snapshot].sort((a: any, b: any) => (b.matchScore ?? 0) - (a.matchScore ?? 0));
+      }
       const data = snapshot.slice(skip, skip + limit);
       res.json({ data, total: snapshot.length, page, totalPages: Math.ceil(snapshot.length / limit) });
       return;
@@ -90,6 +94,9 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
           if (!isNaN(maxScoreParam) && score > maxScoreParam) return false;
           return true;
         });
+      }
+      if (sortBy === 'affinity') {
+        snapshot = [...snapshot].sort((a: any, b: any) => (b.matchScore ?? 0) - (a.matchScore ?? 0));
       }
       const data = snapshot.slice(skip, skip + limit);
       res.json({ data, total: snapshot.length, page, totalPages: Math.ceil(snapshot.length / limit) });
