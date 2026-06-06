@@ -6,6 +6,7 @@ import { trackInteraction } from '../services/interaction.service';
 import { cacheGet, cacheSet, cacheDel } from '../lib/cache';
 import { translateOpportunities } from '../services/opportunityTranslation.service';
 import { resolveLocationTokens } from '../services/locationFilter';
+import { logger } from '../utils/logger';
 
 const VALID_LANGS = new Set(['en', 'es', 'fr', 'zh']);
 
@@ -44,6 +45,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
     const formatFilters = formatParam ? formatParam.split(',').filter(Boolean) : [];
     if (formatFilters.length) filters.formats = formatFilters;
     const hasFilters = Object.keys(filters).length > 0;
+    const sortBy = (req.query.sortBy as string || '').trim();
 
     const minScoreParam = parseFloat(req.query.minScore as string);
     const maxScoreParam = parseFloat(req.query.maxScore as string);
@@ -68,6 +70,9 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
           return true;
         });
       }
+      if (sortBy === 'affinity') {
+        snapshot = [...snapshot].sort((a: any, b: any) => (b.matchScore ?? 0) - (a.matchScore ?? 0));
+      }
       const data = snapshot.slice(skip, skip + limit);
       res.json({ data, total: snapshot.length, page, totalPages: Math.ceil(snapshot.length / limit) });
       return;
@@ -89,6 +94,9 @@ router.get('/', authMiddleware, async (req: Request, res: Response) => {
           if (!isNaN(maxScoreParam) && score > maxScoreParam) return false;
           return true;
         });
+      }
+      if (sortBy === 'affinity') {
+        snapshot = [...snapshot].sort((a: any, b: any) => (b.matchScore ?? 0) - (a.matchScore ?? 0));
       }
       const data = snapshot.slice(skip, skip + limit);
       res.json({ data, total: snapshot.length, page, totalPages: Math.ceil(snapshot.length / limit) });
@@ -245,26 +253,35 @@ router.get('/daily', authMiddleware, async (req: Request, res: Response) => {
     const userId = req.user!.userId;
     const romeDateStr = new Date().toLocaleDateString('sv', { timeZone: 'Europe/Rome' }); // YYYY-MM-DD
     const cacheKey = `cache:opp:daily:${userId}:${romeDateStr}`;
-    const historyKey = `cache:opp:daily:history:${userId}`;
 
     const cached = await cacheGet<any>(cacheKey);
     if (cached) { res.json(cached); return; }
 
-    // Exclude opps the user has interacted with in the last 7 days
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    // Exclude opps the user has saved or applied in the last 7 days — committed actions
+    // only. Views and clicks are passive exploration and should not prevent the best
+    // match from appearing as the daily highlight.
     const recentInteractions = await prisma.userInteraction.findMany({
-      where: { userId, targetType: 'opportunity', createdAt: { gte: sevenDaysAgo } },
+      where: { userId, targetType: 'opportunity', action: { in: ['save', 'apply'] }, createdAt: { gte: sevenDaysAgo } },
       select: { targetId: true },
     });
     const interactedIds = new Set(recentInteractions.map(i => i.targetId));
 
-    // Exclude opps shown as daily in the last 7 days (cross-day variety)
-    const history = (await cacheGet<{ date: string; oppId: string }[]>(historyKey)) ?? [];
-    const recentDailyIds = new Set(history.map(h => h.oppId));
+    // Exclude opps shown as daily in the last 7 days — persisted to DB so history
+    // survives Redis restarts and prevents the same top opportunity repeating daily.
+    const recentDailyInteractions = await prisma.userInteraction.findMany({
+      where: { userId, targetType: 'opportunity', action: 'daily_highlight', createdAt: { gte: sevenDaysAgo } },
+      select: { targetId: true },
+    });
+    const recentDailyIds = new Set(recentDailyInteractions.map(i => i.targetId));
 
-    const result = await getHybridMatchedOpportunities(userId, 50, 0, {});
-    const candidates = result.data.filter(o => !interactedIds.has(o.id) && !recentDailyIds.has(o.id));
-    const pool = candidates.length > 0 ? candidates : result.data; // fallback if all filtered out
+    // Use profile match scores (getNewOpportunitiesFull) so the daily card shows
+    // the same score the user sees in the feed — not the hybrid score which
+    // deflates high-profile-match opps when vector similarity is moderate.
+    const allOpps = await getNewOpportunitiesFull(userId, {});
+    const candidates = allOpps.filter(o => !interactedIds.has(o.id) && !recentDailyIds.has(o.id));
+    const pool = candidates.length > 0 ? candidates : allOpps; // fallback if all filtered out
     if (!pool.length) { res.json(null); return; }
 
     // Top by matchScore — re-sort because the pipeline applies MMR/freshness that
@@ -278,9 +295,9 @@ router.get('/daily', authMiddleware, async (req: Request, res: Response) => {
 
     await cacheSet(cacheKey, daily, ttl);
 
-    // Push to history (keep last 7 entries), 8-day TTL
-    const updatedHistory = [{ date: romeDateStr, oppId: daily.id }, ...history.filter(h => h.oppId !== daily.id)].slice(0, 7);
-    await cacheSet(historyKey, updatedHistory, 8 * 24 * 60 * 60);
+    await prisma.userInteraction.create({
+      data: { userId, targetType: 'opportunity', targetId: daily.id, action: 'daily_highlight' },
+    });
 
     res.json(daily);
   } catch (err: any) {
@@ -293,19 +310,30 @@ router.get('/saved', authMiddleware, async (req: Request, res: Response) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
-      include: { savedOpportunities: { include: { university: true } } },
+      include: {
+        profile: true,
+        savedOpportunities: { include: { university: true } },
+      },
     });
-    res.json(user?.savedOpportunities || []);
+    const opps = (user?.savedOpportunities || []).map((opp) => ({
+      ...opp,
+      matchScore: user?.profile
+        ? Math.max(0, Math.min(100, Math.round(scoreOpportunity(user.profile, user, opp as any))))
+        : undefined,
+    }));
+    res.json(opps);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
 function invalidateUserOppCache(userId: string): void {
+  const romeDateStr = new Date().toLocaleDateString('sv', { timeZone: 'Europe/Rome' });
   Promise.all([
     cacheDel(`cache:opps:matched:${userId}:*`),
     cacheDel(`cache:opps:new:${userId}:*`),
-  ]).catch(() => {});
+    cacheDel(`cache:opp:daily:${userId}:${romeDateStr}`),
+  ]).catch((err) => logger.warn(`[Cache] Failed to invalidate opp cache for ${userId}:`, err));
 }
 
 // Get opportunities semantically related to a given opportunity, re-ranked by user match score.

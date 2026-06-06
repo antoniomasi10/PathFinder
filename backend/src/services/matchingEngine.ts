@@ -1,7 +1,7 @@
-import { UserProfile, User, Opportunity, GpaRange, EnglishLevel, UserInteraction, OpportunityType, FieldOfStudy, Prisma } from '@prisma/client';
+import { UserProfile, User, Opportunity, GpaRange, EnglishLevel, UserInteraction, OpportunityType, FieldOfStudy } from '@prisma/client';
 import prisma from '../lib/prisma';
 import type { UserSkills, SkillEntry } from './skills.service';
-import { normalizeFieldToEnum, isSeniorRole } from './import/utils';
+import { normalizeFieldToEnum } from './import/utils';
 import { resolveLocationTokens } from './locationFilter';
 import { logger } from '../utils/logger';
 
@@ -57,7 +57,7 @@ function applyOppFilters(items: any[], f: OppFilters): any[] {
   });
 }
 
-function parseUserSkills(raw: unknown): UserSkills | null {
+export function parseUserSkills(raw: unknown): UserSkills | null {
   if (!raw || typeof raw !== 'object') return null;
   const obj = raw as Record<string, unknown>;
   return {
@@ -115,6 +115,29 @@ const CLUSTER_TYPE_MAP: Record<string, OpportunityType[]> = {
   Explorer:     ['EXCHANGE', 'SUMMER_PROGRAM', 'EVENT', 'RESEARCH', 'FELLOWSHIP'],
 };
 
+// Tags that signal obvious field incompatibility when eligibleFields is not set.
+// Used by step 16 to catch mismatches that AI classification missed (e.g. an aerospace
+// engineering student getting 100% on a frontend intern with no eligibleFields).
+// Partial: only fields where the mismatch is clear-cut; ANY/HUMANITIES/SOCIAL_SCIENCE omitted.
+const FIELD_INCOMPATIBLE_TAGS: Partial<Record<FieldOfStudy, string[]>> = {
+  ENGINEERING:      ['react', 'frontend', 'ui', 'ux', 'design', 'figma', 'css', 'html',
+                     'marketing', 'fashion', 'pr', 'events', 'social media', 'copywriting'],
+  COMPUTER_SCIENCE: ['fashion', 'textile', 'nursing', 'clinical', 'surgery', 'law', 'legal',
+                     'accounting', 'audit', 'tax'],
+  MEDICINE:         ['react', 'frontend', 'typescript', 'nodejs', 'devops', 'blockchain',
+                     'marketing', 'fashion', 'finance', 'banking'],
+  LAW:              ['react', 'frontend', 'engineering', 'manufacturing', 'clinical',
+                     'nursing', 'fashion'],
+  ECONOMICS:        ['react', 'frontend', 'typescript', 'nodejs', 'clinical', 'nursing',
+                     'surgery', 'aerospace', 'mechanical'],
+  BUSINESS:         ['react', 'frontend', 'typescript', 'nodejs', 'clinical', 'nursing',
+                     'aerospace', 'mechanical'],
+  DESIGN:           ['react', 'frontend', 'typescript', 'nodejs', 'clinical', 'nursing',
+                     'banking', 'audit', 'aerospace', 'mechanical'],
+  HUMANITIES:       ['react', 'frontend', 'typescript', 'nodejs', 'engineering',
+                     'clinical', 'banking', 'audit'],
+};
+
 // ---------------------------------------------------------------------------
 // Per-type scoring profiles
 // ---------------------------------------------------------------------------
@@ -135,20 +158,23 @@ interface ScoringProfile {
 }
 
 // Each profile: base weights + bonus maxima sum to 100
+// All base weights scaled ×0.8 (sum = 80) so that tag-passion (+20 max) and skill (+10 max)
+// bonuses are the true differentiators for reaching 90-100%. Previously weights summed to 100
+// causing too many opportunities to be clamped at 100% with any tag overlap.
 const SCORING_PROFILES: Record<OpportunityType, ScoringProfile> = {
   //                        interest cluster gpa english relocate year | field cost  dead  loc
-  STAGE:          { interest:30, cluster:25, gpa:15, english:15, relocate:10, year:5,  fieldMatchBonus:0,  costBonus:0,  deadlineUrgencyBonus:0,  locationMatchBonus:0  },
-  INTERNSHIP:     { interest:30, cluster:25, gpa:15, english:15, relocate:10, year:5,  fieldMatchBonus:0,  costBonus:0,  deadlineUrgencyBonus:0,  locationMatchBonus:0  },
-  EXTRACURRICULAR:{ interest:25, cluster:25, gpa:5,  english:10, relocate:10, year:5,  fieldMatchBonus:5,  costBonus:5,  deadlineUrgencyBonus:0,  locationMatchBonus:10 },
-  EVENT:          { interest:20, cluster:10, gpa:0,  english:5,  relocate:10, year:0,  fieldMatchBonus:10, costBonus:15, deadlineUrgencyBonus:10, locationMatchBonus:20 },
-  FELLOWSHIP:     { interest:20, cluster:20, gpa:20, english:20, relocate:10, year:5,  fieldMatchBonus:0,  costBonus:0,  deadlineUrgencyBonus:5,  locationMatchBonus:0  },
-  SUMMER_PROGRAM: { interest:15, cluster:15, gpa:5,  english:15, relocate:10, year:5,  fieldMatchBonus:15, costBonus:15, deadlineUrgencyBonus:0,  locationMatchBonus:5  },
-  HACKATHON:      { interest:15, cluster:10, gpa:0,  english:10, relocate:5,  year:0,  fieldMatchBonus:20, costBonus:15, deadlineUrgencyBonus:15, locationMatchBonus:10 },
-  COMPETITION:    { interest:15, cluster:15, gpa:5,  english:15, relocate:10, year:5,  fieldMatchBonus:15, costBonus:5,  deadlineUrgencyBonus:10, locationMatchBonus:5  },
-  EXCHANGE:       { interest:10, cluster:15, gpa:10, english:25, relocate:15, year:10, fieldMatchBonus:5,  costBonus:0,  deadlineUrgencyBonus:10, locationMatchBonus:0  },
-  VOLUNTEERING:   { interest:10, cluster:20, gpa:0,  english:15, relocate:15, year:5,  fieldMatchBonus:10, costBonus:5,  deadlineUrgencyBonus:5,  locationMatchBonus:15 },
-  BOOTCAMP:       { interest:20, cluster:10, gpa:5,  english:10, relocate:10, year:5,  fieldMatchBonus:15, costBonus:15, deadlineUrgencyBonus:0,  locationMatchBonus:10 },
-  RESEARCH:       { interest:15, cluster:10, gpa:25, english:20, relocate:10, year:0,  fieldMatchBonus:15, costBonus:0,  deadlineUrgencyBonus:5,  locationMatchBonus:0  },
+  STAGE:          { interest:24, cluster:20, gpa:12, english:12, relocate:8,  year:4,  fieldMatchBonus:0,  costBonus:0,  deadlineUrgencyBonus:0,  locationMatchBonus:0  },
+  INTERNSHIP:     { interest:24, cluster:20, gpa:12, english:12, relocate:8,  year:4,  fieldMatchBonus:0,  costBonus:0,  deadlineUrgencyBonus:0,  locationMatchBonus:0  },
+  EXTRACURRICULAR:{ interest:20, cluster:20, gpa:4,  english:8,  relocate:8,  year:4,  fieldMatchBonus:4,  costBonus:4,  deadlineUrgencyBonus:0,  locationMatchBonus:8  },
+  EVENT:          { interest:16, cluster:8,  gpa:0,  english:4,  relocate:8,  year:0,  fieldMatchBonus:8,  costBonus:12, deadlineUrgencyBonus:8,  locationMatchBonus:16 },
+  FELLOWSHIP:     { interest:16, cluster:16, gpa:16, english:16, relocate:8,  year:4,  fieldMatchBonus:0,  costBonus:0,  deadlineUrgencyBonus:4,  locationMatchBonus:0  },
+  SUMMER_PROGRAM: { interest:12, cluster:12, gpa:4,  english:12, relocate:8,  year:4,  fieldMatchBonus:12, costBonus:12, deadlineUrgencyBonus:0,  locationMatchBonus:4  },
+  HACKATHON:      { interest:12, cluster:8,  gpa:0,  english:8,  relocate:4,  year:0,  fieldMatchBonus:16, costBonus:12, deadlineUrgencyBonus:12, locationMatchBonus:8  },
+  COMPETITION:    { interest:12, cluster:12, gpa:4,  english:12, relocate:8,  year:4,  fieldMatchBonus:12, costBonus:4,  deadlineUrgencyBonus:8,  locationMatchBonus:4  },
+  EXCHANGE:       { interest:8,  cluster:12, gpa:8,  english:20, relocate:12, year:8,  fieldMatchBonus:4,  costBonus:0,  deadlineUrgencyBonus:8,  locationMatchBonus:0  },
+  VOLUNTEERING:   { interest:8,  cluster:16, gpa:0,  english:12, relocate:12, year:4,  fieldMatchBonus:8,  costBonus:4,  deadlineUrgencyBonus:4,  locationMatchBonus:12 },
+  BOOTCAMP:       { interest:16, cluster:8,  gpa:4,  english:8,  relocate:8,  year:4,  fieldMatchBonus:12, costBonus:12, deadlineUrgencyBonus:0,  locationMatchBonus:8  },
+  RESEARCH:       { interest:12, cluster:8,  gpa:20, english:16, relocate:8,  year:0,  fieldMatchBonus:12, costBonus:0,  deadlineUrgencyBonus:4,  locationMatchBonus:0  },
 };
 
 // Passion value → opportunity tags (used for tag-content matching, max 20 pts)
@@ -271,29 +297,30 @@ export function scoreOpportunity(
   let score = 0;
 
   // 1. Primary interest → opportunity type
+  // All types in the interest's preferred list score full points — no positional penalty.
+  // Users may not choose their best-fit interest on first onboarding.
   const interest = profile.primaryInterest || 'general';
   const preferredTypes = INTEREST_TYPE_MAP[interest] ?? INTEREST_TYPE_MAP.general;
-  if (preferredTypes[0] === opportunity.type) {
+  if (preferredTypes.includes(opportunity.type)) {
     score += p.interest;
-  } else if (preferredTypes.includes(opportunity.type)) {
-    score += Math.round(p.interest * 0.65);
-  } else {
-    // Fully misaligned type → no points
   }
+  // Not in list → no points
 
   // 2. Cluster tag → Schwartz cluster scores on the opportunity (preferred)
   //    Fallback to OpportunityType map for legacy opps not yet classified.
   const cluster = profile.clusterTag || 'Explorer';
   const oppClusterScores = (opportunity as any).clusterScores as Record<string, number> | null | undefined;
   if (oppClusterScores && typeof oppClusterScores === 'object' && oppClusterScores[cluster] !== undefined) {
-    const w = Math.max(0, Math.min(1, oppClusterScores[cluster] ?? 0));
+    const rawW = Math.max(0, Math.min(1, oppClusterScores[cluster] ?? 0));
+    // Floor of 0.3 so non-primary clusters receive meaningful partial credit (~9 pts min)
+    // instead of near-zero when the AI assigns a low but non-zero score.
+    const w = 0.3 + rawW * 0.7;
     score += Math.round(p.cluster * w);
   } else {
+    // Legacy path: all types in the cluster's preferred list score full points.
     const clusterTypes = CLUSTER_TYPE_MAP[cluster] ?? CLUSTER_TYPE_MAP.Explorer;
-    if (clusterTypes[0] === opportunity.type) {
+    if (clusterTypes.includes(opportunity.type)) {
       score += p.cluster;
-    } else if (clusterTypes.includes(opportunity.type)) {
-      score += Math.round(p.cluster * 0.60);
     }
   }
 
@@ -402,25 +429,79 @@ export function scoreOpportunity(
   // causes too many opportunities to disappear when AI-inferred fields don't perfectly
   // match the user's normalised field enum (e.g. ENGINEERING vs COMPUTER_SCIENCE).
   const eligFields: FieldOfStudy[] = (opportunity as any).eligibleFields ?? [];
+  let fieldMismatchApplied = false;
   if (eligFields.length > 0 && !eligFields.includes('ANY' as FieldOfStudy)) {
     const userField = user.courseOfStudy ? normalizeFieldToEnum(user.courseOfStudy) : ('ANY' as FieldOfStudy);
     if (userField !== 'ANY' && !eligFields.includes(userField)) {
       score = Math.round(score * 0.15);
+      fieldMismatchApplied = true;
     }
     // User field unknown but opportunity is restricted: mild penalty since we can't verify eligibility.
     if (userField === 'ANY') {
       score = Math.round(score * 0.5);
+      fieldMismatchApplied = true;
     }
   }
 
-  // 14. Tag-incoherence penalty: opportunity has domain-specific tags with zero overlap with user
+  // 14. Tag-incoherence penalty: opportunity has domain-specific tags with zero overlap with user.
+  // Skipped if field mismatch already fired — both measure the same thematic misalignment and
+  // stacking them (×0.15 × ×0.40 = ×0.06) would bury conceptually relevant opportunities.
   const oppTags = opportunity.tags || [];
-  if (tagScore === 0 && oppTags.length >= 2) {
+  if (!fieldMismatchApplied && tagScore === 0 && oppTags.length >= 2) {
     const interest = profile.primaryInterest || 'general';
     const hasDefinedInterest = PASSION_TAG_MAP[interest] || INTEREST_TAG_MAP[interest];
     if (hasDefinedInterest) {
       score = Math.round(score * 0.4);
     }
+  }
+
+  // 16. Field-tag implicit mismatch: detect domain incompatibility via tags even when the
+  // user IS in eligibleFields (e.g. ENGINEERING includes aerospace, but the opportunity
+  // has frontend/react/css tags — clearly a CS domain, not aerospace).
+  // Skipped only if step 13 already fired a hard penalty (more severe, no need to stack).
+  if (!fieldMismatchApplied) {
+    const userFieldImplicit = user.courseOfStudy
+      ? normalizeFieldToEnum(user.courseOfStudy)
+      : ('ANY' as FieldOfStudy);
+    if (userFieldImplicit !== 'ANY') {
+      const incompatibleTags = FIELD_INCOMPATIBLE_TAGS[userFieldImplicit] ?? [];
+      if (incompatibleTags.length > 0) {
+        const oppTagsLower = (opportunity.tags || []).map((t) => t.toLowerCase());
+        const incompatibleMatches = oppTagsLower.filter((t) =>
+          incompatibleTags.some((it) => t.includes(it)),
+        ).length;
+        if (incompatibleMatches >= 2) {
+          score = Math.round(score * 0.70);
+        }
+      }
+    }
+  }
+
+  // 15. Implicit abroad language barrier.
+  // Applied only when requiredEnglishLevel is null — step 4 already handles explicit requirements.
+  // Remote/online opps are exempt: language barrier is lower in async remote contexts.
+  const oppAny = opportunity as any;
+  const isInPersonAbroad =
+    !opportunity.isRemote &&
+    oppAny.format !== 'ONLINE' &&
+    ((oppAny.country !== null && oppAny.country !== undefined && oppAny.country !== 'IT') || opportunity.isAbroad);
+
+  if (isInPersonAbroad && !opportunity.requiredEnglishLevel) {
+    if (user.englishLevel === 'A2') {
+      score = Math.round(score * 0.60);
+    } else if (user.englishLevel === 'B1_B2') {
+      score = Math.round(score * 0.85);
+    }
+  }
+
+  // 17. Required non-Italian/non-English language barrier.
+  // Italian is assumed known for all users; English is already scored in step 4.
+  // Any other required language (de, fr, es, zh, etc.) cannot be verified → hard penalty.
+  // Applies only when requiredLanguages has been extracted (not null) — null means
+  // the field was never processed, so we give the opportunity the benefit of the doubt.
+  const reqLangs = (oppAny.requiredLanguages as Array<{ lang: string }> | null);
+  if (Array.isArray(reqLangs) && reqLangs.some((l) => l.lang !== 'en' && l.lang !== 'it')) {
+    score = Math.round(score * 0.25);
   }
 
   return Math.min(score, 100);
@@ -443,21 +524,30 @@ function timeDecay(interactionDate: Date): number {
 /**
  * Computes a feedback-based adjustment from user interactions.
  * Returns a value in range [-10, +15].
+ *
+ * When oppTypeMap is provided, only interactions on opportunities of the same type
+ * as the candidate are counted — this makes the boost type-aware instead of
+ * rewarding general app engagement regardless of what was interacted with.
  */
 function computeFeedbackBoost(
   interactions: UserInteraction[],
   opportunity: Opportunity,
+  oppTypeMap?: Map<string, string>,
 ): number {
   let boost = 0;
 
-  // Aggregate weighted interactions by opportunity type
-  const typeInteractions = interactions.filter(
-    (i) => i.targetType === 'opportunity',
-  );
+  // Filter to opportunity interactions of the same type as the current candidate.
+  // If the map is not available, fall back to all opportunity interactions.
+  const typeInteractions = interactions.filter((i) => {
+    if (i.targetType !== 'opportunity') return false;
+    if (oppTypeMap && oppTypeMap.size > 0) {
+      return oppTypeMap.get(i.targetId) === opportunity.type;
+    }
+    return true;
+  });
 
   if (typeInteractions.length === 0) return 0;
 
-  // Positive signals: user saved/applied/clicked similar opportunity types
   let positiveSignal = 0;
   let negativeSignal = 0;
   let hasRecentTypeInteraction = false;
@@ -465,10 +555,6 @@ function computeFeedbackBoost(
   for (const interaction of typeInteractions) {
     const decay = timeDecay(interaction.createdAt);
 
-    // We need to check if this interaction was for the same opportunity type.
-    // Since we don't have the type in the interaction, we use saved opportunity types
-    // from a pre-computed map passed externally, or approximate via targetId.
-    // For simplicity, count all opportunity interactions weighted by decay.
     if (interaction.action === 'save' || interaction.action === 'apply' || interaction.action === 'click') {
       positiveSignal += interaction.weight * decay;
     }
@@ -486,7 +572,7 @@ function computeFeedbackBoost(
   // Negative penalty up to -10
   boost -= Math.min(negativeSignal * 2, 10);
 
-  // Diversity bonus: if user hasn't interacted with this type recently, +5
+  // Diversity bonus: user hasn't viewed this opportunity type recently → +5
   if (!hasRecentTypeInteraction) {
     boost += 5;
   }
@@ -504,9 +590,10 @@ export function scoreOpportunityWithFeedback(
   opportunity: Opportunity,
   interactions: UserInteraction[],
   skills?: UserSkills | null,
+  oppTypeMap?: Map<string, string>,
 ): number {
   const baseScore = scoreOpportunity(profile, user, opportunity, skills);
-  const feedbackBoost = computeFeedbackBoost(interactions, opportunity);
+  const feedbackBoost = computeFeedbackBoost(interactions, opportunity, oppTypeMap);
   return Math.max(0, Math.min(100, baseScore + feedbackBoost));
 }
 
@@ -699,6 +786,17 @@ export async function getRelatedOpportunities(
       })
     : [];
 
+  // Build oppId → oppType map for type-aware feedback boost
+  const relatedOppTypeMap = new Map<string, string>();
+  if (interactions.length > 0) {
+    const relatedInteractedIds = [...new Set(interactions.map((i) => i.targetId))];
+    const relatedOppTypes = await prisma.opportunity.findMany({
+      where: { id: { in: relatedInteractedIds } },
+      select: { id: true, type: true },
+    });
+    relatedOppTypes.forEach((o) => relatedOppTypeMap.set(o.id, o.type));
+  }
+
   const userSkills = user ? parseUserSkills(user.skills) : null;
 
   // Step 4: re-rank with match score + content similarity
@@ -711,9 +809,11 @@ export async function getRelatedOpportunities(
     let matchScore: number;
     if (user?.profile) {
       const baseScore = scoreOpportunity(user.profile, user, opp, userSkills);
-      const feedbackBoost = computeFeedbackBoost(interactions, opp);
-      // 60% user match, 40% content similarity — content similarity is primary driver here
-      matchScore = baseScore * 0.6 + contentSim * 100 * 0.4 + feedbackBoost;
+      const feedbackBoost = computeFeedbackBoost(interactions, opp, relatedOppTypeMap);
+      // 60% user match, 40% content similarity — content similarity is primary driver here.
+      // feedbackBoost is normalized from [-10,+15] to [0,100] range before weighting (×0.1).
+      const normalizedFeedback = (feedbackBoost + 10) * (100 / 25);
+      matchScore = baseScore * 0.6 + contentSim * 100 * 0.4 + normalizedFeedback * 0.1;
     } else {
       // No profile: rank purely by content similarity
       matchScore = contentSim * 100;
@@ -758,7 +858,7 @@ export async function getRelatedOpportunities(
   adjusted.sort((a, b) => b.matchScore - a.matchScore || a.id.localeCompare(b.id));
 
   // MMR on the full list (small window since we only return a few items)
-  const ranked = diversifyMMR(adjusted, adjusted.length, 0.7, 3);
+  const ranked = diversifyMMR(adjusted, adjusted.length, 0.9, 3);
 
   return ranked.slice(0, limit);
 }
@@ -804,17 +904,28 @@ export async function getHybridMatchedOpportunitiesFull(
 
   let candidates: any[];
 
-  // Hard filter: structured location preference (city > region > country)
-  // Replaces fragile regex on location string. Remote opps always allowed.
-  let relocFilter = '';
+  // Hard filter: structured location preference (city > region > country).
+  // Uses parameterized values to avoid SQL injection — string interpolation was unsafe here.
+  // embedExtraParams: used when userId is already $1 (embedding path).
+  // noEmbedExtraParams: used when there is no userId param (fallback path).
+  const embedExtraParams: string[] = [];
+  const noEmbedExtraParams: string[] = [];
+  let relocFilterEmbed = '';
+  let relocFilterNoEmbed = '';
   if (user.cityLock && user.city) {
-    const safeCity = user.city.replace(/'/g, "''");
-    relocFilter = `AND (o."isRemote" = true OR lower(o."city") = lower('${safeCity}'))`;
+    embedExtraParams.push(user.city);
+    relocFilterEmbed = `AND (o."isRemote" = true OR lower(o."city") = lower($2))`;
+    noEmbedExtraParams.push(user.city);
+    relocFilterNoEmbed = `AND (o."isRemote" = true OR lower(o."city") = lower($1))`;
   } else if (user.regionLock && user.region) {
-    const safeRegion = user.region.replace(/'/g, "''");
-    relocFilter = `AND (o."isRemote" = true OR lower(o."region") = lower('${safeRegion}'))`;
+    embedExtraParams.push(user.region);
+    relocFilterEmbed = `AND (o."isRemote" = true OR lower(o."region") = lower($2))`;
+    noEmbedExtraParams.push(user.region);
+    relocFilterNoEmbed = `AND (o."isRemote" = true OR lower(o."region") = lower($1))`;
   } else if (user.willingToRelocate === 'NO') {
-    relocFilter = `AND (o."isRemote" = true OR o."country" = 'IT' OR (o."country" IS NULL AND o."isAbroad" = false))`;
+    const noRelocClause = `AND (o."isRemote" = true OR o."country" = 'IT' OR (o."country" IS NULL AND o."isAbroad" = false))`;
+    relocFilterEmbed = noRelocClause;
+    relocFilterNoEmbed = noRelocClause;
   }
 
   // Hard filter: senior/experienced roles that leak under INTERNSHIP/STAGE tagging.
@@ -858,10 +969,11 @@ export async function getHybridMatchedOpportunitiesFull(
            OR o."endDate" >= CURRENT_DATE
          )
          AND (o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN' OR o."source" = 'curated')
-         ${relocFilter}
+         ${relocFilterEmbed}
          ${seniorLeakFilter}
        ORDER BY o."postedAt" DESC`,
       userId,
+      ...embedExtraParams,
     );
   } else {
     // Fallback: get all opportunities (Phase 1 behavior)
@@ -890,9 +1002,10 @@ export async function getHybridMatchedOpportunitiesFull(
            OR o."endDate" >= CURRENT_DATE
          )
          AND (o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN' OR o."source" = 'curated')
-         ${relocFilter}
+         ${relocFilterNoEmbed}
          ${seniorLeakFilter}
        ORDER BY o."postedAt" DESC`,
+      ...noEmbedExtraParams,
     );
   }
 
@@ -906,13 +1019,24 @@ export async function getHybridMatchedOpportunitiesFull(
     },
   });
 
+  // Build oppId → oppType map so computeFeedbackBoost can filter by type.
+  const interactedOppIds = [...new Set(interactions.map((i) => i.targetId))];
+  const oppTypeMap = new Map<string, string>();
+  if (interactedOppIds.length > 0) {
+    const oppTypes = await prisma.opportunity.findMany({
+      where: { id: { in: interactedOppIds } },
+      select: { id: true, type: true },
+    });
+    oppTypes.forEach((o) => oppTypeMap.set(o.id, o.type));
+  }
+
   // Parse user skills from JSON field
   const userSkills = parseUserSkills(user.skills);
 
   // Stage 2: Re-rank with hybrid scoring
   const scored = candidates.map((opp) => {
     const baseScore = scoreOpportunity(user.profile!, user, opp, userSkills);
-    const feedbackBoost = computeFeedbackBoost(interactions, opp);
+    const feedbackBoost = computeFeedbackBoost(interactions, opp, oppTypeMap);
     const vectorSim = opp.vectorSimilarity ?? 0;
 
     let hybridScore: number;
@@ -959,23 +1083,34 @@ export async function getHybridMatchedOpportunitiesFull(
       source: opp.source,
       sourceId: opp.sourceId,
       clusterPrimary: opp.clusterPrimary ?? null,
-      matchScore: Math.max(0, Math.min(100, Math.round(hybridScore))),
+      // matchScore is always profile-pure so the displayed % is consistent across all surfaces.
+      // hybridScore (with vector + feedback) is kept separately for ranking only.
+      matchScore: Math.max(0, Math.min(100, Math.round(baseScore))),
+      _hybridScore: hybridScore,
       matchReason: getMatchReason(user.profile!, user, opp, userSkills),
     };
   });
 
-  // Soft freshness penalty: already-viewed/-clicked opps lose a few points so they
-  // slide slightly lower without being banished to the end of the feed.
+  // Freshness penalty degrades _hybridScore (ranking) only — matchScore stays profile-pure
+  // so the displayed % never changes when an opp has been viewed or clicked.
   const viewedIds = new Set(interactions.filter((i) => i.action === 'view').map((i) => i.targetId));
   const clickedIds = new Set(interactions.filter((i) => i.action === 'click').map((i) => i.targetId));
-  const adjusted = applyFreshnessPenalty(scored, viewedIds, clickedIds);
+  const penalised = (scored as any[]).map((opp) => {
+    let penalty = 0;
+    if (clickedIds.has(opp.id)) penalty = 10;
+    else if (viewedIds.has(opp.id)) penalty = 5;
+    return penalty === 0 ? opp : { ...opp, _hybridScore: opp._hybridScore - penalty };
+  });
 
-  // Sort by matchScore, tie-break on id for deterministic pagination across requests.
-  adjusted.sort((a, b) => b.matchScore - a.matchScore || a.id.localeCompare(b.id));
+  // Sort by _hybridScore (ranking quality) — tie-break on id for deterministic pagination.
+  penalised.sort((a: any, b: any) => b._hybridScore - a._hybridScore || a.id.localeCompare(b.id));
+
+  // Strip internal field before MMR and return.
+  const adjusted = penalised.map(({ _hybridScore, ...rest }: any) => rest);
 
   // MMR diversification across the WHOLE list (lambda 0.7 keeps score dominant)
   // so type/cluster heterogeneity is preserved on every page, not just the first 40.
-  const ranked = diversifyMMR(adjusted, adjusted.length, 0.7, 5);
+  const ranked = diversifyMMR(adjusted, Math.min(adjusted.length, 300), 0.9, 5);
 
   const filtered = Object.keys(filters).length ? applyOppFilters(ranked, filters) : ranked;
   return filtered;
@@ -1012,74 +1147,93 @@ export async function getNewOpportunitiesFull(
     include: { profile: true },
   });
 
-  // Build Prisma where from filters
-  const where: Prisma.OpportunityWhereInput = {};
-  if (filters.search) {
-    where.OR = [
-      { title: { contains: filters.search, mode: 'insensitive' } },
-      { company: { contains: filters.search, mode: 'insensitive' } },
-    ];
-  }
-  if (filters.company) where.company = { contains: filters.company, mode: 'insensitive' };
-  if (filters.location) where.location = { contains: filters.location, mode: 'insensitive' };
-  if (filters.isRemote !== undefined) where.isRemote = filters.isRemote;
-  if (filters.isAbroad !== undefined) where.isAbroad = filters.isAbroad;
-  if (filters.englishLevels?.length) where.requiredEnglishLevel = { in: filters.englishLevels as any };
+  // Senior/experienced role filter — same regex as the matched feed, applied at SQL level
+  // so the entire table is never loaded into memory just to be filtered in JS.
+  const seniorLeakFilterNew = `
+    AND NOT (
+      lower(o."title") ~ '(^|[^a-z])(senior|sr\\.?|director|head of|vp|vice president|lead|principal|staff|chief|cto|ceo|cmo|coo|cpo|manager|responsabile)([^a-z]|$)'
+      AND NOT lower(o."title") ~ '(^|[^a-z])(intern|interns|internship|internships|stage|tirocinio|stagista|trainee|junior|graduate program|werkstudent|apprenti|alternance|stagiaire|praktikant|borsista)([^a-z]|$)'
+    )
+    AND NOT lower(o."title") ~ '\\d+\\+? *(years?|anni?) +(of +)?(experience|esperienza)'`;
 
-  // Always exclude expired listings, past-deadline, and broken-URL opportunities.
-  // EVENT type uses endDate (not deadline) — events don't have an application deadline.
-  // Curated rows are exempt from urlStatus=BROKEN (manually verified; urlChecker false-positives).
-  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-  const nowTs = new Date();
-  where.AND = [
-    { OR: [{ expiresAt: null }, { expiresAt: { gt: nowTs } }] },
-    {
-      OR: [
-        {
-          AND: [
-            { type: { in: ['EVENT'] } },
-            { OR: [{ endDate: null }, { endDate: { gte: todayStart } }] },
-          ],
-        },
-        {
-          AND: [
-            { type: { notIn: ['EVENT'] } },
-            { OR: [{ deadline: null }, { deadline: { gt: nowTs } }] },
-          ],
-        },
-      ],
-    },
-    { OR: [{ urlStatus: null }, { urlStatus: { not: 'BROKEN' } }, { source: 'curated' }] },
+  // Build parameterized WHERE conditions — mirrors the matched feed SQL approach.
+  const conditions: string[] = [
+    `(o."expiresAt" IS NULL OR o."expiresAt" > NOW())`,
+    `(o."type" IN ('EVENT') OR o."deadline" IS NULL OR o."deadline" > NOW())`,
+    `(o."type" NOT IN ('EVENT') OR o."endDate" IS NULL OR o."endDate" >= CURRENT_DATE)`,
+    `(o."urlStatus" IS NULL OR o."urlStatus" != 'BROKEN' OR o."source" = 'curated')`,
   ];
+  const sqlParams: any[] = [];
+  let pidx = 1;
 
-  // Hard filter: users who explicitly don't want to relocate never see in-person abroad opportunities
+  if (filters.search) {
+    conditions.push(`(o."title" ILIKE $${pidx} OR o."company" ILIKE $${pidx})`);
+    sqlParams.push(`%${filters.search}%`); pidx++;
+  }
+  if (filters.company) {
+    conditions.push(`o."company" ILIKE $${pidx}`);
+    sqlParams.push(`%${filters.company}%`); pidx++;
+  }
+  if (filters.location) {
+    conditions.push(`o."location" ILIKE $${pidx}`);
+    sqlParams.push(`%${filters.location}%`); pidx++;
+  }
+  if (filters.isRemote !== undefined) {
+    conditions.push(`o."isRemote" = $${pidx}`); sqlParams.push(filters.isRemote); pidx++;
+  }
+  if (filters.isAbroad !== undefined) {
+    conditions.push(`o."isAbroad" = $${pidx}`); sqlParams.push(filters.isAbroad); pidx++;
+  }
+  if (filters.englishLevels?.length) {
+    const placeholders = filters.englishLevels.map(() => `$${pidx++}`).join(', ');
+    conditions.push(`o."requiredEnglishLevel" IN (${placeholders})`);
+    sqlParams.push(...filters.englishLevels);
+  }
   if (user?.willingToRelocate === 'NO') {
-    (where.AND as Prisma.OpportunityWhereInput[]).push(
-      { OR: [{ isAbroad: false }, { isRemote: true }] },
-    );
+    conditions.push(`(o."isRemote" = true OR o."isAbroad" = false)`);
+  }
+  if (filters.types?.length) {
+    const placeholders = filters.types.map(() => `$${pidx++}`).join(', ');
+    conditions.push(`o."type" IN (${placeholders})`);
+    sqlParams.push(...filters.types);
+  }
+  if (filters.formats?.length) {
+    const placeholders = filters.formats.map(() => `$${pidx++}`).join(', ');
+    conditions.push(`o."format" IN (${placeholders})`);
+    sqlParams.push(...filters.formats);
+  }
+  if (filters.deadline === '7' || filters.deadline === '30') {
+    const dlNow = new Date(); dlNow.setHours(0, 0, 0, 0);
+    const dlEnd = new Date(dlNow); dlEnd.setDate(dlEnd.getDate() + parseInt(filters.deadline));
+    conditions.push(`(o."deadline" >= $${pidx} AND o."deadline" <= $${pidx + 1})`);
+    sqlParams.push(dlNow, dlEnd); pidx += 2;
+  } else if (filters.deadline === 'month') {
+    const dlNow = new Date();
+    const dlStart = new Date(dlNow.getFullYear(), dlNow.getMonth(), 1);
+    const dlEnd = new Date(dlNow.getFullYear(), dlNow.getMonth() + 1, 0, 23, 59, 59);
+    conditions.push(`(o."deadline" >= $${pidx} AND o."deadline" <= $${pidx + 1})`);
+    sqlParams.push(dlStart, dlEnd); pidx += 2;
   }
 
+  const newWhereClause = `WHERE ${conditions.join(' AND ')} ${seniorLeakFilterNew}`;
 
-  if (filters.deadline) {
-    const now = new Date(); now.setHours(0, 0, 0, 0);
-    if (filters.deadline === '7' || filters.deadline === '30') {
-      const end = new Date(now); end.setDate(end.getDate() + parseInt(filters.deadline));
-      where.deadline = { gte: now, lte: end };
-    } else if (filters.deadline === 'month') {
-      const start = new Date(now.getFullYear(), now.getMonth(), 1);
-      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-      where.deadline = { gte: start, lte: end };
-    }
-  }
-
-  // Fetch opportunities (pre-filtered for efficiency)
-  const allOppsRaw = await prisma.opportunity.findMany({
-    where: Object.keys(where).length ? where : undefined,
-    include: { university: true },
-    orderBy: { postedAt: 'desc' },
-  });
-  // Strip senior/experienced roles that leak under INTERNSHIP/STAGE tagging
-  const allOpps = allOppsRaw.filter((o) => !isSeniorRole(o.title));
+  // Fetch opportunities — senior filter applied at SQL level (no full-table in-memory load)
+  const allOpps = await prisma.$queryRawUnsafe<any[]>(
+    `SELECT o."id", o."title", o."description", o."titleIt", o."descriptionIt", o."about", o."url", o."type",
+            o."universityId", o."company", o."organizer", o."location", o."isRemote", o."isAbroad",
+            o."requiredEnglishLevel", o."minGpa", o."tags", o."deadline",
+            o."postedAt", o."expiresAt", o."source", o."sourceId",
+            o."eligibleFields", o."country", o."city", o."region", o."format",
+            o."clusterScores", o."clusterPrimary", o."minYearOfStudy", o."maxYearOfStudy",
+            o."cost", o."hasScholarship",
+            u."name" as "universityName", u."city" as "universityCity",
+            u."id" as "uniId", u."logoUrl" as "universityLogoUrl"
+     FROM "Opportunity" o
+     LEFT JOIN "University" u ON o."universityId" = u."id"
+     ${newWhereClause}
+     ORDER BY o."postedAt" DESC`,
+    ...sqlParams,
+  );
 
   // Fetch opportunity IDs the user has saved/applied (novelty = 0)
   const seenInteractions = await prisma.userInteraction.findMany({
@@ -1131,7 +1285,7 @@ export async function getNewOpportunitiesFull(
       url: opp.url,
       type: opp.type,
       universityId: opp.universityId,
-      university: opp.university,
+      university: opp.uniId ? { id: opp.uniId, name: opp.universityName, city: opp.universityCity, logoUrl: opp.universityLogoUrl } : null,
       company: opp.company,
       organizer: opp.organizer,
       location: opp.location,

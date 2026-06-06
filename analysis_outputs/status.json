@@ -1,0 +1,21 @@
+{
+  "status": "complete",
+  "analyzedAt": "2026-06-01",
+  "scope": "matchmaking-engine",
+  "filesRead": [
+    "backend/src/services/matchingEngine.ts",
+    "backend/src/routes/opportunity.routes.ts",
+    "backend/src/services/embedding.service.ts",
+    "backend/src/services/ai/clusterClassifier.ts",
+    "backend/src/services/interaction.service.ts",
+    "backend/src/services/locationFilter.ts"
+  ],
+  "risksFound": 9,
+  "highSeverity": 2,
+  "medSeverity": 3,
+  "lowSeverity": 4,
+  "criticalFindings": [
+    "RISK-01: SQL injection via string interpolation in city/region relocation filter (getHybridMatchedOpportunitiesFull)",
+    "RISK-02: Feedback boost is type-agnostic — any opportunity interaction boosts all opportunity scores"
+  ]
+}

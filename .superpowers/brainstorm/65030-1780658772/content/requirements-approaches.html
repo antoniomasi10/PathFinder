@@ -1,0 +1,242 @@
+<h2>Come strutturare i Requisiti di Candidatura</h2>
+<p class="subtitle">Tre approcci diversi — seleziona quello che preferisci come punto di partenza</p>
+
+<style>
+  .req-section { font-family: -apple-system, sans-serif; }
+  .req-card {
+    background: #f3f2ff;
+    border: 1px solid #dde1ff;
+    border-radius: 16px;
+    padding: 20px;
+    margin: 0;
+  }
+  .req-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6b6bd7;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .req-label-icon { font-size: 13px; }
+  .req-group { margin-bottom: 14px; }
+  .req-group:last-child { margin-bottom: 0; }
+  .req-divider {
+    height: 1px;
+    background: #dde1ff;
+    margin: 12px 0;
+  }
+  /* Approach A: Categorized */
+  .req-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+    font-size: 14px;
+    color: #1a1a2e;
+  }
+  .req-check { color: #4a4bd7; font-size: 16px; }
+
+  /* Approach B: With match status */
+  .req-pill-match {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    margin: 3px 4px 3px 0;
+  }
+  .pill-met { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+  .pill-unmet { background: #fff3e0; color: #e65100; border: 1px solid #ffe0b2; }
+  .pill-neutral { background: #f3f2ff; color: #4a4bd7; border: 1px solid #dde1ff; }
+
+  /* Approach C: Tags compatti */
+  .tag-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .tag-skill { background: #ede9ff; color: #5b21b6; }
+  .tag-lang { background: #e0f2fe; color: #0369a1; }
+  .tag-acad { background: #f0fdf4; color: #166534; }
+  .tag-exp { background: #fff7ed; color: #9a3412; }
+
+  .section-title-mock {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 12px;
+  }
+  .type-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 12px;
+    background: #bcbcff;
+    color: #3730a3;
+    margin-bottom: 12px;
+  }
+  .match-score-inline {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #dde1ff;
+  }
+  .score-bar {
+    display: inline-block;
+    width: 60px;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    vertical-align: middle;
+    position: relative;
+    margin-left: 4px;
+  }
+  .score-fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    border-radius: 3px;
+    background: #4a4bd7;
+    width: 72%;
+  }
+  .not-shown-notice {
+    font-size: 12px;
+    color: #94a3b8;
+    font-style: italic;
+    text-align: center;
+    padding: 12px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    margin-top: 4px;
+  }
+</style>
+
+<div class="cards" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:16px; align-items:start;">
+
+  <!-- Approach A -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)" style="cursor:pointer;">
+    <div class="card-image" style="padding:16px;">
+      <div class="type-badge">STAGE / INTERNSHIP</div>
+      <div class="section-title-mock">Requisiti di candidatura</div>
+      <div class="req-card">
+        <div class="req-group">
+          <div class="req-label"><span class="req-label-icon">🛠</span> Competenze</div>
+          <div class="req-row"><span class="req-check">✓</span> Python</div>
+          <div class="req-row"><span class="req-check">✓</span> SQL</div>
+          <div class="req-row"><span class="req-check">✓</span> Data Analysis</div>
+        </div>
+        <div class="req-divider"></div>
+        <div class="req-group">
+          <div class="req-label"><span class="req-label-icon">🎓</span> Accademico</div>
+          <div class="req-row"><span class="req-check">✓</span> 2°–4° anno</div>
+          <div class="req-row"><span class="req-check">✓</span> Voto ≥ 25/30</div>
+          <div class="req-row"><span class="req-check">✓</span> Economia, Ingegneria</div>
+        </div>
+        <div class="req-divider"></div>
+        <div class="req-group">
+          <div class="req-label"><span class="req-label-icon">🌐</span> Lingue</div>
+          <div class="req-row"><span class="req-check">✓</span> Inglese B2+</div>
+          <div class="req-row"><span class="req-check">✓</span> Tedesco B1</div>
+        </div>
+      </div>
+      <div class="not-shown-notice" style="margin-top:10px;">Non mostrato per eventi, summer school, fellowship…</div>
+    </div>
+    <div class="card-body">
+      <h3>A — Requisiti per categoria</h3>
+      <p>Competenze, accademico e lingue divisi in gruppi chiari con etichette. Nessun giudizio sul profilo dell'utente.</p>
+    </div>
+  </div>
+
+  <!-- Approach B -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)" style="cursor:pointer;">
+    <div class="card-image" style="padding:16px;">
+      <div class="type-badge">STAGE / INTERNSHIP</div>
+      <div class="section-title-mock">Requisiti di candidatura</div>
+      <div class="req-card">
+        <div class="req-group">
+          <div class="req-label"><span class="req-label-icon">🛠</span> Competenze</div>
+          <span class="req-pill-match pill-met">✓ Python</span>
+          <span class="req-pill-match pill-met">✓ SQL</span>
+          <span class="req-pill-match pill-unmet">⚠ Data Analysis</span>
+        </div>
+        <div class="req-divider"></div>
+        <div class="req-group">
+          <div class="req-label"><span class="req-label-icon">🎓</span> Accademico</div>
+          <span class="req-pill-match pill-met">✓ 2°–4° anno</span>
+          <span class="req-pill-match pill-unmet">⚠ Voto ≥ 25/30</span>
+          <span class="req-pill-match pill-met">✓ Economia</span>
+        </div>
+        <div class="req-divider"></div>
+        <div class="req-group">
+          <div class="req-label"><span class="req-label-icon">🌐</span> Lingue</div>
+          <span class="req-pill-match pill-met">✓ Inglese B2+</span>
+          <span class="req-pill-match pill-unmet">⚠ Tedesco B1</span>
+        </div>
+        <div class="match-score-inline">Compatibilità: 72% <span class="score-bar"><span class="score-fill"></span></span></div>
+      </div>
+      <div class="not-shown-notice" style="margin-top:10px;">Non mostrato per eventi, summer school, fellowship…</div>
+    </div>
+    <div class="card-body">
+      <h3>B — Requisiti con match status</h3>
+      <p>Ogni requisito mostra se l'utente lo soddisfa (verde ✓) o meno (arancio ⚠). Richiede confronto con il profilo utente.</p>
+    </div>
+  </div>
+
+  <!-- Approach C -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)" style="cursor:pointer;">
+    <div class="card-image" style="padding:16px;">
+      <div class="type-badge">STAGE / INTERNSHIP</div>
+      <div class="section-title-mock">Requisiti di candidatura</div>
+      <div class="req-card">
+        <div class="req-group">
+          <div class="req-label"><span class="req-label-icon">🛠</span> Competenze richieste</div>
+          <div class="tag-grid">
+            <span class="tag tag-skill">Python</span>
+            <span class="tag tag-skill">SQL</span>
+            <span class="tag tag-skill">Data Analysis</span>
+            <span class="tag tag-skill">Market Research</span>
+          </div>
+        </div>
+        <div class="req-divider"></div>
+        <div class="req-group">
+          <div class="req-label"><span class="req-label-icon">🎓</span> Percorso accademico</div>
+          <div class="tag-grid">
+            <span class="tag tag-acad">2°–4° anno</span>
+            <span class="tag tag-acad">Voto ≥ 25/30</span>
+            <span class="tag tag-acad">Economia</span>
+          </div>
+        </div>
+        <div class="req-divider"></div>
+        <div class="req-group">
+          <div class="req-label"><span class="req-label-icon">🌐</span> Lingue</div>
+          <div class="tag-grid">
+            <span class="tag tag-lang">Inglese B2+</span>
+            <span class="tag tag-lang">Tedesco B1</span>
+          </div>
+        </div>
+      </div>
+      <div class="not-shown-notice" style="margin-top:10px;">Non mostrato per eventi, summer school, fellowship…</div>
+    </div>
+    <div class="card-body">
+      <h3>C — Tag colorati per tipo</h3>
+      <p>Ogni categoria usa un colore diverso come tag compatti. Visivamente immediato, nessun giudizio sul profilo.</p>
+    </div>
+  </div>
+
+</div>

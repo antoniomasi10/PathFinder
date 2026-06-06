@@ -100,8 +100,7 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
           deadline: o.deadline,
           tags: o.tags,
           university: o.university,
-          // Preserve matchScore from local storage — the backend doesn't return it
-          matchScore: localById.get(o.id)?.matchScore,
+          matchScore: o.matchScore ?? localById.get(o.id)?.matchScore,
         }));
 
         // Merge: server items take precedence; local-only items (e.g. mock data

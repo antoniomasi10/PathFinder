@@ -10,6 +10,7 @@
  */
 
 import OpenAI from 'openai';
+import { Prisma } from '@prisma/client';
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
 
@@ -334,6 +335,199 @@ export async function extractOpportunitySkills(
   }
 }
 
+const CONTEXTUALIZED_SKILLS_SYSTEM_PROMPT = `Sei un assistente che descrive le competenze richieste da opportunità di stage e tirocinio per studenti universitari italiani.
+
+Date le competenze richieste e la descrizione dell'opportunità, scrivi una frase breve in italiano per ciascuna competenza che ne spieghi il contesto specifico nell'opportunità.
+
+Rispondi SOLO con JSON: { "skills": ["frase 1", "frase 2", ...] }
+
+Regole:
+- Massimo 5 frasi, almeno 1.
+- Ogni frase inizia con un sostantivo (es. "Padronanza di", "Capacità di", "Conoscenza di", "Familiarità con", "Competenza in").
+- Massimo 12 parole per frase.
+- Lingua: SEMPRE italiano. Traduci i nomi delle competenze in italiano anche se il testo originale è in tedesco, inglese o altra lingua. Eccezione: nomi propri di software/strumenti (es. "SAP", "Python", "Figma", "Excel") si lasciano invariati.
+- Contestualizza ogni competenza usando le informazioni del testo dell'opportunità.
+- NON includere competenze vaghe o generiche come: motivazione, passione, entusiasmo, flessibilità, dinamismo, proattività, teamwork, problem-solving generico, capacità di lavorare in team. Se non ci sono competenze specifiche identificabili, ritorna { "skills": [] }.
+- Rispondi SOLO con JSON valido.`;
+
+/**
+ * Generates up to 5 short, contextualized Italian-language skill descriptions
+ * for STAGE/INTERNSHIP opportunities. Uses extractedSkills as seed if available.
+ * Returns an empty array if none found or on error — never throws.
+ */
+export async function extractContextualizedSkills(
+  title: string,
+  description: string,
+  extractedSkills: string[],
+  about?: string | null,
+): Promise<string[]> {
+  const client = getClient();
+  if (!client) return [];
+
+  const skillsList = extractedSkills.length > 0
+    ? `Competenze da contestualizzare: ${extractedSkills.join(', ')}`
+    : 'Identifica e contestualizza le competenze richieste dal testo.';
+
+  const userContent = [
+    `Titolo: ${title}`,
+    skillsList,
+    `Descrizione:\n${description.slice(0, 3000)}`,
+    about ? `Info aggiuntive:\n${about.slice(0, 1000)}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
+  try {
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: CONTEXTUALIZED_SKILLS_SYSTEM_PROMPT },
+        { role: 'user', content: userContent },
+      ],
+      max_tokens: 200,
+      temperature: 0.2,
+    });
+
+    const raw = response.choices[0]?.message?.content;
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw) as { skills?: unknown };
+    if (!Array.isArray(parsed.skills)) return [];
+    return parsed.skills
+      .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+      .slice(0, 5);
+  } catch (err) {
+    logger.warn(`[OpportunityParser] extractContextualizedSkills failed for "${title}": ${err}`);
+    return [];
+  }
+}
+
+const LANGUAGES_SYSTEM_PROMPT = `Sei un assistente che identifica i requisiti linguistici nelle descrizioni di opportunità per studenti universitari italiani.
+
+Data la descrizione di un'opportunità, identifica le lingue (diverse dall'italiano e dall'inglese) che il candidato deve o dovrebbe probabilmente conoscere.
+
+Rispondi SOLO con JSON valido: { "languages": [{"lang": "de", "level": "B2"}, ...] }
+
+Regole:
+- Usa codici ISO 639-1 a due lettere (es. "de" per tedesco, "fr" per francese, "es" per spagnolo, "zh" per cinese).
+- Usa livelli CEFR (A1, A2, B1, B2, C1, C2) per il campo "level". Usa null se nessun livello è specificato.
+- NON includere italiano ("it") né inglese ("en") — sono gestiti separatamente.
+- Includi lingue esplicitamente richieste E lingue deducibili dal contesto:
+  * Se il titolo usa notazione di genere tedesca "(m/w/d)", "(f/m/d)", "(f/m/x)", "(w/m/div.)" → l'azienda è tedesca, includi "de" (level: null se non specificato).
+  * Se la sede è in Germania, Austria o Svizzera tedesca e il ruolo prevede contatto con clienti/colleghi locali → includi "de".
+  * Se la sede è in Francia/Belgio/Svizzera francofona e il ruolo prevede interazione locale → includi "fr".
+  * Se la sede è in Spagna/America Latina e il ruolo prevede interazione locale → includi "es".
+  * Applica la stessa logica per altre lingue (nl, pl, pt, sv, ecc.) in base alla sede e al contesto.
+- NON inferire una lingua solo dalla sede se il ruolo è esplicitamente full remote/internazionale senza interazione locale.
+- Se davvero non ci sono requisiti linguistici deducibili, restituisci: { "languages": [] }
+- Rispondi SOLO con JSON valido, nessun testo aggiuntivo.`;
+
+export interface RequiredLanguage {
+  lang: string;
+  level: string | null;
+}
+
+/**
+ * Extracts non-English/non-Italian language requirements from an opportunity.
+ * Returns an empty array if none found, or null if OPENAI_API_KEY is not set.
+ * Never throws.
+ */
+export async function extractRequiredLanguages(
+  title: string,
+  description: string,
+  about?: string | null,
+): Promise<RequiredLanguage[] | null> {
+  const client = getClient();
+  if (!client) return null;
+
+  const userContent = [
+    `Titolo: ${title}`,
+    `Descrizione:\n${description.slice(0, 3000)}`,
+    about ? `Info aggiuntive:\n${about.slice(0, 1000)}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
+  try {
+    const response = await client.chat.completions.create({
+      model: 'gpt-4o-mini',
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: LANGUAGES_SYSTEM_PROMPT },
+        { role: 'user', content: userContent },
+      ],
+      max_tokens: 150,
+      temperature: 0.1,
+    });
+
+    const raw = response.choices[0]?.message?.content;
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw) as { languages?: unknown };
+    if (!Array.isArray(parsed.languages)) return [];
+
+    return parsed.languages
+      .filter((l): l is Record<string, unknown> => typeof l === 'object' && l !== null)
+      .filter((l) => typeof l.lang === 'string' && l.lang.length === 2)
+      .map((l) => ({
+        lang: (l.lang as string).toLowerCase(),
+        level: typeof l.level === 'string' && l.level.trim() ? l.level.trim().toUpperCase() : null,
+      }))
+      .filter((l) => l.lang !== 'en' && l.lang !== 'it');
+  } catch (err) {
+    logger.warn(`[OpportunityParser] extractRequiredLanguages failed for "${title}": ${err}`);
+    return null;
+  }
+}
+
+/**
+ * Boot-time backfill: processes up to `limit` active opportunities that have
+ * requiredLanguages as null (never extracted). Runs in the background — never
+ * throws, never blocks startup.
+ */
+export async function backfillRequiredLanguagesBoot(limit = 200): Promise<void> {
+  if (!process.env.OPENAI_API_KEY) return;
+
+  const now = new Date();
+  const opps = await prisma.opportunity.findMany({
+    where: {
+      requiredLanguages: { equals: Prisma.DbNull },
+      OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+    },
+    select: { id: true, title: true, description: true, about: true },
+    take: limit,
+    orderBy: { postedAt: 'desc' },
+  });
+
+  if (!opps.length) return;
+
+  const CONCURRENCY = 5;
+  logger.info(`[LangBackfill] Processing ${opps.length} opportunities at boot (concurrency=${CONCURRENCY})`);
+
+  let updated = 0;
+  for (let i = 0; i < opps.length; i += CONCURRENCY) {
+    const chunk = opps.slice(i, i + CONCURRENCY);
+    await Promise.all(
+      chunk.map(async (opp) => {
+        try {
+          const langs = await extractRequiredLanguages(opp.title, opp.description, opp.about);
+          // Store empty array (not null) to mark as "processed, none found"
+          await prisma.opportunity.update({
+            where: { id: opp.id },
+            data: { requiredLanguages: (langs ?? []) as unknown as Prisma.InputJsonValue },
+          });
+          updated++;
+        } catch {
+          // Non-fatal — will be retried on next boot
+        }
+      }),
+    );
+  }
+
+  logger.info(`[LangBackfill] Boot backfill complete — ${updated}/${opps.length} updated`);
+}
+
 const TRANSLATE_SYSTEM_PROMPT = `Sei un traduttore professionista. Traduci il testo fornito in italiano naturale e scorrevole.
 Regole:
 - Mantieni titoli di lavoro, nomi propri, brand e acronimi nella forma originale (es. "Software Engineer", "Goldman Sachs", "MIT").
@@ -419,4 +613,50 @@ export async function backfillExtractedSkillsBoot(limit = 200): Promise<void> {
   }
 
   logger.info('[SkillsBackfill] Boot backfill complete');
+}
+
+/**
+ * Boot-time backfill: processes up to `limit` active STAGE/INTERNSHIP opportunities
+ * that have no contextualizedSkills yet. Runs in the background — never throws, never blocks startup.
+ */
+export async function backfillContextualizedSkillsBoot(limit = 200): Promise<void> {
+  if (!process.env.OPENAI_API_KEY) return;
+
+  const now = new Date();
+  const opps = await prisma.opportunity.findMany({
+    where: {
+      type: { in: ['STAGE', 'INTERNSHIP'] },
+      contextualizedSkills: { isEmpty: true },
+      OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+    },
+    select: { id: true, title: true, description: true, about: true, extractedSkills: true },
+    take: limit,
+    orderBy: { postedAt: 'desc' },
+  });
+
+  if (!opps.length) return;
+
+  const CONCURRENCY = 5;
+  logger.info(`[ContextSkillsBackfill] Processing ${opps.length} opportunities at boot (concurrency=${CONCURRENCY})`);
+
+  let updated = 0;
+  for (let i = 0; i < opps.length; i += CONCURRENCY) {
+    const chunk = opps.slice(i, i + CONCURRENCY);
+    await Promise.all(
+      chunk.map(async (opp) => {
+        try {
+          const skills = await extractContextualizedSkills(opp.title, opp.description, opp.extractedSkills, opp.about);
+          await prisma.opportunity.update({
+            where: { id: opp.id },
+            data: { contextualizedSkills: skills },
+          });
+          updated++;
+        } catch {
+          // Non-fatal — will be retried on next boot
+        }
+      }),
+    );
+  }
+
+  logger.info(`[ContextSkillsBackfill] Boot backfill complete — ${updated}/${opps.length} updated`);
 }

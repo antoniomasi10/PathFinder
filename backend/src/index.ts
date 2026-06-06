@@ -40,11 +40,12 @@ import { setupNotificationSocket } from './socket/notificationHandler';
 import { correlationIdMiddleware } from './middleware/correlationId';
 import { setIO } from './socketManager';
 import { startDeadlineChecker } from './services/deadlineChecker';
+import { startDailyOpportunityNotifier } from './services/dailyOpportunityNotifier';
 import { startImportScheduler } from './services/import/scheduler';
 import { bulkGenerateEmbeddings } from './services/embedding.service';
 import { startRetentionCleanupJob } from './services/cleanup.service';
 import { runUrlCheckBatch } from './services/import/urlChecker';
-import { backfillExtractedSkillsBoot } from './services/ai/opportunityParser';
+import { backfillExtractedSkillsBoot, backfillRequiredLanguagesBoot, backfillContextualizedSkillsBoot } from './services/ai/opportunityParser';
 import { startTranslationScheduler } from './services/translationJob';
 import { startStructuredContentScheduler, runStructuredContentBatch } from './services/structuredContentJob';
 import { cacheDel } from './lib/cache';
@@ -211,6 +212,7 @@ httpServer.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
   cacheDel('cache:opps:*');
   startDeadlineChecker();
+  startDailyOpportunityNotifier();
   startImportScheduler();
   startRetentionCleanupJob();
   startCampaignScheduler();
@@ -228,6 +230,14 @@ httpServer.listen(PORT, () => {
   setTimeout(() => {
     backfillExtractedSkillsBoot(200).catch((err) => logger.error('Skills backfill boot failed:', err));
   }, 60_000);
+  // Backfill required language extraction for opportunities that haven't been processed yet (75s delay)
+  setTimeout(() => {
+    backfillRequiredLanguagesBoot(200).catch((err) => logger.error('Languages backfill boot failed:', err));
+  }, 75_000);
+  // Backfill contextualized skill descriptions for STAGE/INTERNSHIP opportunities (90s delay)
+  setTimeout(() => {
+    backfillContextualizedSkillsBoot(200).catch((err) => logger.error('Contextualized skills backfill boot failed:', err));
+  }, 90_000);
   // Backfill structured content for opportunities that don't have it yet (90s delay)
   setTimeout(() => {
     runStructuredContentBatch(10_000).catch((err) => logger.error('Structured content backfill boot failed:', err));

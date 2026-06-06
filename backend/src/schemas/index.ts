@@ -46,7 +46,7 @@ export const sendMessageSchema = z.union([
   z.object({
     receiverId: z.string().uuid('ID destinatario non valido'),
     type: z.literal('opportunity'),
-    opportunityId: z.string().uuid('ID opportunità non valido'),
+    opportunityId: z.string().min(1, 'ID opportunità non valido'),
     content: z.string().optional(),
     images: z.array(z.string()).max(5).optional(),
   }),

@@ -3,13 +3,13 @@
 import { useRouter } from 'next/navigation';
 import { useSavedOpportunities } from '@/lib/savedOpportunities';
 import { getOpportunityTypeColor } from '@/lib/opportunityColors';
-import { ChevronLeft } from '@/components/icons';
+import { ChevronLeft, Bookmark } from '@/components/icons';
 import DeadlineLabel, { OpenLabel } from '@/components/DeadlineLabel';
 import BottomNav from '@/components/BottomNav';
 
 export default function SavedOpportunitiesPage() {
   const router = useRouter();
-  const { savedOpps } = useSavedOpportunities();
+  const { savedOpps, toggleSave } = useSavedOpportunities();
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#fbf8ff' }}>
@@ -109,8 +109,10 @@ export default function SavedOpportunitiesPage() {
         ) : (
           <div className="flex flex-col gap-8">
             {savedOpps.map((opp) => (
-              <button
+              <div
                 key={opp.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => {
                   try {
                     sessionStorage.setItem(`opp_${opp.id}`, JSON.stringify({
@@ -130,7 +132,8 @@ export default function SavedOpportunitiesPage() {
                   } catch {}
                   router.push(`/opportunities/${opp.id}`);
                 }}
-                className="text-left active:opacity-75 w-full"
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.currentTarget.click(); }}
+                className="text-left active:opacity-75 w-full cursor-pointer"
               >
                 <div
                   className="flex flex-col gap-3 w-full"
@@ -172,6 +175,17 @@ export default function SavedOpportunitiesPage() {
                         {[opp.company, opp.location].filter(Boolean).join(' • ')}
                       </p>
                     </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSave(opp.id);
+                      }}
+                      className="flex-shrink-0 flex items-center justify-center active:opacity-75"
+                      style={{ width: 32, height: 32 }}
+                      aria-label="Rimuovi dai salvati"
+                    >
+                      <Bookmark size={20} filled color="#4a4bd7" />
+                    </button>
                   </div>
 
                   {/* Bottom row: affinità + deadline + type pill */}
@@ -207,7 +221,7 @@ export default function SavedOpportunitiesPage() {
                     </div>
                   </div>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         )}

@@ -34,10 +34,28 @@ I 6 cluster sono:
 - Sociale: impatto sociale, volontariato, community, persone, educazione, sanità.
 - Explorer: viaggi, scambi culturali, internazionalità, scoperta, lingue.
 
-Data un'opportunità, classifica quanto fortemente (scala 0.0-1.0) corrisponde a ciascun cluster.
+RUBRICA DI SCORING (0.0–1.0):
+- 0.85–1.0: il cluster è l'identità CORE dell'opportunità (identità esclusiva o quasi)
+- 0.60–0.84: forte allineamento, il cluster è una componente primaria
+- 0.35–0.59: presenza moderata, il cluster è rilevante ma non dominante
+- 0.15–0.34: presenza debole, il cluster appare ma non è centrale
+- 0.00–0.14: non pertinente o minimamente presente
+
+REGOLA FONDAMENTALE: la maggior parte delle opportunità tocca 2-4 cluster con intensità diverse. Evita distribuzioni binarie dove un cluster è vicino a 1.0 e tutti gli altri sono vicini a 0.0. Usa la rubrica sopra per riflettere le sfumature reali.
+
+ESEMPI DI CALIBRAZIONE:
+
+Esempio 1 — Hackathon AI per startup (HACKATHON, tag: ai, startup, data):
+{ "Analista": 0.80, "Imprenditore": 0.65, "Creativo": 0.30, "Leader": 0.25, "Sociale": 0.10, "Explorer": 0.10 }
+→ Analista domina (dati/ML), Imprenditore forte (startup mindset), Creativo presente (design soluzioni)
+
+Esempio 2 — Programma Erasmus + tirocinio (EXCHANGE, tag: international, language):
+{ "Explorer": 0.90, "Sociale": 0.45, "Leader": 0.40, "Analista": 0.20, "Imprenditore": 0.25, "Creativo": 0.20 }
+→ Explorer nettamente dominante, ma Sociale e Leader hanno peso reale (adattamento, relazioni)
+
 Rispondi SOLO con JSON valido: { "scores": { "Analista": 0.0, "Creativo": 0.0, "Leader": 0.0, "Imprenditore": 0.0, "Sociale": 0.0, "Explorer": 0.0 }, "primary": "Leader" }
 I valori devono essere compresi tra 0.0 e 1.0.
-Scegli come "primary" il cluster con il punteggio più alto (possono esserci più cluster alti se l'opportunità è ibrida).`;
+Il campo "primary" deve essere il cluster con il punteggio più alto.`;
 
 const CLUSTERS = ['Analista', 'Creativo', 'Leader', 'Imprenditore', 'Sociale', 'Explorer'] as const;
 

@@ -740,13 +740,9 @@ async function processCompanyCompliance(company: CompanyWatchlist, now: Date): P
     Object.assign(company, updates);
   }
 
-  // Block if explicitly disallowed
+  // Block only if explicitly disallowed — null (unknown/not found) is treated as allowed
   if (company.robotsAllowed === false) return false;
   if (company.tosAllowed === false) return false;
-  // Block if ToS is unknown (null = not found or error)
-  if (company.tosAllowed === null && (updates.tosAllowed !== undefined || !tosExpired)) {
-    return false;
-  }
 
   return true;
 }
