@@ -40,6 +40,7 @@ import { setupNotificationSocket } from './socket/notificationHandler';
 import { correlationIdMiddleware } from './middleware/correlationId';
 import { setIO } from './socketManager';
 import { startDeadlineChecker } from './services/deadlineChecker';
+import { startDailyOpportunityNotifier } from './services/dailyOpportunityNotifier';
 import { startImportScheduler } from './services/import/scheduler';
 import { bulkGenerateEmbeddings } from './services/embedding.service';
 import { startRetentionCleanupJob } from './services/cleanup.service';
@@ -211,6 +212,7 @@ httpServer.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
   cacheDel('cache:opps:*');
   startDeadlineChecker();
+  startDailyOpportunityNotifier();
   startImportScheduler();
   startRetentionCleanupJob();
   startCampaignScheduler();

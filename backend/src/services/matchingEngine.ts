@@ -57,7 +57,7 @@ function applyOppFilters(items: any[], f: OppFilters): any[] {
   });
 }
 
-function parseUserSkills(raw: unknown): UserSkills | null {
+export function parseUserSkills(raw: unknown): UserSkills | null {
   if (!raw || typeof raw !== 'object') return null;
   const obj = raw as Record<string, unknown>;
   return {
