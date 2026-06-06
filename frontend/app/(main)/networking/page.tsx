@@ -527,14 +527,18 @@ export default function NetworkingPage() {
   }, [tab, loadConversations]);
 
   useEffect(() => {
+    const socket = getSocket();
     if (selectedUser) {
       currentConvIdRef.current = selectedUser.id;
       loadMessages(selectedUser.id);
-      // Reset unread counter for this conversation
       setUnifiedConversations((prev) =>
         prev.map((c) => c.id === `direct-${selectedUser.id}` ? { ...c, unread: 0 } : c),
       );
+      socket.emit('viewing_conversation', { withUserId: selectedUser.id });
+    } else {
+      socket.emit('left_conversation');
     }
+    return () => { socket.emit('left_conversation'); };
   }, [selectedUser?.id]);
 
   useEffect(() => {

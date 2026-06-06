@@ -6,6 +6,7 @@ import { validateImages } from '../utils/imageValidation';
 import { uploadImages } from '../utils/imageUpload';
 import { logger } from '../utils/logger';
 import { sanitizeText } from '../utils/sanitize';
+import { createNotification } from '../services/notification.service';
 import { z } from 'zod';
 
 const MAX_MESSAGES_PER_MINUTE = 30;
@@ -249,10 +250,28 @@ export function setupChatSocket(io: Server) {
 
         chatNs.to(`user:${receiverId}`).emit('new_message', message);
         socket.emit('message_sent', message);
+
+        const viewingWith = await redis.get(`chat:viewing:${receiverId}`).catch(() => null);
+        if (viewingWith !== userId) {
+          const notifContent = msgType === 'opportunity'
+            ? `${message.sender.name} ti ha condiviso un'opportunità`
+            : `${message.sender.name}: ${content.slice(0, 60)}${content.length > 60 ? '…' : ''}`;
+          createNotification(receiverId, 'NEW_MESSAGE', notifContent, '/messages', '💬').catch(() => {});
+        }
       } catch (err) {
         logger.error('send_message failed', { error: String(err) });
         socket.emit('message_error', { message: 'Errore nell\'invio del messaggio' });
       }
+    });
+
+    socket.on('viewing_conversation', (data: { withUserId: string }) => {
+      if (typeof data?.withUserId === 'string') {
+        redis.setex(`chat:viewing:${userId}`, 120, data.withUserId).catch(() => {});
+      }
+    });
+
+    socket.on('left_conversation', () => {
+      redis.del(`chat:viewing:${userId}`).catch(() => {});
     });
 
     socket.on('typing', (data: { receiverId: string }) => {
@@ -265,6 +284,7 @@ export function setupChatSocket(io: Server) {
 
     socket.on('disconnect', () => {
       decrementConnectionCount(userId, ip);
+      redis.del(`chat:viewing:${userId}`).catch(() => {});
       socket.leave(`user:${userId}`);
     });
   });
