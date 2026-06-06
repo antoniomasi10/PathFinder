@@ -253,24 +253,28 @@ router.get('/daily', authMiddleware, async (req: Request, res: Response) => {
     const userId = req.user!.userId;
     const romeDateStr = new Date().toLocaleDateString('sv', { timeZone: 'Europe/Rome' }); // YYYY-MM-DD
     const cacheKey = `cache:opp:daily:${userId}:${romeDateStr}`;
-    const historyKey = `cache:opp:daily:history:${userId}`;
 
     const cached = await cacheGet<any>(cacheKey);
     if (cached) { res.json(cached); return; }
 
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
     // Exclude opps the user has saved or applied in the last 7 days — committed actions
     // only. Views and clicks are passive exploration and should not prevent the best
     // match from appearing as the daily highlight.
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const recentInteractions = await prisma.userInteraction.findMany({
       where: { userId, targetType: 'opportunity', action: { in: ['save', 'apply'] }, createdAt: { gte: sevenDaysAgo } },
       select: { targetId: true },
     });
     const interactedIds = new Set(recentInteractions.map(i => i.targetId));
 
-    // Exclude opps shown as daily in the last 7 days (cross-day variety)
-    const history = (await cacheGet<{ date: string; oppId: string }[]>(historyKey)) ?? [];
-    const recentDailyIds = new Set(history.map(h => h.oppId));
+    // Exclude opps shown as daily in the last 7 days — persisted to DB so history
+    // survives Redis restarts and prevents the same top opportunity repeating daily.
+    const recentDailyInteractions = await prisma.userInteraction.findMany({
+      where: { userId, targetType: 'opportunity', action: 'daily_highlight', createdAt: { gte: sevenDaysAgo } },
+      select: { targetId: true },
+    });
+    const recentDailyIds = new Set(recentDailyInteractions.map(i => i.targetId));
 
     // Use profile match scores (getNewOpportunitiesFull) so the daily card shows
     // the same score the user sees in the feed — not the hybrid score which
@@ -291,9 +295,9 @@ router.get('/daily', authMiddleware, async (req: Request, res: Response) => {
 
     await cacheSet(cacheKey, daily, ttl);
 
-    // Push to history (keep last 7 entries), 8-day TTL
-    const updatedHistory = [{ date: romeDateStr, oppId: daily.id }, ...history.filter(h => h.oppId !== daily.id)].slice(0, 7);
-    await cacheSet(historyKey, updatedHistory, 8 * 24 * 60 * 60);
+    await prisma.userInteraction.create({
+      data: { userId, targetType: 'opportunity', targetId: daily.id, action: 'daily_highlight' },
+    });
 
     res.json(daily);
   } catch (err: any) {
