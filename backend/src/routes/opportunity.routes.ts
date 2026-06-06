@@ -310,9 +310,18 @@ router.get('/saved', authMiddleware, async (req: Request, res: Response) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
-      include: { savedOpportunities: { include: { university: true } } },
+      include: {
+        profile: true,
+        savedOpportunities: { include: { university: true } },
+      },
     });
-    res.json(user?.savedOpportunities || []);
+    const opps = (user?.savedOpportunities || []).map((opp) => ({
+      ...opp,
+      matchScore: user?.profile
+        ? Math.max(0, Math.min(100, Math.round(scoreOpportunity(user.profile, user, opp as any))))
+        : undefined,
+    }));
+    res.json(opps);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
