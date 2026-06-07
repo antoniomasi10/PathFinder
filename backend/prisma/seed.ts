@@ -1,9 +1,9 @@
-import { PrismaClient, GpaRange, EnglishLevel, WillingnessToRelocate, CourseType, OpportunityType, OpportunityFormat, FieldOfStudy } from '@prisma/client';
+﻿import { PrismaClient, GpaRange, EnglishLevel, WillingnessToRelocate, CourseType, OpportunityType, OpportunityFormat, FieldOfStudy } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { UNIVERSITY_COURSES } from './data/courses-data';
 
 if (process.env.NODE_ENV === 'production') {
-  console.error('Seed non può essere eseguito in produzione!');
+  console.error('Seed non puÃ² essere eseguito in produzione!');
   process.exit(1);
 }
 
@@ -30,10 +30,10 @@ async function main() {
   const universities = await Promise.all([
     prisma.university.create({
       data: {
-        name: 'Alma Mater Studiorum – Università di Bologna',
-        shortName: 'Università di Bologna',
+        name: 'Alma Mater Studiorum â€“ UniversitÃ  di Bologna',
+        shortName: 'UniversitÃ  di Bologna',
         city: 'Bologna',
-        description: 'La più antica università del mondo occidentale, fondata nel 1088. Eccellenza nella ricerca e nella formazione con una forte vocazione internazionale.',
+        description: 'La piÃ¹ antica universitÃ  del mondo occidentale, fondata nel 1088. Eccellenza nella ricerca e nella formazione con una forte vocazione internazionale.',
         websiteUrl: 'https://www.unibo.it',
         alumniCount: 85000,
         avgRating: 4.5,
@@ -44,7 +44,7 @@ async function main() {
         name: 'Politecnico di Milano',
         shortName: 'Politecnico di Milano',
         city: 'Milano',
-        description: 'Eccellenza italiana nell\'ingegneria, architettura e design. Tra le prime università tecniche in Europa per ricerca e innovazione.',
+        description: 'Eccellenza italiana nell\'ingegneria, architettura e design. Tra le prime universitÃ  tecniche in Europa per ricerca e innovazione.',
         websiteUrl: 'https://www.polimi.it',
         alumniCount: 95000,
         avgRating: 4.7,
@@ -52,10 +52,10 @@ async function main() {
     }),
     prisma.university.create({
       data: {
-        name: 'Università degli Studi di Roma "La Sapienza"',
+        name: 'UniversitÃ  degli Studi di Roma "La Sapienza"',
         shortName: 'La Sapienza',
         city: 'Roma',
-        description: 'La più grande università d\'Europa, con un\'offerta formativa vastissima e centri di ricerca d\'eccellenza in tutti i campi del sapere.',
+        description: 'La piÃ¹ grande universitÃ  d\'Europa, con un\'offerta formativa vastissima e centri di ricerca d\'eccellenza in tutti i campi del sapere.',
         websiteUrl: 'https://www.uniroma1.it',
         alumniCount: 112000,
         avgRating: 4.3,
@@ -63,10 +63,10 @@ async function main() {
     }),
     prisma.university.create({
       data: {
-        name: 'Università degli Studi di Torino',
-        shortName: 'Università di Torino',
+        name: 'UniversitÃ  degli Studi di Torino',
+        shortName: 'UniversitÃ  di Torino',
         city: 'Torino',
-        description: 'Ateneo con forte tradizione nella ricerca scientifica e umanistica, situato nel cuore di una città innovativa e tecnologica.',
+        description: 'Ateneo con forte tradizione nella ricerca scientifica e umanistica, situato nel cuore di una cittÃ  innovativa e tecnologica.',
         websiteUrl: 'https://www.unito.it',
         alumniCount: 70000,
         avgRating: 4.2,
@@ -74,10 +74,10 @@ async function main() {
     }),
     prisma.university.create({
       data: {
-        name: 'Università degli Studi di Napoli "Federico II"',
+        name: 'UniversitÃ  degli Studi di Napoli "Federico II"',
         shortName: 'Federico II',
         city: 'Napoli',
-        description: 'Fondata nel 1224, è una delle più antiche università pubbliche al mondo. Leader nella ricerca scientifica del Sud Italia.',
+        description: 'Fondata nel 1224, Ã¨ una delle piÃ¹ antiche universitÃ  pubbliche al mondo. Leader nella ricerca scientifica del Sud Italia.',
         websiteUrl: 'https://www.unina.it',
         alumniCount: 80000,
         avgRating: 4.1,
@@ -85,8 +85,8 @@ async function main() {
     }),
     prisma.university.create({
       data: {
-        name: 'Università degli Studi di Firenze',
-        shortName: 'Università di Firenze',
+        name: 'UniversitÃ  degli Studi di Firenze',
+        shortName: 'UniversitÃ  di Firenze',
         city: 'Firenze',
         description: 'Ateneo di grande tradizione nel cuore del Rinascimento, con eccellenze in discipline umanistiche, scientifiche e mediche.',
         websiteUrl: 'https://www.unifi.it',
@@ -107,7 +107,7 @@ async function main() {
     }),
     prisma.university.create({
       data: {
-        name: 'Università Ca\' Foscari Venezia',
+        name: 'UniversitÃ  Ca\' Foscari Venezia',
         shortName: 'Ca\' Foscari',
         city: 'Venezia',
         description: 'Prima business school in Italia, oggi eccellenza in lingue, economia, scienze ambientali e digital humanities.',
@@ -118,10 +118,10 @@ async function main() {
     }),
     prisma.university.create({
       data: {
-        name: 'Università degli Studi di Padova',
-        shortName: 'Università di Padova',
+        name: 'UniversitÃ  degli Studi di Padova',
+        shortName: 'UniversitÃ  di Padova',
         city: 'Padova',
-        description: 'Tra le più antiche e prestigiose d\'Europa, con eccellenze in medicina, ingegneria e scienze. Fondata nel 1222.',
+        description: 'Tra le piÃ¹ antiche e prestigiose d\'Europa, con eccellenze in medicina, ingegneria e scienze. Fondata nel 1222.',
         websiteUrl: 'https://www.unipd.it',
         alumniCount: 65000,
         avgRating: 4.5,
@@ -129,10 +129,10 @@ async function main() {
     }),
     prisma.university.create({
       data: {
-        name: 'Università degli Studi di Pisa',
-        shortName: 'Università di Pisa',
+        name: 'UniversitÃ  degli Studi di Pisa',
+        shortName: 'UniversitÃ  di Pisa',
         city: 'Pisa',
-        description: 'Ateneo di prestigio con la Scuola Normale Superiore, eccellenza nella ricerca scientifica e nella formazione d\'élite.',
+        description: 'Ateneo di prestigio con la Scuola Normale Superiore, eccellenza nella ricerca scientifica e nella formazione d\'Ã©lite.',
         websiteUrl: 'https://www.unipi.it',
         alumniCount: 50000,
         avgRating: 4.4,
@@ -145,93 +145,93 @@ async function main() {
   // ============ ALL ITALIAN UNIVERSITIES ============
   await prisma.university.createMany({
     data: [
-      { name: 'Università degli Studi di Bari "Aldo Moro"', shortName: 'Università di Bari', city: 'Bari', websiteUrl: 'https://www.uniba.it' },
-      { name: 'Università degli Studi di Bergamo', shortName: 'Università di Bergamo', city: 'Bergamo', websiteUrl: 'https://www.unibg.it' },
-      { name: 'Università degli Studi di Brescia', shortName: 'Università di Brescia', city: 'Brescia', websiteUrl: 'https://www.unibs.it' },
-      { name: 'Università degli Studi di Cagliari', shortName: 'Università di Cagliari', city: 'Cagliari', websiteUrl: 'https://www.unica.it' },
-      { name: 'Università degli Studi di Camerino', shortName: 'Università di Camerino', city: 'Camerino', websiteUrl: 'https://www.unicam.it' },
-      { name: 'Università degli Studi della Campania Luigi Vanvitelli', shortName: 'Vanvitelli', city: 'Caserta', websiteUrl: 'https://www.unicampania.it' },
-      { name: 'Università degli Studi di Cassino e del Lazio Meridionale', shortName: 'Università di Cassino', city: 'Cassino', websiteUrl: 'https://www.unicas.it' },
-      { name: 'Università degli Studi di Catania', shortName: 'Università di Catania', city: 'Catania', websiteUrl: 'https://www.unict.it' },
-      { name: "Università degli Studi di Chieti-Pescara \"Gabriele d'Annunzio\"", shortName: "D'Annunzio", city: 'Chieti', websiteUrl: 'https://www.unich.it' },
-      { name: 'Università degli Studi della Calabria', shortName: 'UniCal', city: 'Rende', websiteUrl: 'https://www.unical.it' },
-      { name: 'Università degli Studi di Ferrara', shortName: 'Università di Ferrara', city: 'Ferrara', websiteUrl: 'https://www.unife.it' },
-      { name: 'Università degli Studi di Foggia', shortName: 'Università di Foggia', city: 'Foggia', websiteUrl: 'https://www.unifg.it' },
-      { name: 'Università degli Studi di Genova', shortName: 'Università di Genova', city: 'Genova', websiteUrl: 'https://www.unige.it' },
-      { name: "Università degli Studi dell'Insubria", shortName: 'Insubria', city: 'Varese', websiteUrl: 'https://www.uninsubria.it' },
-      { name: "Università degli Studi dell'Aquila", shortName: 'UniAQ', city: "L'Aquila", websiteUrl: 'https://www.univaq.it' },
-      { name: 'Istituto Universitario di Studi Superiori – IUSS', shortName: 'IUSS', city: 'Pavia', websiteUrl: 'https://www.iusspavia.it' },
+      { name: 'UniversitÃ  degli Studi di Bari "Aldo Moro"', shortName: 'UniversitÃ  di Bari', city: 'Bari', websiteUrl: 'https://www.uniba.it' },
+      { name: 'UniversitÃ  degli Studi di Bergamo', shortName: 'UniversitÃ  di Bergamo', city: 'Bergamo', websiteUrl: 'https://www.unibg.it' },
+      { name: 'UniversitÃ  degli Studi di Brescia', shortName: 'UniversitÃ  di Brescia', city: 'Brescia', websiteUrl: 'https://www.unibs.it' },
+      { name: 'UniversitÃ  degli Studi di Cagliari', shortName: 'UniversitÃ  di Cagliari', city: 'Cagliari', websiteUrl: 'https://www.unica.it' },
+      { name: 'UniversitÃ  degli Studi di Camerino', shortName: 'UniversitÃ  di Camerino', city: 'Camerino', websiteUrl: 'https://www.unicam.it' },
+      { name: 'UniversitÃ  degli Studi della Campania Luigi Vanvitelli', shortName: 'Vanvitelli', city: 'Caserta', websiteUrl: 'https://www.unicampania.it' },
+      { name: 'UniversitÃ  degli Studi di Cassino e del Lazio Meridionale', shortName: 'UniversitÃ  di Cassino', city: 'Cassino', websiteUrl: 'https://www.unicas.it' },
+      { name: 'UniversitÃ  degli Studi di Catania', shortName: 'UniversitÃ  di Catania', city: 'Catania', websiteUrl: 'https://www.unict.it' },
+      { name: "UniversitÃ  degli Studi di Chieti-Pescara \"Gabriele d'Annunzio\"", shortName: "D'Annunzio", city: 'Chieti', websiteUrl: 'https://www.unich.it' },
+      { name: 'UniversitÃ  degli Studi della Calabria', shortName: 'UniCal', city: 'Rende', websiteUrl: 'https://www.unical.it' },
+      { name: 'UniversitÃ  degli Studi di Ferrara', shortName: 'UniversitÃ  di Ferrara', city: 'Ferrara', websiteUrl: 'https://www.unife.it' },
+      { name: 'UniversitÃ  degli Studi di Foggia', shortName: 'UniversitÃ  di Foggia', city: 'Foggia', websiteUrl: 'https://www.unifg.it' },
+      { name: 'UniversitÃ  degli Studi di Genova', shortName: 'UniversitÃ  di Genova', city: 'Genova', websiteUrl: 'https://www.unige.it' },
+      { name: "UniversitÃ  degli Studi dell'Insubria", shortName: 'Insubria', city: 'Varese', websiteUrl: 'https://www.uninsubria.it' },
+      { name: "UniversitÃ  degli Studi dell'Aquila", shortName: 'UniAQ', city: "L'Aquila", websiteUrl: 'https://www.univaq.it' },
+      { name: 'Istituto Universitario di Studi Superiori â€“ IUSS', shortName: 'IUSS', city: 'Pavia', websiteUrl: 'https://www.iusspavia.it' },
       { name: 'IMT Alti Studi Lucca', shortName: 'IMT Lucca', city: 'Lucca', websiteUrl: 'https://www.imtlucca.it' },
-      { name: 'Università degli Studi di Macerata', shortName: 'Università di Macerata', city: 'Macerata', websiteUrl: 'https://www.unimc.it' },
-      { name: 'Università degli Studi Magna Græcia di Catanzaro', shortName: 'Magna Græcia', city: 'Catanzaro', websiteUrl: 'https://www.umg.it' },
-      { name: 'Università degli Studi Mediterranea di Reggio Calabria', shortName: 'Mediterranea', city: 'Reggio Calabria', websiteUrl: 'https://www.unirc.it' },
-      { name: 'Università degli Studi di Messina', shortName: 'Università di Messina', city: 'Messina', websiteUrl: 'https://www.unime.it' },
-      { name: 'Università degli Studi di Milano', shortName: 'Università di Milano', city: 'Milano', websiteUrl: 'https://www.unimi.it' },
-      { name: 'Università degli Studi di Milano-Bicocca', shortName: 'Milano-Bicocca', city: 'Milano', websiteUrl: 'https://www.unimib.it' },
-      { name: 'Università degli Studi di Modena e Reggio Emilia', shortName: 'UniMoRe', city: 'Modena', websiteUrl: 'https://www.unimore.it' },
-      { name: 'Università degli Studi del Molise', shortName: 'Università del Molise', city: 'Campobasso', websiteUrl: 'https://www.unimol.it' },
-      { name: "Università degli Studi di Napoli \"L'Orientale\"", shortName: "L'Orientale", city: 'Napoli', websiteUrl: 'https://www.unior.it' },
-      { name: 'Università degli Studi di Napoli "Parthenope"', shortName: 'Parthenope', city: 'Napoli', websiteUrl: 'https://www.uniparthenope.it' },
-      { name: 'Università degli Studi di Palermo', shortName: 'Università di Palermo', city: 'Palermo', websiteUrl: 'https://www.unipa.it' },
-      { name: 'Università degli Studi di Parma', shortName: 'Università di Parma', city: 'Parma', websiteUrl: 'https://www.unipr.it' },
-      { name: 'Università degli Studi di Pavia', shortName: 'Università di Pavia', city: 'Pavia', websiteUrl: 'https://www.unipv.it' },
-      { name: 'Università degli Studi di Perugia', shortName: 'Università di Perugia', city: 'Perugia', websiteUrl: 'https://www.unipg.it' },
-      { name: 'Università degli Studi del Piemonte Orientale "Amedeo Avogadro"', shortName: 'Piemonte Orientale', city: 'Vercelli', websiteUrl: 'https://www.uniupo.it' },
+      { name: 'UniversitÃ  degli Studi di Macerata', shortName: 'UniversitÃ  di Macerata', city: 'Macerata', websiteUrl: 'https://www.unimc.it' },
+      { name: 'UniversitÃ  degli Studi Magna GrÃ¦cia di Catanzaro', shortName: 'Magna GrÃ¦cia', city: 'Catanzaro', websiteUrl: 'https://www.umg.it' },
+      { name: 'UniversitÃ  degli Studi Mediterranea di Reggio Calabria', shortName: 'Mediterranea', city: 'Reggio Calabria', websiteUrl: 'https://www.unirc.it' },
+      { name: 'UniversitÃ  degli Studi di Messina', shortName: 'UniversitÃ  di Messina', city: 'Messina', websiteUrl: 'https://www.unime.it' },
+      { name: 'UniversitÃ  degli Studi di Milano', shortName: 'UniversitÃ  di Milano', city: 'Milano', websiteUrl: 'https://www.unimi.it' },
+      { name: 'UniversitÃ  degli Studi di Milano-Bicocca', shortName: 'Milano-Bicocca', city: 'Milano', websiteUrl: 'https://www.unimib.it' },
+      { name: 'UniversitÃ  degli Studi di Modena e Reggio Emilia', shortName: 'UniMoRe', city: 'Modena', websiteUrl: 'https://www.unimore.it' },
+      { name: 'UniversitÃ  degli Studi del Molise', shortName: 'UniversitÃ  del Molise', city: 'Campobasso', websiteUrl: 'https://www.unimol.it' },
+      { name: "UniversitÃ  degli Studi di Napoli \"L'Orientale\"", shortName: "L'Orientale", city: 'Napoli', websiteUrl: 'https://www.unior.it' },
+      { name: 'UniversitÃ  degli Studi di Napoli "Parthenope"', shortName: 'Parthenope', city: 'Napoli', websiteUrl: 'https://www.uniparthenope.it' },
+      { name: 'UniversitÃ  degli Studi di Palermo', shortName: 'UniversitÃ  di Palermo', city: 'Palermo', websiteUrl: 'https://www.unipa.it' },
+      { name: 'UniversitÃ  degli Studi di Parma', shortName: 'UniversitÃ  di Parma', city: 'Parma', websiteUrl: 'https://www.unipr.it' },
+      { name: 'UniversitÃ  degli Studi di Pavia', shortName: 'UniversitÃ  di Pavia', city: 'Pavia', websiteUrl: 'https://www.unipv.it' },
+      { name: 'UniversitÃ  degli Studi di Perugia', shortName: 'UniversitÃ  di Perugia', city: 'Perugia', websiteUrl: 'https://www.unipg.it' },
+      { name: 'UniversitÃ  degli Studi del Piemonte Orientale "Amedeo Avogadro"', shortName: 'Piemonte Orientale', city: 'Vercelli', websiteUrl: 'https://www.uniupo.it' },
       { name: 'Politecnico di Bari', shortName: 'Poliba', city: 'Bari', websiteUrl: 'https://www.poliba.it' },
-      { name: 'Università Politecnica delle Marche', shortName: 'Politecnica delle Marche', city: 'Ancona', websiteUrl: 'https://www.univpm.it' },
-      { name: 'Università degli Studi di Roma "Foro Italico"', shortName: 'Foro Italico', city: 'Roma', websiteUrl: 'https://www.uniroma4.it' },
-      { name: 'Università degli Studi di Roma Tor Vergata', shortName: 'Tor Vergata', city: 'Roma', websiteUrl: 'https://www.uniroma2.it' },
-      { name: 'Università degli Studi Roma Tre', shortName: 'Roma Tre', city: 'Roma', websiteUrl: 'https://www.uniroma3.it' },
-      { name: 'Università degli Studi di Salerno', shortName: 'Università di Salerno', city: 'Salerno', websiteUrl: 'https://www.unisa.it' },
-      { name: 'Università degli Studi del Sannio', shortName: 'Università del Sannio', city: 'Benevento', websiteUrl: 'https://www.unisannio.it' },
-      { name: 'Università degli Studi di Sassari', shortName: 'Università di Sassari', city: 'Sassari', websiteUrl: 'https://www.uniss.it' },
+      { name: 'UniversitÃ  Politecnica delle Marche', shortName: 'Politecnica delle Marche', city: 'Ancona', websiteUrl: 'https://www.univpm.it' },
+      { name: 'UniversitÃ  degli Studi di Roma "Foro Italico"', shortName: 'Foro Italico', city: 'Roma', websiteUrl: 'https://www.uniroma4.it' },
+      { name: 'UniversitÃ  degli Studi di Roma Tor Vergata', shortName: 'Tor Vergata', city: 'Roma', websiteUrl: 'https://www.uniroma2.it' },
+      { name: 'UniversitÃ  degli Studi Roma Tre', shortName: 'Roma Tre', city: 'Roma', websiteUrl: 'https://www.uniroma3.it' },
+      { name: 'UniversitÃ  degli Studi di Salerno', shortName: 'UniversitÃ  di Salerno', city: 'Salerno', websiteUrl: 'https://www.unisa.it' },
+      { name: 'UniversitÃ  degli Studi del Sannio', shortName: 'UniversitÃ  del Sannio', city: 'Benevento', websiteUrl: 'https://www.unisannio.it' },
+      { name: 'UniversitÃ  degli Studi di Sassari', shortName: 'UniversitÃ  di Sassari', city: 'Sassari', websiteUrl: 'https://www.uniss.it' },
       { name: 'Scuola Normale Superiore', shortName: 'SNS', city: 'Pisa', websiteUrl: 'https://www.sns.it' },
       { name: "Scuola Superiore Sant'Anna", shortName: "Sant'Anna", city: 'Pisa', websiteUrl: 'https://www.santannapisa.it' },
       { name: 'Scuola Superiore Meridionale', shortName: 'SSM', city: 'Napoli', websiteUrl: 'https://www.ssmeridionale.it' },
-      { name: 'Università del Salento', shortName: 'UniSalento', city: 'Lecce', websiteUrl: 'https://www.unisalento.it' },
-      { name: 'Università degli Studi di Siena', shortName: 'Università di Siena', city: 'Siena', websiteUrl: 'https://www.unisi.it' },
-      { name: 'Università degli Studi di Teramo', shortName: 'Università di Teramo', city: 'Teramo', websiteUrl: 'https://www.unite.it' },
-      { name: 'Università degli Studi di Trento', shortName: 'Università di Trento', city: 'Trento', websiteUrl: 'https://www.unitn.it' },
-      { name: 'Università degli Studi di Trieste', shortName: 'Università di Trieste', city: 'Trieste', websiteUrl: 'https://www.units.it' },
-      { name: 'Università degli Studi della Tuscia', shortName: 'Università della Tuscia', city: 'Viterbo', websiteUrl: 'https://www.unitus.it' },
-      { name: 'Università degli Studi di Udine', shortName: 'Università di Udine', city: 'Udine', websiteUrl: 'https://www.uniud.it' },
-      { name: 'Università degli Studi di Urbino "Carlo Bo"', shortName: 'Università di Urbino', city: 'Urbino', websiteUrl: 'https://www.uniurb.it' },
-      { name: 'Università Iuav di Venezia', shortName: 'IUAV', city: 'Venezia', websiteUrl: 'https://www.iuav.it' },
-      { name: 'Università degli Studi di Verona', shortName: 'Università di Verona', city: 'Verona', websiteUrl: 'https://www.univr.it' },
-      { name: 'Università per Stranieri di Perugia', shortName: 'Stranieri di Perugia', city: 'Perugia', websiteUrl: 'https://www.unistrapg.it' },
-      { name: 'Università per Stranieri di Siena', shortName: 'Stranieri di Siena', city: 'Siena', websiteUrl: 'https://www.unistrasi.it' },
-      { name: 'Università degli Studi della Basilicata', shortName: 'Università della Basilicata', city: 'Potenza', websiteUrl: 'https://www.unibas.it' },
-      { name: 'Università Cattolica del Sacro Cuore', shortName: 'Cattolica', city: 'Milano', websiteUrl: 'https://www.unicatt.it' },
-      { name: 'Università Commerciale Luigi Bocconi', shortName: 'Bocconi', city: 'Milano', websiteUrl: 'https://www.unibocconi.it' },
-      { name: 'LUISS – Libera Università Internazionale degli Studi Sociali', shortName: 'LUISS', city: 'Roma', websiteUrl: 'https://www.luiss.it' },
-      { name: 'IULM – Libera Università di Lingue e Comunicazione', shortName: 'IULM', city: 'Milano', websiteUrl: 'https://www.iulm.it' },
-      { name: 'LUMSA – Libera Università Maria Santissima Assunta', shortName: 'LUMSA', city: 'Roma', websiteUrl: 'https://www.lumsa.it' },
-      { name: 'Università degli Studi "Suor Orsola Benincasa"', shortName: 'Suor Orsola Benincasa', city: 'Napoli', websiteUrl: 'https://www.unisob.na.it' },
-      { name: 'Università Campus Bio-Medico di Roma', shortName: 'Campus Bio-Medico', city: 'Roma', websiteUrl: 'https://www.unicampus.it' },
-      { name: 'Università Europea di Roma', shortName: 'Università Europea di Roma', city: 'Roma', websiteUrl: 'https://www.unier.it' },
-      { name: 'Università Vita-Salute San Raffaele', shortName: 'Vita-Salute San Raffaele', city: 'Milano', websiteUrl: 'https://www.unisr.it' },
+      { name: 'UniversitÃ  del Salento', shortName: 'UniSalento', city: 'Lecce', websiteUrl: 'https://www.unisalento.it' },
+      { name: 'UniversitÃ  degli Studi di Siena', shortName: 'UniversitÃ  di Siena', city: 'Siena', websiteUrl: 'https://www.unisi.it' },
+      { name: 'UniversitÃ  degli Studi di Teramo', shortName: 'UniversitÃ  di Teramo', city: 'Teramo', websiteUrl: 'https://www.unite.it' },
+      { name: 'UniversitÃ  degli Studi di Trento', shortName: 'UniversitÃ  di Trento', city: 'Trento', websiteUrl: 'https://www.unitn.it' },
+      { name: 'UniversitÃ  degli Studi di Trieste', shortName: 'UniversitÃ  di Trieste', city: 'Trieste', websiteUrl: 'https://www.units.it' },
+      { name: 'UniversitÃ  degli Studi della Tuscia', shortName: 'UniversitÃ  della Tuscia', city: 'Viterbo', websiteUrl: 'https://www.unitus.it' },
+      { name: 'UniversitÃ  degli Studi di Udine', shortName: 'UniversitÃ  di Udine', city: 'Udine', websiteUrl: 'https://www.uniud.it' },
+      { name: 'UniversitÃ  degli Studi di Urbino "Carlo Bo"', shortName: 'UniversitÃ  di Urbino', city: 'Urbino', websiteUrl: 'https://www.uniurb.it' },
+      { name: 'UniversitÃ  Iuav di Venezia', shortName: 'IUAV', city: 'Venezia', websiteUrl: 'https://www.iuav.it' },
+      { name: 'UniversitÃ  degli Studi di Verona', shortName: 'UniversitÃ  di Verona', city: 'Verona', websiteUrl: 'https://www.univr.it' },
+      { name: 'UniversitÃ  per Stranieri di Perugia', shortName: 'Stranieri di Perugia', city: 'Perugia', websiteUrl: 'https://www.unistrapg.it' },
+      { name: 'UniversitÃ  per Stranieri di Siena', shortName: 'Stranieri di Siena', city: 'Siena', websiteUrl: 'https://www.unistrasi.it' },
+      { name: 'UniversitÃ  degli Studi della Basilicata', shortName: 'UniversitÃ  della Basilicata', city: 'Potenza', websiteUrl: 'https://www.unibas.it' },
+      { name: 'UniversitÃ  Cattolica del Sacro Cuore', shortName: 'Cattolica', city: 'Milano', websiteUrl: 'https://www.unicatt.it' },
+      { name: 'UniversitÃ  Commerciale Luigi Bocconi', shortName: 'Bocconi', city: 'Milano', websiteUrl: 'https://www.unibocconi.it' },
+      { name: 'LUISS â€“ Libera UniversitÃ  Internazionale degli Studi Sociali', shortName: 'LUISS', city: 'Roma', websiteUrl: 'https://www.luiss.it' },
+      { name: 'IULM â€“ Libera UniversitÃ  di Lingue e Comunicazione', shortName: 'IULM', city: 'Milano', websiteUrl: 'https://www.iulm.it' },
+      { name: 'LUMSA â€“ Libera UniversitÃ  Maria Santissima Assunta', shortName: 'LUMSA', city: 'Roma', websiteUrl: 'https://www.lumsa.it' },
+      { name: 'UniversitÃ  degli Studi "Suor Orsola Benincasa"', shortName: 'Suor Orsola Benincasa', city: 'Napoli', websiteUrl: 'https://www.unisob.na.it' },
+      { name: 'UniversitÃ  Campus Bio-Medico di Roma', shortName: 'Campus Bio-Medico', city: 'Roma', websiteUrl: 'https://www.unicampus.it' },
+      { name: 'UniversitÃ  Europea di Roma', shortName: 'UniversitÃ  Europea di Roma', city: 'Roma', websiteUrl: 'https://www.unier.it' },
+      { name: 'UniversitÃ  Vita-Salute San Raffaele', shortName: 'Vita-Salute San Raffaele', city: 'Milano', websiteUrl: 'https://www.unisr.it' },
       { name: 'Humanitas University', shortName: 'Humanitas', city: 'Rozzano', websiteUrl: 'https://www.hunimed.eu' },
-      { name: 'LIUC – Università Cattaneo', shortName: 'LIUC', city: 'Castellanza', websiteUrl: 'https://www.liuc.it' },
-      { name: 'Università degli Studi di Scienze Gastronomiche', shortName: 'UNISG', city: 'Pollenzo', websiteUrl: 'https://www.unisg.it' },
-      { name: 'Università degli Studi "Giustino Fortunato"', shortName: 'Giustino Fortunato', city: 'Benevento', websiteUrl: 'https://www.unifortunato.eu' },
+      { name: 'LIUC â€“ UniversitÃ  Cattaneo', shortName: 'LIUC', city: 'Castellanza', websiteUrl: 'https://www.liuc.it' },
+      { name: 'UniversitÃ  degli Studi di Scienze Gastronomiche', shortName: 'UNISG', city: 'Pollenzo', websiteUrl: 'https://www.unisg.it' },
+      { name: 'UniversitÃ  degli Studi "Giustino Fortunato"', shortName: 'Giustino Fortunato', city: 'Benevento', websiteUrl: 'https://www.unifortunato.eu' },
       { name: 'Link Campus University', shortName: 'Link Campus', city: 'Roma', websiteUrl: 'https://www.unilink.it' },
-      { name: 'Università degli Studi Internazionali di Roma – UNINT', shortName: 'UNINT', city: 'Roma', websiteUrl: 'https://www.unint.eu' },
-      { name: 'Libera Università di Bolzano', shortName: 'Unibz', city: 'Bolzano', websiteUrl: 'https://www.unibz.it' },
-      { name: "Università della Valle d'Aosta", shortName: "UniVdA", city: 'Aosta', websiteUrl: 'https://www.univda.it' },
-      { name: 'Università degli Studi di Enna "Kore"', shortName: 'Kore', city: 'Enna', websiteUrl: 'https://www.unikore.it' },
-      { name: 'Università degli Studi San Raffaele Roma', shortName: 'San Raffaele Roma', city: 'Roma', websiteUrl: 'https://www.uniroma5.it' },
-      { name: 'Università telematica eCampus', shortName: 'eCampus', city: 'Novedrate', websiteUrl: 'https://www.uniecampus.it' },
-      { name: 'Università telematica Pegaso', shortName: 'Pegaso', city: 'Napoli', websiteUrl: 'https://www.unipegaso.it' },
-      { name: 'Università telematica Niccolò Cusano – UNICUSANO', shortName: 'Cusano', city: 'Roma', websiteUrl: 'https://www.unicusano.it' },
-      { name: 'Università telematica Internazionale Uninettuno', shortName: 'Uninettuno', city: 'Roma', websiteUrl: 'https://www.uninettunouniversity.net' },
-      { name: 'Università telematica Leonardo da Vinci', shortName: 'Leonardo da Vinci', city: 'Torrevecchia Teatina', websiteUrl: 'https://www.unidav.it' },
+      { name: 'UniversitÃ  degli Studi Internazionali di Roma â€“ UNINT', shortName: 'UNINT', city: 'Roma', websiteUrl: 'https://www.unint.eu' },
+      { name: 'Libera UniversitÃ  di Bolzano', shortName: 'Unibz', city: 'Bolzano', websiteUrl: 'https://www.unibz.it' },
+      { name: "UniversitÃ  della Valle d'Aosta", shortName: "UniVdA", city: 'Aosta', websiteUrl: 'https://www.univda.it' },
+      { name: 'UniversitÃ  degli Studi di Enna "Kore"', shortName: 'Kore', city: 'Enna', websiteUrl: 'https://www.unikore.it' },
+      { name: 'UniversitÃ  degli Studi San Raffaele Roma', shortName: 'San Raffaele Roma', city: 'Roma', websiteUrl: 'https://www.uniroma5.it' },
+      { name: 'UniversitÃ  telematica eCampus', shortName: 'eCampus', city: 'Novedrate', websiteUrl: 'https://www.uniecampus.it' },
+      { name: 'UniversitÃ  telematica Pegaso', shortName: 'Pegaso', city: 'Napoli', websiteUrl: 'https://www.unipegaso.it' },
+      { name: 'UniversitÃ  telematica NiccolÃ² Cusano â€“ UNICUSANO', shortName: 'Cusano', city: 'Roma', websiteUrl: 'https://www.unicusano.it' },
+      { name: 'UniversitÃ  telematica Internazionale Uninettuno', shortName: 'Uninettuno', city: 'Roma', websiteUrl: 'https://www.uninettunouniversity.net' },
+      { name: 'UniversitÃ  telematica Leonardo da Vinci', shortName: 'Leonardo da Vinci', city: 'Torrevecchia Teatina', websiteUrl: 'https://www.unidav.it' },
       { name: 'UNITELMA Sapienza', shortName: 'UNITELMA', city: 'Roma', websiteUrl: 'https://www.unitelmasapienza.it' },
-      { name: 'Università telematica Mercatorum', shortName: 'Mercatorum', city: 'Roma', websiteUrl: 'https://www.universitamercatorum.it' },
-      { name: 'Università telematica San Raffaele Roma', shortName: 'Telematica San Raffaele', city: 'Roma', websiteUrl: 'https://www.sanraffaele.org' },
-      { name: 'Università telematica IUL', shortName: 'IUL', city: 'Firenze', websiteUrl: 'https://www.iuline.it' },
-      { name: 'Università telematica Giustino Fortunato', shortName: 'Telematica Giustino Fortunato', city: 'Benevento', websiteUrl: 'https://www.unifortunato.it' },
+      { name: 'UniversitÃ  telematica Mercatorum', shortName: 'Mercatorum', city: 'Roma', websiteUrl: 'https://www.universitamercatorum.it' },
+      { name: 'UniversitÃ  telematica San Raffaele Roma', shortName: 'Telematica San Raffaele', city: 'Roma', websiteUrl: 'https://www.sanraffaele.org' },
+      { name: 'UniversitÃ  telematica IUL', shortName: 'IUL', city: 'Firenze', websiteUrl: 'https://www.iuline.it' },
+      { name: 'UniversitÃ  telematica Giustino Fortunato', shortName: 'Telematica Giustino Fortunato', city: 'Benevento', websiteUrl: 'https://www.unifortunato.it' },
       { name: 'Gran Sasso Science Institute', shortName: 'GSSI', city: "L'Aquila", websiteUrl: 'https://www.gssi.it' },
-      { name: 'SISSA – Scuola Internazionale Superiore di Studi Avanzati', shortName: 'SISSA', city: 'Trieste', websiteUrl: 'https://www.sissa.it' },
+      { name: 'SISSA â€“ Scuola Internazionale Superiore di Studi Avanzati', shortName: 'SISSA', city: 'Trieste', websiteUrl: 'https://www.sissa.it' },
     ],
   });
 
@@ -256,13 +256,13 @@ async function main() {
   await prisma.opportunity.createMany({
     data: [
 
-      // ── STAGE (Italia) ─────────────────────────────────────────────────
+      // ── TIROCINIO (Italia) ─────────────────────────────────────────
       {
         title: 'Stage Marketing Digitale & Social Media',
-        description: 'Lavazza ricerca uno stagista da inserire nel team Marketing Digitale della sede di Torino. Il candidato supporterà le campagne sui canali social, l\'analisi delle performance e la produzione di contenuti per il brand.',
-        about: 'Stipendio €800/mese. Durata 6 mesi. Possibilità di assunzione al termine.',
+        description: 'Lavazza ricerca uno stagista da inserire nel team Marketing Digitale della sede di Torino. Il candidato supporterÃ  le campagne sui canali social, l\'analisi delle performance e la produzione di contenuti per il brand.',
+        about: 'Stipendio â‚¬800/mese. Durata 6 mesi. PossibilitÃ  di assunzione al termine.',
         url: 'https://careers.lavazza.com/stage-marketing',
-        type: OpportunityType.STAGE,
+        type: OpportunityType.TIROCINIO,
         company: 'Lavazza',
         location: 'Torino, Italy',
         city: 'Torino',
@@ -284,11 +284,11 @@ async function main() {
         minYearOfStudy: 3,
       },
       {
-        title: 'Stage Ingegneria Aerospaziale – Propulsion Division',
-        description: 'Airbus cerca uno stagista da integrare nella divisione Propulsion Systems di Tolosa. Il candidato parteciperà all\'analisi strutturale e alle simulazioni CFD su componenti motore A320neo.',
-        about: 'Rimborso spese €1.200/mese + vitto. Durata 5-6 mesi. Visto di lavoro non richiesto (UE). Conoscenza di ANSYS o SolidWorks preferita.',
+        title: 'Stage Ingegneria Aerospaziale â€“ Propulsion Division',
+        description: 'Airbus cerca uno stagista da integrare nella divisione Propulsion Systems di Tolosa. Il candidato parteciperÃ  all\'analisi strutturale e alle simulazioni CFD su componenti motore A320neo.',
+        about: 'Rimborso spese â‚¬1.200/mese + vitto. Durata 5-6 mesi. Visto di lavoro non richiesto (UE). Conoscenza di ANSYS o SolidWorks preferita.',
         url: 'https://jobs.airbus.com/toulouse-propulsion-intern',
-        type: OpportunityType.STAGE,
+        type: OpportunityType.TIROCINIO,
         company: 'Airbus',
         location: 'Toulouse, France',
         city: 'Toulouse',
@@ -311,11 +311,11 @@ async function main() {
         maxYearOfStudy: 5,
       },
       {
-        title: 'Stage Politiche Europee – Ufficio dell\'Ambasciata Italiana',
-        description: 'L\'Ambasciata Italiana a Bruxelles offre uno stage nel settore Politiche Europee e Affari Istituzionali. Il tirocinante supporterà la stesura di report, la partecipazione a riunioni del Consiglio UE e la gestione della corrispondenza diplomatica.',
-        about: 'Rimborso spese €600/mese. Durata 3-6 mesi. Richiesta disponibilità immediata.',
+        title: 'Stage Politiche Europee â€“ Ufficio dell\'Ambasciata Italiana',
+        description: 'L\'Ambasciata Italiana a Bruxelles offre uno stage nel settore Politiche Europee e Affari Istituzionali. Il tirocinante supporterÃ  la stesura di report, la partecipazione a riunioni del Consiglio UE e la gestione della corrispondenza diplomatica.',
+        about: 'Rimborso spese â‚¬600/mese. Durata 3-6 mesi. Richiesta disponibilitÃ  immediata.',
         url: 'https://ambbruxelles.esteri.it/stage',
-        type: OpportunityType.STAGE,
+        type: OpportunityType.TIROCINIO,
         company: 'Ambasciata Italiana a Bruxelles',
         location: 'Brussels, Belgium',
         city: 'Bruxelles',
@@ -336,11 +336,11 @@ async function main() {
         requiredLanguages: [{ lang: 'fr', level: 'B2' }],
       },
       {
-        title: 'Stage Ufficio Stile – Collezione Donna',
-        description: 'Gucci ricerca uno stagista da inserire nell\'Ufficio Stile della sede di Firenze, con focus sulla collezione Donna. Il candidato affiancherà il team creativo nella ricerca di tendenze, nella preparazione dei mood board e nel coordinamento dei campionari.',
-        about: 'Stipendio €800/mese. Durata 6 mesi. Ambiente internazionale e possibilità di partecipare alle fashion week.',
+        title: 'Stage Ufficio Stile â€“ Collezione Donna',
+        description: 'Gucci ricerca uno stagista da inserire nell\'Ufficio Stile della sede di Firenze, con focus sulla collezione Donna. Il candidato affiancherÃ  il team creativo nella ricerca di tendenze, nella preparazione dei mood board e nel coordinamento dei campionari.',
+        about: 'Stipendio â‚¬800/mese. Durata 6 mesi. Ambiente internazionale e possibilitÃ  di partecipare alle fashion week.',
         url: 'https://careers.gucci.com/stage-stile',
-        type: OpportunityType.STAGE,
+        type: OpportunityType.TIROCINIO,
         company: 'Gucci',
         location: 'Firenze, Italy',
         city: 'Firenze',
@@ -362,12 +362,12 @@ async function main() {
         minYearOfStudy: 2,
       },
       {
-        title: 'Stage Redazione Digitale – Rai News',
-        description: 'RAI cerca uno stagista per il team editoriale di Rai News 24, sede di Roma. Il candidato supporterà la produzione di contenuti multimediali, la gestione dei canali social e la revisione dei testi per le trasmissioni online.',
-        about: 'Rimborso spese €600/mese. Durata 6 mesi. Opportunità formativa unica nel panorama giornalistico italiano.',
+        title: 'Stage Redazione Digitale â€“ Rai News',
+        description: 'RAI cerca uno stagista per il team editoriale di Rai News 24, sede di Roma. Il candidato supporterÃ  la produzione di contenuti multimediali, la gestione dei canali social e la revisione dei testi per le trasmissioni online.',
+        about: 'Rimborso spese â‚¬600/mese. Durata 6 mesi. OpportunitÃ  formativa unica nel panorama giornalistico italiano.',
         url: 'https://www.rai.it/lavora-con-noi/stage',
-        type: OpportunityType.STAGE,
-        company: 'RAI – Radiotelevisione Italiana',
+        type: OpportunityType.TIROCINIO,
+        company: 'RAI â€“ Radiotelevisione Italiana',
         location: 'Roma, Italy',
         city: 'Roma',
         region: 'Lazio',
@@ -387,12 +387,12 @@ async function main() {
         minYearOfStudy: 2,
       },
       {
-        title: 'Stage Diritti Umani – Ufficio Alto Commissariato ONU',
+        title: 'Stage Diritti Umani â€“ Ufficio Alto Commissariato ONU',
         description: 'L\'UNHCR offre stage non retribuiti a Ginevra per studenti di giurisprudenza, scienze politiche o relazioni internazionali. I tirocinanti supporteranno la redazione di rapporti su violazioni dei diritti umani e la gestione di casi.',
-        about: 'Stage non retribuito. Durata 3-6 mesi. Possibilità di accedere a fondi di sostegno esterni. Sede: Palais des Nations, Ginevra.',
+        about: 'Stage non retribuito. Durata 3-6 mesi. PossibilitÃ  di accedere a fondi di sostegno esterni. Sede: Palais des Nations, Ginevra.',
         url: 'https://www.unhcr.org/internships',
-        type: OpportunityType.STAGE,
-        company: 'UNHCR – Alto Commissariato ONU per i Rifugiati',
+        type: OpportunityType.TIROCINIO,
+        company: 'UNHCR â€“ Alto Commissariato ONU per i Rifugiati',
         organizer: 'United Nations',
         location: 'Geneva, Switzerland',
         city: 'Ginevra',
@@ -414,13 +414,13 @@ async function main() {
         requiredLanguages: [{ lang: 'fr', level: 'B1' }],
       },
 
-      // ── INTERNSHIP (Italia) ─────────────────────────────────────────────
+      // ── TIROCINIO (Italia) ─────────────────────────────────────────
       {
         title: 'Software Engineering Intern',
-        description: 'Bending Spoons, una delle aziende tech in più rapida crescita in Europa, cerca ingegneri software per un internship estivo a Milano. Lavorerai su prodotti consumer con milioni di utenti (Elytra, Splice, Issuu) usando Swift, Kotlin e Python.',
-        about: 'Retribuzione competitiva (€1.500-2.000/mese). Full-time per 3-6 mesi. Opportunità di assunzione al termine per i migliori candidati.',
+        description: 'Bending Spoons, una delle aziende tech in piÃ¹ rapida crescita in Europa, cerca ingegneri software per un internship estivo a Milano. Lavorerai su prodotti consumer con milioni di utenti (Elytra, Splice, Issuu) usando Swift, Kotlin e Python.',
+        about: 'Retribuzione competitiva (â‚¬1.500-2.000/mese). Full-time per 3-6 mesi. OpportunitÃ  di assunzione al termine per i migliori candidati.',
         url: 'https://bendingspoons.com/careers/software-engineering-intern',
-        type: OpportunityType.INTERNSHIP,
+        type: OpportunityType.TIROCINIO,
         company: 'Bending Spoons',
         location: 'Milano, Italy',
         city: 'Milano',
@@ -444,9 +444,9 @@ async function main() {
       {
         title: 'Product Manager Intern',
         description: 'Satispay, il principale sistema di pagamento mobile italiano, cerca un Product Manager Intern per il team di Milano. Collaborerai nella definizione della roadmap, nel testing A/B e nell\'analisi delle metriche di prodotto.',
-        about: 'Rimborso €800/mese. 6 mesi. Team giovane e internazionale. Sede: centro di Milano.',
+        about: 'Rimborso â‚¬800/mese. 6 mesi. Team giovane e internazionale. Sede: centro di Milano.',
         url: 'https://jobs.satispay.com/pm-intern',
-        type: OpportunityType.INTERNSHIP,
+        type: OpportunityType.TIROCINIO,
         company: 'Satispay',
         location: 'Milano, Italy',
         city: 'Milano',
@@ -468,13 +468,13 @@ async function main() {
         minYearOfStudy: 3,
       },
 
-      // ── INTERNSHIP (Estero) ─────────────────────────────────────────────
+      // ── TIROCINIO (Estero) ─────────────────────────────────────────
       {
-        title: 'Data Science Intern – Personalization Team',
-        description: 'Zalando cerca Data Science Intern per il team Personalization di Berlino. Svilupperai modelli di raccomandazione e analizzerai il comportamento degli utenti su una delle più grandi piattaforme e-commerce d\'Europa, con dati su oltre 50M di clienti.',
-        about: '€1.500/mese + benefit. 6 mesi, full-time. Stack: Python, Spark, Databricks, MLflow. Uffici moderni nel cuore di Berlino.',
+        title: 'Data Science Intern â€“ Personalization Team',
+        description: 'Zalando cerca Data Science Intern per il team Personalization di Berlino. Svilupperai modelli di raccomandazione e analizzerai il comportamento degli utenti su una delle piÃ¹ grandi piattaforme e-commerce d\'Europa, con dati su oltre 50M di clienti.',
+        about: 'â‚¬1.500/mese + benefit. 6 mesi, full-time. Stack: Python, Spark, Databricks, MLflow. Uffici moderni nel cuore di Berlino.',
         url: 'https://jobs.zalando.com/data-science-intern',
-        type: OpportunityType.INTERNSHIP,
+        type: OpportunityType.TIROCINIO,
         company: 'Zalando',
         location: 'Berlin, Germany',
         city: 'Berlino',
@@ -496,10 +496,10 @@ async function main() {
       },
       {
         title: 'Finance & Controlling Intern',
-        description: 'Bosch offre un internship nel team Finance & Controlling presso la sede di Stoccarda. Il candidato supporterà la pianificazione finanziaria, la reportistica mensile e l\'analisi degli scostamenti di budget a livello divisionale.',
-        about: '€1.200/mese. 6 mesi. Ottima opportunità per chi vuole fare esperienza in una multinazionale industriale tedesca. Conoscenza di SAP gradita.',
+        description: 'Bosch offre un internship nel team Finance & Controlling presso la sede di Stoccarda. Il candidato supporterÃ  la pianificazione finanziaria, la reportistica mensile e l\'analisi degli scostamenti di budget a livello divisionale.',
+        about: 'â‚¬1.200/mese. 6 mesi. Ottima opportunitÃ  per chi vuole fare esperienza in una multinazionale industriale tedesca. Conoscenza di SAP gradita.',
         url: 'https://jobs.bosch.com/finance-controlling-intern',
-        type: OpportunityType.INTERNSHIP,
+        type: OpportunityType.TIROCINIO,
         company: 'Bosch',
         location: 'Stuttgart, Germany',
         city: 'Stoccarda',
@@ -522,10 +522,10 @@ async function main() {
       },
       {
         title: 'Fashion Marketing & Buying Intern',
-        description: 'H&M cerca un intern per il team Fashion Marketing & Buying della sede di Stoccolma. Il candidato supporterà le analisi di mercato, la selezione dei capi per le collezioni stagionali e la gestione delle relazioni con i fornitori.',
-        about: '€1.100/mese. 4-6 mesi. Opportunità unica di lavorare in uno dei brand di moda più famosi al mondo.',
+        description: 'H&M cerca un intern per il team Fashion Marketing & Buying della sede di Stoccolma. Il candidato supporterÃ  le analisi di mercato, la selezione dei capi per le collezioni stagionali e la gestione delle relazioni con i fornitori.',
+        about: 'â‚¬1.100/mese. 4-6 mesi. OpportunitÃ  unica di lavorare in uno dei brand di moda piÃ¹ famosi al mondo.',
         url: 'https://careers.hm.com/fashion-marketing-intern',
-        type: OpportunityType.INTERNSHIP,
+        type: OpportunityType.TIROCINIO,
         company: 'H&M Group',
         location: 'Stockholm, Sweden',
         city: 'Stoccolma',
@@ -548,9 +548,9 @@ async function main() {
       {
         title: 'Frontend Developer Intern (Remote)',
         description: 'Startup fintech in fase seed cerca un Frontend Developer Intern da remoto per contribuire allo sviluppo del proprio dashboard B2B. Stack: React, TypeScript, Tailwind CSS. Lavoro asincrono con team distribuito in Europa.',
-        about: '€700/mese. 3-6 mesi. Full-remote. Meeting settimanali via Zoom. GitHub-driven workflow.',
+        about: 'â‚¬700/mese. 3-6 mesi. Full-remote. Meeting settimanali via Zoom. GitHub-driven workflow.',
         url: 'https://jobicy.com/frontend-intern-remote',
-        type: OpportunityType.INTERNSHIP,
+        type: OpportunityType.TIROCINIO,
         company: 'NovaPay (Seed Stage)',
         location: 'Remote (EU)',
         isRemote: true,
@@ -568,11 +568,11 @@ async function main() {
         minYearOfStudy: 2,
       },
 
-      // ── FELLOWSHIP ─────────────────────────────────────────────────────
+      // â”€â”€ FELLOWSHIP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       {
         title: 'Obama Foundation Leaders Europe Program',
         description: 'Il programma Leaders: Europe della Obama Foundation seleziona ogni anno 100 leader emergenti da tutta Europa. I Fellows partecipano a un programma formativo intensivo a Londra e in altre capitali europee, focalizzato su leadership, democrazia e impatto sociale.',
-        about: 'Borse di studio complete (volo, alloggio, vitto). Durata: 12 mesi con più residency in-person. Deadline: candidatura con essay e video.',
+        about: 'Borse di studio complete (volo, alloggio, vitto). Durata: 12 mesi con piÃ¹ residency in-person. Deadline: candidatura con essay e video.',
         url: 'https://www.obama.org/programs/leaders/europe/',
         type: OpportunityType.FELLOWSHIP,
         organizer: 'Obama Foundation',
@@ -596,12 +596,12 @@ async function main() {
         minYearOfStudy: 1,
       },
       {
-        title: 'DAAD Research Fellowship – Graduate Studies in Germany',
-        description: 'Il Deutscher Akademischer Austauschdienst offre borse di ricerca per studenti magistrali e dottorandi italiani che vogliono trascorrere un periodo di ricerca in università tedesche. Ambiti: ingegneria, scienze naturali, economia, scienze sociali.',
-        about: 'Borsa mensile €861-1.200 (magistrale) / €1.365 (dottorato). Durata: 7-12 mesi. Copertura parziale per corsi di tedesco.',
+        title: 'DAAD Research Fellowship â€“ Graduate Studies in Germany',
+        description: 'Il Deutscher Akademischer Austauschdienst offre borse di ricerca per studenti magistrali e dottorandi italiani che vogliono trascorrere un periodo di ricerca in universitÃ  tedesche. Ambiti: ingegneria, scienze naturali, economia, scienze sociali.',
+        about: 'Borsa mensile â‚¬861-1.200 (magistrale) / â‚¬1.365 (dottorato). Durata: 7-12 mesi. Copertura parziale per corsi di tedesco.',
         url: 'https://www.daad.de/research-grants',
         type: OpportunityType.FELLOWSHIP,
-        organizer: 'DAAD – Deutscher Akademischer Austauschdienst',
+        organizer: 'DAAD â€“ Deutscher Akademischer Austauschdienst',
         location: 'Germany (multiple cities)',
         country: 'DE',
         isRemote: false,
@@ -617,17 +617,17 @@ async function main() {
         sourceId: 'mock-fellowship-002',
         cost: 0,
         hasScholarship: true,
-        scholarshipDetails: 'Borsa mensile € 861–1.200 per magistrale. Include contributo per volo andata/ritorno e assicurazione sanitaria.',
+        scholarshipDetails: 'Borsa mensile â‚¬ 861â€“1.200 per magistrale. Include contributo per volo andata/ritorno e assicurazione sanitaria.',
         eligibleFields: [FieldOfStudy.ENGINEERING, FieldOfStudy.PHYSICAL_SCIENCES, FieldOfStudy.MATHEMATICS, FieldOfStudy.ECONOMICS],
         minYearOfStudy: 4,
         requiredLanguages: [{ lang: 'de', level: 'A2' }],
       },
 
-      // ── COMPETITION ─────────────────────────────────────────────────────
+      // â”€â”€ COMPETITION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       {
         title: 'Reply Code Challenge 2026',
-        description: 'La Reply Code Challenge è una delle più grandi competizioni di coding in Europa, organizzata da Reply. Sfide algoritmiche su 4 livelli di difficoltà crescente. Open a studenti universitari e appassionati di informatica. Edizione online, team da 1 a 4 persone.',
-        about: 'Premi fino a €10.000. Free to enter. Durata: 24 ore. Classifiche internazionali e categoria dedicata agli studenti.',
+        description: 'La Reply Code Challenge Ã¨ una delle piÃ¹ grandi competizioni di coding in Europa, organizzata da Reply. Sfide algoritmiche su 4 livelli di difficoltÃ  crescente. Open a studenti universitari e appassionati di informatica. Edizione online, team da 1 a 4 persone.',
+        about: 'Premi fino a â‚¬10.000. Free to enter. Durata: 24 ore. Classifiche internazionali e categoria dedicata agli studenti.',
         url: 'https://challenges.reply.com/tamtamy/coding-challenge',
         type: OpportunityType.COMPETITION,
         organizer: 'Reply',
@@ -649,12 +649,12 @@ async function main() {
         eligibleFields: [FieldOfStudy.COMPUTER_SCIENCE, FieldOfStudy.ENGINEERING, FieldOfStudy.MATHEMATICS],
       },
       {
-        title: 'L\'Oréal Brandstorm 2026 – Global Innovation Competition',
-        description: 'L\'Oréal Brandstorm è la più nota competizione internazionale di innovation & marketing riservata agli studenti universitari. I team da 3 persone sviluppano soluzioni innovative per sfide di business lanciate dal Gruppo L\'Oréal. Fasi: nazionale → internazionale a Parigi.',
-        about: 'Gratuito. Premi: esperienza a Parigi, mentorship, opportunità di stage. Team da 3 persone. Già oltre 70 paesi partecipanti.',
+        title: 'L\'OrÃ©al Brandstorm 2026 â€“ Global Innovation Competition',
+        description: 'L\'OrÃ©al Brandstorm Ã¨ la piÃ¹ nota competizione internazionale di innovation & marketing riservata agli studenti universitari. I team da 3 persone sviluppano soluzioni innovative per sfide di business lanciate dal Gruppo L\'OrÃ©al. Fasi: nazionale â†’ internazionale a Parigi.',
+        about: 'Gratuito. Premi: esperienza a Parigi, mentorship, opportunitÃ  di stage. Team da 3 persone. GiÃ  oltre 70 paesi partecipanti.',
         url: 'https://www.brandstorm.loreal.com/',
         type: OpportunityType.COMPETITION,
-        organizer: 'L\'Oréal',
+        organizer: 'L\'OrÃ©al',
         location: 'Online + Finale a Parigi',
         isRemote: true,
         isAbroad: false,
@@ -670,11 +670,11 @@ async function main() {
         eligibleFields: [FieldOfStudy.BUSINESS, FieldOfStudy.ECONOMICS, FieldOfStudy.DESIGN],
       },
 
-      // ── HACKATHON ──────────────────────────────────────────────────────
+      // â”€â”€ HACKATHON â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       {
         title: 'Junction Hackathon 2026',
-        description: 'Junction è uno dei più grandi hackathon d\'Europa, organizzato a Helsinki. 48 ore per costruire soluzioni innovative su challenge proposte da aziende come Supercell, KONE, Nokia e Slush. Partecipanti da oltre 100 paesi.',
-        about: 'Gratuito. Vitto e alloggio forniti. Travel grant disponibili per partecipanti UE. Premi: €30.000+ in totale.',
+        description: 'Junction Ã¨ uno dei piÃ¹ grandi hackathon d\'Europa, organizzato a Helsinki. 48 ore per costruire soluzioni innovative su challenge proposte da aziende come Supercell, KONE, Nokia e Slush. Partecipanti da oltre 100 paesi.',
+        about: 'Gratuito. Vitto e alloggio forniti. Travel grant disponibili per partecipanti UE. Premi: â‚¬30.000+ in totale.',
         url: 'https://www.hackjunction.com/',
         type: OpportunityType.HACKATHON,
         organizer: 'Junction',
@@ -696,12 +696,12 @@ async function main() {
         sourceId: 'mock-hackathon-001',
         cost: 0,
         hasScholarship: true,
-        scholarshipDetails: 'Travel grant parziale disponibile per partecipanti UE (max €200).',
+        scholarshipDetails: 'Travel grant parziale disponibile per partecipanti UE (max â‚¬200).',
         eligibleFields: [FieldOfStudy.COMPUTER_SCIENCE, FieldOfStudy.ENGINEERING, FieldOfStudy.DESIGN, FieldOfStudy.BUSINESS],
       },
       {
-        title: 'PoliHack 2026 – Hackathon del Politecnico di Milano',
-        description: 'PoliHack è l\'hackathon organizzato dalla Junior Enterprise del Politecnico di Milano. 24 ore per sviluppare soluzioni tech su sfide lanciate da aziende partner come BCG, Vodafone e Siemens. Aperto a tutti gli studenti universitari italiani.',
+        title: 'PoliHack 2026 â€“ Hackathon del Politecnico di Milano',
+        description: 'PoliHack Ã¨ l\'hackathon organizzato dalla Junior Enterprise del Politecnico di Milano. 24 ore per sviluppare soluzioni tech su sfide lanciate da aziende partner come BCG, Vodafone e Siemens. Aperto a tutti gli studenti universitari italiani.',
         about: 'Gratuito. Vitto incluso. Premi: stage e percorsi fast-track nelle aziende partner. Iscrizione a team (2-4 persone).',
         url: 'https://polihack.je-polimi.it/',
         type: OpportunityType.HACKATHON,
@@ -727,11 +727,11 @@ async function main() {
         eligibleFields: [FieldOfStudy.COMPUTER_SCIENCE, FieldOfStudy.ENGINEERING, FieldOfStudy.DESIGN, FieldOfStudy.ECONOMICS],
       },
 
-      // ── CONFERENCE ─────────────────────────────────────────────────────
+      // â”€â”€ CONFERENCE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       {
-        title: 'Web Summit 2026 – Student Pass',
-        description: 'Web Summit è la più grande conferenza tecnologica al mondo, con oltre 70.000 partecipanti da 160 paesi. Lo Student Pass offre accesso a talks, workshop e networking con i principali founder e investor tech del panorama globale.',
-        about: 'Student Pass: €149 (sconto 80% sul pass standard). Location: Altice Arena, Lisbona. Durata: 4 giorni.',
+        title: 'Web Summit 2026 â€“ Student Pass',
+        description: 'Web Summit Ã¨ la piÃ¹ grande conferenza tecnologica al mondo, con oltre 70.000 partecipanti da 160 paesi. Lo Student Pass offre accesso a talks, workshop e networking con i principali founder e investor tech del panorama globale.',
+        about: 'Student Pass: â‚¬149 (sconto 80% sul pass standard). Location: Altice Arena, Lisbona. Durata: 4 giorni.',
         url: 'https://websummit.com/tickets/student',
         type: OpportunityType.EVENT,
         organizer: 'Web Summit',
@@ -756,8 +756,8 @@ async function main() {
       },
       {
         title: 'PyCon Italia 2026',
-        description: 'PyCon Italia è la conferenza italiana della comunità Python, ospitata a Bologna. Due giorni di talk, tutorial e sprint su Python, data science, machine learning, web development e open source. Relatori da tutto il mondo.',
-        about: 'Biglietto studente: €50. Durata: 3 giorni. Call for Proposals aperta. Borsa per speaker e contributi di diversity ticket.',
+        description: 'PyCon Italia Ã¨ la conferenza italiana della comunitÃ  Python, ospitata a Bologna. Due giorni di talk, tutorial e sprint su Python, data science, machine learning, web development e open source. Relatori da tutto il mondo.',
+        about: 'Biglietto studente: â‚¬50. Durata: 3 giorni. Call for Proposals aperta. Borsa per speaker e contributi di diversity ticket.',
         url: 'https://pycon.it/en',
         type: OpportunityType.EVENT,
         organizer: 'Python Italia APS',
@@ -782,11 +782,11 @@ async function main() {
         eligibleFields: [FieldOfStudy.COMPUTER_SCIENCE, FieldOfStudy.MATHEMATICS, FieldOfStudy.ENGINEERING],
       },
 
-      // ── EVENT ──────────────────────────────────────────────────────────
+      // â”€â”€ EVENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       {
-        title: 'TEDxMilano 2026 – Volunteer & Attendee',
-        description: 'TEDxMilano è uno degli eventi TED più grandi d\'Europa. Nel 2026 si terrà all\'Arcimboldi di Milano con oltre 20 speaker internazionali su temi di innovazione, scienza, arte e società. Possibilità di candidarsi come volontario organizzatore.',
-        about: 'Ticket standard €40, studenti €20. Candidature volontari chiuse 3 mesi prima dell\'evento.',
+        title: 'TEDxMilano 2026 â€“ Volunteer & Attendee',
+        description: 'TEDxMilano Ã¨ uno degli eventi TED piÃ¹ grandi d\'Europa. Nel 2026 si terrÃ  all\'Arcimboldi di Milano con oltre 20 speaker internazionali su temi di innovazione, scienza, arte e societÃ . PossibilitÃ  di candidarsi come volontario organizzatore.',
+        about: 'Ticket standard â‚¬40, studenti â‚¬20. Candidature volontari chiuse 3 mesi prima dell\'evento.',
         url: 'https://tedxmilano.com/',
         type: OpportunityType.EVENT,
         organizer: 'TEDxMilano',
@@ -812,8 +812,8 @@ async function main() {
       },
       {
         title: 'Startup Weekend Roma 2026',
-        description: 'Startup Weekend è il più famoso evento globale di imprenditorialità: 54 ore per trasformare un\'idea in un prototipo. Il format prevede pitch venerdì sera, formazione di team multidisciplinari e presentazione agli investitori domenica pomeriggio.',
-        about: 'Costo €50 (include vitto per il weekend). Nessuna esperienza richiesta. Mentori da BCG, Techstars, CDP Venture Capital.',
+        description: 'Startup Weekend Ã¨ il piÃ¹ famoso evento globale di imprenditorialitÃ : 54 ore per trasformare un\'idea in un prototipo. Il format prevede pitch venerdÃ¬ sera, formazione di team multidisciplinari e presentazione agli investitori domenica pomeriggio.',
+        about: 'Costo â‚¬50 (include vitto per il weekend). Nessuna esperienza richiesta. Mentori da BCG, Techstars, CDP Venture Capital.',
         url: 'https://startupweekend.org/communities/rome',
         type: OpportunityType.EVENT,
         organizer: 'Techstars / Startup Weekend',
@@ -838,11 +838,11 @@ async function main() {
         eligibleFields: [FieldOfStudy.BUSINESS, FieldOfStudy.COMPUTER_SCIENCE, FieldOfStudy.DESIGN, FieldOfStudy.ANY],
       },
 
-      // ── SUMMER PROGRAM ─────────────────────────────────────────────────
+      // â”€â”€ SUMMER PROGRAM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       {
         title: 'CERN Summer Student Programme 2026',
-        description: 'Il CERN Summer Student Programme offre a studenti di fisica, ingegneria e informatica l\'opportunità di lavorare per 2 mesi a Ginevra con i ricercatori del più grande laboratorio di fisica delle particelle del mondo. I partecipanti contribuiscono a progetti reali e assistono a lectures esclusive.',
-        about: 'Borsa €3.542/mese. Volo e alloggio coperti. Durata: 8-13 settimane. Deadline selezione: gennaio-febbraio. Altamente competitivo.',
+        description: 'Il CERN Summer Student Programme offre a studenti di fisica, ingegneria e informatica l\'opportunitÃ  di lavorare per 2 mesi a Ginevra con i ricercatori del piÃ¹ grande laboratorio di fisica delle particelle del mondo. I partecipanti contribuiscono a progetti reali e assistono a lectures esclusive.',
+        about: 'Borsa â‚¬3.542/mese. Volo e alloggio coperti. Durata: 8-13 settimane. Deadline selezione: gennaio-febbraio. Altamente competitivo.',
         url: 'https://careers.cern/summer',
         type: OpportunityType.SUMMER_PROGRAM,
         organizer: 'CERN',
@@ -866,16 +866,16 @@ async function main() {
         sourceId: 'mock-summer-001',
         cost: 0,
         hasScholarship: true,
-        scholarshipDetails: 'Borsa €3.542/mese + rimborso volo + alloggio in campus CERN.',
+        scholarshipDetails: 'Borsa â‚¬3.542/mese + rimborso volo + alloggio in campus CERN.',
         stipend: 3542,
         eligibleFields: [FieldOfStudy.PHYSICAL_SCIENCES, FieldOfStudy.ENGINEERING, FieldOfStudy.COMPUTER_SCIENCE, FieldOfStudy.MATHEMATICS],
         minYearOfStudy: 3,
         maxYearOfStudy: 6,
       },
       {
-        title: 'AI & Machine Learning Summer School – Università di Bologna',
+        title: 'AI & Machine Learning Summer School â€“ UniversitÃ  di Bologna',
         description: 'La Bologna Business School organizza una summer school intensiva di 2 settimane su AI e Machine Learning, aperta a studenti universitari di qualsiasi corso di laurea. Il programma include lezioni frontali, laboratori pratici con Python/TensorFlow e un progetto finale.',
-        about: 'Costo €600 (borsa parziale disponibile per studenti UniBo). Durata: 2 settimane a luglio. Certificato di partecipazione. Massimo 40 posti.',
+        about: 'Costo â‚¬600 (borsa parziale disponibile per studenti UniBo). Durata: 2 settimane a luglio. Certificato di partecipazione. Massimo 40 posti.',
         url: 'https://www.bbs.unibo.eu/summer-school-ai',
         type: OpportunityType.SUMMER_PROGRAM,
         organizer: 'Bologna Business School',
@@ -898,14 +898,14 @@ async function main() {
         sourceId: 'mock-summer-002',
         cost: 600,
         hasScholarship: true,
-        scholarshipDetails: 'Borsa parziale da €200 per studenti iscritti all\'Università di Bologna.',
+        scholarshipDetails: 'Borsa parziale da â‚¬200 per studenti iscritti all\'UniversitÃ  di Bologna.',
         eligibleFields: [FieldOfStudy.COMPUTER_SCIENCE, FieldOfStudy.MATHEMATICS, FieldOfStudy.ENGINEERING, FieldOfStudy.ANY],
         minYearOfStudy: 2,
       },
       {
-        title: 'LSE Summer School – Economics & Finance',
+        title: 'LSE Summer School â€“ Economics & Finance',
         description: 'La London School of Economics offre corsi estivi intensivi di 3 settimane in Economics, Finance, Data Analysis e Political Science. Ogni corso vale crediti accademici riconoscibili via accordi bilaterali. Studenti da oltre 100 paesi.',
-        about: 'Costo £2.600-3.400 per corso (3 settimane). Borse parziali disponibili. Alloggio in campus disponibile. Unico programma estivo della LSE.',
+        about: 'Costo Â£2.600-3.400 per corso (3 settimane). Borse parziali disponibili. Alloggio in campus disponibile. Unico programma estivo della LSE.',
         url: 'https://www.lse.ac.uk/study-at-lse/summer-schools',
         type: OpportunityType.SUMMER_PROGRAM,
         organizer: 'London School of Economics',
@@ -929,16 +929,16 @@ async function main() {
         sourceId: 'mock-summer-003',
         cost: 3000,
         hasScholarship: true,
-        scholarshipDetails: 'Borse parziali da £500–2.000 per studenti con merito accademico eccellente.',
+        scholarshipDetails: 'Borse parziali da Â£500â€“2.000 per studenti con merito accademico eccellente.',
         eligibleFields: [FieldOfStudy.ECONOMICS, FieldOfStudy.BUSINESS, FieldOfStudy.POLITICAL_SCIENCE, FieldOfStudy.MATHEMATICS],
         minYearOfStudy: 2,
       },
 
-      // ── BOOTCAMP ───────────────────────────────────────────────────────
+      // â”€â”€ BOOTCAMP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       {
-        title: 'Le Wagon Full-Stack Web Development Bootcamp – Milano',
+        title: 'Le Wagon Full-Stack Web Development Bootcamp â€“ Milano',
         description: 'Le Wagon Milano offre un bootcamp full-time di 9 settimane per imparare Ruby on Rails, JavaScript, React e SQL da zero. Il programma culmina in un Demo Day con oltre 100 tech recruiter presenti. Alumni in Deliveroo, BlaBlaCar, Airbnb.',
-        about: 'Costo €6.500 (ISA e finanziamenti disponibili). Full-time 9 settimane. Sede: quartiere Isola, Milano. Prossima edizione: settembre.',
+        about: 'Costo â‚¬6.500 (ISA e finanziamenti disponibili). Full-time 9 settimane. Sede: quartiere Isola, Milano. Prossima edizione: settembre.',
         url: 'https://www.lewagon.com/milan',
         type: OpportunityType.BOOTCAMP,
         company: 'Le Wagon',
@@ -965,7 +965,7 @@ async function main() {
       {
         title: 'Ironhack Data Analytics Bootcamp (Remote)',
         description: 'Ironhack offre un bootcamp part-time in Data Analytics completamente online, della durata di 24 settimane. Il programma copre SQL, Python, Tableau, statistiche e machine learning di base. Adatto a chi studia o lavora e vuole una riqualificazione professionale.',
-        about: 'Costo €6.000 (ISA disponibile). Part-time 24 settimane. Prossima edizione: ottobre. Supporto career service post-diploma.',
+        about: 'Costo â‚¬6.000 (ISA disponibile). Part-time 24 settimane. Prossima edizione: ottobre. Supporto career service post-diploma.',
         url: 'https://www.ironhack.com/en/data-analytics/remote',
         type: OpportunityType.BOOTCAMP,
         company: 'Ironhack',
@@ -987,11 +987,11 @@ async function main() {
         eligibleFields: [FieldOfStudy.COMPUTER_SCIENCE, FieldOfStudy.MATHEMATICS, FieldOfStudy.ECONOMICS, FieldOfStudy.ANY],
       },
 
-      // ── EXCHANGE ───────────────────────────────────────────────────────
+      // â”€â”€ EXCHANGE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       {
-        title: 'Erasmus+ Traineeship – Commissione Europea, DG CONNECT',
-        description: 'La Commissione Europea seleziona stagisti via Erasmus+ Traineeship per la Direzione Generale CONNECT (società digitale). I tirocinanti lavorano su policy digitali, intelligenza artificiale, cybersicurezza e regolamentazione del mercato unico digitale.',
-        about: 'Borsa Erasmus+ ~€700/mese (erogata dall\'università di provenienza). Durata: 3-6 mesi. Richiede accordo Erasmus+ attivo con il proprio ateneo.',
+        title: 'Erasmus+ Traineeship â€“ Commissione Europea, DG CONNECT',
+        description: 'La Commissione Europea seleziona stagisti via Erasmus+ Traineeship per la Direzione Generale CONNECT (societÃ  digitale). I tirocinanti lavorano su policy digitali, intelligenza artificiale, cybersicurezza e regolamentazione del mercato unico digitale.',
+        about: 'Borsa Erasmus+ ~â‚¬700/mese (erogata dall\'universitÃ  di provenienza). Durata: 3-6 mesi. Richiede accordo Erasmus+ attivo con il proprio ateneo.',
         url: 'https://traineeships.ec.europa.eu/',
         type: OpportunityType.EXCHANGE,
         organizer: 'European Commission',
@@ -1011,14 +1011,14 @@ async function main() {
         sourceId: 'mock-exchange-001',
         cost: 0,
         hasScholarship: true,
-        scholarshipDetails: 'Borsa Erasmus+ erogata dall\'ateneo (tipicamente €500-800/mese in base all\'accordo).',
+        scholarshipDetails: 'Borsa Erasmus+ erogata dall\'ateneo (tipicamente â‚¬500-800/mese in base all\'accordo).',
         eligibleFields: [FieldOfStudy.POLITICAL_SCIENCE, FieldOfStudy.LAW, FieldOfStudy.COMPUTER_SCIENCE, FieldOfStudy.ECONOMICS],
         minYearOfStudy: 3,
       },
       {
-        title: 'Youth Exchange – Green Skills for the Future (Barcellona)',
-        description: 'Scambio giovanile Erasmus+ su economia circolare e competenze verdi. 20 giovani da Italia, Spagna e Francia si incontrano a Barcellona per 7 giorni di formazione non formale su sostenibilità, green jobs e attivismo climatico.',
-        about: 'Gratuito: vitto, alloggio e viaggio coperti. Età 18-30. Organizzato da associazione giovanile accreditata Erasmus+.',
+        title: 'Youth Exchange â€“ Green Skills for the Future (Barcellona)',
+        description: 'Scambio giovanile Erasmus+ su economia circolare e competenze verdi. 20 giovani da Italia, Spagna e Francia si incontrano a Barcellona per 7 giorni di formazione non formale su sostenibilitÃ , green jobs e attivismo climatico.',
+        about: 'Gratuito: vitto, alloggio e viaggio coperti. EtÃ  18-30. Organizzato da associazione giovanile accreditata Erasmus+.',
         url: 'https://www.erasmusplus.it/scambi-giovani',
         type: OpportunityType.EXCHANGE,
         organizer: 'Associazione Giovani per il Futuro Verde',
@@ -1040,19 +1040,19 @@ async function main() {
         sourceId: 'mock-exchange-002',
         cost: 0,
         hasScholarship: true,
-        scholarshipDetails: 'Volo (max €275), alloggio e vitto coperti dal programma Erasmus+.',
+        scholarshipDetails: 'Volo (max â‚¬275), alloggio e vitto coperti dal programma Erasmus+.',
         eligibleFields: [FieldOfStudy.ANY],
         maxYearOfStudy: 6,
       },
 
-      // ── VOLUNTEERING ───────────────────────────────────────────────────
+      // â”€â”€ VOLUNTEERING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       {
-        title: 'European Solidarity Corps – Educazione Ambientale (Lisbona)',
-        description: 'Il Corpo Europeo di Solidarietà finanzia volontari italiani che vogliono trascorrere 6-12 mesi in un\'organizzazione portoghese attiva nell\'educazione ambientale e nella sensibilizzazione al cambiamento climatico nelle scuole di Lisbona.',
-        about: 'Completamente gratuito. Borsa mensile ~€250 + pocket money + volo + alloggio + cibo. Età 18-30. Lingua: portoghese di base utile ma non richiesto.',
+        title: 'European Solidarity Corps â€“ Educazione Ambientale (Lisbona)',
+        description: 'Il Corpo Europeo di SolidarietÃ  finanzia volontari italiani che vogliono trascorrere 6-12 mesi in un\'organizzazione portoghese attiva nell\'educazione ambientale e nella sensibilizzazione al cambiamento climatico nelle scuole di Lisbona.',
+        about: 'Completamente gratuito. Borsa mensile ~â‚¬250 + pocket money + volo + alloggio + cibo. EtÃ  18-30. Lingua: portoghese di base utile ma non richiesto.',
         url: 'https://youth.europa.eu/solidarity_it',
         type: OpportunityType.VOLUNTEERING,
-        organizer: 'Corpo Europeo di Solidarietà / ESC',
+        organizer: 'Corpo Europeo di SolidarietÃ  / ESC',
         location: 'Lisbon, Portugal',
         city: 'Lisbona',
         country: 'PT',
@@ -1069,13 +1069,13 @@ async function main() {
         sourceId: 'mock-volunteering-001',
         cost: 0,
         hasScholarship: true,
-        scholarshipDetails: 'Coperto al 100%: volo, alloggio, vitto, pocket money e borsa mensile ~€150.',
+        scholarshipDetails: 'Coperto al 100%: volo, alloggio, vitto, pocket money e borsa mensile ~â‚¬150.',
         eligibleFields: [FieldOfStudy.ANY],
         maxYearOfStudy: 6,
       },
       {
-        title: 'INTERSOS – Volontariato in Risposta alle Crisi Umanitarie',
-        description: 'INTERSOS, ONG umanitaria italiana, cerca volontari per supportare i propri uffici italiani nella gestione dei progetti, comunicazione e raccolta fondi. Attività svolte principalmente a Roma, con possibilità di missioni brevi all\'estero.',
+        title: 'INTERSOS â€“ Volontariato in Risposta alle Crisi Umanitarie',
+        description: 'INTERSOS, ONG umanitaria italiana, cerca volontari per supportare i propri uffici italiani nella gestione dei progetti, comunicazione e raccolta fondi. AttivitÃ  svolte principalmente a Roma, con possibilitÃ  di missioni brevi all\'estero.',
         about: 'Non retribuito. Rimborso spese. Parte-time (2-3 giorni/settimana). Minimo 6 mesi. Ideale per chi studia scienze politiche, cooperazione internazionale o comunicazione.',
         url: 'https://www.intersos.org/lavora-con-noi/volontari',
         type: OpportunityType.VOLUNTEERING,
@@ -1099,14 +1099,14 @@ async function main() {
         minYearOfStudy: 2,
       },
 
-      // ── RESEARCH ───────────────────────────────────────────────────────
+      // â”€â”€ RESEARCH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       {
-        title: 'Tirocinio Scientifico INFN – Fisica delle Particelle',
+        title: 'Tirocinio Scientifico INFN â€“ Fisica delle Particelle',
         description: 'L\'Istituto Nazionale di Fisica Nucleare offre tirocini curricolari ed extracurricolari nei propri laboratori nazionali (Frascati, Gran Sasso, Legnaro, Catania). I tirocinanti affiancano ricercatori su esperimenti di fisica delle particelle, astrofisica e fisica nucleare.',
-        about: 'Rimborso spese €500-700/mese. Durata 3-6 mesi. Posti limitati. Accesso ai laboratori sotterranei del Gran Sasso.',
+        about: 'Rimborso spese â‚¬500-700/mese. Durata 3-6 mesi. Posti limitati. Accesso ai laboratori sotterranei del Gran Sasso.',
         url: 'https://www.infn.it/tirocini',
         type: OpportunityType.RESEARCH,
-        organizer: 'INFN – Istituto Nazionale di Fisica Nucleare',
+        organizer: 'INFN â€“ Istituto Nazionale di Fisica Nucleare',
         location: 'Multiple sedi (Frascati, L\'Aquila, Padova, Catania)',
         country: 'IT',
         isRemote: false,
@@ -1125,12 +1125,12 @@ async function main() {
         minYearOfStudy: 3,
       },
       {
-        title: 'EMBL Internship Programme – Computational Biology',
+        title: 'EMBL Internship Programme â€“ Computational Biology',
         description: 'L\'European Molecular Biology Laboratory di Heidelberg offre internship di 3-6 mesi per studenti di biologia computazionale, bioinformatica e informatica. I partecipanti lavorano con i gruppi di ricerca su genomica, proteomica e analisi di dati biologici su larga scala.',
-        about: '€1.050/mese. Alloggio agevolato in campus EMBL. Accesso a infrastrutture di computing ad alte prestazioni. Lingua di lavoro: inglese.',
+        about: 'â‚¬1.050/mese. Alloggio agevolato in campus EMBL. Accesso a infrastrutture di computing ad alte prestazioni. Lingua di lavoro: inglese.',
         url: 'https://www.embl.org/about/info/embl-programme/internship/',
         type: OpportunityType.RESEARCH,
-        organizer: 'EMBL – European Molecular Biology Laboratory',
+        organizer: 'EMBL â€“ European Molecular Biology Laboratory',
         company: 'EMBL',
         location: 'Heidelberg, Germany',
         city: 'Heidelberg',
@@ -1151,9 +1151,9 @@ async function main() {
         minYearOfStudy: 3,
       },
       {
-        title: 'Max Planck Research Stipend – Cognitive Neuroscience',
+        title: 'Max Planck Research Stipend â€“ Cognitive Neuroscience',
         description: 'Il Max Planck Institute for Human Cognitive and Brain Sciences di Lipsia offre stipendi di ricerca per studenti magistrali interessati alle neuroscienze cognitive, neuroimaging (fMRI, EEG) e psicologia sperimentale.',
-        about: '€1.100/mese. Durata 3-6 mesi. Supervisore dedicato. Accesso ai laboratori di neuroimaging tra i più avanzati in Europa.',
+        about: 'â‚¬1.100/mese. Durata 3-6 mesi. Supervisore dedicato. Accesso ai laboratori di neuroimaging tra i piÃ¹ avanzati in Europa.',
         url: 'https://www.cbs.mpg.de/intern-opportunities',
         type: OpportunityType.RESEARCH,
         organizer: 'Max Planck Institute for Human Cognitive and Brain Sciences',
@@ -1176,10 +1176,10 @@ async function main() {
         minYearOfStudy: 4,
       },
 
-      // ── EXTRACURRICULAR ─────────────────────────────────────────────────
+      // â”€â”€ EXTRACURRICULAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       {
-        title: 'Junior Enterprise Polimi – Selezione Nuovi Membri',
-        description: 'Junior Enterprise del Politecnico di Milano è una delle principali JE d\'Europa, con 80+ consulenti attivi. Offre ai membri la possibilità di lavorare su progetti reali per aziende come McKinsey, Accenture, ENI, sviluppando competenze di consulting, project management e leadership.',
+        title: 'Junior Enterprise Polimi â€“ Selezione Nuovi Membri',
+        description: 'Junior Enterprise del Politecnico di Milano Ã¨ una delle principali JE d\'Europa, con 80+ consulenti attivi. Offre ai membri la possibilitÃ  di lavorare su progetti reali per aziende come McKinsey, Accenture, ENI, sviluppando competenze di consulting, project management e leadership.',
         about: 'Gratuito. Selezione via CV + colloquio. Divisioni disponibili: Consulting, Tech, HR, Marketing, Finance. Impegno: ~10 ore/settimana.',
         url: 'https://je-polimi.it/join',
         type: OpportunityType.EXTRACURRICULAR,
@@ -1203,9 +1203,9 @@ async function main() {
         maxYearOfStudy: 5,
       },
       {
-        title: 'NMUN Roma – National Model United Nations',
-        description: 'NMUN Roma è il più grande Model United Nations italiano, con oltre 500 delegati da 60 università. La conferenza si svolge a Roma per 4 giorni e simula le sessioni delle Nazioni Unite su temi di geopolitica, diritti umani, sicurezza e sviluppo sostenibile.',
-        about: 'Costo delegato €80 (include alloggio, vitto, materiali). Posti limitati. Formazione obbligatoria pre-conferenza online.',
+        title: 'NMUN Roma â€“ National Model United Nations',
+        description: 'NMUN Roma Ã¨ il piÃ¹ grande Model United Nations italiano, con oltre 500 delegati da 60 universitÃ . La conferenza si svolge a Roma per 4 giorni e simula le sessioni delle Nazioni Unite su temi di geopolitica, diritti umani, sicurezza e sviluppo sostenibile.',
+        about: 'Costo delegato â‚¬80 (include alloggio, vitto, materiali). Posti limitati. Formazione obbligatoria pre-conferenza online.',
         url: 'https://www.nmunrome.it/',
         type: OpportunityType.EXTRACURRICULAR,
         organizer: 'NMUN Roma',
@@ -1270,7 +1270,7 @@ async function main() {
       englishLevel: EnglishLevel.B1_B2,
       willingToRelocate: WillingnessToRelocate.MAYBE,
       profileCompleted: true,
-      bio: 'Economia e sostenibilità. Sogno di lavorare nell\'innovazione sociale.',
+      bio: 'Economia e sostenibilitÃ . Sogno di lavorare nell\'innovazione sociale.',
       region: 'Emilia-Romagna',
       city: 'Bologna',
       regionLock: false,
@@ -1439,8 +1439,8 @@ async function main() {
   await prisma.pathMatesMessage.createMany({
     data: [
       { senderId: user1.id, receiverId: user2.id, content: 'Ciao Giulia! Hai visto lo stage alla Ferrari?' },
-      { senderId: user2.id, receiverId: user1.id, content: 'Sì! Incredibile, ma serve una media alta 😅' },
-      { senderId: user1.id, receiverId: user2.id, content: 'Proviamoci comunque, il peggio che può succedere è un no!' },
+      { senderId: user2.id, receiverId: user1.id, content: 'SÃ¬! Incredibile, ma serve una media alta ðŸ˜…' },
+      { senderId: user1.id, receiverId: user2.id, content: 'Proviamoci comunque, il peggio che puÃ² succedere Ã¨ un no!' },
       { senderId: user1.id, receiverId: user3.id, content: 'Luca, ti iscrivi anche tu all\'hackathon IoT?' },
       { senderId: user3.id, receiverId: user1.id, content: 'Assolutamente! Formiamo un team?' },
     ],
@@ -1450,21 +1450,21 @@ async function main() {
   const post1 = await prisma.post.create({
     data: {
       authorId: user1.id,
-      content: 'Appena completato il mio primo progetto open source! Chi vuole contribuire? 💻 #OpenSource #Tech',
+      content: 'Appena completato il mio primo progetto open source! Chi vuole contribuire? ðŸ’» #OpenSource #Tech',
     },
   });
 
   const post2 = await prisma.post.create({
     data: {
       authorId: user2.id,
-      content: 'Qualcuno ha esperienza con le Junior Enterprise? Sto valutando di entrare in JEBologna 🚀',
+      content: 'Qualcuno ha esperienza con le Junior Enterprise? Sto valutando di entrare in JEBologna ðŸš€',
     },
   });
 
   const post3 = await prisma.post.create({
     data: {
       authorId: user4.id,
-      content: 'La Design Week di Milano è stata incredibile! Quante ispirazioni per il mio progetto di tesi 🎨✨',
+      content: 'La Design Week di Milano Ã¨ stata incredibile! Quante ispirazioni per il mio progetto di tesi ðŸŽ¨âœ¨',
     },
   });
 
@@ -1478,7 +1478,7 @@ async function main() {
 
   await Promise.all([
     prisma.postComment.create({ data: { postId: post1.id, authorId: user3.id, content: 'Grandissimo! Manda il link del repo!' } }),
-    prisma.postComment.create({ data: { postId: post2.id, authorId: user1.id, content: 'JE è un\'esperienza fantastica, ti la consiglio!' } }),
+    prisma.postComment.create({ data: { postId: post2.id, authorId: user1.id, content: 'JE Ã¨ un\'esperienza fantastica, ti la consiglio!' } }),
     prisma.postComment.create({ data: { postId: post3.id, authorId: user2.id, content: 'Bellissimo! Condividi qualche foto!' } }),
   ]);
 
@@ -1497,3 +1497,5 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
+

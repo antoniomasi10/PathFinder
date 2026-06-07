@@ -340,7 +340,7 @@ function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => 
               }}
             >
               <span className="text-[13px] font-medium text-white" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
-                {opp.type || 'Internship'}
+                {TYPE_LABELS[opp.type] ?? opp.type}
               </span>
             </div>
           </div>
@@ -415,7 +415,7 @@ function OpportunityCard({ opp, isSaved, onSave, onOpen }: {
               style={{ backgroundColor: getOpportunityTypeColor(opp.type || opp.badge.split(' • ')[0]) }}
             >
               <span className="text-[13px] font-medium" style={{ color: '#4f5160', fontFamily: 'var(--font-plus-jakarta)' }}>
-                {opp.type || opp.badge.split(' • ')[0]}
+                {TYPE_LABELS[opp.type] ?? opp.type}
               </span>
             </div>
           </div>
@@ -449,7 +449,7 @@ function SearchDropdown({ suggestions, query, activeIndex, onSelect, onHover }: 
             <p className="text-xs truncate" style={{ color: '#595e78' }}>{s.opp.company}</p>
           </div>
           <span className="text-[10px] px-2 py-1 rounded-full flex-shrink-0 uppercase tracking-wide" style={{ backgroundColor: '#ecedff', color: '#4a4bd7' }}>
-            {s.opp.type || s.opp.badge.split(' • ')[0]}
+            {TYPE_LABELS[s.opp.type] ?? s.opp.type}
           </span>
         </button>
       ))}
@@ -547,7 +547,9 @@ const TYPE_ALIASES: Record<string, string> = {
   'summer program': 'SUMMER_PROGRAM',
   'summership': 'SUMMER_PROGRAM',
   'summer school': 'SUMMER_PROGRAM',
-  'internship': 'INTERNSHIP',
+  'internship': 'TIROCINIO',
+  'tirocinio': 'TIROCINIO',
+  'stage': 'TIROCINIO',
   'hackathon': 'HACKATHON',
   'hackaton': 'HACKATHON',
   'fellowship': 'FELLOWSHIP',
@@ -586,7 +588,7 @@ function extractTypesFromSearch(query: string): { detectedTypes: string[]; remai
 }
 
 const OPPORTUNITY_TYPE_CHIPS = [
-  { label: 'Internship / Stage',      types: ['INTERNSHIP', 'STAGE'] },
+  { label: 'Tirocinio',               types: ['TIROCINIO'] },
   { label: 'Summer School',           types: ['SUMMER_PROGRAM'] },
   { label: 'Fellowship',              types: ['FELLOWSHIP'] },
   { label: 'Events & Conference',      types: ['EVENT'] },
@@ -595,7 +597,7 @@ const OPPORTUNITY_TYPE_CHIPS = [
 ] as const;
 
 const TYPE_LABELS: Record<string, string> = {
-  INTERNSHIP: 'Internship', STAGE: 'Stage', SUMMER_PROGRAM: 'Summer Program',
+  TIROCINIO: 'Tirocinio', SUMMER_PROGRAM: 'Summer Program',
   FELLOWSHIP: 'Fellowship', HACKATHON: 'Hackathon', COMPETITION: 'Competition',
   EXCHANGE: 'Exchange', VOLUNTEERING: 'Volunteering', BOOTCAMP: 'Bootcamp',
   EXTRACURRICULAR: 'Extracurricular',

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { isValidImageUrl } from '@/lib/urlValidation';
 
 interface UserAvatarProps {
@@ -14,6 +15,12 @@ interface UserAvatarProps {
  * Falls back to initials on gradient if no avatar is set.
  */
 export default function UserAvatar({ avatar, name, size = 40, className = '' }: UserAvatarProps) {
+  const [imgFailed, setImgFailed] = useState(false);
+
+  useEffect(() => {
+    setImgFailed(false);
+  }, [avatar]);
+
   const initials = name
     .split(' ')
     .map((w) => w[0])
@@ -21,7 +28,7 @@ export default function UserAvatar({ avatar, name, size = 40, className = '' }: 
     .toUpperCase()
     .slice(0, 2);
 
-  const hasValidImage = isValidImageUrl(avatar);
+  const hasValidImage = isValidImageUrl(avatar) && !imgFailed;
 
   return (
     <div
@@ -36,8 +43,9 @@ export default function UserAvatar({ avatar, name, size = 40, className = '' }: 
       {hasValidImage ? (
         <img
           src={avatar!}
-          alt={name}
+          alt=""
           className="w-full h-full rounded-full object-cover"
+          onError={() => setImgFailed(true)}
         />
       ) : (
         <span

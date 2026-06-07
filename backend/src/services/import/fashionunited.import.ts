@@ -50,12 +50,12 @@ const REQUEST_DELAY_MS = 800;
 function mapType(title: string, keyword: string): OpportunityType {
   const t = title.toLowerCase();
   const k = keyword.toLowerCase();
-  if (k === 'stage' || t.includes('stage') || t.includes('tirocinio')) return 'STAGE';
-  if (k === 'praktikum' || t.includes('praktikum')) return 'STAGE';
-  if (k === 'alternance' || t.includes('alternance')) return 'STAGE';
-  if (k === 'trainee' || t.includes('trainee')) return 'INTERNSHIP';
+  if (k === 'stage' || t.includes('stage') || t.includes('tirocinio')) return 'TIROCINIO';
+  if (k === 'praktikum' || t.includes('praktikum')) return 'TIROCINIO';
+  if (k === 'alternance' || t.includes('alternance')) return 'TIROCINIO';
+  if (k === 'trainee' || t.includes('trainee')) return 'TIROCINIO';
   if (t.includes('fellow') || t.includes('graduate')) return 'FELLOWSHIP';
-  return 'INTERNSHIP';
+  return 'TIROCINIO';
 }
 
 function isCountryAbroad(country: string): boolean {

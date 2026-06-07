@@ -483,7 +483,7 @@ const EXTRACT_SYSTEM_PROMPT = `You are a job listing extractor. Extract all stud
 Only include: internship, stage, tirocinio, trainee, apprenticeship, graduate roles, junior roles, entry-level roles.
 Exclude: senior, manager, director, lead, principal, staff, head of, VP, C-suite roles.
 
-Return JSON in this exact shape: { "positions": [ { "title": "...", "url": "...", "location": "...", "type": "INTERNSHIP|STAGE|FELLOWSHIP|EXTRACURRICULAR", "deadline": "YYYY-MM-DD or null" } ] }
+Return JSON in this exact shape: { "positions": [ { "title": "...", "url": "...", "location": "...", "type": "TIROCINIO|FELLOWSHIP|EXTRACURRICULAR", "deadline": "YYYY-MM-DD or null" } ] }
 
 If no relevant positions found, return { "positions": [] }.
 The content uses format "Job title (url)" — extract the URL from the parentheses. Use absolute URLs only.

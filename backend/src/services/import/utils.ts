@@ -160,14 +160,14 @@ export function extractCountryCode(location: string): string {
 /**
  * Maps a job/event title (and optional type tags from source) to our OpportunityType enum.
  * Covers EN/IT/DE/FR terminology. More specific types are checked first to avoid
- * false positives (e.g. "summer intern" should resolve to INTERNSHIP, not SUMMER_PROGRAM).
+ * false positives (e.g. "summer intern" should resolve to TIROCINIO, not SUMMER_PROGRAM).
  */
 export function mapOpportunityType(title: string, jobTypes?: string[] | null): OpportunityType {
   const jt = jobTypes?.map(j => j.toLowerCase()) ?? [];
   const t = title.toLowerCase();
 
   // --- Source-declared type tags (highest priority) ---
-  if (jt.includes('internship')) return 'INTERNSHIP';
+  if (jt.includes('internship')) return 'TIROCINIO';
   if (jt.includes('hackathon')) return 'HACKATHON';
   if (jt.includes('volunteer') || jt.includes('volunteering')) return 'VOLUNTEERING';
   if (jt.includes('exchange')) return 'EXCHANGE';
@@ -212,20 +212,20 @@ export function mapOpportunityType(title: string, jobTypes?: string[] | null): O
       t.includes('european solidarity') || t.includes('service civile') ||
       t.includes('corps') || t.includes('corps')) return 'VOLUNTEERING';
 
-  // --- Internship / stage (EN/IT/DE/FR) ---
-  if (t.includes('intern') || t.includes('tirocinio') || t.includes('traineeship')) return 'INTERNSHIP';
-  if (t.includes('stage') || t.includes('stagiaire')) return 'STAGE';
-  if (t.includes('praktikum') || t.includes('praktikant')) return 'STAGE';
-  if (t.includes('trainee') || t.includes('werkstudent')) return 'STAGE';
+  // --- Tirocinio (EN/IT/DE/FR) ---
+  if (t.includes('intern') || t.includes('tirocinio') || t.includes('traineeship')) return 'TIROCINIO';
+  if (t.includes('stage') || t.includes('stagiaire')) return 'TIROCINIO';
+  if (t.includes('praktikum') || t.includes('praktikant')) return 'TIROCINIO';
+  if (t.includes('trainee') || t.includes('werkstudent')) return 'TIROCINIO';
   if (t.includes('apprenti') || t.includes('alternance') ||
-      t.includes('duales studium') || t.includes('co-op')) return 'STAGE';
+      t.includes('duales studium') || t.includes('co-op')) return 'TIROCINIO';
 
   // --- Fellowship (graduate programs, named fellowships) ---
   if (t.includes('fellow') || t.includes('graduate program') ||
       t.includes('graduate scheme') || t.includes('leadership program') ||
       t.includes('silicon valley') || t.includes('scholar')) return 'FELLOWSHIP';
 
-  return 'INTERNSHIP';
+  return 'TIROCINIO';
 }
 
 // ---------------------------------------------------------------------------

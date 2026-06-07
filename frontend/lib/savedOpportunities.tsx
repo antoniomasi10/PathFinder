@@ -150,7 +150,7 @@ export function SavedOpportunitiesProvider({ children }: { children: ReactNode }
               description: data.description,
               about: data.about,
               company: data.company,
-              type: data.type ?? 'INTERNSHIP',
+              type: data.type ?? 'TIROCINIO',
               url: data.url,
               location: data.location,
               isRemote: data.isRemote,

@@ -1,5 +1,5 @@
 // Usage: npx ts-node backend/scripts/expire-senior-leaks.ts
-// One-shot cleanup: expires INTERNSHIP/STAGE rows whose title matches the senior heuristic.
+// One-shot cleanup: expires TIROCINIO rows whose title matches the senior heuristic.
 // Reuses isSeniorRole() from import/utils so logic stays in one place.
 
 import * as dotenv from 'dotenv';
@@ -11,7 +11,7 @@ import { isSeniorRole } from '../src/services/import/utils';
 async function main() {
   const rows = await prisma.opportunity.findMany({
     where: {
-      type: { in: ['INTERNSHIP', 'STAGE'] },
+      type: { in: ['TIROCINIO'] },
       OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
     },
     select: { id: true, title: true },

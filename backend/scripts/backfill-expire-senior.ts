@@ -9,7 +9,7 @@
  * Usage:
  *   npx ts-node --transpile-only scripts/backfill-expire-senior.ts
  *
- * Safe to run multiple times — only targets INTERNSHIP/STAGE with expiresAt IS NULL.
+ * Safe to run multiple times — only targets TIROCINIO with expiresAt IS NULL.
  */
 
 import * as dotenv from 'dotenv';
@@ -57,7 +57,7 @@ async function main() {
   const allEntryLevel = await prisma.$queryRaw<OppRow[]>`
     SELECT id, title, description, about
     FROM "Opportunity"
-    WHERE type IN ('INTERNSHIP', 'STAGE')
+    WHERE type IN ('TIROCINIO')
       AND "expiresAt" IS NULL
   `;
 
@@ -89,7 +89,7 @@ async function main() {
   const [{ count }] = await prisma.$queryRaw<[{ count: bigint }]>`
     SELECT COUNT(*)::bigint as count
     FROM "Opportunity"
-    WHERE type IN ('INTERNSHIP', 'STAGE')
+    WHERE type IN ('TIROCINIO')
       AND "expiresAt" IS NULL
       AND LENGTH(description) > 200
   `;
@@ -111,7 +111,7 @@ async function main() {
       ? await prisma.$queryRaw`
           SELECT id, title, description, about
           FROM "Opportunity"
-          WHERE type IN ('INTERNSHIP', 'STAGE')
+          WHERE type IN ('TIROCINIO')
             AND "expiresAt" IS NULL
             AND LENGTH(description) > 200
             AND id > ${lastId}
@@ -121,7 +121,7 @@ async function main() {
       : await prisma.$queryRaw`
           SELECT id, title, description, about
           FROM "Opportunity"
-          WHERE type IN ('INTERNSHIP', 'STAGE')
+          WHERE type IN ('TIROCINIO')
             AND "expiresAt" IS NULL
             AND LENGTH(description) > 200
           ORDER BY id

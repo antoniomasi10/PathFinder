@@ -69,8 +69,7 @@ interface PublicProfile {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const OPP_TYPE_ICON: Record<string, React.ReactNode> = {
-  STAGE: <Briefcase size={16} color="#615FE2" />,
-  INTERNSHIP: <Building size={16} color="#615FE2" />,
+  TIROCINIO: <Briefcase size={16} color="#615FE2" />,
   EXTRACURRICULAR: <GraduationCap size={16} color="#F59E0B" />,
   EVENT: <CalendarIcon size={16} color="#615FE2" />,
   FELLOWSHIP: <Trophy size={16} color="#F59E0B" />,

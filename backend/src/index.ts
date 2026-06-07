@@ -234,7 +234,7 @@ httpServer.listen(PORT, () => {
   setTimeout(() => {
     backfillRequiredLanguagesBoot(200).catch((err) => logger.error('Languages backfill boot failed:', err));
   }, 75_000);
-  // Backfill contextualized skill descriptions for STAGE/INTERNSHIP opportunities (90s delay)
+  // Backfill contextualized skill descriptions for TIROCINIO opportunities (90s delay)
   setTimeout(() => {
     backfillContextualizedSkillsBoot(200).catch((err) => logger.error('Contextualized skills backfill boot failed:', err));
   }, 90_000);

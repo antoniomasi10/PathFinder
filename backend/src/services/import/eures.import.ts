@@ -60,11 +60,11 @@ const USER_AGENT = `COhABot/1.0 (+https://coha.example; ${CONTACT_EMAIL}) Chrome
 /** Map a job title + description to an OpportunityType enum value */
 function mapType(title: string, desc: string): OpportunityType {
   const t = `${title} ${desc}`.toLowerCase();
-  if (t.includes('stage') || t.includes('tirocinio')) return 'STAGE';
-  if (t.includes('intern') || t.includes('traineeship')) return 'INTERNSHIP';
+  if (t.includes('stage') || t.includes('tirocinio')) return 'TIROCINIO';
+  if (t.includes('intern') || t.includes('traineeship')) return 'TIROCINIO';
   if (t.includes('fellow')) return 'FELLOWSHIP';
   if (t.includes('event') || t.includes('workshop')) return 'EVENT';
-  return 'INTERNSHIP';
+  return 'TIROCINIO';
 }
 
 /** Build a EURES search URL with query parameters */

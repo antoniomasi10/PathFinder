@@ -109,8 +109,8 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
     logger.info(`[BatchUpsert] Skipped ${crossSourceSkipped} cross-source duplicates`);
   }
 
-  // Filter out senior roles that would be classified as INTERNSHIP or STAGE.
-  const ENTRY_ONLY_TYPES = new Set<string>(['INTERNSHIP', 'STAGE']);
+  // Filter out senior roles that would be classified as TIROCINIO.
+  const ENTRY_ONLY_TYPES = new Set<string>(['TIROCINIO']);
   let seniorSkipped = 0;
   const filteredCreate = toCreate.filter(r => {
     if (ENTRY_ONLY_TYPES.has(r.type) && isSeniorRole(r.title)) {
@@ -220,8 +220,8 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
           if (langs !== null) {
             updateData.requiredLanguages = langs;
           }
-          // Generate contextualized skill descriptions for stage/internship only
-          if (r.type === 'STAGE' || r.type === 'INTERNSHIP') {
+          // Generate contextualized skill descriptions for tirocinio only
+          if (r.type === 'TIROCINIO') {
             const contextSkills = await extractContextualizedSkills(r.title, r.description, skills, null).catch(() => []);
             if (contextSkills.length > 0) {
               updateData.contextualizedSkills = contextSkills;

@@ -28,8 +28,7 @@ enum WillingnessToRelocate {
 }
 
 enum OpportunityType {
-  STAGE
-  INTERNSHIP
+  TIROCINIO
   EXTRACURRICULAR
   EVENT
   FELLOWSHIP
@@ -282,7 +281,7 @@ model Opportunity {
   // --- AI-extracted structured content ---
   structuredContent    Json?           // {opportunityDescription, companyDescription, tasks}
   extractedSkills      String[]        @default([]) // AI-extracted, up to 5 real skill names
-  contextualizedSkills String[]        @default([]) // AI-generated contextualized descriptions (STAGE/INTERNSHIP only)
+  contextualizedSkills String[]        @default([]) // AI-generated contextualized descriptions (TIROCINIO only)
 
   // --- URL health ---
   urlStatus            String?         @default("UNCHECKED") // UNCHECKED | ACTIVE | BROKEN
