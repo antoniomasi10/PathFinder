@@ -236,7 +236,7 @@ httpServer.listen(PORT, () => {
   }, 75_000);
   // Backfill contextualized skill descriptions for TIROCINIO opportunities (90s delay)
   setTimeout(() => {
-    backfillContextualizedSkillsBoot(200).catch((err) => logger.error('Contextualized skills backfill boot failed:', err));
+    backfillContextualizedSkillsBoot(2000).catch((err) => logger.error('Contextualized skills backfill boot failed:', err));
   }, 90_000);
   // Backfill structured content for opportunities that don't have it yet (90s delay)
   setTimeout(() => {

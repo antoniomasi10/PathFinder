@@ -5,6 +5,13 @@ import { normalizeFieldToEnum } from './import/utils';
 import { resolveLocationTokens } from './locationFilter';
 import { logger } from '../utils/logger';
 
+export interface ScoreTraceEntry {
+  step: string;
+  detail: string;
+  scoreAfter: number;
+}
+export type ScoreTrace = ScoreTraceEntry[];
+
 export interface OppFilters {
   search?: string;
   company?: string;
@@ -129,14 +136,40 @@ const FIELD_INCOMPATIBLE_TAGS: Partial<Record<FieldOfStudy, string[]>> = {
   LAW:              ['react', 'frontend', 'engineering', 'manufacturing', 'clinical',
                      'nursing', 'fashion'],
   ECONOMICS:        ['react', 'frontend', 'typescript', 'nodejs', 'clinical', 'nursing',
-                     'surgery', 'aerospace', 'mechanical'],
+                     'surgery', 'aerospace', 'mechanical',
+                     'software', 'developer', 'backend', 'python', 'java', 'devops', 'data engineer', 'cybersecurity'],
   BUSINESS:         ['react', 'frontend', 'typescript', 'nodejs', 'clinical', 'nursing',
-                     'aerospace', 'mechanical'],
+                     'aerospace', 'mechanical',
+                     'software', 'developer', 'backend', 'python', 'java', 'devops', 'data engineer', 'cybersecurity'],
   DESIGN:           ['react', 'frontend', 'typescript', 'nodejs', 'clinical', 'nursing',
                      'banking', 'audit', 'aerospace', 'mechanical'],
   HUMANITIES:       ['react', 'frontend', 'typescript', 'nodejs', 'engineering',
                      'clinical', 'banking', 'audit'],
 };
+
+// ---------------------------------------------------------------------------
+// Title-based domain mismatch (step 18)
+// ---------------------------------------------------------------------------
+
+// Compound phrases in titles that unambiguously signal a software/tech role.
+// Checked against lower-cased title — a single phrase match is enough.
+const TECH_ROLE_TITLE_PHRASES: string[] = [
+  'software engineer', 'software developer', 'software development',
+  'frontend developer', 'backend developer', 'full stack', 'fullstack', 'full-stack',
+  'web developer', 'mobile developer', 'ios developer', 'android developer',
+  'data engineer', 'data scientist', 'machine learning engineer', 'ml engineer',
+  'devops engineer', 'cloud engineer', 'site reliability engineer',
+  'cybersecurity engineer', 'security engineer',
+  'programmatore', 'sviluppatore software', 'ingegnere software',
+];
+
+// Fields for which a tech-role title is a clear domain mismatch.
+// COMPUTER_SCIENCE, ENGINEERING, MATHEMATICS excluded — tech-compatible.
+const NON_TECH_FIELDS_FOR_TITLE_CHECK = new Set<FieldOfStudy>([
+  'BUSINESS', 'ECONOMICS', 'LAW', 'MEDICINE', 'HUMANITIES',
+  'LIFE_SCIENCES', 'PHYSICAL_SCIENCES', 'DESIGN', 'ARCHITECTURE',
+  'PSYCHOLOGY', 'EDUCATION', 'POLITICAL_SCIENCE',
+]);
 
 // ---------------------------------------------------------------------------
 // Per-type scoring profiles
@@ -291,6 +324,7 @@ export function scoreOpportunity(
   user: Pick<User, 'gpa' | 'englishLevel' | 'willingToRelocate' | 'yearOfStudy' | 'courseOfStudy' | 'region' | 'city' | 'regionLock' | 'cityLock'>,
   opportunity: Opportunity,
   skills?: UserSkills | null,
+  trace?: ScoreTrace,
 ): number {
   const p = SCORING_PROFILES[opportunity.type] ?? SCORING_PROFILES.TIROCINIO;
   let score = 0;
@@ -303,7 +337,7 @@ export function scoreOpportunity(
   if (preferredTypes.includes(opportunity.type)) {
     score += p.interest;
   }
-  // Not in list → no points
+  if (trace) trace.push({ step: 'step1-interest', detail: `interest=${interest} type=${opportunity.type} inList=${preferredTypes.includes(opportunity.type)} pts=${p.interest}`, scoreAfter: score });
 
   // 2. Cluster tag → Schwartz cluster scores on the opportunity (preferred)
   //    Fallback to OpportunityType map for legacy opps not yet classified.
@@ -315,12 +349,14 @@ export function scoreOpportunity(
     // instead of near-zero when the AI assigns a low but non-zero score.
     const w = 0.3 + rawW * 0.7;
     score += Math.round(p.cluster * w);
+    if (trace) trace.push({ step: 'step2-cluster', detail: `cluster=${cluster} rawW=${rawW.toFixed(2)} w=${w.toFixed(2)} via=clusterScores`, scoreAfter: score });
   } else {
     // Legacy path: all types in the cluster's preferred list score full points.
     const clusterTypes = CLUSTER_TYPE_MAP[cluster] ?? CLUSTER_TYPE_MAP.Explorer;
     if (clusterTypes.includes(opportunity.type)) {
       score += p.cluster;
     }
+    if (trace) trace.push({ step: 'step2-cluster', detail: `cluster=${cluster} inList=${clusterTypes.includes(opportunity.type)} pts=${p.cluster} via=legacy`, scoreAfter: score });
   }
 
   // 3. GPA sufficient
@@ -333,6 +369,7 @@ export function scoreOpportunity(
       score += Math.round(p.gpa * 0.5);
     }
   }
+  if (trace) trace.push({ step: 'step3-gpa', detail: `userGpa=${user.gpa} minGpa=${opportunity.minGpa}`, scoreAfter: score });
 
   // 4. English level
   if (p.english > 0) {
@@ -344,6 +381,7 @@ export function scoreOpportunity(
       score += Math.round(p.english * 0.5);
     }
   }
+  if (trace) trace.push({ step: 'step4-english', detail: `userEng=${user.englishLevel} reqEng=${opportunity.requiredEnglishLevel}`, scoreAfter: score });
 
   // 5. Relocation willingness — uses structured country/region/city
   if (p.relocate > 0) {
@@ -369,6 +407,7 @@ export function scoreOpportunity(
     } else if (user.willingToRelocate === 'MAYBE') {
       score += Math.round(p.relocate * 0.5);
     }
+    if (trace) trace.push({ step: 'step5-relocate', detail: `willingToRelocate=${user.willingToRelocate} isRemote=${isRemote} isItaly=${isItaly}`, scoreAfter: score });
   }
 
   // 6. Year of study accessibility
@@ -384,6 +423,7 @@ export function scoreOpportunity(
     } else {
       score += Math.round(p.year * 0.3);
     }
+    if (trace) trace.push({ step: 'step6-year', detail: `userYear=${user.yearOfStudy} min=${(opp as any).minYearOfStudy} max=${(opp as any).maxYearOfStudy} ok=${yearOk}`, scoreAfter: score });
   }
 
   // 7. Field of study bonus
@@ -399,6 +439,7 @@ export function scoreOpportunity(
         score += p.fieldMatchBonus;
       }
     }
+    if (trace) trace.push({ step: 'step7-fieldBonus', detail: `eligibleFields=[${((opportunity as any).eligibleFields ?? []).join(',')}] courseOfStudy=${user.courseOfStudy}`, scoreAfter: score });
   }
 
   // 8. Cost / scholarship bonus (free or covered = good match for students)
@@ -406,12 +447,14 @@ export function scoreOpportunity(
     const opp = opportunity as any;
     const isFreeOrCovered = opp.cost == null || opp.cost === 0 || opp.hasScholarship;
     if (isFreeOrCovered) score += p.costBonus;
+    if (trace) trace.push({ step: 'step8-cost', detail: `cost=${opp.cost} hasScholarship=${opp.hasScholarship}`, scoreAfter: score });
   }
 
   // 9. Deadline urgency bonus (closing within 14 days = surface it now)
   if (p.deadlineUrgencyBonus > 0 && opportunity.deadline) {
     const daysUntil = (opportunity.deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
     if (daysUntil > 0 && daysUntil <= 14) score += p.deadlineUrgencyBonus;
+    if (trace) trace.push({ step: 'step9-deadline', detail: `daysUntil=${daysUntil.toFixed(1)}`, scoreAfter: score });
   }
 
   // 10. Location match bonus — V2 (requires user.country, skipped for now)
@@ -419,9 +462,12 @@ export function scoreOpportunity(
   // 11. Tag-passion alignment bonus (additive, max +20, clamped to 100)
   const tagScore = computeTagScore(profile, opportunity);
   score += tagScore;
+  if (trace) trace.push({ step: 'step11-tags', detail: `tagScore=${tagScore} oppTags=[${(opportunity.tags || []).join(',')}]`, scoreAfter: score });
 
   // 12. Skill match bonus (additive, max +10, clamped to 100)
-  score += computeSkillMatchScore(skills || null, opportunity);
+  const skillScore = computeSkillMatchScore(skills || null, opportunity);
+  score += skillScore;
+  if (trace) trace.push({ step: 'step12-skills', detail: `skillScore=${skillScore}`, scoreAfter: score });
 
   // 13. Field mismatch penalty: if eligibleFields is set and user's field not in it,
   // apply a soft penalty rather than a hard exclusion. Hard exclusion at SQL level
@@ -434,12 +480,17 @@ export function scoreOpportunity(
     if (userField !== 'ANY' && !eligFields.includes(userField)) {
       score = Math.round(score * 0.15);
       fieldMismatchApplied = true;
-    }
-    // User field unknown but opportunity is restricted: mild penalty since we can't verify eligibility.
-    if (userField === 'ANY') {
+      if (trace) trace.push({ step: 'step13-fieldMismatch', detail: `PENALTY ×0.15 userField=${userField} eligFields=[${eligFields.join(',')}]`, scoreAfter: score });
+    } else if (userField === 'ANY') {
+      // User field unknown but opportunity is restricted: mild penalty since we can't verify eligibility.
       score = Math.round(score * 0.5);
       fieldMismatchApplied = true;
+      if (trace) trace.push({ step: 'step13-fieldMismatch', detail: `PENALTY ×0.5 userField=ANY (unknown) eligFields=[${eligFields.join(',')}]`, scoreAfter: score });
+    } else {
+      if (trace) trace.push({ step: 'step13-fieldMismatch', detail: `SKIP userField=${userField} in eligFields`, scoreAfter: score });
     }
+  } else {
+    if (trace) trace.push({ step: 'step13-fieldMismatch', detail: `SKIP eligibleFields empty or contains ANY`, scoreAfter: score });
   }
 
   // 14. Tag-incoherence penalty: opportunity has domain-specific tags with zero overlap with user.
@@ -451,7 +502,12 @@ export function scoreOpportunity(
     const hasDefinedInterest = PASSION_TAG_MAP[interest] || INTEREST_TAG_MAP[interest];
     if (hasDefinedInterest) {
       score = Math.round(score * 0.4);
+      if (trace) trace.push({ step: 'step14-tagIncoherence', detail: `PENALTY ×0.4 tagScore=0 oppTags=${oppTags.length}`, scoreAfter: score });
+    } else {
+      if (trace) trace.push({ step: 'step14-tagIncoherence', detail: `SKIP no defined interest tags`, scoreAfter: score });
     }
+  } else {
+    if (trace) trace.push({ step: 'step14-tagIncoherence', detail: `SKIP fieldMismatchApplied=${fieldMismatchApplied} tagScore=${tagScore} oppTagsCount=${oppTags.length}`, scoreAfter: score });
   }
 
   // 16. Field-tag implicit mismatch: detect domain incompatibility via tags even when the
@@ -471,8 +527,15 @@ export function scoreOpportunity(
         ).length;
         if (incompatibleMatches >= 2) {
           score = Math.round(score * 0.70);
+          if (trace) trace.push({ step: 'step16-fieldTagImplicit', detail: `PENALTY ×0.70 userField=${userFieldImplicit} incompatibleMatches=${incompatibleMatches}`, scoreAfter: score });
+        } else {
+          if (trace) trace.push({ step: 'step16-fieldTagImplicit', detail: `SKIP incompatibleMatches=${incompatibleMatches} < 2 oppTags=[${oppTagsLower.join(',')}]`, scoreAfter: score });
         }
+      } else {
+        if (trace) trace.push({ step: 'step16-fieldTagImplicit', detail: `SKIP no incompatibleTags for userField=${userFieldImplicit}`, scoreAfter: score });
       }
+    } else {
+      if (trace) trace.push({ step: 'step16-fieldTagImplicit', detail: `SKIP userField=ANY`, scoreAfter: score });
     }
   }
 
@@ -488,9 +551,15 @@ export function scoreOpportunity(
   if (isInPersonAbroad && !opportunity.requiredEnglishLevel) {
     if (user.englishLevel === 'A2') {
       score = Math.round(score * 0.60);
+      if (trace) trace.push({ step: 'step15-abroadLang', detail: `PENALTY ×0.60 A2+abroad`, scoreAfter: score });
     } else if (user.englishLevel === 'B1_B2') {
       score = Math.round(score * 0.85);
+      if (trace) trace.push({ step: 'step15-abroadLang', detail: `PENALTY ×0.85 B1_B2+abroad`, scoreAfter: score });
+    } else {
+      if (trace) trace.push({ step: 'step15-abroadLang', detail: `SKIP englishLevel=${user.englishLevel}`, scoreAfter: score });
     }
+  } else {
+    if (trace) trace.push({ step: 'step15-abroadLang', detail: `SKIP isInPersonAbroad=${isInPersonAbroad} reqEng=${opportunity.requiredEnglishLevel}`, scoreAfter: score });
   }
 
   // 17. Required non-Italian/non-English language barrier.
@@ -501,6 +570,32 @@ export function scoreOpportunity(
   const reqLangs = (oppAny.requiredLanguages as Array<{ lang: string }> | null);
   if (Array.isArray(reqLangs) && reqLangs.some((l) => l.lang !== 'en' && l.lang !== 'it')) {
     score = Math.round(score * 0.25);
+    if (trace) trace.push({ step: 'step17-reqLang', detail: `PENALTY ×0.25 langs=[${reqLangs.map(l => l.lang).join(',')}]`, scoreAfter: score });
+  } else {
+    if (trace) trace.push({ step: 'step17-reqLang', detail: `SKIP reqLangs=${JSON.stringify(reqLangs)}`, scoreAfter: score });
+  }
+
+  // 18. Title-based domain mismatch: catches tech-role titles for non-tech users even when
+  // tags and eligibleFields are empty (common for freshly imported opportunities).
+  // Skipped if steps 13/16 already applied a field or tag penalty.
+  if (!fieldMismatchApplied) {
+    const userFieldTitle = user.courseOfStudy
+      ? normalizeFieldToEnum(user.courseOfStudy)
+      : ('ANY' as FieldOfStudy);
+    if (NON_TECH_FIELDS_FOR_TITLE_CHECK.has(userFieldTitle)) {
+      const titleLower = (opportunity.title || '').toLowerCase();
+      const matchedPhrase = TECH_ROLE_TITLE_PHRASES.find((phrase) => titleLower.includes(phrase));
+      if (matchedPhrase) {
+        score = Math.round(score * 0.35);
+        if (trace) trace.push({ step: 'step18-titleDomain', detail: `PENALTY ×0.35 userField=${userFieldTitle} matchedPhrase="${matchedPhrase}"`, scoreAfter: score });
+      } else {
+        if (trace) trace.push({ step: 'step18-titleDomain', detail: `SKIP no tech phrase in title="${opportunity.title}"`, scoreAfter: score });
+      }
+    } else {
+      if (trace) trace.push({ step: 'step18-titleDomain', detail: `SKIP userField=${userFieldTitle} is tech-compatible`, scoreAfter: score });
+    }
+  } else {
+    if (trace) trace.push({ step: 'step18-titleDomain', detail: `SKIP fieldMismatchApplied=true`, scoreAfter: score });
   }
 
   return Math.min(score, 100);
