@@ -1,11 +1,11 @@
 /**
- * Re-backfill: resets and re-extracts requiredLanguages for active STAGE/INTERNSHIP
+ * Re-backfill: resets and re-extracts requiredLanguages for active TIROCINIO
  * opportunities using the updated prompt that infers language from context
  * (German gender notation, company location, etc.).
  *
  * Run with: npx ts-node --transpile-only src/scripts/backfillRequiredLanguagesStage.ts
  *
- * Safe to re-run: processes all active STAGE/INTERNSHIP regardless of current value.
+ * Safe to re-run: processes all active TIROCINIO regardless of current value.
  */
 
 import { Prisma } from '@prisma/client';
@@ -25,7 +25,7 @@ async function main() {
 
   const opps = await prisma.opportunity.findMany({
     where: {
-      type: { in: ['STAGE', 'INTERNSHIP'] },
+      type: { in: ['TIROCINIO'] },
       OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
     },
     select: { id: true, title: true, description: true, about: true },
@@ -33,7 +33,7 @@ async function main() {
     orderBy: { postedAt: 'desc' },
   });
 
-  console.log(`[backfillRequiredLanguagesStage] Found ${opps.length} STAGE/INTERNSHIP to re-process`);
+  console.log(`[backfillRequiredLanguagesStage] Found ${opps.length} TIROCINIO to re-process`);
 
   let updated = 0;
   let empty = 0;

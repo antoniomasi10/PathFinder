@@ -60,7 +60,7 @@ const CLUSTER_COLORS: Record<string, string> = {
 function TypeIcon({ type, className = 'w-5 h-5' }: { type: string; className?: string }) {
   const props = { className };
   switch (type) {
-    case 'INTERNSHIP':   return <Briefcase {...props} />;
+    case 'TIROCINIO':    return <Briefcase {...props} />;
     case 'SCHOLARSHIP':  return <GraduationCap {...props} />;
     case 'ERASMUS':      return <Plane {...props} />;
     case 'PROJECT':      return <Rocket {...props} />;

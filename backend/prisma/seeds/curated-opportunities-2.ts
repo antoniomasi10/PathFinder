@@ -1,5 +1,5 @@
-/**
- * Curated opportunities seed — round 2.
+﻿/**
+ * Curated opportunities seed â€” round 2.
  *
  * Covers domains underserved after round 1:
  * medicine/health, humanities/social science, diplomacy, social entrepreneurship,
@@ -12,10 +12,10 @@ import { logger } from '../../src/utils/logger';
 
 const opportunities = [
 
-  // ── FELLOWSHIPS — social impact & humanities ───────────────────────────────
+  // â”€â”€ FELLOWSHIPS â€” social impact & humanities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   {
-    title: 'Fulbright Foreign Student Program — USA',
+    title: 'Fulbright Foreign Student Program â€” USA',
     description: 'The Fulbright Program is the US government flagship international scholarship, funding postgraduate study and research in the United States for students from 160+ countries. Fully funded: tuition, living stipend, health insurance, and travel. Highly competitive (Italy: ~15 grants/year).',
     type: 'FELLOWSHIP' as const,
     url: 'https://fulbright.it/',
@@ -36,8 +36,8 @@ const opportunities = [
   },
 
   {
-    title: 'Obama Foundation Scholars Program — Columbia University',
-    description: 'The Obama Foundation Scholars Program at Columbia University is a 1-year leadership program for emerging civic leaders aged 21–30. Fully funded. Focus on social change, community development, and public service. Applications open annually in early autumn.',
+    title: 'Obama Foundation Scholars Program â€” Columbia University',
+    description: 'The Obama Foundation Scholars Program at Columbia University is a 1-year leadership program for emerging civic leaders aged 21â€“30. Fully funded. Focus on social change, community development, and public service. Applications open annually in early autumn.',
     type: 'FELLOWSHIP' as const,
     url: 'https://www.obama.org/programs/scholars/',
     organizer: 'Obama Foundation',
@@ -58,8 +58,8 @@ const opportunities = [
   },
 
   {
-    title: 'Fondazione Cariplo — Young Investigator Grant (Italy)',
-    description: 'Fondazione Cariplo finanzia progetti di ricerca scientifica per giovani ricercatori italiani under 40, con grants da €100.000 a €400.000 su aree: ricerca biomedica, scienze dell\'ambiente, e scienze sociali e umanistiche. Aperto a ricercatori con contratto presso istituti italiani.',
+    title: 'Fondazione Cariplo â€” Young Investigator Grant (Italy)',
+    description: 'Fondazione Cariplo finanzia progetti di ricerca scientifica per giovani ricercatori italiani under 40, con grants da â‚¬100.000 a â‚¬400.000 su aree: ricerca biomedica, scienze dell\'ambiente, e scienze sociali e umanistiche. Aperto a ricercatori con contratto presso istituti italiani.',
     type: 'FELLOWSHIP' as const,
     url: 'https://www.fondazionecariplo.it/it/programmi/ricerca/',
     organizer: 'Fondazione Cariplo',
@@ -70,7 +70,7 @@ const opportunities = [
     format: 'IN_PERSON' as const,
     cost: 0,
     hasScholarship: true,
-    scholarshipDetails: 'Grants €100.000–€400.000 per progetti di ricerca (2–3 anni).',
+    scholarshipDetails: 'Grants â‚¬100.000â€“â‚¬400.000 per progetti di ricerca (2â€“3 anni).',
     stipend: 0,
     eligibleFields: ['MEDICINE', 'LIFE_SCIENCES', 'HUMANITIES', 'PHYSICAL_SCIENCES'] as any[],
     minYearOfStudy: 5,
@@ -79,11 +79,11 @@ const opportunities = [
     sourceId: 'curated-cariplo-young-investigator',
   },
 
-  // ── SUMMER PROGRAMS — medicine & science ───────────────────────────────���──
+  // â”€â”€ SUMMER PROGRAMS â€” medicine & science â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ï¿½ï¿½ï¿½â”€â”€
 
   {
-    title: 'NIH Summer Internship Program in Biomedical Research — USA',
-    description: 'The NIH Summer Internship Program (SIP) places students in research labs at the National Institutes of Health in Bethesda, Maryland. 8–10 weeks, paid stipend ($1,800–$2,000/month). Open to undergraduate and graduate students in biomedical, behavioral, and social sciences.',
+    title: 'NIH Summer Internship Program in Biomedical Research â€” USA',
+    description: 'The NIH Summer Internship Program (SIP) places students in research labs at the National Institutes of Health in Bethesda, Maryland. 8â€“10 weeks, paid stipend ($1,800â€“$2,000/month). Open to undergraduate and graduate students in biomedical, behavioral, and social sciences.',
     type: 'SUMMER_PROGRAM' as const,
     url: 'https://www.training.nih.gov/programs/sip',
     organizer: 'National Institutes of Health (NIH)',
@@ -96,7 +96,7 @@ const opportunities = [
     durationDays: 63,
     cost: 0,
     hasScholarship: true,
-    scholarshipDetails: 'Paid stipend $1,800–$2,000/month. Housing assistance available.',
+    scholarshipDetails: 'Paid stipend $1,800â€“$2,000/month. Housing assistance available.',
     stipend: 1800,
     eligibleFields: ['MEDICINE', 'LIFE_SCIENCES', 'PSYCHOLOGY', 'PHYSICAL_SCIENCES'] as any[],
     minYearOfStudy: 2,
@@ -106,7 +106,7 @@ const opportunities = [
   },
 
   {
-    title: 'Scuola Normale Superiore — Summer School Pisa',
+    title: 'Scuola Normale Superiore â€” Summer School Pisa',
     description: 'La Scuola Normale Superiore di Pisa offre summer school in scienze umane, letteratura, filosofia, storia, e scienze esatte. Destinata a studenti universitari eccellenti. Borsa di studio totale disponibile per i migliori candidati. Lingua: italiano e inglese.',
     type: 'SUMMER_PROGRAM' as const,
     url: 'https://www.sns.it/it',
@@ -128,11 +128,11 @@ const opportunities = [
     sourceId: 'curated-sns-summer-school',
   },
 
-  // ── CONFERENCES & EVENTS ─────────────────────────────────────────────��────
+  // â”€â”€ CONFERENCES & EVENTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ï¿½ï¿½â”€â”€â”€â”€
 
   {
-    title: 'European Youth Parliament — National Selection Italy',
-    description: "L'European Youth Parliament (EYP) è una delle più grandi associazioni giovanili indipendenti d'Europa. Le sessioni nazionali italiane raccolgono 100+ studenti universitari per 3 giorni di dibattiti parlamentari su temi europei. Partecipazione gratuita, viaggio a carico del partecipante.",
+    title: 'European Youth Parliament â€” National Selection Italy',
+    description: "L'European Youth Parliament (EYP) Ã¨ una delle piÃ¹ grandi associazioni giovanili indipendenti d'Europa. Le sessioni nazionali italiane raccolgono 100+ studenti universitari per 3 giorni di dibattiti parlamentari su temi europei. Partecipazione gratuita, viaggio a carico del partecipante.",
     type: 'EVENT' as const,
     url: 'https://eyp.it/',
     organizer: 'EYP Italia',
@@ -152,8 +152,8 @@ const opportunities = [
   },
 
   {
-    title: 'Startup Weekend — Italy (by Techstars)',
-    description: 'Startup Weekend è un evento intensivo di 54 ore organizzato da Techstars in cui partecipanti con background diversi (sviluppatori, designer, marketer) formano team e costruiscono una startup dal concept al pitch. Costo ~€50-80. Si tiene in varie città italiane durante tutto l\'anno.',
+    title: 'Startup Weekend â€” Italy (by Techstars)',
+    description: 'Startup Weekend Ã¨ un evento intensivo di 54 ore organizzato da Techstars in cui partecipanti con background diversi (sviluppatori, designer, marketer) formano team e costruiscono una startup dal concept al pitch. Costo ~â‚¬50-80. Si tiene in varie cittÃ  italiane durante tutto l\'anno.',
     type: 'HACKATHON' as const,
     url: 'https://startupweekend.org/',
     organizer: 'Techstars',
@@ -174,7 +174,7 @@ const opportunities = [
 
   {
     title: 'Forum Economico di Trento (Festival dell\'Economia)',
-    description: "Il Festival dell'Economia di Trento è uno dei principali eventi di divulgazione economica in Italia, con economisti, policy maker e imprenditori di fama internazionale. Ingresso gratuito per studenti universitari. Ideale per studenti di economia, scienze politiche e management.",
+    description: "Il Festival dell'Economia di Trento Ã¨ uno dei principali eventi di divulgazione economica in Italia, con economisti, policy maker e imprenditori di fama internazionale. Ingresso gratuito per studenti universitari. Ideale per studenti di economia, scienze politiche e management.",
     type: 'EVENT' as const,
     url: 'https://www.festivaleconomia.it/',
     organizer: 'Provincia Autonoma di Trento',
@@ -194,11 +194,11 @@ const opportunities = [
     sourceId: 'curated-festival-economia-trento',
   },
 
-  // ── EXCHANGE / VOLUNTEERING ───────────────────────────────────────────────
+  // â”€â”€ EXCHANGE / VOLUNTEERING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   {
-    title: 'AIESEC — International Volunteer Exchange Program',
-    description: "AIESEC è la più grande organizzazione giovanile al mondo (113 paesi). Offre esperienze di volontariato internazionale da 6 a 8 settimane su progetti in educazione, ambiente, salute, e imprenditorialità. Costo di partecipazione variabile (€200–€1.200 a seconda del paese). Aperto a studenti universitari.",
+    title: 'AIESEC â€” International Volunteer Exchange Program',
+    description: "AIESEC Ã¨ la piÃ¹ grande organizzazione giovanile al mondo (113 paesi). Offre esperienze di volontariato internazionale da 6 a 8 settimane su progetti in educazione, ambiente, salute, e imprenditorialitÃ . Costo di partecipazione variabile (â‚¬200â€“â‚¬1.200 a seconda del paese). Aperto a studenti universitari.",
     type: 'EXCHANGE' as const,
     url: 'https://aiesec.org/global-volunteer',
     organizer: 'AIESEC',
@@ -217,7 +217,7 @@ const opportunities = [
 
   {
     title: 'Erasmus+ Blended Intensive Program (BIP)',
-    description: 'I BIP Erasmus+ combinano una fase online con una mobilità fisica breve (5–30 giorni) presso università partner europee. Finanziati da Erasmus+, offrono un contributo giornaliero (€70–€150/giorno) per coprire soggiorno e viaggi. Disponibili in tutte le università italiane convenzionate.',
+    description: 'I BIP Erasmus+ combinano una fase online con una mobilitÃ  fisica breve (5â€“30 giorni) presso universitÃ  partner europee. Finanziati da Erasmus+, offrono un contributo giornaliero (â‚¬70â€“â‚¬150/giorno) per coprire soggiorno e viaggi. Disponibili in tutte le universitÃ  italiane convenzionate.',
     type: 'EXCHANGE' as const,
     url: 'https://erasmus-plus.ec.europa.eu/opportunities/individuals/students/studying-abroad',
     organizer: 'European Commission / Erasmus+',
@@ -227,7 +227,7 @@ const opportunities = [
     durationDays: 14,
     cost: 0,
     hasScholarship: true,
-    scholarshipDetails: 'Erasmus+ grant: €70–150/giorno per la fase di mobilità fisica.',
+    scholarshipDetails: 'Erasmus+ grant: â‚¬70â€“150/giorno per la fase di mobilitÃ  fisica.',
     eligibleFields: [] as any[],
     minYearOfStudy: 2,
     maxYearOfStudy: 5,
@@ -235,10 +235,10 @@ const opportunities = [
     sourceId: 'curated-erasmus-bip',
   },
 
-  // ── RESEARCH ──────────────────────────────────────────────────────────────
+  // â”€â”€ RESEARCH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   {
-    title: 'Istituto Italiano di Tecnologia (IIT) — Summer Student Program',
+    title: 'Istituto Italiano di Tecnologia (IIT) â€” Summer Student Program',
     description: "IIT offre internship di ricerca estivi a studenti magistrali e dottorali in: robotics, neuroscience, computational sciences, e materials science. Sede principale a Genova, con laboratori distribuiti in tutta Italia. Rimborso spese. Candidature tipicamente aperte da gennaio a marzo.",
     type: 'RESEARCH' as const,
     url: 'https://www.iit.it/web/careers/internships',
@@ -261,8 +261,8 @@ const opportunities = [
   },
 
   {
-    title: 'CERN OpenLab Student Program — IT & Electronics',
-    description: "CERN openlab offers a 2-month paid internship for IT/electronics students to work on cutting-edge computing challenges at CERN. Projects span: distributed computing, machine learning, data analytics, and hardware. Stipend CHF 91/day + accommodation. Applications open January–February.",
+    title: 'CERN OpenLab Student Program â€” IT & Electronics',
+    description: "CERN openlab offers a 2-month paid internship for IT/electronics students to work on cutting-edge computing challenges at CERN. Projects span: distributed computing, machine learning, data analytics, and hardware. Stipend CHF 91/day + accommodation. Applications open Januaryâ€“February.",
     type: 'RESEARCH' as const,
     url: 'https://openlab.cern/education/cern-openlab-summer-student-programme',
     organizer: 'CERN openlab',
@@ -284,11 +284,11 @@ const opportunities = [
     sourceId: 'curated-cern-openlab',
   },
 
-  // ── COMPETITION ────────────────────────────────────────────────────────────
+  // â”€â”€ COMPETITION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   {
-    title: 'FameLab — International Science Communication Competition',
-    description: "FameLab è una competizione internazionale di comunicazione scientifica: i partecipanti hanno 3 minuti per spiegare un concetto scientifico in modo chiaro e coinvolgente. Si tiene in 30+ paesi, con finali nazionali e internazionale a Cheltenham Science Festival (UK). Aperto a studenti e ricercatori under 35.",
+    title: 'FameLab â€” International Science Communication Competition',
+    description: "FameLab Ã¨ una competizione internazionale di comunicazione scientifica: i partecipanti hanno 3 minuti per spiegare un concetto scientifico in modo chiaro e coinvolgente. Si tiene in 30+ paesi, con finali nazionali e internazionale a Cheltenham Science Festival (UK). Aperto a studenti e ricercatori under 35.",
     type: 'COMPETITION' as const,
     url: 'https://www.cheltenhamfestivals.com/famelab',
     organizer: 'Cheltenham Festivals / British Council',
@@ -306,8 +306,8 @@ const opportunities = [
   },
 
   {
-    title: 'Hult Prize — Global Student Social Enterprise Competition',
-    description: "The Hult Prize is the world's largest student competition for social good. Teams of 4 students develop a social enterprise idea to address a global challenge (announced each year by the UN Secretary-General). Campus rounds → regional semi-finals → global final with $1M prize. Free to enter.",
+    title: 'Hult Prize â€” Global Student Social Enterprise Competition',
+    description: "The Hult Prize is the world's largest student competition for social good. Teams of 4 students develop a social enterprise idea to address a global challenge (announced each year by the UN Secretary-General). Campus rounds â†’ regional semi-finals â†’ global final with $1M prize. Free to enter.",
     type: 'COMPETITION' as const,
     url: 'https://www.hultprize.org/',
     organizer: 'Hult Prize Foundation',
@@ -325,8 +325,8 @@ const opportunities = [
   },
 
   {
-    title: 'CFA Institute Research Challenge — Italy',
-    description: "Il CFA Research Challenge è una competizione internazionale per studenti universitari di economia e finanza. I team analizzano un'azienda quotata e presentano un report di analisi finanziaria a una giuria di professionisti CFA. Vincitori nazionali accedono alla finale EMEA. Gratuito.",
+    title: 'CFA Institute Research Challenge â€” Italy',
+    description: "Il CFA Research Challenge Ã¨ una competizione internazionale per studenti universitari di economia e finanza. I team analizzano un'azienda quotata e presentano un report di analisi finanziaria a una giuria di professionisti CFA. Vincitori nazionali accedono alla finale EMEA. Gratuito.",
     type: 'COMPETITION' as const,
     url: 'https://www.cfainstitute.org/en/research/foundation/research-challenge',
     organizer: 'CFA Institute',
@@ -342,11 +342,11 @@ const opportunities = [
     sourceId: 'curated-cfa-research-challenge',
   },
 
-  // ── BOOTCAMP — creative & design ──────────────────────────────────────────
+  // â”€â”€ BOOTCAMP â€” creative & design â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   {
-    title: 'Scuola Holden — Summer Intensive di Scrittura Creativa',
-    description: "La Scuola Holden di Alessandro Baricco a Torino offre summer intensive di 1-2 settimane in scrittura creativa, storytelling, e content creation. Aperto a tutti, nessun prerequisito richiesto. Costo ~€600-1.200. Ideale per studenti di lettere, comunicazione e media.",
+    title: 'Scuola Holden â€” Summer Intensive di Scrittura Creativa',
+    description: "La Scuola Holden di Alessandro Baricco a Torino offre summer intensive di 1-2 settimane in scrittura creativa, storytelling, e content creation. Aperto a tutti, nessun prerequisito richiesto. Costo ~â‚¬600-1.200. Ideale per studenti di lettere, comunicazione e media.",
     type: 'BOOTCAMP' as const,
     url: 'https://scuolaholden.it/',
     organizer: 'Scuola Holden',
@@ -366,11 +366,11 @@ const opportunities = [
     sourceId: 'curated-scuola-holden-summer',
   },
 
-  // ── VOLUNTEERING ──────────────────��──────────────────────────────────────
+  // â”€â”€ VOLUNTEERING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ï¿½ï¿½â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   {
-    title: 'UN Volunteers — Online Volunteering Program',
-    description: "Il programma di volontariato online dell'ONU permette di contribuire a progetti di sviluppo internazionale da remoto, da casa. Disponibili opportunità in: ricerca, comunicazione, traduzione, IT, e coordinamento di progetti. Aperto a studenti universitari e laureati di tutto il mondo.",
+    title: 'UN Volunteers â€” Online Volunteering Program',
+    description: "Il programma di volontariato online dell'ONU permette di contribuire a progetti di sviluppo internazionale da remoto, da casa. Disponibili opportunitÃ  in: ricerca, comunicazione, traduzione, IT, e coordinamento di progetti. Aperto a studenti universitari e laureati di tutto il mondo.",
     type: 'VOLUNTEERING' as const,
     url: 'https://www.onlinevolunteering.org/',
     organizer: 'United Nations Volunteers',
@@ -400,7 +400,7 @@ async function run() {
       else updated++;
       logger.info(`[Seed2] ${result.action}: ${opp.title.slice(0, 60)}`);
     } catch (err) {
-      logger.error(`[Seed2] Failed: ${opp.title.slice(0, 60)} — ${err}`);
+      logger.error(`[Seed2] Failed: ${opp.title.slice(0, 60)} â€” ${err}`);
       failed++;
     }
   }
@@ -410,3 +410,4 @@ async function run() {
 }
 
 run();
+

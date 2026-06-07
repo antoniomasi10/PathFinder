@@ -352,7 +352,7 @@ Regole:
 
 /**
  * Generates up to 5 short, contextualized Italian-language skill descriptions
- * for STAGE/INTERNSHIP opportunities. Uses extractedSkills as seed if available.
+ * for TIROCINIO opportunities. Uses extractedSkills as seed if available.
  * Returns an empty array if none found or on error — never throws.
  */
 export async function extractContextualizedSkills(
@@ -616,7 +616,7 @@ export async function backfillExtractedSkillsBoot(limit = 200): Promise<void> {
 }
 
 /**
- * Boot-time backfill: processes up to `limit` active STAGE/INTERNSHIP opportunities
+ * Boot-time backfill: processes up to `limit` active TIROCINIO opportunities
  * that have no contextualizedSkills yet. Runs in the background — never throws, never blocks startup.
  */
 export async function backfillContextualizedSkillsBoot(limit = 200): Promise<void> {
@@ -625,7 +625,7 @@ export async function backfillContextualizedSkillsBoot(limit = 200): Promise<voi
   const now = new Date();
   const opps = await prisma.opportunity.findMany({
     where: {
-      type: { in: ['STAGE', 'INTERNSHIP'] },
+      type: { in: ['TIROCINIO'] },
       contextualizedSkills: { isEmpty: true },
       OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
     },

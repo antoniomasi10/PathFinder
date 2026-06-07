@@ -88,7 +88,7 @@ function topPercentile(score: number): string {
   return '20%';
 }
 
-const INTERNSHIP_TYPES = new Set(['STAGE', 'INTERNSHIP']);
+const INTERNSHIP_TYPES = new Set(['TIROCINIO']);
 
 const GPA_LABELS: Record<string, string> = {
   GPA_18_20: 'Media voti 18–20',
@@ -266,7 +266,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
   const isSaved = savedIds.has(opportunity.id);
   const companyInitial = opportunity.company.charAt(0).toUpperCase() || '?';
 
-  // --- Structured requirements (STAGE/INTERNSHIP only) ---
+  // --- Structured requirements (TIROCINIO only) ---
   const competenzeRows = opportunity.contextualizedSkills ?? [];
 
   const accademicoRows: string[] = [];
@@ -639,7 +639,7 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
             </div>
           ) : null}
 
-          {/* Requirements — only for STAGE / INTERNSHIP */}
+          {/* Requirements — only for TIROCINIO */}
           {showRequirements && (
             <div className="flex flex-col gap-4">
               <h2 className="text-[20px] font-bold" style={{ color: '#2c3149', fontFamily: 'var(--font-plus-jakarta)' }}>

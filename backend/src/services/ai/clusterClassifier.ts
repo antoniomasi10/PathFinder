@@ -102,8 +102,7 @@ export function fallbackClassify(opp: {
       scores.Imprenditore = 0.6;
       scores.Analista = 0.4;
       break;
-    case 'INTERNSHIP':
-    case 'STAGE':
+    case 'TIROCINIO':
       scores.Leader = 0.7;
       scores.Analista = 0.6;
       scores.Imprenditore = 0.5;

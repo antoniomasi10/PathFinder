@@ -80,8 +80,7 @@ function daysUntil(deadline: Date): number {
 
 function opportunityTypeLabel(type: string): string {
   const labels: Record<string, string> = {
-    STAGE: 'Stage',
-    INTERNSHIP: 'Internship',
+    TIROCINIO: 'Tirocinio',
     FELLOWSHIP: 'Fellowship',
     HACKATHON: 'Hackathon',
     COMPETITION: 'Competizione',

@@ -206,10 +206,10 @@ async function fetchDetail(url: string): Promise<DetailData | null> {
 
 function mapType(title: string, sector: string): OpportunityType {
   const t = `${title} ${sector}`.toLowerCase();
-  if (t.includes('stage') || t.includes('tirocinio')) return 'STAGE';
+  if (t.includes('stage') || t.includes('tirocinio')) return 'TIROCINIO';
   if (t.includes('fellow')) return 'FELLOWSHIP';
   if (t.includes('event') || t.includes('workshop')) return 'EVENT';
-  return 'INTERNSHIP'; // Stage4eu is primarily internships
+  return 'TIROCINIO';
 }
 
 /** Parse duration string like "6 mesi" to months */

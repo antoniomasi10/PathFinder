@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Curated opportunities seed.
  *
  * Covers OpportunityType values not well-served by automated importers:
@@ -7,17 +7,17 @@
  * All entries are verified=true and source='curated'.
  * Run: npx ts-node --transpile-only prisma/seeds/curated-opportunities.ts
  *
- * Update annually (June–July) for summer programs; December for fellowships.
+ * Update annually (Juneâ€“July) for summer programs; December for fellowships.
  */
 import { upsertManualOpportunity } from '../../src/services/import/manual.import';
 import { logger } from '../../src/utils/logger';
 
 const opportunities = [
 
-  // ── SUMMER PROGRAMS (Italian) ──────────────────────────────────────────────
+  // â”€â”€ SUMMER PROGRAMS (Italian) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   {
-    title: 'H-Farm Summer School — Digital Innovation & Entrepreneurship',
+    title: 'H-Farm Summer School â€” Digital Innovation & Entrepreneurship',
     description: 'H-Farm Summer School offre programmi intensivi su digital innovation, startup building e business design nel campus di Roncade (Treviso). Partecipanti dai 16 ai 25 anni. Residenziale, include alloggio e pasti. Ideale per chi vuole costruire il proprio progetto imprenditoriale in ambiente internazionale.',
     type: 'SUMMER_PROGRAM' as const,
     url: 'https://www.h-farm.com/en/education/h-farm-schools/h-farm-summer-school',
@@ -39,11 +39,11 @@ const opportunities = [
   },
 
   {
-    title: 'Bocconi Summer School — Business & Economics',
-    description: "Bocconi University's summer programs cover finance, management, marketing, and economics. Held in Milan, they combine lectures by Bocconi faculty with case studies and company visits. Programs run 1–3 weeks. Financial aid available for outstanding applicants.",
+    title: 'Bocconi Summer School â€” Business & Economics',
+    description: "Bocconi University's summer programs cover finance, management, marketing, and economics. Held in Milan, they combine lectures by Bocconi faculty with case studies and company visits. Programs run 1â€“3 weeks. Financial aid available for outstanding applicants.",
     type: 'SUMMER_PROGRAM' as const,
     url: 'https://www.unibocconi.eu/wps/wcm/connect/bocconi/sitopubblico_en/navigation+tree/home/programs/summer+school',
-    organizer: 'Università Bocconi',
+    organizer: 'UniversitÃ  Bocconi',
     location: 'Milan, Italy',
     city: 'Milan',
     country: 'IT',
@@ -53,7 +53,7 @@ const opportunities = [
     durationDays: 14,
     cost: 3200,
     hasScholarship: true,
-    scholarshipDetails: 'Merit-based scholarships covering 50–100% of tuition available.',
+    scholarshipDetails: 'Merit-based scholarships covering 50â€“100% of tuition available.',
     eligibleFields: ['ECONOMICS', 'BUSINESS', 'LAW'] as any[],
     minYearOfStudy: 1,
     maxYearOfStudy: 6,
@@ -62,7 +62,7 @@ const opportunities = [
   },
 
   {
-    title: 'Politecnico di Milano Summer School — Engineering & Design',
+    title: 'Politecnico di Milano Summer School â€” Engineering & Design',
     description: "Polimi's international summer schools cover architecture, industrial design, and engineering. Courses are taught in English, attracting students from over 60 countries. Located in Milan's vibrant design district.",
     type: 'SUMMER_PROGRAM' as const,
     url: 'https://www.polimi.it/en/educational-offer/summer-schools/',
@@ -84,7 +84,7 @@ const opportunities = [
   },
 
   {
-    title: 'LUISS Summer School — Law, Political Science & International Relations',
+    title: 'LUISS Summer School â€” Law, Political Science & International Relations',
     description: "LUISS Guido Carli's summer programs focus on European law, international relations, and political economy. Held in Rome, with visits to EU institutions and diplomatic venues. Taught in English.",
     type: 'SUMMER_PROGRAM' as const,
     url: 'https://summerschool.luiss.it/',
@@ -107,7 +107,7 @@ const opportunities = [
   },
 
   {
-    title: 'SDA Bocconi Executive Summer Program — Leadership & Innovation',
+    title: 'SDA Bocconi Executive Summer Program â€” Leadership & Innovation',
     description: 'SDA Bocconi School of Management summer programs are aimed at ambitious undergraduates and recent graduates looking to develop leadership and innovation skills. Intensive 1-week format with business simulations.',
     type: 'SUMMER_PROGRAM' as const,
     url: 'https://www.sdabocconi.it/en/programs/executive-education/open-programs',
@@ -128,11 +128,11 @@ const opportunities = [
     sourceId: 'curated-sda-bocconi-summer',
   },
 
-  // ── BOOTCAMPS ──────────────────────────────────────────────────────────────
+  // â”€â”€ BOOTCAMPS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   {
-    title: '42 Roma Luiss — Coding Bootcamp (Piscine)',
-    description: "42 Roma Luiss offers a 4-week intensive coding bootcamp called the 'Piscine' — a peer-learning, project-based program with no prior programming experience required. Completely free, no tuition. Top performers are invited to join the full 3-year program.",
+    title: '42 Roma Luiss â€” Coding Bootcamp (Piscine)',
+    description: "42 Roma Luiss offers a 4-week intensive coding bootcamp called the 'Piscine' â€” a peer-learning, project-based program with no prior programming experience required. Completely free, no tuition. Top performers are invited to join the full 3-year program.",
     type: 'BOOTCAMP' as const,
     url: 'https://42roma.it/',
     organizer: '42 Roma Luiss',
@@ -153,7 +153,7 @@ const opportunities = [
   },
 
   {
-    title: 'Codemotion Tech Conference & Workshop — Milan',
+    title: 'Codemotion Tech Conference & Workshop â€” Milan',
     description: "Italy's largest tech community event. Codemotion Milan features 100+ talks, workshops, and hands-on labs on software engineering, cloud, AI, and DevOps. Mix of free tickets (online stream) and paid in-person passes.",
     type: 'BOOTCAMP' as const,
     url: 'https://conferences.codemotion.com/milan/',
@@ -174,11 +174,11 @@ const opportunities = [
     sourceId: 'curated-codemotion-milan',
   },
 
-  // ── CONFERENCES ────────────────────────────────────────────────────────────
+  // â”€â”€ CONFERENCES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   {
-    title: 'Web Marketing Festival — Rimini',
-    description: "Il WMF è il più grande evento italiano sull'innovazione digitale, marketing, AI e startup. Tre giorni di talk, workshop, e networking a Rimini con oltre 60.000 partecipanti. Accesso gratuito con registrazione anticipata.",
+    title: 'Web Marketing Festival â€” Rimini',
+    description: "Il WMF Ã¨ il piÃ¹ grande evento italiano sull'innovazione digitale, marketing, AI e startup. Tre giorni di talk, workshop, e networking a Rimini con oltre 60.000 partecipanti. Accesso gratuito con registrazione anticipata.",
     type: 'EVENT' as const,
     url: 'https://www.webmarketingfestival.it/',
     organizer: 'Web Marketing Festival',
@@ -220,10 +220,10 @@ const opportunities = [
     sourceId: 'curated-tedx-milan',
   },
 
-  // ── FELLOWSHIPS (prestige, international) ──────────────────────────────────
+  // â”€â”€ FELLOWSHIPS (prestige, international) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   {
-    title: 'Schwarzman Scholars Program — Beijing',
+    title: 'Schwarzman Scholars Program â€” Beijing',
     description: "The Schwarzman Scholars program at Tsinghua University in Beijing is a highly selective 1-year master's program designed to develop future global leaders. Full funding including tuition, accommodation, travel, and living stipend. Open to students aged 18-28.",
     type: 'FELLOWSHIP' as const,
     url: 'https://www.schwarzmanscholars.org/',
@@ -247,8 +247,8 @@ const opportunities = [
   },
 
   {
-    title: 'Rhodes Scholarship — Oxford University',
-    description: 'The Rhodes Scholarship is the oldest and most celebrated international fellowship, funding postgraduate study at the University of Oxford. Open to students aged 19–25. Fully funded: university fees, living allowance, and airfare.',
+    title: 'Rhodes Scholarship â€” Oxford University',
+    description: 'The Rhodes Scholarship is the oldest and most celebrated international fellowship, funding postgraduate study at the University of Oxford. Open to students aged 19â€“25. Fully funded: university fees, living allowance, and airfare.',
     type: 'FELLOWSHIP' as const,
     url: 'https://www.rhodeshouse.ox.ac.uk/scholarships/',
     organizer: 'Rhodes Trust',
@@ -260,7 +260,7 @@ const opportunities = [
     format: 'IN_PERSON' as const,
     cost: 0,
     hasScholarship: true,
-    scholarshipDetails: 'Fully funded: Oxford fees, living allowance (£18,180/year), and return airfare.',
+    scholarshipDetails: 'Fully funded: Oxford fees, living allowance (Â£18,180/year), and return airfare.',
     eligibleFields: [] as any[],
     minYearOfStudy: 4,
     maxYearOfStudy: 6,
@@ -269,7 +269,7 @@ const opportunities = [
   },
 
   {
-    title: 'Harvard HPAIR — Asia Pacific Student Leaders Conference',
+    title: 'Harvard HPAIR â€” Asia Pacific Student Leaders Conference',
     description: 'Harvard Project for Asian and International Relations (HPAIR) brings together 600+ student leaders from 50+ countries for a week-long conference in Asia. Focus: leadership, international policy, business, and technology. Partial need-based financial aid available.',
     type: 'EVENT' as const,
     url: 'https://www.hpair.org/',
@@ -288,11 +288,11 @@ const opportunities = [
     sourceId: 'curated-harvard-hpair',
   },
 
-  // ── EXCHANGE PROGRAMS ──────────────────────────────────────────────────────
+  // â”€â”€ EXCHANGE PROGRAMS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   {
-    title: 'IAESTE Internship Exchange — International Science & Engineering',
-    description: 'IAESTE (International Association for the Exchange of Students for Technical Experience) places science, engineering, and technology students in paid work placements abroad. 80+ countries, 6–12 week programs. Free to apply; host company covers living costs.',
+    title: 'IAESTE Internship Exchange â€” International Science & Engineering',
+    description: 'IAESTE (International Association for the Exchange of Students for Technical Experience) places science, engineering, and technology students in paid work placements abroad. 80+ countries, 6â€“12 week programs. Free to apply; host company covers living costs.',
     type: 'EXCHANGE' as const,
     url: 'https://www.iaeste.org/',
     organizer: 'IAESTE',
@@ -310,8 +310,8 @@ const opportunities = [
   },
 
   {
-    title: 'Fondazione Intercultura — AFS Exchange Program',
-    description: 'Intercultura/AFS offre scambi culturali da 1 mese a 1 anno in oltre 50 paesi. Programmi high school e undergraduate, con borse di studio parziali e totali offerte da enti pubblici e privati. Uno dei programmi di scambio più longevi e riconosciuti al mondo.',
+    title: 'Fondazione Intercultura â€” AFS Exchange Program',
+    description: 'Intercultura/AFS offre scambi culturali da 1 mese a 1 anno in oltre 50 paesi. Programmi high school e undergraduate, con borse di studio parziali e totali offerte da enti pubblici e privati. Uno dei programmi di scambio piÃ¹ longevi e riconosciuti al mondo.',
     type: 'EXCHANGE' as const,
     url: 'https://www.intercultura.it/',
     organizer: 'Fondazione Intercultura / AFS Italia',
@@ -328,11 +328,11 @@ const opportunities = [
     sourceId: 'curated-intercultura-afs',
   },
 
-  // ── RESEARCH PROGRAMS ──────────────────────────────────────────────────────
+  // â”€â”€ RESEARCH PROGRAMS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   {
     title: 'CERN Summer Student Programme',
-    description: "CERN's Summer Student Programme offers undergraduate students in physics, computing, and engineering the opportunity to work at the world's largest particle physics laboratory in Geneva. 8–13 weeks, fully paid (CHF 91/day + housing). Applications open November–January.",
+    description: "CERN's Summer Student Programme offers undergraduate students in physics, computing, and engineering the opportunity to work at the world's largest particle physics laboratory in Geneva. 8â€“13 weeks, fully paid (CHF 91/day + housing). Applications open Novemberâ€“January.",
     type: 'RESEARCH' as const,
     url: 'https://home.cern/summer-student-programme',
     organizer: 'CERN',
@@ -355,7 +355,7 @@ const opportunities = [
   },
 
   {
-    title: 'EMBO Short-Term Fellowship — Molecular Biology',
+    title: 'EMBO Short-Term Fellowship â€” Molecular Biology',
     description: 'EMBO Short-Term Fellowships fund visits of up to 3 months to European molecular biology labs for collaborative research. Open to PhD students and postdocs. Covers travel and living expenses. Applications accepted year-round.',
     type: 'RESEARCH' as const,
     url: 'https://www.embo.org/funding/fellowships-awards-and-grants/short-term-fellowships/',
@@ -366,7 +366,7 @@ const opportunities = [
     durationDays: 60,
     cost: 0,
     hasScholarship: true,
-    scholarshipDetails: 'Covers travel and living costs for 1–3 months abroad.',
+    scholarshipDetails: 'Covers travel and living costs for 1â€“3 months abroad.',
     eligibleFields: ['LIFE_SCIENCES', 'MEDICINE'] as any[],
     minYearOfStudy: 4,
     maxYearOfStudy: 6,
@@ -375,8 +375,8 @@ const opportunities = [
   },
 
   {
-    title: 'DAAD Research Internship in Science & Engineering (RISE) — Germany',
-    description: 'DAAD RISE places undergraduate students from abroad in research internships at top German universities and institutes for 6–12 weeks during summer. Fields: biology, chemistry, physics, CS, and engineering. Stipend €650–850/month.',
+    title: 'DAAD Research Internship in Science & Engineering (RISE) â€” Germany',
+    description: 'DAAD RISE places undergraduate students from abroad in research internships at top German universities and institutes for 6â€“12 weeks during summer. Fields: biology, chemistry, physics, CS, and engineering. Stipend â‚¬650â€“850/month.',
     type: 'RESEARCH' as const,
     url: 'https://www.daad.de/rise/en/',
     organizer: 'DAAD',
@@ -388,7 +388,7 @@ const opportunities = [
     durationDays: 56,
     cost: 0,
     hasScholarship: true,
-    scholarshipDetails: 'Stipend of €650–850/month plus travel allowance.',
+    scholarshipDetails: 'Stipend of â‚¬650â€“850/month plus travel allowance.',
     stipend: 700,
     eligibleFields: ['LIFE_SCIENCES', 'PHYSICAL_SCIENCES', 'COMPUTER_SCIENCE', 'ENGINEERING'] as any[],
     minYearOfStudy: 2,
@@ -397,11 +397,11 @@ const opportunities = [
     sourceId: 'curated-daad-rise',
   },
 
-  // ── VOLUNTEERING ───────────────────────────────────────────────────────────
+  // â”€â”€ VOLUNTEERING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   {
-    title: 'ESN Erasmus Student Network — Volunteer Coordinator',
-    description: "ESN è la più grande rete studentesca europea, presente in 40 paesi e 1.000+ sezioni universitarie. Diventare volontario o coordinatore locale permette di organizzare eventi internazionali, supportare studenti Erasmus, e sviluppare competenze di leadership e gestione di progetti.",
+    title: 'ESN Erasmus Student Network â€” Volunteer Coordinator',
+    description: "ESN Ã¨ la piÃ¹ grande rete studentesca europea, presente in 40 paesi e 1.000+ sezioni universitarie. Diventare volontario o coordinatore locale permette di organizzare eventi internazionali, supportare studenti Erasmus, e sviluppare competenze di leadership e gestione di progetti.",
     type: 'VOLUNTEERING' as const,
     url: 'https://esn.org/volunteer',
     organizer: 'Erasmus Student Network',
@@ -418,8 +418,8 @@ const opportunities = [
   },
 
   {
-    title: 'European Solidarity Corps — Volunteering Abroad (EU)',
-    description: "Il European Solidarity Corps finanzia periodi di volontariato da 2 settimane a 12 mesi in tutta Europa per giovani 18–30 anni. Copre viaggio, alloggio, vitto e pocket money. Ideale per chi vuole un'esperienza all'estero in ambito sociale, ambientale o educativo.",
+    title: 'European Solidarity Corps â€” Volunteering Abroad (EU)',
+    description: "Il European Solidarity Corps finanzia periodi di volontariato da 2 settimane a 12 mesi in tutta Europa per giovani 18â€“30 anni. Copre viaggio, alloggio, vitto e pocket money. Ideale per chi vuole un'esperienza all'estero in ambito sociale, ambientale o educativo.",
     type: 'VOLUNTEERING' as const,
     url: 'https://youth.europa.eu/solidarity/esc/volunteering_en',
     organizer: 'European Commission',
@@ -428,7 +428,7 @@ const opportunities = [
     format: 'IN_PERSON' as const,
     cost: 0,
     hasScholarship: true,
-    scholarshipDetails: 'Fully funded: travel, accommodation, meals, and monthly pocket money (€150–€200).',
+    scholarshipDetails: 'Fully funded: travel, accommodation, meals, and monthly pocket money (â‚¬150â€“â‚¬200).',
     eligibleFields: [] as any[],
     minYearOfStudy: 1,
     maxYearOfStudy: 6,
@@ -436,11 +436,11 @@ const opportunities = [
     sourceId: 'curated-european-solidarity-corps',
   },
 
-  // ── COMPETITION ────────────────────────────────────────────────────────────
+  // â”€â”€ COMPETITION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   {
-    title: 'Model United Nations — WFUNA International MUN',
-    description: "WIMUN (World Federation of United Nations Associations) è la simulazione delle Nazioni Unite più riconosciuta a livello internazionale. Studenti universitari rappresentano paesi in commissioni ONU, dibattendo risoluzioni su crisi globali. Si tiene a New York e Ginevra.",
+    title: 'Model United Nations â€” WFUNA International MUN',
+    description: "WIMUN (World Federation of United Nations Associations) Ã¨ la simulazione delle Nazioni Unite piÃ¹ riconosciuta a livello internazionale. Studenti universitari rappresentano paesi in commissioni ONU, dibattendo risoluzioni su crisi globali. Si tiene a New York e Ginevra.",
     type: 'COMPETITION' as const,
     url: 'https://www.wfuna.org/wimun',
     organizer: 'WFUNA',
@@ -459,11 +459,11 @@ const opportunities = [
   },
 
   {
-    title: "L'Oréal Brandstorm — Global Innovation Competition",
-    description: "L'Oréal Brandstorm è una competizione internazionale di innovazione e marketing aperta a team di 2–3 studenti universitari. I team sviluppano un concept di prodotto/servizio per uno dei brand L'Oréal. I vincitori nazionali accedono alla finale globale a Parigi con mentoship e premi.",
+    title: "L'OrÃ©al Brandstorm â€” Global Innovation Competition",
+    description: "L'OrÃ©al Brandstorm Ã¨ una competizione internazionale di innovazione e marketing aperta a team di 2â€“3 studenti universitari. I team sviluppano un concept di prodotto/servizio per uno dei brand L'OrÃ©al. I vincitori nazionali accedono alla finale globale a Parigi con mentoship e premi.",
     type: 'COMPETITION' as const,
     url: 'https://brandstorm.loreal.com/',
-    organizer: "L'Oréal",
+    organizer: "L'OrÃ©al",
     location: 'Paris, France',
     city: 'Paris',
     country: 'FR',
@@ -493,7 +493,7 @@ async function run() {
       else updated++;
       logger.info(`[Seed] ${result.action}: ${opp.title.slice(0, 60)}`);
     } catch (err) {
-      logger.error(`[Seed] Failed: ${opp.title.slice(0, 60)} — ${err}`);
+      logger.error(`[Seed] Failed: ${opp.title.slice(0, 60)} â€” ${err}`);
       failed++;
     }
   }
@@ -503,3 +503,4 @@ async function run() {
 }
 
 run();
+

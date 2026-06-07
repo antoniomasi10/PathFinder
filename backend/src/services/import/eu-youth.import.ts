@@ -108,9 +108,9 @@ function mapType(hit: EYPHit['_source']): OpportunityType {
   const title = (hit.title || '').toLowerCase();
 
   if (activityTypes.includes('volunteering') || title.includes('volunt')) return 'EXTRACURRICULAR';
-  if (activityTypes.includes('traineeship') || title.includes('trainee') || title.includes('stage')) return 'STAGE';
+  if (activityTypes.includes('traineeship') || title.includes('trainee') || title.includes('stage')) return 'TIROCINIO';
   if (activityTypes.includes('solidarity') || title.includes('solidarity')) return 'EXTRACURRICULAR';
-  if (title.includes('internship') || title.includes('tirocinio')) return 'INTERNSHIP';
+  if (title.includes('internship') || title.includes('tirocinio')) return 'TIROCINIO';
   return 'EXTRACURRICULAR'; // ESC is primarily volunteering/solidarity
 }
 

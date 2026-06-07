@@ -86,31 +86,31 @@ const ENGLISH_ORDER: Record<EnglishLevel, number> = {
 
 // Interest → preferred opportunity types (ordered: first = top match)
 const INTEREST_TYPE_MAP: Record<string, OpportunityType[]> = {
-  tech:               ['INTERNSHIP', 'STAGE', 'HACKATHON', 'BOOTCAMP', 'RESEARCH'],
-  business:           ['FELLOWSHIP', 'INTERNSHIP', 'SUMMER_PROGRAM', 'COMPETITION', 'EVENT'],
+  tech:               ['TIROCINIO', 'HACKATHON', 'BOOTCAMP', 'RESEARCH'],
+  business:           ['FELLOWSHIP', 'TIROCINIO', 'SUMMER_PROGRAM', 'COMPETITION', 'EVENT'],
   creative:           ['EXTRACURRICULAR', 'EVENT', 'BOOTCAMP'],
   sport:              ['EXTRACURRICULAR', 'EVENT', 'COMPETITION'],
-  general:            ['STAGE', 'EVENT', 'EXTRACURRICULAR'],
+  general:            ['TIROCINIO', 'EVENT', 'EXTRACURRICULAR'],
   // onboarding InterestSelection values
-  ai_ml:              ['RESEARCH', 'HACKATHON', 'INTERNSHIP', 'BOOTCAMP'],
-  web_development:    ['INTERNSHIP', 'STAGE', 'HACKATHON', 'BOOTCAMP'],
-  data_science:       ['RESEARCH', 'HACKATHON', 'INTERNSHIP', 'COMPETITION'],
-  mobile_dev:         ['INTERNSHIP', 'STAGE', 'HACKATHON', 'BOOTCAMP'],
+  ai_ml:              ['RESEARCH', 'HACKATHON', 'TIROCINIO', 'BOOTCAMP'],
+  web_development:    ['TIROCINIO', 'HACKATHON', 'BOOTCAMP'],
+  data_science:       ['RESEARCH', 'HACKATHON', 'TIROCINIO', 'COMPETITION'],
+  mobile_dev:         ['TIROCINIO', 'HACKATHON', 'BOOTCAMP'],
   ricerca_scientifica:['RESEARCH', 'FELLOWSHIP', 'EXCHANGE', 'SUMMER_PROGRAM'],
   business_strategy:  ['FELLOWSHIP', 'COMPETITION', 'SUMMER_PROGRAM', 'EVENT'],
-  finance:            ['INTERNSHIP', 'FELLOWSHIP', 'COMPETITION'],
+  finance:            ['TIROCINIO', 'FELLOWSHIP', 'COMPETITION'],
   sustainability:     ['VOLUNTEERING', 'RESEARCH', 'EXCHANGE', 'FELLOWSHIP'],
-  marketing:          ['INTERNSHIP', 'STAGE', 'EVENT'],
+  marketing:          ['TIROCINIO', 'EVENT'],
   law_policy:         ['FELLOWSHIP', 'COMPETITION', 'EVENT', 'EXCHANGE'],
-  healthcare:         ['RESEARCH', 'VOLUNTEERING', 'EXCHANGE', 'INTERNSHIP'],
+  healthcare:         ['RESEARCH', 'VOLUNTEERING', 'EXCHANGE', 'TIROCINIO'],
 };
 
 // Cluster tag → preferred opportunity types (ordered: first = top match)
 const CLUSTER_TYPE_MAP: Record<string, OpportunityType[]> = {
-  Analista:     ['INTERNSHIP', 'STAGE', 'RESEARCH', 'HACKATHON', 'COMPETITION'],
+  Analista:     ['TIROCINIO', 'RESEARCH', 'HACKATHON', 'COMPETITION'],
   Creativo:     ['EXTRACURRICULAR', 'EVENT', 'BOOTCAMP'],
-  Leader:       ['FELLOWSHIP', 'INTERNSHIP', 'COMPETITION', 'EVENT', 'SUMMER_PROGRAM'],
-  Imprenditore: ['FELLOWSHIP', 'STAGE', 'SUMMER_PROGRAM', 'COMPETITION', 'EVENT'],
+  Leader:       ['FELLOWSHIP', 'TIROCINIO', 'COMPETITION', 'EVENT', 'SUMMER_PROGRAM'],
+  Imprenditore: ['FELLOWSHIP', 'TIROCINIO', 'SUMMER_PROGRAM', 'COMPETITION', 'EVENT'],
   Sociale:      ['EXTRACURRICULAR', 'EVENT', 'VOLUNTEERING', 'EXCHANGE'],
   Explorer:     ['EXCHANGE', 'SUMMER_PROGRAM', 'EVENT', 'RESEARCH', 'FELLOWSHIP'],
 };
@@ -163,8 +163,7 @@ interface ScoringProfile {
 // causing too many opportunities to be clamped at 100% with any tag overlap.
 const SCORING_PROFILES: Record<OpportunityType, ScoringProfile> = {
   //                        interest cluster gpa english relocate year | field cost  dead  loc
-  STAGE:          { interest:24, cluster:20, gpa:12, english:12, relocate:8,  year:4,  fieldMatchBonus:0,  costBonus:0,  deadlineUrgencyBonus:0,  locationMatchBonus:0  },
-  INTERNSHIP:     { interest:24, cluster:20, gpa:12, english:12, relocate:8,  year:4,  fieldMatchBonus:0,  costBonus:0,  deadlineUrgencyBonus:0,  locationMatchBonus:0  },
+  TIROCINIO:      { interest:24, cluster:20, gpa:12, english:12, relocate:8,  year:4,  fieldMatchBonus:0,  costBonus:0,  deadlineUrgencyBonus:0,  locationMatchBonus:0  },
   EXTRACURRICULAR:{ interest:20, cluster:20, gpa:4,  english:8,  relocate:8,  year:4,  fieldMatchBonus:4,  costBonus:4,  deadlineUrgencyBonus:0,  locationMatchBonus:8  },
   EVENT:          { interest:16, cluster:8,  gpa:0,  english:4,  relocate:8,  year:0,  fieldMatchBonus:8,  costBonus:12, deadlineUrgencyBonus:8,  locationMatchBonus:16 },
   FELLOWSHIP:     { interest:16, cluster:16, gpa:16, english:16, relocate:8,  year:4,  fieldMatchBonus:0,  costBonus:0,  deadlineUrgencyBonus:4,  locationMatchBonus:0  },
@@ -293,7 +292,7 @@ export function scoreOpportunity(
   opportunity: Opportunity,
   skills?: UserSkills | null,
 ): number {
-  const p = SCORING_PROFILES[opportunity.type] ?? SCORING_PROFILES.INTERNSHIP;
+  const p = SCORING_PROFILES[opportunity.type] ?? SCORING_PROFILES.TIROCINIO;
   let score = 0;
 
   // 1. Primary interest → opportunity type
@@ -928,7 +927,7 @@ export async function getHybridMatchedOpportunitiesFull(
     relocFilterNoEmbed = noRelocClause;
   }
 
-  // Hard filter: senior/experienced roles that leak under INTERNSHIP/STAGE tagging.
+  // Hard filter: senior/experienced roles that leak under TIROCINIO tagging.
   // We mirror isSeniorRole() semantics: senior pattern triggers exclusion UNLESS a safe
   // pattern (intern/junior/trainee/...) is also present. The "years of experience" pattern
   // is always disqualifying.
@@ -1379,7 +1378,7 @@ function getMatchReason(profile: any, user: any, opp: any, skills?: UserSkills |
   }
 
   // Interest/cluster generic reasons (lower priority)
-  if (profile.primaryInterest === 'tech' && (opp.type === 'INTERNSHIP' || opp.type === 'STAGE')) {
+  if (profile.primaryInterest === 'tech' && opp.type === 'TIROCINIO') {
     reasons.push({ priority: 4, text: 'In linea con i tuoi interessi tech' });
   }
   if (profile.primaryInterest === 'business' && opp.type === 'FELLOWSHIP') {

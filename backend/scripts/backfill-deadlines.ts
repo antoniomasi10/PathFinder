@@ -8,7 +8,7 @@
  *   npx ts-node --transpile-only scripts/backfill-deadlines.ts
  *
  * Safe to run multiple times — only processes records where deadline IS NULL.
- * INTERNSHIP and STAGE are included: the AI returns null if no deadline is in the text.
+ * TIROCINIO is included: the AI returns null if no deadline is in the text.
  */
 
 import * as dotenv from 'dotenv';

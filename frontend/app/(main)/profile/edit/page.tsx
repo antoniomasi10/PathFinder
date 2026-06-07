@@ -66,7 +66,7 @@ export default function EditProfilePage() {
     setError('');
     setSaving(true);
     try {
-      await api.patch('/profile/me', {
+      const { data: updated } = await api.patch('/profile/me', {
         name: name.trim(),
         surname: surname.trim(),
         bio,
@@ -74,8 +74,8 @@ export default function EditProfilePage() {
         yearOfStudy: year,
         ...(avatarPreview && { avatar: avatarPreview }),
       });
-      if (avatarPreview && user) {
-        setUser({ ...user, avatar: avatarPreview });
+      if (user) {
+        setUser({ ...user, avatar: updated?.avatar ?? user.avatar });
       }
       router.back();
       router.refresh();

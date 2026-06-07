@@ -1,11 +1,10 @@
 const TYPE_COLORS: Record<string, string> = {
-  internship:      '#bcbcff',
+  tirocinio:       '#bcbcff',
   summership:      '#c2e8ff',
   'summer program':'#ebe0f4',
   'summer school': '#ebe0f4',
   event:           '#f1f4e0',
   hackathon:       '#e0f4e1',
-  stage:           '#f4e0e8',
   extracurricular: '#f4e8e0',
   fellowship:      '#f4e0f1',
   competition:     '#f4e0e0',

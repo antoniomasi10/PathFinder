@@ -1,5 +1,5 @@
 /**
- * One-shot backfill: populates contextualizedSkills for active STAGE/INTERNSHIP
+ * One-shot backfill: populates contextualizedSkills for active TIROCINIO
  * opportunities that have an empty contextualizedSkills array.
  *
  * Run with: npx ts-node --transpile-only src/scripts/backfillContextualizedSkills.ts
@@ -22,7 +22,7 @@ async function main() {
 
   const opps = await prisma.opportunity.findMany({
     where: {
-      type: { in: ['STAGE', 'INTERNSHIP'] },
+      type: { in: ['TIROCINIO'] },
       contextualizedSkills: { isEmpty: true },
       OR: [
         { expiresAt: null },
@@ -34,7 +34,7 @@ async function main() {
     orderBy: { postedAt: 'desc' },
   });
 
-  console.log(`[backfillContextualizedSkills] Found ${opps.length} STAGE/INTERNSHIP opportunities to process`);
+  console.log(`[backfillContextualizedSkills] Found ${opps.length} TIROCINIO opportunities to process`);
 
   let updated = 0;
   let skipped = 0;
