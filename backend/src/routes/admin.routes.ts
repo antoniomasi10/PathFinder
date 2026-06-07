@@ -4,6 +4,9 @@ import { adminMiddleware } from '../middleware/admin';
 import prisma from '../lib/prisma';
 import { logSecurityEvent } from '../utils/securityLogger';
 import { createNotification } from '../services/notification.service';
+import { runStructuredContentBatch } from '../services/structuredContentJob';
+import { backfillContextualizedSkillsBoot } from '../services/ai/opportunityParser';
+import { Prisma } from '@prisma/client';
 
 const router = Router();
 const adminAuth = [verifiedMiddleware, adminMiddleware];
@@ -111,6 +114,47 @@ router.patch('/users/:id/role', ...adminAuth, async (req: Request, res: Response
     );
 
     res.json(updated);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/backfill/status — count opportunities missing AI-generated fields
+router.get('/backfill/status', ...adminAuth, async (_req: Request, res: Response) => {
+  try {
+    const now = new Date();
+    const activeFilter = { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] };
+
+    const [missingStructured, missingContextualized] = await Promise.all([
+      prisma.opportunity.count({
+        where: { structuredContent: { equals: Prisma.DbNull }, ...activeFilter },
+      }),
+      prisma.opportunity.count({
+        where: { type: 'TIROCINIO', contextualizedSkills: { isEmpty: true }, ...activeFilter },
+      }),
+    ]);
+
+    res.json({ missingStructuredContent: missingStructured, missingContextualizedSkills: missingContextualized });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/backfill/structured-content — trigger immediate backfill (up to 5000)
+router.post('/backfill/structured-content', ...adminAuth, async (_req: Request, res: Response) => {
+  try {
+    const result = await runStructuredContentBatch(5000);
+    res.json({ ok: true, ...result });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/backfill/contextualized-skills — trigger immediate contextualizedSkills backfill (up to 5000)
+router.post('/backfill/contextualized-skills', ...adminAuth, async (_req: Request, res: Response) => {
+  try {
+    await backfillContextualizedSkillsBoot(5000);
+    res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
