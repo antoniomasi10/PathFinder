@@ -96,7 +96,7 @@ async function sendDailyOpportunityNotifications() {
       ? `${bestOpp.title} di ${source} — la tua opportunità di oggi`
       : `${bestOpp.title} — la tua opportunità di oggi`;
 
-    await createNotification(user.id, 'NEW_OPPORTUNITY', content, '/opportunities', '💼', {
+    await createNotification(user.id, 'NEW_OPPORTUNITY', content, `/opportunities/${bestOpp.id}`, '💼', {
       opportunityId: bestOpp.id,
       matchScore: bestScore,
     });
