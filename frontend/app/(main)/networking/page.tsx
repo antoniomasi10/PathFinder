@@ -909,6 +909,11 @@ export default function NetworkingPage() {
       if (skillArea) profileParams.set('coreSkillArea', skillArea);
       const { data } = await api.get(`/profile/search?${profileParams.toString()}`);
       setSearchProfileResults(data);
+      const profileIds = (data as { id: string }[]).map((p) => p.id).filter((id) => id !== user?.id);
+      if (profileIds.length > 0) {
+        const { data: statuses } = await api.post('/friends/status/batch', { userIds: profileIds });
+        setConnectionStatuses(prev => ({ ...prev, ...statuses }));
+      }
     } catch (err) {
       // silent
     } finally {
