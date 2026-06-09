@@ -38,9 +38,21 @@ export default function RootLayout({
   return (
     <html lang="it">
       <head>
+        <title>COhA — University is not enough</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
         <meta name="theme-color" content="#4F46E5" />
-        <meta name="description" content="COhA - Trova il tuo percorso universitario ideale" />
+        <meta name="description" content="University is not enough — COhA ti connette con opportunità, studenti e percorsi oltre l'università." />
+        {/* Open Graph — WhatsApp / social preview */}
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="COhA" />
+        <meta property="og:url" content="https://cohaapp.com/" />
+        <meta property="og:title" content="COhA — University is not enough" />
+        <meta property="og:description" content="University is not enough — COhA ti connette con opportunità, studenti e percorsi oltre l'università." />
+        <meta property="og:image" content="https://cohaapp.com/logo-coha-swash.svg" />
+        {/* Twitter / X card */}
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="COhA — University is not enough" />
+        <meta name="twitter:description" content="University is not enough — COhA ti connette con opportunità, studenti e percorsi oltre l'università." />
         <link rel="icon" type="image/svg+xml" href="/icon.svg" />
         <link rel="shortcut icon" href="/icon.svg" />
 
