@@ -875,11 +875,14 @@ export default function NetworkingPage() {
     setSuggestionsLoading(true);
     try {
       const { data } = await api.get('/profile/suggestions');
-      setSuggestedProfiles(data);
-      const ids = data.map((u: { id: string }) => u.id);
+      const ids = (data as { id: string }[]).map((u) => u.id);
       if (ids.length > 0) {
         const { data: statuses } = await api.post('/friends/status/batch', { userIds: ids });
         setConnectionStatuses(prev => ({ ...prev, ...statuses }));
+        // Filter out already-accepted connections (backend cache may be stale)
+        setSuggestedProfiles(data.filter((u: { id: string }) => statuses[u.id]?.status !== 'ACCEPTED'));
+      } else {
+        setSuggestedProfiles(data);
       }
     } catch (err) {
       // silent;
@@ -1212,7 +1215,7 @@ export default function NetworkingPage() {
                     ))}
                   </div>
                 ) : suggestedProfiles.length === 0 ? (
-                  <p style={{ color: '#acb0ce', fontFamily: 'var(--font-plus-jakarta)', fontSize: 13 }}>
+                  <p style={{ color: '#acb0ce', fontFamily: 'var(--font-plus-jakarta)', fontSize: 13, paddingLeft: 16 }}>
                     Nessun profilo suggerito al momento
                   </p>
                 ) : (
@@ -1262,6 +1265,16 @@ export default function NetworkingPage() {
                               <p style={{ fontSize: 10, color: '#747995', lineHeight: '14px', marginTop: 2, fontFamily: 'var(--font-plus-jakarta)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                                 {person.courseOfStudy}
                               </p>
+                              {connectionStatuses[person.id]?.status === 'PENDING' ? (
+                                <p style={{ fontSize: 10, color: '#acb0ce', marginTop: 6, textAlign: 'center', fontFamily: 'var(--font-plus-jakarta)' }}>Inviato</p>
+                              ) : (
+                                <button
+                                  onClick={async (e) => { e.stopPropagation(); await sendFriendRequest(person.id); }}
+                                  style={{ marginTop: 6, width: '100%', fontSize: 11, fontWeight: 600, color: '#4a4bd7', backgroundColor: '#f3f2ff', border: '1px solid #e4e7ff', padding: '5px 0', borderRadius: 9999, cursor: 'pointer', fontFamily: 'var(--font-plus-jakarta)' }}
+                                >
+                                  Connetti
+                                </button>
+                              )}
                             </div>
                           </button>
                         );
