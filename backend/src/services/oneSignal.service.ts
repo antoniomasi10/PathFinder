@@ -5,6 +5,34 @@ const APP_ID = process.env.ONESIGNAL_APP_ID || '';
 const REST_API_KEY = process.env.ONESIGNAL_REST_API_KEY || '';
 const BASE_URL = 'https://onesignal.com/api/v1';
 
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '';
+const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'info@cohaapp.com';
+const SENDGRID_FROM_NAME = process.env.SENDGRID_FROM_NAME || 'COhA';
+
+function isSendGridConfigured(): boolean {
+  return Boolean(SENDGRID_API_KEY);
+}
+
+async function sendViaSendGrid(toEmail: string, subject: string, html: string): Promise<void> {
+  const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${SENDGRID_API_KEY}`,
+    },
+    body: JSON.stringify({
+      personalizations: [{ to: [{ email: toEmail }] }],
+      from: { email: SENDGRID_FROM_EMAIL, name: SENDGRID_FROM_NAME },
+      subject,
+      content: [{ type: 'text/html', value: html }],
+    }),
+  });
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`SendGrid API error ${response.status}: ${text}`);
+  }
+}
+
 export function isOneSignalConfigured(): boolean {
   return Boolean(APP_ID && REST_API_KEY);
 }
@@ -66,6 +94,16 @@ export async function registerEmailPlayer(userId: string, email: string): Promis
 }
 
 export async function sendEmailToUser(userId: string, subject: string, html: string): Promise<void> {
+  if (isSendGridConfigured()) {
+    try {
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+      if (!user?.email) return;
+      await sendViaSendGrid(user.email, subject, html);
+    } catch (err) {
+      logger.warn('SendGrid sendEmailToUser failed', { userId, error: String(err) });
+    }
+    return;
+  }
   if (!isOneSignalConfigured()) return;
   try {
     const user = await prisma.user.findUnique({
@@ -85,7 +123,26 @@ export async function sendEmailToUser(userId: string, subject: string, html: str
 }
 
 export async function sendEmailToUsers(userIds: string[], subject: string, html: string): Promise<void> {
-  if (!isOneSignalConfigured() || userIds.length === 0) return;
+  if (userIds.length === 0) return;
+
+  if (isSendGridConfigured()) {
+    const users = await prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { email: true },
+    });
+    await Promise.allSettled(
+      users.map(async (u) => {
+        try {
+          await sendViaSendGrid(u.email, subject, html);
+        } catch (err) {
+          logger.warn('SendGrid sendEmailToUsers failed for user', { email: u.email, error: String(err) });
+        }
+      })
+    );
+    return;
+  }
+
+  if (!isOneSignalConfigured()) return;
   try {
     const users = await prisma.user.findMany({
       where: { id: { in: userIds }, oneSignalEmailPlayerId: { not: null } },

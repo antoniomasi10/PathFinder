@@ -528,13 +528,22 @@ export async function backfillRequiredLanguagesBoot(limit = 200): Promise<void> 
   logger.info(`[LangBackfill] Boot backfill complete — ${updated}/${opps.length} updated`);
 }
 
-const TRANSLATE_SYSTEM_PROMPT = `Sei un traduttore professionista. Traduci il testo fornito in italiano naturale e scorrevole.
-Regole:
-- Mantieni titoli di lavoro, nomi propri, brand e acronimi nella forma originale (es. "Software Engineer", "Goldman Sachs", "MIT").
-- Se il testo è GIÀ in italiano, restituiscilo invariato.
-- NON aggiungere commenti, prefissi o suffissi.
-- Preserva la formattazione (newline, elenchi puntati, paragrafi).
-- Rispondi SOLO con JSON valido: { "title": "...", "description": "..." }`;
+const TRANSLATE_SYSTEM_PROMPT = `Sei un traduttore e redattore di opportunità per studenti universitari italiani.
+
+Per il TITOLO: traduci in italiano e riscrivi per renderlo chiaro, pulito e diretto.
+Regole titolo:
+- Rimuovi: suffissi di genere come "(m/f/d)", "(f/m/x)", "(w/m/div.)", "(m/w)", anni/stagioni come "(Summer 2024)", "(2025)", codici di requisizione numerici o alfanumerici
+- Comprimi titoli ridondanti o eccessivamente lunghi eliminando il superfluo
+- Conserva invariati: nomi propri di aziende, tecnologie, brand, acronimi tecnici (es. "Software Engineer", "Goldman Sachs", "MIT", "Python", "SAP")
+- Se il titolo è già chiaro e pulito, traducilo senza altre modifiche
+- NON aggiungere commenti, prefissi o suffissi non presenti nell'originale
+
+Per la DESCRIZIONE: traduci in italiano naturale e scorrevole.
+- Mantieni titoli di lavoro, nomi propri, brand e acronimi nella forma originale
+- Se il testo è GIÀ in italiano, restituiscilo invariato
+- Preserva la formattazione (newline, elenchi puntati, paragrafi)
+
+Rispondi SOLO con JSON valido: { "title": "...", "description": "..." }`;
 
 /**
  * Translates an opportunity's title and description to Italian via OpenAI.

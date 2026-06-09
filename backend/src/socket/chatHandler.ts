@@ -256,7 +256,7 @@ export function setupChatSocket(io: Server) {
           const notifContent = msgType === 'opportunity'
             ? `${message.sender.name} ti ha condiviso un'opportunità`
             : `${message.sender.name}: ${content.slice(0, 60)}${content.length > 60 ? '…' : ''}`;
-          createNotification(receiverId, 'NEW_MESSAGE', notifContent, '/messages', '💬').catch(() => {});
+          createNotification(receiverId, 'NEW_MESSAGE', notifContent, `/networking?openChat=${userId}&name=${encodeURIComponent(message.sender.name)}`, '💬', { senderId: userId }).catch(() => {});
         }
       } catch (err) {
         logger.error('send_message failed', { error: String(err) });

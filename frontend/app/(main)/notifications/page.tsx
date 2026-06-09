@@ -24,12 +24,12 @@ interface Notification {
 
 function resolveNavTarget(notif: Notification): string | null {
   const { type, data, linkTo } = notif;
-  if (type === 'OPPORTUNITY_DEADLINE' || type === 'NEW_OPPORTUNITY') {
+  if (type === 'NEW_OPPORTUNITY') {
     const id = data?.opportunityId;
-    if (id) {
-      sessionStorage.setItem('openSavedOpp', id);
-      return '/profile';
-    }
+    if (id) return `/opportunities/${id}`;
+  }
+  if (type === 'OPPORTUNITY_DEADLINE') {
+    return '/profile/saved-opportunities';
   }
   if (type === 'POST_LIKE' || type === 'POST_COMMENT' || type === 'COMMENT_REPLY') {
     const id = data?.postId;
