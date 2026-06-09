@@ -57,6 +57,12 @@ export default function ShareSheet({ isOpen, onClose, opportunityId, opportunity
   }, [isOpen, handleClose]);
 
   useEffect(() => {
+    if (!mounted) return;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = ''; };
+  }, [mounted]);
+
+  useEffect(() => {
     if (!isOpen) return;
     setLoading(true);
     api.get('/friends')
