@@ -7,6 +7,7 @@ import posthog from 'posthog-js';
  * Adding a new event? Add it here so dashboards and code stay aligned.
  */
 export type EventName =
+  | 'signup_started'
   | 'signup_completed'
   | 'login_succeeded'
   | 'onboarding_completed'
@@ -20,7 +21,8 @@ export type EventName =
   | 'comment_added'
   | 'message_sent'
   | 'friend_request_sent'
-  | 'friend_request_accepted';
+  | 'friend_request_accepted'
+  | 'profile_viewed';
 
 let initialized = false;
 
