@@ -1,37 +1,20 @@
-'use client';
+import type { Metadata } from 'next';
+import LandingPage from '@/components/landing/LandingPage';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { getAccessToken } from '@/lib/api';
+export const metadata: Metadata = {
+  title: 'COhA - Tutte le opportunità in un posto solo',
+  description:
+    'Tirocini, summer school, scambi e borse sono sparsi su mille siti. COhA li raccoglie in un posto solo e ti mostra quelli giusti per te, con un punteggio di affinità.',
+  openGraph: {
+    title: 'COhA - Tutte le opportunità in un posto solo',
+    description:
+      'Smetti di controllare mille siti. COhA raccoglie le opportunità per studenti universitari e te le ordina per affinità.',
+    type: 'website',
+  },
+};
 
+// Marketing landing for visitors. AuthProvider redirects authenticated users
+// to /home (or /onboarding if their profile is incomplete) once the session refreshes.
 export default function RootPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const token = getAccessToken();
-      router.replace(token ? '/home' : '/login');
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [router]);
-
-  return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center font-jakarta"
-      style={{ background: '#fbf8ff' }}
-    >
-      <img
-        src="/logo-coha-swash.svg"
-        alt="COA"
-        style={{ width: 188, height: 113 }}
-        className="object-contain pointer-events-none"
-      />
-      <p
-        className="mt-2 text-[#595e78] text-center"
-        style={{ fontSize: 13.5, letterSpacing: '0.34px', fontFamily: 'var(--font-plus-jakarta)' }}
-      >
-        University is not enough
-      </p>
-    </div>
-  );
+  return <LandingPage />;
 }
