@@ -182,6 +182,52 @@
   }
 }
 
+/* ── Landing: company logo marquee ─────────────────────────────── */
+@keyframes coha-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.coha-marquee-track {
+  animation: coha-marquee 45s linear infinite;
+  will-change: transform;
+}
+.coha-marquee:hover .coha-marquee-track {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .coha-marquee-track { animation: none; }
+}
+
+/* ── Landing: brand text selection ─────────────────────────────── */
+.coha-landing ::selection {
+  background: rgba(97, 95, 226, 0.22);
+  color: #2c3149;
+}
+
+/* ── Landing: nav link underline ───────────────────────────────── */
+.coha-navlink {
+  position: relative;
+}
+.coha-navlink::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -5px;
+  height: 2px;
+  border-radius: 2px;
+  background: #615fe2;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.coha-navlink:hover::after {
+  transform: scaleX(1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .coha-navlink::after { transition: none; }
+}
+
 video.no-controls::-webkit-media-controls,
 video.no-controls::-webkit-media-controls-enclosure,
 video.no-controls::-webkit-media-controls-panel,
