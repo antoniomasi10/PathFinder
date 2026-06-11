@@ -52,19 +52,6 @@ export function LandingNav() {
             ))}
           </nav>
 
-          <div className="hidden items-center gap-2.5 lg:flex">
-            <a
-              href="/login"
-              className="px-2 text-[14.5px] font-semibold transition-colors"
-              style={{ color: C.ink }}
-            >
-              Accedi
-            </a>
-            <CTAButton href="/register" className="px-5 py-2.5 text-[14px]">
-              Inizia gratis
-            </CTAButton>
-          </div>
-
           <button
             type="button"
             aria-label="Apri menu"

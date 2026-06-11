@@ -363,7 +363,7 @@ function ProblemSection() {
  * and lands on the matching card column (right column of the 1200 grid).
  * lg+ only: below lg neither the funnel stage nor the two-column grid exist.
  */
-const THREAD_PATH = 'M 568 6 C 568 170, 900 100, 900 334';
+const THREAD_PATH = 'M 568 6 C 568 240, 900 160, 900 480';
 
 function FlowThread() {
   const reduce = useReducedMotion();
@@ -389,9 +389,9 @@ function FlowThread() {
   return (
     // negative margins let the thread live in the two sections' paddings;
     // z-10 keeps it above the matching section's opaque background
-    <div ref={ref} aria-hidden className="pointer-events-none relative z-10 -my-24 hidden lg:block">
-      <div className="mx-auto h-[340px] max-w-[1200px] px-8">
-        <svg viewBox="0 0 1136 340" preserveAspectRatio="none" className="h-full w-full overflow-visible">
+    <div ref={ref} aria-hidden className="pointer-events-none relative z-10 -mt-24 -mb-[236px] hidden lg:block">
+      <div className="mx-auto h-[480px] max-w-[1200px] px-8">
+        <svg viewBox="0 0 1136 480" preserveAspectRatio="none" className="h-full w-full overflow-visible">
           {/* soft halo under the crisp stroke, same comet language as the funnel pulses */}
           <motion.path
             d={THREAD_PATH}
@@ -545,7 +545,7 @@ function MatchingSection() {
           </div>
         </Reveal>
 
-        <Reveal delay={0.08} className="pt-7">
+        <Reveal delay={0.08} className="relative z-20 pt-7">
           <MatchingCard />
         </Reveal>
       </div>
@@ -954,7 +954,7 @@ const TEAM: Array<{ name: string; role: string; line: string; bg: string; ink: s
   {
     name: 'Antonio',
     role: 'Sviluppo',
-    line: 'Scrive il codice che tiene insieme tutto questo, dal matching alla chat.',
+    line: 'Trasforma la nostra visione in qualcosa di concreto, una riga di codice alla volta.',
     bg: '#eef1ff',
     ink: '#3f54c4',
   },
@@ -1003,6 +1003,12 @@ function AboutSection() {
           WebkitMaskImage: 'radial-gradient(46% 70% at 50% 32%, black 20%, transparent 75%)',
         }}
       />
+      {/* soften the seam with the section above: ease the tint + dots in from the page background */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[240px]"
+        style={{ background: `linear-gradient(180deg, ${C.bg} 0%, ${C.bg} 10%, transparent 100%)` }}
+      />
       <div className="relative mx-auto max-w-[900px] px-5 sm:px-8">
         <Reveal>
           <Heading
@@ -1031,7 +1037,8 @@ function AboutSection() {
             >
               <p className="text-[13px] font-semibold" style={{ color: C.faint }}>La visione</p>
               <p className="mt-3 text-[18px] font-medium leading-relaxed" style={{ color: C.ink }}>
-                Un’università in cui ogni studente sa cosa può fare, e fin dove può arrivare.
+                Che ogni studente possa trovare il suo percorso, eliminando le
+                divergenze di informazioni.
               </p>
             </div>
           </div>
