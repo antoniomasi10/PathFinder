@@ -116,7 +116,8 @@ export async function runWeeklyDigest(): Promise<void> {
             unsubscribeUrl: `${APP_URL}/profile#notifications`,
           });
 
-          await sendEmailToUser(user.id, subject, html);
+          const sentOk = await sendEmailToUser(user.id, subject, html);
+          if (!sentOk) { skipped++; return; }
           await logEmailSent(user.id, 'weekly_digest', week, year);
           sent++;
         } catch (err) {
@@ -194,6 +195,7 @@ export async function runExpiringAlert(): Promise<void> {
   const BATCH = 50;
   const entries = Array.from(byUser.entries());
   let sent = 0;
+  let failed = 0;
 
   for (let i = 0; i < entries.length; i += BATCH) {
     const batch = entries.slice(i, i + BATCH);
@@ -207,7 +209,8 @@ export async function runExpiringAlert(): Promise<void> {
             preferencesUrl: `${APP_URL}/profile#notifications`,
             unsubscribeUrl: `${APP_URL}/profile#notifications`,
           });
-          await sendEmailToUser(userId, subject, html);
+          const sentOk = await sendEmailToUser(userId, subject, html);
+          if (!sentOk) { failed++; return; }
           await logEmailSent(userId, 'expiring_alert');
           sent++;
         } catch (err) {
@@ -220,7 +223,7 @@ export async function runExpiringAlert(): Promise<void> {
     }
   }
 
-  logger.info('Expiring alert complete', { sent, total: byUser.size });
+  logger.info('Expiring alert complete', { sent, failed, total: byUser.size });
 }
 
 // ── Daily Opportunity ────────────────────────────────────────
@@ -293,7 +296,8 @@ export async function runDailyOpportunity(): Promise<void> {
             unsubscribeUrl: `${APP_URL}/profile#notifications`,
           });
 
-          await sendEmailToUser(user.id, subject, html);
+          const sentOk = await sendEmailToUser(user.id, subject, html);
+          if (!sentOk) { skipped++; return; }
           await logEmailSent(user.id, 'daily_opportunity');
           sent++;
         } catch (err) {
@@ -412,7 +416,8 @@ export async function runSpotRecommendation(): Promise<void> {
             unsubscribeUrl: `${APP_URL}/settings/security`,
           });
 
-          await sendEmailToUser(user.id, subject, html);
+          const sentOk = await sendEmailToUser(user.id, subject, html);
+          if (!sentOk) { skipped++; return; }
           await logEmailSent(user.id, 'spot_recommendation');
           sent++;
         } catch (err) {
