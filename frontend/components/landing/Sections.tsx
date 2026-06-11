@@ -1,9 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { motion, useReducedMotion, useInView, AnimatePresence } from 'framer-motion';
 import {
-  ChevronDown,
+  motion,
+  useReducedMotion,
+  useInView,
+  AnimatePresence,
+  useScroll,
+  useSpring,
+  useTransform,
+  useMotionValueEvent,
+} from 'framer-motion';
+import {
   Target,
   Compass,
   GraduationCap,
@@ -25,7 +33,7 @@ import {
   Bookmark,
   type LucideIcon,
 } from 'lucide-react';
-import { C, Reveal, CTAButton, GhostButton, cx, EASE_OUT, useCountUp, SWASH_PATH } from './shared';
+import { C, Reveal, CTAButton, cx, EASE_OUT, useCountUp, SWASH_PATH } from './shared';
 import { CohaLogo } from './CohaLogo';
 
 function ScoreCounter({ target, duration, className, style }: { target: number; duration?: number; className?: string; style?: React.CSSProperties }) {
@@ -333,8 +341,8 @@ function ProblemSection() {
         <Reveal>
           <Heading
             align="center"
-            title={<>Le opportunità sono ovunque. <span style={{ color: C.violet }}>Tranne in un posto solo.</span></>}
-            sub="Sito dell’ateneo, pagine delle aziende, newsletter, gruppi, bandi. Per non perderne una dovresti controllarli tutti, ogni giorno. Nessuno ha il tempo di farlo."
+            title={<>Le opportunità esistono. <span style={{ color: C.violet }}>Ma sono invisibili.</span></>}
+            sub="Sparse su decine di siti, newsletter e gruppi che conosce solo chi ha i contatti giusti. Chi ha il network trova tutto, gli altri no. Non per mancanza di talento: per mancanza di informazione."
             className="mx-auto !max-w-[40rem]"
           />
         </Reveal>
@@ -342,6 +350,77 @@ function ProblemSection() {
       <FunnelStage />
       <FunnelStack />
     </section>
+  );
+}
+
+/* ───────────────────────── Scroll-drawn thread ───────────────────────── */
+
+/**
+ * The thread that carries what the funnel collects down into the matching
+ * card. Unlike the in-view reveals, its stroke length is bound to scroll
+ * progress, so it draws (and un-draws) with the visitor's own movement,
+ * a comet head riding the tip. Starts under the COhA node (page center)
+ * and lands on the matching card column (right column of the 1200 grid).
+ * lg+ only: below lg neither the funnel stage nor the two-column grid exist.
+ */
+const THREAD_PATH = 'M 568 6 C 568 170, 900 100, 900 334';
+
+function FlowThread() {
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const pathRef = useRef<SVGPathElement>(null);
+  const headRef = useRef<SVGGElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start 0.9', 'end 0.45'] });
+  const pathLength = useSpring(scrollYProgress, { stiffness: 180, damping: 28, mass: 0.4 });
+  const headOpacity = useTransform(pathLength, [0, 0.03, 0.92, 1], [0, 1, 1, 0]);
+
+  // The head follows the tip of the stroke. Positioned imperatively
+  // (no re-renders): both live in the same viewBox space, so the
+  // non-uniform preserveAspectRatio scaling stays consistent.
+  useMotionValueEvent(pathLength, 'change', (v) => {
+    const path = pathRef.current;
+    const head = headRef.current;
+    if (!path || !head) return;
+    const clamped = Math.min(1, Math.max(0, v));
+    const p = path.getPointAtLength(clamped * path.getTotalLength());
+    head.setAttribute('transform', `translate(${p.x} ${p.y})`);
+  });
+
+  return (
+    // negative margins let the thread live in the two sections' paddings;
+    // z-10 keeps it above the matching section's opaque background
+    <div ref={ref} aria-hidden className="pointer-events-none relative z-10 -my-24 hidden lg:block">
+      <div className="mx-auto h-[340px] max-w-[1200px] px-8">
+        <svg viewBox="0 0 1136 340" preserveAspectRatio="none" className="h-full w-full overflow-visible">
+          {/* soft halo under the crisp stroke, same comet language as the funnel pulses */}
+          <motion.path
+            d={THREAD_PATH}
+            fill="none"
+            stroke="rgba(124,108,255,0.16)"
+            strokeWidth={7}
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+            style={{ pathLength: reduce ? 1 : pathLength }}
+          />
+          <motion.path
+            ref={pathRef}
+            d={THREAD_PATH}
+            fill="none"
+            stroke="rgba(124,108,255,0.5)"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+            style={{ pathLength: reduce ? 1 : pathLength }}
+          />
+          {!reduce && (
+            <motion.g ref={headRef} transform="translate(568 6)" style={{ opacity: headOpacity }}>
+              <circle r={9} fill="rgba(124,108,255,0.30)" />
+              <circle r={4} fill="#7c6cff" />
+            </motion.g>
+          )}
+        </svg>
+      </div>
+    </div>
   );
 }
 
@@ -458,11 +537,11 @@ function MatchingSection() {
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-12 px-5 sm:px-8 lg:grid-cols-2 lg:gap-16">
         <Reveal>
           <Heading
-            title={<>Le uniamo tutte. <span className="block" style={{ color: C.violet }}>E le ordiniamo per te.</span></>}
-            sub="COhA raccoglie le opportunità da ogni fonte e assegna a ognuna un punteggio di affinità su 100. Vedi prima quelle giuste per te, e non te ne perdi nemmeno una."
+            title={<>Non le cerchi tu. <span className="block" style={{ color: C.violet }}>Ti trovano loro.</span></>}
+            sub="COhA raccoglie le opportunità da oltre 16 fonti e le confronta con il tuo profilo, i tuoi interessi e le tue ambizioni. A ognuna assegna un punteggio di affinità su 100: vedi prima quelle giuste per te."
           />
           <div className="mt-9">
-            <CTAButton href="/register">Inizia ora</CTAButton>
+            <CTAButton href="/register">Inizia gratis</CTAButton>
           </div>
         </Reveal>
 
@@ -696,6 +775,11 @@ const STEPS: Array<{ verb: string; body: string; icon: LucideIcon }> = [
 ];
 
 function HowItWorks() {
+  const reduce = useReducedMotion();
+  const stepsRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: stepsRef, offset: ['start 0.85', 'end 0.55'] });
+  const railLength = useSpring(scrollYProgress, { stiffness: 180, damping: 28, mass: 0.4 });
+
   return (
     <section id="come-funziona" className="py-24 sm:py-28" style={{ background: `linear-gradient(180deg, #edeefb 0%, ${C.bg} 100%)` }}>
       <div className="mx-auto grid max-w-[1040px] grid-cols-1 items-center gap-12 px-5 sm:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:gap-20">
@@ -706,13 +790,37 @@ function HowItWorks() {
           />
         </Reveal>
 
-        <div className="relative">
+        <div ref={stepsRef} className="relative">
           {/* vertical rail connecting the steps */}
           <div
             aria-hidden
             className="absolute bottom-10 left-7 top-10 w-px"
             style={{ background: `linear-gradient(180deg, transparent, ${C.chip} 14%, ${C.chip} 86%, transparent)` }}
           />
+          {/* violet progress stroke filling the rail as the visitor scrolls the steps */}
+          {!reduce && (
+            <svg
+              aria-hidden
+              viewBox="0 0 2 100"
+              preserveAspectRatio="none"
+              className="absolute bottom-10 left-7 top-10 w-px overflow-visible"
+              style={{
+                maskImage: 'linear-gradient(180deg, transparent, black 14%, black 86%, transparent)',
+                WebkitMaskImage: 'linear-gradient(180deg, transparent, black 14%, black 86%, transparent)',
+              }}
+            >
+              <motion.path
+                d="M 1 0 L 1 100"
+                fill="none"
+                stroke={C.violet}
+                strokeOpacity={0.6}
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+                style={{ pathLength: railLength }}
+              />
+            </svg>
+          )}
           <div className="space-y-9">
             {STEPS.map((s, i) => (
               <Reveal key={s.verb} delay={i * 0.1} className="relative flex items-start gap-5">
@@ -826,88 +934,116 @@ function TestimonialsSection() {
   );
 }
 
-/* ───────────────────────── FAQ ───────────────────────── */
+/* ───────────────────────── Chi siamo ───────────────────────── */
 
-const FAQS: Array<{ q: string; a: string }> = [
+const TEAM: Array<{ name: string; role: string; line: string; bg: string; ink: string }> = [
   {
-    q: 'COhA è gratuito?',
-    a: 'Sì. Creare il profilo, ricevere le opportunità e salvarle non costa nulla.',
+    name: 'Marco',
+    role: 'Crescita',
+    line: 'Porta COhA negli atenei e la fa conoscere a chi ancora non sa di averne bisogno.',
+    bg: '#fff2e3',
+    ink: '#c07d2c',
   },
   {
-    q: 'Per chi è pensato?',
-    a: 'Per chi studia in un’università italiana: triennale, magistrale o dottorato. Il profilo si adatta al tuo corso e al tuo anno.',
+    name: 'Matteo',
+    role: 'Prodotto',
+    line: 'Decide cosa costruiamo e perché, ascoltando gli studenti che lo usano ogni giorno.',
+    bg: '#e9f6ef',
+    ink: '#2f8d5f',
   },
   {
-    q: 'Come funziona il punteggio di affinità?',
-    a: 'Ogni opportunità riceve un punteggio da 0 a 100 in base a interessi, profilo, media voti, livello di inglese, disponibilità a spostarti e anno di corso. Vedi prima quelle con il punteggio più alto.',
-  },
-  {
-    q: 'Da dove arrivano le opportunità?',
-    a: 'Da atenei, aziende, enti e bandi pubblici. Le raccogliamo e le organizziamo in un unico posto, così non devi controllare dieci siti ogni giorno.',
-  },
-  {
-    q: 'C’è anche una parte social?',
-    a: 'Sì: puoi trovare altri studenti del tuo corso, scambiarti messaggi e confrontarti sulle opportunità che salvi.',
+    name: 'Antonio',
+    role: 'Sviluppo',
+    line: 'Scrive il codice che tiene insieme tutto questo, dal matching alla chat.',
+    bg: '#eef1ff',
+    ink: '#3f54c4',
   },
 ];
 
-function FaqItem({ q, a, open, onToggle, id }: { q: string; a: string; open: boolean; onToggle: () => void; id: string }) {
-  const reduce = useReducedMotion();
+function TeamRow({ name, role, line, bg, ink, first }: (typeof TEAM)[number] & { first: boolean }) {
   return (
     <div
-      className="overflow-hidden rounded-[18px] bg-white"
-      style={{ border: `1px solid ${C.line}`, boxShadow: open ? '0 10px 26px rgba(74,75,215,0.07)' : 'none' }}
+      className="flex flex-col gap-2 px-6 py-5 transition-colors duration-200 first:rounded-t-[22px] last:rounded-b-[22px] hover:bg-[#f7f5ff] sm:flex-row sm:items-center sm:gap-6 sm:px-7"
+      style={first ? undefined : { borderTop: `1px solid ${C.line}` }}
     >
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={id}
-        onClick={onToggle}
-        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left sm:px-6 sm:py-5"
-      >
-        <span className="text-[15.5px] font-semibold" style={{ color: C.ink }}>{q}</span>
-        <ChevronDown
-          className="h-[18px] w-[18px] shrink-0 transition-transform duration-200"
-          style={{ color: C.violetDeep, transform: open ? 'rotate(180deg)' : 'none' }}
-        />
-      </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            id={id}
-            initial={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
-            animate={reduce ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
-            exit={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
-            transition={{ duration: 0.28, ease: EASE_OUT }}
-          >
-            <p className="px-5 pb-5 text-[14.5px] leading-relaxed sm:px-6" style={{ color: C.muted }}>
-              {a}
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div className="flex w-[200px] shrink-0 items-center gap-4">
+        <div
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[17px] font-bold"
+          style={{ backgroundColor: bg, color: ink }}
+        >
+          {name[0]}
+        </div>
+        <div>
+          <p className="text-[16px] font-bold leading-tight" style={{ color: C.ink }}>{name}</p>
+          <p className="mt-0.5 text-[13px] font-semibold" style={{ color: ink }}>{role}</p>
+        </div>
+      </div>
+      <p className="pl-16 text-[14.5px] leading-relaxed sm:pl-0" style={{ color: C.muted }}>
+        {line}
+      </p>
     </div>
   );
 }
 
-function FaqSection() {
-  const [openIndex, setOpenIndex] = useState(0);
+function AboutSection() {
   return (
-    <section id="faq" className="py-24 sm:py-28" style={{ backgroundColor: C.bg }}>
-      <div className="mx-auto max-w-[720px] px-5 sm:px-8">
+    <section
+      id="chi-siamo"
+      className="relative overflow-hidden py-24 sm:py-28"
+      style={{ background: `radial-gradient(60% 50% at 14% 16%, #efecff 0%, ${C.bg} 60%)` }}
+    >
+      {/* dot-grid backdrop, same engineered motif as the funnel stage */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[440px]"
+        style={{
+          backgroundImage: 'radial-gradient(rgba(124,108,255,0.18) 1.2px, transparent 1.2px)',
+          backgroundSize: '24px 24px',
+          maskImage: 'radial-gradient(46% 70% at 50% 32%, black 20%, transparent 75%)',
+          WebkitMaskImage: 'radial-gradient(46% 70% at 50% 32%, black 20%, transparent 75%)',
+        }}
+      />
+      <div className="relative mx-auto max-w-[900px] px-5 sm:px-8">
         <Reveal>
-          <Heading align="center" title="Domande frequenti." />
+          <Heading
+            align="center"
+            title={<>Tre studenti, <span style={{ color: C.violet }}>lo stesso problema.</span></>}
+            sub="Siamo Marco, Matteo e Antonio. Senza il network giusto, certe opportunità non le avremmo mai viste: abbiamo costruito COhA perché nessuno perda un’occasione solo perché non sapeva dove guardare."
+            className="mx-auto !max-w-[38rem]"
+          />
         </Reveal>
-        <Reveal delay={0.08} className="mt-12">
-          <div className="space-y-3">
-            {FAQS.map((f, i) => (
-              <FaqItem
-                key={f.q}
-                {...f}
-                id={`faq-panel-${i}`}
-                open={openIndex === i}
-                onToggle={() => setOpenIndex((v) => (v === i ? -1 : i))}
-              />
+
+        <Reveal delay={0.08} className="mt-14">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1.15fr_0.85fr]">
+            <div
+              className="rounded-[22px] p-7 sm:p-8"
+              style={{ background: 'linear-gradient(150deg, #efecff, #ffffff 80%)', border: '1px solid rgba(97,95,226,0.20)', boxShadow: '0 14px 34px rgba(74,75,215,0.10)' }}
+            >
+              <p className="text-[13px] font-semibold" style={{ color: C.faint }}>La missione</p>
+              <p className="mt-3 text-[18px] font-medium leading-relaxed" style={{ color: C.ink }}>
+                Rendere le opportunità accessibili a tutti gli studenti, indipendentemente dal
+                contesto da cui partono e dalle persone che conoscono.
+              </p>
+            </div>
+            <div
+              className="rounded-[22px] bg-white p-7 sm:p-8"
+              style={{ border: `1px solid ${C.line}`, boxShadow: '0 10px 26px rgba(74,75,215,0.06)' }}
+            >
+              <p className="text-[13px] font-semibold" style={{ color: C.faint }}>La visione</p>
+              <p className="mt-3 text-[18px] font-medium leading-relaxed" style={{ color: C.ink }}>
+                Un’università in cui ogni studente sa cosa può fare, e fin dove può arrivare.
+              </p>
+            </div>
+          </div>
+        </Reveal>
+
+        <Reveal delay={0.12} className="mt-4">
+          <div
+            className="rounded-[22px] bg-white"
+            style={{ border: `1px solid ${C.line}`, boxShadow: '0 10px 26px rgba(74,75,215,0.06)' }}
+          >
+            {TEAM.map((t, i) => (
+              <TeamRow key={t.name} {...t} first={i === 0} />
             ))}
           </div>
         </Reveal>
@@ -971,11 +1107,11 @@ function ClosingCTA() {
           <ClosingSwash reduce={!!reduce} />
 
           <div className="relative z-10">
-            <h2 className="mx-auto max-w-[20ch] text-[30px] font-extrabold leading-[1.12] text-white sm:text-[50px] sm:leading-[1.08]" style={{ letterSpacing: '-0.025em', textWrap: 'balance' } as React.CSSProperties}>
-              Non perderti la prossima opportunità.
+            <h2 className="mx-auto max-w-[24ch] text-[30px] font-extrabold leading-[1.12] text-white sm:text-[50px] sm:leading-[1.08]" style={{ letterSpacing: '-0.025em', textWrap: 'balance' } as React.CSSProperties}>
+              Scopri le opportunità che ti stanno aspettando.
             </h2>
             <p className="mx-auto mt-5 max-w-[32rem] text-[16.5px] leading-relaxed text-white/85">
-              Bastano pochi minuti per creare il tuo profilo e vedere quelle giuste per te.
+              È gratis e bastano due minuti per creare il tuo profilo.
             </p>
             <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
               <a
@@ -983,7 +1119,7 @@ function ClosingCTA() {
                 className="inline-flex items-center justify-center rounded-full bg-white px-7 py-3.5 text-[15px] font-bold shadow-lg transition-transform duration-150 ease-out hover:-translate-y-0.5 active:scale-[0.98]"
                 style={{ color: C.violetDeep }}
               >
-                Inizia ora
+                Inizia gratis
               </a>
               <a
                 href="/login"
@@ -1068,14 +1204,15 @@ export function LandingSections() {
       <CompanyMarquee />
       <SectionDivider />
       <ProblemSection />
+      <FlowThread />
       <MatchingSection />
       <ProfileSection />
       <HowItWorks />
       <SectionDivider flip />
       <TestimonialsSection />
-      <ClosingCTA />
       <SectionDivider />
-      <FaqSection />
+      <AboutSection />
+      <ClosingCTA />
     </>
   );
 }

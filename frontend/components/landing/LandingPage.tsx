@@ -8,7 +8,7 @@ import { C } from './shared';
 export default function LandingPage() {
   return (
     <div
-      className="relative min-h-[100dvh] overflow-x-hidden font-jakarta antialiased"
+      className="coha-landing relative min-h-[100dvh] overflow-x-hidden font-jakarta antialiased"
       style={{ backgroundColor: C.bg, color: C.ink }}
     >
       <LandingNav />

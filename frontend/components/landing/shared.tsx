@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, ReactNode } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion, useMotionValue, useSpring } from 'framer-motion';
 
 /**
  * Light, app-native tokens. These mirror the real COhA app surfaces
@@ -62,7 +62,11 @@ export function Reveal({
   );
 }
 
-/** Primary CTA: solid violet, white text (6.3:1), press feedback. */
+/**
+ * Primary CTA: solid violet, white text (6.3:1), press feedback.
+ * Magnetic on mouse: pulls a few px toward the cursor via spring motion
+ * values (no React state per frame). Static under reduced motion / touch.
+ */
 export function CTAButton({
   href,
   children,
@@ -72,18 +76,38 @@ export function CTAButton({
   children: ReactNode;
   className?: string;
 }) {
+  const reduce = useReducedMotion();
+  const mx = useMotionValue(0);
+  const my = useMotionValue(0);
+  const x = useSpring(mx, { stiffness: 260, damping: 20, mass: 0.5 });
+  const y = useSpring(my, { stiffness: 260, damping: 20, mass: 0.5 });
+
+  const onPointerMove = (e: React.PointerEvent<HTMLAnchorElement>) => {
+    if (reduce || e.pointerType !== 'mouse') return;
+    const r = e.currentTarget.getBoundingClientRect();
+    mx.set((e.clientX - (r.left + r.width / 2)) * 0.16);
+    my.set((e.clientY - (r.top + r.height / 2)) * 0.24);
+  };
+  const reset = () => {
+    mx.set(0);
+    my.set(0);
+  };
+
   return (
-    <a
+    <motion.a
       href={href}
+      onPointerMove={onPointerMove}
+      onPointerLeave={reset}
+      whileTap={{ scale: 0.97 }}
       className={cx(
         'inline-flex items-center justify-center rounded-full px-7 py-3.5 text-[15px] font-semibold text-white',
-        'transition-[transform,background-color] duration-150 ease-out hover:bg-[#4140c4] active:scale-[0.98] whitespace-nowrap',
+        'transition-colors duration-150 ease-out hover:bg-[#4140c4] whitespace-nowrap',
         className,
       )}
-      style={{ backgroundColor: C.violetDeep }}
+      style={{ backgroundColor: C.violetDeep, x, y }}
     >
       {children}
-    </a>
+    </motion.a>
   );
 }
 

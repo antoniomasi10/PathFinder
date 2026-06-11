@@ -1,7 +1,7 @@
 'use client';
 
-import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
+import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
+import { ArrowRight, Star } from 'lucide-react';
 import { C, CTAButton, GhostButton, useCountUp, EASE_OUT, cx } from './shared';
 
 /** Sonar halo: rings born behind the card, expanding outward in a continuous loop. */
@@ -75,9 +75,7 @@ function OpportunityOfTheDayCard() {
 
       <div className="relative z-10 flex flex-col p-[27px]">
         <div className="mb-[12px] flex items-center gap-[8px]">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)" stroke="none">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-          </svg>
+          <Star className="h-3 w-3" fill="rgba(255,255,255,0.9)" strokeWidth={0} />
           <span className="text-[15px] font-semibold uppercase tracking-[0.8px] text-white">
             Opportunity of the day
           </span>
@@ -158,6 +156,10 @@ function FloatChip({
 export function HeroSection() {
   const reduce = useReducedMotion();
 
+  // gentle depth: the card stage drifts slower than the copy while the hero scrolls out
+  const { scrollY } = useScroll();
+  const cardY = useTransform(scrollY, [0, 640], [0, 56]);
+
   const container = { hidden: {}, show: { transition: { staggerChildren: 0.08, delayChildren: 0.04 } } };
   const item = reduce
     ? { hidden: { opacity: 0 }, show: { opacity: 1 } }
@@ -202,12 +204,12 @@ export function HeroSection() {
             style={{ color: C.muted }}
           >
             Tirocini, summer school, scambi e borse. COhA raccoglie le opportunità sparse su
-            mille siti diversi e ti mostra quelle giuste per te.
+            decine di siti diversi e ti mostra quelle giuste per te.
           </motion.p>
 
           <motion.div variants={item} className="mt-9 flex flex-wrap items-center gap-3">
             <CTAButton href="/register" className="group gap-2">
-              Inizia ora
+              Inizia gratis
               <ArrowRight className="h-4 w-4 transition-transform duration-200 ease-out group-hover:translate-x-0.5" />
             </CTAButton>
             <GhostButton href="/login">Accedi</GhostButton>
@@ -216,7 +218,7 @@ export function HeroSection() {
         </div>
 
         {/* card stage: halo rings + floating chips + card */}
-        <div className="flex justify-center lg:justify-end">
+        <motion.div className="flex justify-center lg:justify-end" style={{ y: reduce ? undefined : cardY }}>
           <div className="relative w-full max-w-[440px] px-2 py-6">
             <CardHalo />
             <FloatChip label="Evento" bg="#e7f5fb" ink="#2f81a0" className="left-[-6px] top-[2px] z-20" delay={0.0} amp={14} />
@@ -227,7 +229,7 @@ export function HeroSection() {
               <OpportunityOfTheDayCard />
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
