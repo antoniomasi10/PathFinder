@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { bffPost, setAccessToken } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { track } from '@/lib/analytics';
 
 
 function MailIcon() {
@@ -214,7 +215,7 @@ export default function LoginPage() {
         {/* Footer */}
         <div className="mt-4 flex items-center justify-center gap-1">
           <span className="text-sm text-[#595e78]">Non hai un account?</span>
-          <Link href="/register" className="text-xs font-medium text-[#615fe2] tracking-[0.5px] hover:underline">
+          <Link href="/register" className="text-xs font-medium text-[#615fe2] tracking-[0.5px] hover:underline" onClick={() => track('signup_started')}>
             Registrati
           </Link>
         </div>

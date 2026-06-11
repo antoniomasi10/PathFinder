@@ -26,6 +26,13 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         return api.get('/profile/me');
       })
       .then(({ data }) => {
+        // identify() must fire before setLoading(false) so PostHog has the user
+        // identity before any child component can emit tracking events.
+        identify(data.id, {
+          email: data.email,
+          universityId: data.university?.id,
+          profileCompleted: data.profileCompleted,
+        });
         setUser({
           id: data.id,
           name: data.name,
@@ -54,16 +61,6 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       })
       .finally(() => setLoading(false));
   }, []);
-
-  useEffect(() => {
-    if (user) {
-      identify(user.id, {
-        email: user.email,
-        universityId: user.university?.id,
-        profileCompleted: user.profileCompleted,
-      });
-    }
-  }, [user]);
 
   const logout = () => {
     bffPost('/api/bff/logout').catch(() => {});

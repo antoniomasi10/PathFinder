@@ -178,7 +178,7 @@ const it = {
     accept: 'Accetta',
     reject: 'Rifiuta',
     requestSent: 'Richiesta inviata',
-    addPathmate: 'Aggiungi ai Pathmates',
+    addPathmate: 'Connettiti',
     privateProfile: 'Questo profilo è privato',
     becomePathmate: 'Diventa pathmate per vedere il profilo completo',
     pathmatesHidden: 'Pathmates non visibili',

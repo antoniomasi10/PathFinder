@@ -40,7 +40,8 @@
     "backfill:onesignal-emails": "ts-node --transpile-only src/scripts/backfill-onesignal-email-players.ts",
     "backfill:extracted-skills": "ts-node --transpile-only src/scripts/backfillExtractedSkills.ts",
     "cleanup:urls": "ts-node --transpile-only src/scripts/runUrlCleanup.ts",
-    "cleanup:universities": "ts-node --transpile-only scripts/cleanup-university-duplicates.ts"
+    "cleanup:universities": "ts-node --transpile-only scripts/cleanup-university-duplicates.ts",
+    "backfill:rewrite-titles": "ts-node --transpile-only scripts/rewrite-titles.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

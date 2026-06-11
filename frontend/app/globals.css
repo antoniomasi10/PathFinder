@@ -227,3 +227,11 @@
 @media (prefers-reduced-motion: reduce) {
   .coha-navlink::after { transition: none; }
 }
+
+video.no-controls::-webkit-media-controls,
+video.no-controls::-webkit-media-controls-enclosure,
+video.no-controls::-webkit-media-controls-panel,
+video.no-controls::-webkit-media-controls-timeline,
+video.no-controls::-webkit-media-controls-play-button {
+  display: none !important;
+}

@@ -11,9 +11,9 @@ export function startDailyOpportunityNotifier() {
     } catch (err) {
       logger.error('Daily opportunity notifier error', { error: String(err) });
     }
-  });
+  }, { timezone: 'Europe/Rome' });
 
-  logger.info('Daily opportunity notifier started (runs at 09:30 every day)');
+  logger.info('Daily opportunity notifier started (runs at 09:30 Europe/Rome every day)');
 }
 
 async function sendDailyOpportunityNotifications() {
@@ -55,17 +55,33 @@ async function sendDailyOpportunityNotifications() {
     return;
   }
 
+  // Build per-user set of opportunity IDs already sent in the last 7 days
+  const recentNotifs = await prisma.$queryRawUnsafe<{ userId: string; oppId: string }[]>(
+    `SELECT "userId", data->>'opportunityId' AS "oppId"
+     FROM "Notification"
+     WHERE type = 'NEW_OPPORTUNITY'
+       AND "createdAt" >= NOW() - INTERVAL '7 days'
+       AND data->>'opportunityId' IS NOT NULL`,
+  );
+  const recentByUser = new Map<string, Set<string>>();
+  for (const row of recentNotifs) {
+    if (!recentByUser.has(row.userId)) recentByUser.set(row.userId, new Set());
+    recentByUser.get(row.userId)!.add(row.oppId);
+  }
+
   let sent = 0;
 
   for (const user of users) {
     if (!user.profile) continue;
 
     const userSkills = parseUserSkills(user.skills);
+    const excluded = recentByUser.get(user.id) ?? new Set<string>();
 
     let bestOpp: any = null;
     let bestScore = 0;
 
     for (const opp of opportunities) {
+      if (excluded.has(opp.id)) continue;
       const score = scoreOpportunity(user.profile as any, user as any, opp, userSkills);
       if (score > bestScore) {
         bestScore = score;
@@ -80,7 +96,7 @@ async function sendDailyOpportunityNotifications() {
       ? `${bestOpp.title} di ${source} — la tua opportunità di oggi`
       : `${bestOpp.title} — la tua opportunità di oggi`;
 
-    await createNotification(user.id, 'NEW_OPPORTUNITY', content, '/opportunities', '💼', {
+    await createNotification(user.id, 'NEW_OPPORTUNITY', content, `/opportunities/${bestOpp.id}`, '💼', {
       opportunityId: bestOpp.id,
       matchScore: bestScore,
     });

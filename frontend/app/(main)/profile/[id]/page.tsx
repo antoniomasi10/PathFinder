@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useLanguage } from '@/lib/language';
+import { track } from '@/lib/analytics';
 import {
   Briefcase,
   Building,
@@ -225,6 +226,12 @@ export default function UserProfilePage() {
       setReportReason('');
     },
   });
+
+  useEffect(() => {
+    if (profile && id && id !== user?.id) {
+      track('profile_viewed', { profileId: profile.id });
+    }
+  }, [profile?.id]);
 
   const handleAddPathmate = () => addPathmateMutation.mutate();
   const handleRemovePathmate = () => removePathmateMutation.mutate();

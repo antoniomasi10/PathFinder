@@ -28,7 +28,7 @@ export async function getOrCreatePreferences(userId: string) {
 
 export async function updatePreferences(userId: string, data: Record<string, boolean>) {
   // Only allow known fields
-  const allowed = ['pushEnabled', 'networking', 'opportunities', 'universities', 'social', 'postLikes', 'chat', 'achievements', 'system', 'emailDigest', 'emailAlerts', 'emailSpot'];
+  const allowed = ['pushEnabled', 'networking', 'opportunities', 'universities', 'social', 'postLikes', 'chat', 'achievements', 'system', 'emailDigest', 'emailAlerts', 'emailSpot', 'emailDaily'];
   const filtered: Record<string, boolean> = {};
   for (const key of allowed) {
     if (key in data) filtered[key] = data[key];

@@ -220,12 +220,14 @@ export default function AvatarReveal({ avatarId, profileData }: Props) {
               <video
                 ref={videoRef}
                 src={avatar.video}
-                className="w-full h-full object-cover"
-                style={{ pointerEvents: 'none' }}
+                className="w-full h-full object-cover no-controls"
+                style={{ pointerEvents: 'none', WebkitUserSelect: 'none' }}
                 preload="auto"
                 autoPlay
                 muted
                 playsInline
+                disablePictureInPicture
+                controlsList="nodownload nofullscreen noremoteplayback"
                 onEnded={handleVideoEnd}
                 onError={handleVideoError}
                 aria-label="Animazione rivelazione avatar"
