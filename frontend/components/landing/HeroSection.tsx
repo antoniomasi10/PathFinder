@@ -1,39 +1,39 @@
 'use client';
 
 import { motion, useReducedMotion } from 'framer-motion';
-import { C, CTAButton, GhostButton, useCountUp, EASE_OUT, cx, SWASH_PATH } from './shared';
+import { ArrowRight } from 'lucide-react';
+import { C, CTAButton, GhostButton, useCountUp, EASE_OUT, cx } from './shared';
 
-/** The brand swash that draws its outline, then fills in faintly ("completes itself"). */
-function SwashDraw() {
+/** Sonar halo: rings born behind the card, expanding outward in a continuous loop. */
+function CardHalo() {
   const reduce = useReducedMotion();
+
+  if (reduce) {
+    return (
+      <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 z-0 -translate-x-1/2 -translate-y-1/2">
+        {[470, 640, 810].map((size, i) => (
+          <div
+            key={size}
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{ width: size, height: size, border: `1.5px solid rgba(124,108,255,${0.3 - i * 0.09})` }}
+          />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <svg
-      viewBox="0 0 1070 782"
-      preserveAspectRatio="xMidYMid meet"
-      aria-hidden
-      className="absolute left-1/2 top-1/2 z-0 h-auto w-[600px] max-w-none -translate-x-1/2 -translate-y-1/2"
-    >
-      <motion.path
-        d={SWASH_PATH}
-        fill="#615FE2"
-        initial={{ opacity: reduce ? 0.07 : 0 }}
-        animate={{ opacity: 0.07 }}
-        transition={{ duration: 1.1, delay: reduce ? 0 : 2.3, ease: 'easeOut' }}
-      />
-      <motion.path
-        d={SWASH_PATH}
-        fill="none"
-        stroke="#7c6cff"
-        strokeWidth={2.5}
-        strokeLinejoin="round"
-        initial={{ pathLength: reduce ? 1 : 0, opacity: reduce ? 0.35 : 0.5 }}
-        animate={{ pathLength: 1, opacity: 0.4 }}
-        transition={{
-          pathLength: { duration: reduce ? 0 : 2.8, ease: [0.16, 1, 0.3, 1] },
-          opacity: { duration: 0.5 },
-        }}
-      />
-    </svg>
+    <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
+      {[0, 2.7, 5.4].map((delay) => (
+        <motion.div
+          key={delay}
+          className="absolute left-1/2 top-1/2 rounded-full"
+          style={{ width: 460, height: 460, border: '1.5px solid rgba(124,108,255,0.4)', x: '-50%', y: '-50%' }}
+          animate={{ scale: [0.62, 2], opacity: [0, 0.7, 0] }}
+          transition={{ duration: 8, repeat: Infinity, ease: 'linear', delay, times: [0, 0.22, 1] }}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -105,7 +105,7 @@ function OpportunityOfTheDayCard() {
             <p className="text-[20px] font-bold leading-[28px] text-white">{score}%</p>
           </div>
           <div className="flex justify-center">
-            <span className="text-[12px] font-semibold text-white/90">Scade tra 5 giorni</span>
+            <span className="whitespace-nowrap text-[11px] font-semibold text-white/90 sm:text-[12px]">Scade tra 5 giorni</span>
           </div>
           <div className="flex justify-end">
             <div
@@ -184,22 +184,12 @@ export function HeroSection() {
       <FloatRing className="left-[6%] top-[20%]" size={150} delay={0} />
       <FloatRing className="left-[40%] bottom-[12%]" size={92} delay={2.5} />
 
-      <div className="mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-16 px-5 pb-24 pt-16 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:pt-24">
+      <div className="mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-16 px-5 pb-24 pt-16 sm:px-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-10 lg:pt-24">
         <div className="relative">
-          {/* self-drawing brand swash, behind the copy */}
-          <SwashDraw />
           <motion.div variants={container} initial="hidden" animate="show" className="relative z-10">
-          <motion.span
-            variants={item}
-            className="inline-flex items-center rounded-full px-3.5 py-1.5 text-[13px] font-semibold"
-            style={{ backgroundColor: C.surface, border: `1px solid ${C.line}`, color: C.violetDeep, boxShadow: '0 4px 14px rgba(74,75,215,0.06)' }}
-          >
-            University is not enough
-          </motion.span>
-
           <motion.h1
             variants={item}
-            className="mt-5 text-[42px] font-extrabold leading-[1.03] sm:text-[56px] lg:text-[64px]"
+            className="text-[42px] font-extrabold leading-[1.05] sm:text-[52px] lg:text-[56px]"
             style={{ color: C.ink, letterSpacing: '-0.03em', textWrap: 'balance' } as React.CSSProperties}
           >
             Tutte le opportunità,{' '}
@@ -216,19 +206,23 @@ export function HeroSection() {
           </motion.p>
 
           <motion.div variants={item} className="mt-9 flex flex-wrap items-center gap-3">
-            <CTAButton href="/register">Inizia ora</CTAButton>
+            <CTAButton href="/register" className="group gap-2">
+              Inizia ora
+              <ArrowRight className="h-4 w-4 transition-transform duration-200 ease-out group-hover:translate-x-0.5" />
+            </CTAButton>
             <GhostButton href="/login">Accedi</GhostButton>
           </motion.div>
           </motion.div>
         </div>
 
-        {/* card stage: floating chips + card */}
+        {/* card stage: halo rings + floating chips + card */}
         <div className="flex justify-center lg:justify-end">
           <div className="relative w-full max-w-[440px] px-2 py-6">
-            <FloatChip label="Erasmus" bg="#e7f5fb" ink="#2f81a0" className="left-[-6px] top-[2px] z-20" delay={0.0} amp={14} />
+            <CardHalo />
+            <FloatChip label="Evento" bg="#e7f5fb" ink="#2f81a0" className="left-[-6px] top-[2px] z-20" delay={0.0} amp={14} />
             <FloatChip label="Hackathon" bg="#e9f6ef" ink="#2f8d5f" className="right-[-4px] top-[40px] z-20" delay={0.5} amp={10} />
-            <FloatChip label="Summer school" bg="#f3eef9" ink="#6a4a8a" className="left-[8px] bottom-[18px] z-20" delay={0.9} amp={12} />
-            <FloatChip label="Borsa di studio" bg="#eef1ff" ink="#3f54c4" className="right-[2px] bottom-[2px] z-20" delay={0.3} amp={13} />
+            <FloatChip label="Summer school" bg="#f3eef9" ink="#6a4a8a" className="left-[-14px] bottom-[-4px] z-20" delay={0.9} amp={12} />
+            <FloatChip label="Internship" bg="#eef1ff" ink="#3f54c4" className="right-[-10px] bottom-[-10px] z-20" delay={0.3} amp={13} />
             <div className="relative z-10 flex justify-center">
               <OpportunityOfTheDayCard />
             </div>

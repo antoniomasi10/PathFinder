@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { label: 'Opportunità', href: '#matching' },
   { label: 'Profilo', href: '#profilo' },
   { label: 'Come funziona', href: '#come-funziona' },
+  { label: 'FAQ', href: '#faq' },
 ];
 
 export function LandingNav() {
@@ -139,6 +140,7 @@ export function LandingFooter() {
                 { label: 'Opportunità', href: '#matching' },
                 { label: 'Il tuo profilo', href: '#profilo' },
                 { label: 'Come funziona', href: '#come-funziona' },
+                { label: 'FAQ', href: '#faq' },
               ]}
             />
             <FooterCol
@@ -163,7 +165,7 @@ export function LandingFooter() {
           style={{ borderColor: C.lineSoft }}
         >
           <p className="text-[13px]" style={{ color: C.faint }}>
-            COhA {new Date().getFullYear()}. Fatto per chi studia in Italia.
+            COhA {new Date().getFullYear()}
           </p>
           <p className="text-[13px] font-medium" style={{ color: C.violet }}>
             University is not enough.
