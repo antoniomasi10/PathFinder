@@ -93,32 +93,37 @@ export async function registerEmailPlayer(userId: string, email: string): Promis
   }
 }
 
-export async function sendEmailToUser(userId: string, subject: string, html: string): Promise<void> {
+// Returns true only if the email was actually accepted by a provider.
+// Callers rely on this to avoid recording a send (EmailLog) that never happened.
+export async function sendEmailToUser(userId: string, subject: string, html: string): Promise<boolean> {
   if (isSendGridConfigured()) {
     try {
       const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
-      if (!user?.email) return;
+      if (!user?.email) return false;
       await sendViaSendGrid(user.email, subject, html);
+      return true;
     } catch (err) {
       logger.warn('SendGrid sendEmailToUser failed', { userId, error: String(err) });
+      return false;
     }
-    return;
   }
-  if (!isOneSignalConfigured()) return;
+  if (!isOneSignalConfigured()) return false;
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { oneSignalEmailPlayerId: true },
     });
-    if (!user?.oneSignalEmailPlayerId) return;
+    if (!user?.oneSignalEmailPlayerId) return false;
     await callOneSignal('/notifications', {
       app_id: APP_ID,
       include_player_ids: [user.oneSignalEmailPlayerId],
       email_subject: subject,
       email_body: html,
     });
+    return true;
   } catch (err) {
     logger.warn('OneSignal sendEmailToUser failed', { userId, error: String(err) });
+    return false;
   }
 }
 
