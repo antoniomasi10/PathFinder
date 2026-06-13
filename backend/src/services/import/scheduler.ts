@@ -49,6 +49,8 @@ import { importDevelopersEventsOpportunities } from './developers-events.import'
 import { importTechConfitOpportunities } from './techconfit.import';
 import { importMobilizonOpportunities } from './mobilizon.import';
 import { importCompanyWatchlistOpportunities } from './company-watchlist.import';
+import { importANPALOpportunities } from './anpal.import';
+// F6S: DISABLED — import will be added here after C0 compliance verification (see f6s.import.ts)
 import { runCleanup } from './cleanup.service';
 import { runUrlCheckBatch } from './urlChecker';
 import { alertImportFailure } from './alerting';
@@ -181,10 +183,21 @@ export function startImportScheduler() {
     runWithAlert('MUR Courses', 'mur', 'courses', importCourses);
   });
 
+  // Monthly 1st: ANPAL — Garanzia Giovani + Servizio Civile Universale (03:00)
+  cron.schedule('0 3 1 * *', () => {
+    runWithAlert('ANPAL', 'anpal', 'opportunities', importANPALOpportunities);
+  });
+
   // Quarterly: AlmaLaurea stats (1st Jan/Apr/Jul/Oct at 04:00)
   cron.schedule('0 4 1 1,4,7,10 *', () => {
     runWithAlert('AlmaLaurea', 'almalaurea', 'stats', importAlmaLaureaStats);
   });
+
+  // F6S: DISABLED — pending C0 compliance verification (robots.txt + ToS)
+  // After C0: add import at top, then uncomment:
+  // cron.schedule('0 5 * * 2', () => {
+  //   runWithAlert('F6S', 'f6s', 'opportunities', importF6sOpportunities);
+  // });
 
   // Weekly Sunday: cleanup (05:00)
   cron.schedule('0 5 * * 0', async () => {
@@ -205,14 +218,13 @@ export function startImportScheduler() {
   });
 
   logger.info('[Scheduler] Import scheduler started:');
-  logger.info('  EURES: disabled (static cache)');
+  logger.info('  EURES: disabled (static cache) | F6S: disabled (pending C0 verification)');
   logger.info('  EU Youth: Mon 03:30 | SmartRecruiters: Mon 04:00 | HackClub: Mon 04:30');
-  logger.info('  Arbeitnow: Tue 03:30 | RemoteOK: Tue 04:00');
-  logger.info('  ConfsTech: Wed 03:00 (tech conferences, MIT license)');
-  logger.info('  Stage4eu: Wed 03:30 | CompanyWatchlist: Wed 05:30');
-  logger.info('  Greenhouse: Thu 03:30 | Jobicy: Thu 04:00');
-  logger.info('  Lever: Fri 03:30 | FashionUnited: Fri 04:00');
+  logger.info('  Arbeitnow: Tue 03:30 | RemoteOK: Tue 04:00 | DevelopersEvents: Tue 04:30');
+  logger.info('  ConfsTech: Wed 03:00 | Stage4eu: Wed 03:30 | CompanyWatchlist: Wed 05:30');
+  logger.info('  Greenhouse: Thu 03:30 | Jobicy: Thu 04:00 | TechConfit: Thu 04:30');
+  logger.info('  Lever: Fri 03:30 | FashionUnited: Fri 04:00 | Mobilizon: Fri 04:30');
   logger.info('  Ashby: Sat 03:30 | Workable: Sat 04:00');
   logger.info('  Personio: Sun 03:30 | Cleanup: Sun 05:00 | URL check: Sun 06:00');
-  logger.info('  BEST Courses: monthly 1st 03:30 | MUR: monthly 1st 02:00/02:30 | AlmaLaurea: quarterly');
+  logger.info('  MUR: monthly 1st 02:00/02:30 | ANPAL (GG+SCU): monthly 1st 03:00 | AlmaLaurea: quarterly');
 }
