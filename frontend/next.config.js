@@ -12,6 +12,8 @@ const cspDirectives = [
   isDev
     ? "connect-src 'self' http://localhost:4000 ws://localhost:4000 ws://localhost:3000 wss: https://onesignal.com https://*.onesignal.com https://*.i.posthog.com"
     : `connect-src 'self' ${process.env.NEXT_PUBLIC_API_URL || ''} wss: https://accounts.google.com https://onesignal.com https://*.onesignal.com https://*.i.posthog.com`,
+  "worker-src blob:",
+  "child-src blob:",
   "frame-src 'self' accounts.google.com",
   "object-src 'none'",
   "base-uri 'self'",

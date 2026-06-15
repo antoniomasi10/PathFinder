@@ -339,7 +339,7 @@ function OpportunityOfTheDay({ opp, onOpen }: { opp: Opportunity; onOpen: () => 
                 backdropFilter: 'blur(6px)',
               }}
             >
-              <span className="text-[13px] font-medium text-white" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
+              <span className="text-[13px] font-medium text-white whitespace-nowrap" style={{ fontFamily: 'var(--font-plus-jakarta)' }}>
                 {TYPE_LABELS[opp.type] ?? opp.type}
               </span>
             </div>
@@ -414,7 +414,7 @@ function OpportunityCard({ opp, isSaved, onSave, onOpen }: {
               className="rounded-full px-[10px] py-[4px]"
               style={{ backgroundColor: getOpportunityTypeColor(opp.type || opp.badge.split(' • ')[0]) }}
             >
-              <span className="text-[13px] font-medium" style={{ color: '#4f5160', fontFamily: 'var(--font-plus-jakarta)' }}>
+              <span className="text-[13px] font-medium whitespace-nowrap" style={{ color: '#4f5160', fontFamily: 'var(--font-plus-jakarta)' }}>
                 {TYPE_LABELS[opp.type] ?? opp.type}
               </span>
             </div>
@@ -597,7 +597,7 @@ const OPPORTUNITY_TYPE_CHIPS = [
 ] as const;
 
 const TYPE_LABELS: Record<string, string> = {
-  TIROCINIO: 'Tirocinio', SUMMER_PROGRAM: 'Summer Program',
+  TIROCINIO: 'Tirocinio', SUMMER_PROGRAM: 'Summer School',
   FELLOWSHIP: 'Fellowship', HACKATHON: 'Hackathon', COMPETITION: 'Competition',
   EXCHANGE: 'Exchange', VOLUNTEERING: 'Volunteering', BOOTCAMP: 'Bootcamp',
   EXTRACURRICULAR: 'Extracurricular',
