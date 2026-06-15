@@ -118,28 +118,18 @@ export async function runCleanup(): Promise<CleanupResult> {
 }
 
 /**
- * Get stats about data freshness — useful for admin dashboard
+ * Get stats about data freshness — useful for admin dashboard (legacy, kept for /status endpoint)
  */
 export async function getDataFreshnessStats() {
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * DAYS_MS);
-  const sixtyDaysAgo = new Date(now.getTime() - 60 * DAYS_MS);
+  const sixtyDaysAgo  = new Date(now.getTime() - 60 * DAYS_MS);
 
   const [
-    totalOpportunities,
-    importedOpportunities,
-    freshOpportunities,
-    staleOpportunities,
-    totalUniversities,
-    activeUniversities,
-    totalCourses,
-    activeCourses,
-    lastImports,
-    recentErrors,
-    euresCount,
-    euYouthCount,
-    eurodesCount,
-    murOppCount,
+    totalOpportunities, importedOpportunities, freshOpportunities, staleOpportunities,
+    totalUniversities, activeUniversities, totalCourses, activeCourses,
+    lastImports, recentErrors,
+    euresCount, euYouthCount, eurodesCount, murOppCount,
   ] = await Promise.all([
     prisma.opportunity.count(),
     prisma.opportunity.count({ where: { sourceId: { not: null } } }),
@@ -150,15 +140,11 @@ export async function getDataFreshnessStats() {
     prisma.course.count(),
     prisma.course.count({ where: { isActive: true } }),
     prisma.importLog.findMany({
-      where: { status: 'success' },
-      orderBy: { startedAt: 'desc' },
-      take: 10,
+      where: { status: 'success' }, orderBy: { startedAt: 'desc' }, take: 10,
       select: { source: true, type: true, count: true, startedAt: true },
     }),
     prisma.importLog.findMany({
-      where: { status: 'failed' },
-      orderBy: { startedAt: 'desc' },
-      take: 5,
+      where: { status: 'failed' }, orderBy: { startedAt: 'desc' }, take: 5,
       select: { source: true, type: true, error: true, startedAt: true },
     }),
     prisma.opportunity.count({ where: { sourceId: { startsWith: 'eures-' } } }),
@@ -167,49 +153,151 @@ export async function getDataFreshnessStats() {
     prisma.opportunity.count({ where: { sourceId: { startsWith: 'mur-' } } }),
   ]);
 
-  // Per-source health: last successful import per source
-  const sources = ['eures', 'eu-youth', 'eurodesk', 'mur', 'almalaurea'];
-  const sourceHealth: Record<string, { lastSuccess: Date | null; lastError: string | null; recordCount: number }> = {};
-
-  for (const source of sources) {
-    const lastSuccess = await prisma.importLog.findFirst({
-      where: { source, status: 'success' },
-      orderBy: { startedAt: 'desc' },
-      select: { startedAt: true },
-    });
-    const lastFail = await prisma.importLog.findFirst({
-      where: { source, status: 'failed' },
-      orderBy: { startedAt: 'desc' },
-      select: { error: true },
-    });
-
-    const countMap: Record<string, number> = {
-      eures: euresCount,
-      'eu-youth': euYouthCount,
-      eurodesk: eurodesCount,
-      mur: murOppCount,
-      almalaurea: 0, // stats, not records
-    };
-
-    sourceHealth[source] = {
-      lastSuccess: lastSuccess?.startedAt || null,
-      lastError: lastFail?.error || null,
-      recordCount: countMap[source] || 0,
-    };
-  }
-
   return {
     opportunities: {
-      total: totalOpportunities,
-      imported: importedOpportunities,
-      fresh: freshOpportunities,
-      stale: staleOpportunities,
+      total: totalOpportunities, imported: importedOpportunities,
+      fresh: freshOpportunities, stale: staleOpportunities,
       bySource: { eures: euresCount, euYouth: euYouthCount, eurodesk: eurodesCount },
     },
     universities: { total: totalUniversities, active: activeUniversities },
     courses: { total: totalCourses, active: activeCourses },
-    lastImports,
-    recentErrors,
-    sourceHealth,
+    lastImports, recentErrors,
+  };
+}
+
+// All enabled sources tracked in ImportLog. Ordered to match SOURCES.md table.
+const ALL_SOURCES = [
+  { key: 'opportunity-desk', prefix: 'od-',                schedule: 'Mon/Wed/Fri 02:00' },
+  { key: 'eu-youth',         prefix: 'eu-youth-',          schedule: 'Mon 03:30' },
+  { key: 'smartrecruiters',  prefix: 'smartrecruiters-',   schedule: 'Mon 04:00' },
+  { key: 'hackclub',         prefix: 'hackclub-',          schedule: 'Mon 04:30' },
+  { key: 'arbeitnow',        prefix: 'arbeitnow-',         schedule: 'Tue 03:30' },
+  { key: 'remoteok',         prefix: 'remoteok-',          schedule: 'Tue 04:00' },
+  { key: 'developers-events',prefix: 'devevents-',         schedule: 'Tue 04:30' },
+  { key: 'confstech',        prefix: 'confstech-',         schedule: 'Wed 03:00' },
+  { key: 'stage4eu',         prefix: 'stage4eu-',          schedule: 'Wed 03:30' },
+  { key: 'company-watchlist',prefix: 'company-watchlist-', schedule: 'Wed 05:30' },
+  { key: 'greenhouse',       prefix: 'greenhouse-',        schedule: 'Thu 03:30' },
+  { key: 'jobicy',           prefix: 'jobicy-',            schedule: 'Thu 04:00' },
+  { key: 'techconfit',       prefix: 'techconfit-',        schedule: 'Thu 04:30' },
+  { key: 'lever',            prefix: 'lever-',             schedule: 'Fri 03:30' },
+  { key: 'fashionunited',    prefix: 'fashionunited-',     schedule: 'Fri 04:00' },
+  { key: 'mobilizon-it',     prefix: 'mobilizon-',         schedule: 'Fri 04:30' },
+  { key: 'ashby',            prefix: 'ashby-',             schedule: 'Sat 03:30' },
+  { key: 'workable',         prefix: 'workable-',          schedule: 'Sat 04:00' },
+  { key: 'personio',         prefix: 'personio-',          schedule: 'Sun 03:30' },
+  { key: 'mur',              prefix: 'mur-',               schedule: 'Monthly 1st 02:00' },
+  { key: 'almalaurea',       prefix: 'almalaurea-',        schedule: 'Quarterly' },
+  { key: 'anpal',            prefix: 'anpal-',             schedule: 'Monthly 1st 03:00' },
+] as const;
+
+/**
+ * Per-source health: last run, last success, last error, record count, 30-day success rate.
+ * Covers all 22 ENABLED sources from SOURCES.md.
+ */
+export async function getSourceHealthStats() {
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * DAYS_MS);
+
+  const results: Record<string, {
+    schedule: string;
+    lastRunAt: Date | null;
+    lastSuccessAt: Date | null;
+    lastError: string | null;
+    recordCount: number;
+    successRateLast30d: number | null;
+  }> = {};
+
+  await Promise.all(ALL_SOURCES.map(async ({ key, prefix, schedule }) => {
+    const [lastSuccess, lastFail, recentRuns, recordCount] = await Promise.all([
+      prisma.importLog.findFirst({
+        where: { source: key, status: 'success' },
+        orderBy: { startedAt: 'desc' },
+        select: { startedAt: true },
+      }),
+      prisma.importLog.findFirst({
+        where: { source: key, status: 'failed' },
+        orderBy: { startedAt: 'desc' },
+        select: { startedAt: true, error: true },
+      }),
+      prisma.importLog.findMany({
+        where: { source: key, startedAt: { gte: thirtyDaysAgo } },
+        select: { status: true },
+      }),
+      prisma.opportunity.count({ where: { sourceId: { startsWith: prefix } } }),
+    ]);
+
+    const totalRuns = recentRuns.length;
+    const successRuns = recentRuns.filter(r => r.status === 'success').length;
+
+    results[key] = {
+      schedule,
+      lastRunAt: lastSuccess?.startedAt ?? lastFail?.startedAt ?? null,
+      lastSuccessAt: lastSuccess?.startedAt ?? null,
+      lastError: lastFail?.error ?? null,
+      recordCount,
+      successRateLast30d: totalRuns > 0 ? Math.round((successRuns / totalRuns) * 100) : null,
+    };
+  }));
+
+  return { sources: results, generatedAt: now.toISOString() };
+}
+
+/**
+ * Opportunity distribution by type, sector (top tags), region, and country.
+ * Used for the Phase 6 dashboard and admin analytics.
+ */
+export async function getOpportunityDistribution() {
+  const now = new Date();
+
+  const [byType, byCountry, byRegion, allTags] = await Promise.all([
+    // Count by OpportunityType
+    prisma.opportunity.groupBy({
+      by: ['type'],
+      _count: { id: true },
+      where: { expiresAt: null },
+      orderBy: { _count: { id: 'desc' } },
+    }),
+    // Count by country (top 15)
+    prisma.opportunity.groupBy({
+      by: ['country'],
+      _count: { id: true },
+      where: { expiresAt: null, country: { not: null } },
+      orderBy: { _count: { id: 'desc' } },
+      take: 15,
+    }),
+    // Count by region (Italy only, top 20)
+    prisma.opportunity.groupBy({
+      by: ['region'],
+      _count: { id: true },
+      where: { expiresAt: null, region: { not: null }, country: 'IT' },
+      orderBy: { _count: { id: 'desc' } },
+      take: 20,
+    }),
+    // Fetch all active opportunity tags for sector frequency analysis
+    prisma.opportunity.findMany({
+      where: { expiresAt: null, sourceId: { not: null } },
+      select: { tags: true },
+    }),
+  ]);
+
+  // Aggregate sector tags — count occurrences of each tag across all opportunities
+  const tagFreq: Record<string, number> = {};
+  for (const opp of allTags) {
+    for (const tag of opp.tags ?? []) {
+      if (tag) tagFreq[tag.toLowerCase()] = (tagFreq[tag.toLowerCase()] ?? 0) + 1;
+    }
+  }
+  const topTags = Object.entries(tagFreq)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 30)
+    .map(([tag, count]) => ({ tag, count }));
+
+  return {
+    byType: byType.map(r => ({ type: r.type, count: r._count.id })),
+    byCountry: byCountry.map(r => ({ country: r.country!, count: r._count.id })),
+    byRegion: byRegion.map(r => ({ region: r.region!, count: r._count.id })),
+    topSectorTags: topTags,
+    generatedAt: now.toISOString(),
   };
 }

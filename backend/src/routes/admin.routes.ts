@@ -6,6 +6,7 @@ import { logSecurityEvent } from '../utils/securityLogger';
 import { createNotification } from '../services/notification.service';
 import { runStructuredContentBatch } from '../services/structuredContentJob';
 import { backfillContextualizedSkillsBoot } from '../services/ai/opportunityParser';
+import { runRewriteTitlesBatch } from '../services/translationJob';
 import { Prisma } from '@prisma/client';
 
 const router = Router();
@@ -158,6 +159,14 @@ router.post('/backfill/contextualized-skills', ...adminAuth, async (_req: Reques
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// POST /api/admin/backfill/rewrite-titles — rewrite titleIt for all active opportunities with current prompt
+router.post('/backfill/rewrite-titles', ...adminAuth, (_req: Request, res: Response) => {
+  res.json({ ok: true, message: 'Rewrite started in background — check server logs for [RewriteJob]' });
+  runRewriteTitlesBatch(5000).catch((err) =>
+    console.error('[RewriteJob] Fatal error:', err),
+  );
 });
 
 export default router;

@@ -25,16 +25,21 @@ import OpenAI from 'openai';
 import { chromium, Page } from 'playwright';
 import { CompanyWatchlist } from '@prisma/client';
 import { validateOpportunity } from './validation';
-import { batchUpsertOpportunities, OpportunityRecord } from './batch';
+import { batchUpsertOpportunities, markStaleOpportunities, OpportunityRecord } from './batch';
 import { extractCountryCode, mapOpportunityType, fetchWithRetry, stripHtml } from './utils';
+import {
+  checkRobotsTxt,
+  findAndAnalyzeTos,
+  daysSince,
+  ROBOTS_CHECK_INTERVAL_DAYS,
+  TOS_CHECK_INTERVAL_DAYS,
+} from './compliance';
 
 // ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
 
 const FETCH_DELAY_MS = 2000;
-const ROBOTS_CHECK_INTERVAL_DAYS = 30;
-const TOS_CHECK_INTERVAL_DAYS = 30;
 const MAX_HTML_CHARS = 40000; // ~12k tokens after strip
 
 let _client: OpenAI | null = null;
@@ -241,229 +246,40 @@ export async function fetchWithHeadlessBrowser(url: string): Promise<string> {
   }
 }
 
+// checkRobotsTxt, findAndAnalyzeTos, daysSince imported from ./compliance
+
 // ---------------------------------------------------------------------------
-// robots.txt check
+// Sector → passion tags (D2)
 // ---------------------------------------------------------------------------
 
 /**
- * Fetches and parses robots.txt for the given URL's origin.
- * Returns true if our bot is allowed to access the careers path,
- * false if explicitly disallowed.
- * On fetch error, defaults to true (benefit of the doubt).
+ * Maps a sector string to the lowercase individual tags recognised by the
+ * matching engine's PASSION_TAG_MAP. The sector string itself (e.g.
+ * 'Finance & Banking') is already stored as a tag, but the engine compares
+ * against exact lowercase tokens like 'finance', 'banking', 'startup', etc.
+ * Adding the individual tokens as extra tags ensures passion-match points fire.
  */
-export async function checkRobotsTxt(careersUrl: string): Promise<boolean> {
-  try {
-    const origin = new URL(careersUrl).origin;
-    const robotsUrl = `${origin}/robots.txt`;
-
-    const res = await fetchWithRetry(robotsUrl, {
-      timeoutMs: 10000,
-      retries: 1,
-      headers: { 'Accept': 'text/plain' },
-      logTag: '[CompanyWatchlist] robots.txt',
-    });
-
-    if (!res.ok) {
-      logger.warn(`[CompanyWatchlist] robots.txt not found for ${origin} (${res.status}) — allowing`);
-      return true;
-    }
-
-    const text = await res.text();
-    const careersPath = new URL(careersUrl).pathname;
-
-    return isAllowedByRobots(text, careersPath);
-  } catch (err) {
-    logger.warn(`[CompanyWatchlist] robots.txt fetch failed: ${err} — allowing`);
-    return true;
+function sectorTags(sector: string): string[] {
+  const s = sector.toLowerCase();
+  if (s.includes('finance') || s.includes('banking')) {
+    return ['finance', 'banking', 'consulting', 'graduate'];
   }
-}
-
-/**
- * Parses robots.txt text and checks if the given path is allowed
- * under User-agent: * or User-agent: COhA.
- */
-function isAllowedByRobots(robotsTxt: string, path: string): boolean {
-  const lines = robotsTxt.split('\n').map(l => l.trim());
-
-  // Collect rules per agent block to avoid mixing rules across different agents.
-  // We only apply blocks whose User-agent matches us (* or coha), not googlebot.
-  type Block = { agents: string[]; allow: string[]; disallow: string[] };
-  const blocks: Block[] = [];
-  let current: Block | null = null;
-
-  for (const line of lines) {
-    if (line.toLowerCase().startsWith('user-agent:')) {
-      const agent = line.slice('user-agent:'.length).trim().toLowerCase();
-      if (!current) {
-        current = { agents: [agent], allow: [], disallow: [] };
-      } else if (current.allow.length === 0 && current.disallow.length === 0) {
-        // Multiple consecutive User-agent lines belong to the same block
-        current.agents.push(agent);
-      } else {
-        blocks.push(current);
-        current = { agents: [agent], allow: [], disallow: [] };
-      }
-      continue;
-    }
-    if (!current) continue;
-    if (line.toLowerCase().startsWith('disallow:')) {
-      const p = line.slice('disallow:'.length).trim();
-      if (p) current.disallow.push(p);
-    } else if (line.toLowerCase().startsWith('allow:')) {
-      const p = line.slice('allow:'.length).trim();
-      if (p) current.allow.push(p);
-    } else if (line === '') {
-      // Blank line ends the current block
-      blocks.push(current);
-      current = null;
-    }
+  if (s.includes('startup') || s.includes('scaleup')) {
+    return ['startup', 'entrepreneurship', 'innovation', 'business'];
   }
-  if (current) blocks.push(current);
-
-  // Apply only blocks that match our bot (* or coha), not googlebot
-  for (const block of blocks) {
-    const applies = block.agents.some(a => a === '*' || a === 'coha');
-    if (!applies) continue;
-
-    // Allow takes precedence over Disallow within the same block
-    for (const p of block.allow) {
-      if (path.startsWith(p)) return true;
-    }
-    for (const p of block.disallow) {
-      if (p === '/' || path.startsWith(p)) return false;
-    }
+  if (s.includes('consulting')) {
+    return ['consulting', 'strategy', 'business', 'graduate'];
   }
-  return true;
-}
-
-// ---------------------------------------------------------------------------
-// ToS analysis via LLM
-// ---------------------------------------------------------------------------
-
-const TOS_LINK_PATTERNS = [
-  '/terms', '/legal', '/tos', '/terms-of-service', '/terms-of-use',
-  '/termini', '/condizioni', '/privacy-policy', '/note-legali',
-  '/condizioni-di-utilizzo', '/termini-di-servizio',
-];
-
-const TOS_LINK_REGEX = /href=["']([^"']*(?:terms|legal|tos|termini|condizioni|note-legali)[^"']*?)["']/gi;
-
-/**
- * Fetches the homepage of the careers URL's domain, finds the ToS page link,
- * fetches the ToS text, and uses OpenAI to determine if scraping is allowed.
- */
-export async function findAndAnalyzeTos(careersUrl: string): Promise<{
-  allowed: boolean | null;
-  notes: string;
-  pageNotFound: boolean;
-}> {
-  const client = getClient();
-  if (!client) {
-    logger.warn('[CompanyWatchlist] No OpenAI API key — skipping ToS analysis, allowing by default');
-    return { allowed: true, notes: 'OpenAI not configured — skipped', pageNotFound: false };
+  if (s.includes('tech')) {
+    return ['tech', 'startup', 'innovation'];
   }
-
-  try {
-    const origin = new URL(careersUrl).origin;
-
-    // Fetch homepage to find ToS link
-    const homeRes = await fetchWithRetry(origin, {
-      timeoutMs: 15000,
-      retries: 1,
-      headers: { 'Accept': 'text/html' },
-      logTag: '[CompanyWatchlist] homepage',
-    });
-
-    if (!homeRes.ok) {
-      return { allowed: null, notes: `Homepage returned ${homeRes.status}`, pageNotFound: true };
-    }
-
-    const homeHtml = await homeRes.text();
-    const tosUrl = extractTosUrl(homeHtml, origin);
-
-    if (!tosUrl) {
-      return { allowed: null, notes: 'ToS page link not found in homepage', pageNotFound: true };
-    }
-
-    // Fetch ToS page
-    const tosRes = await fetchWithRetry(tosUrl, {
-      timeoutMs: 15000,
-      retries: 1,
-      headers: { 'Accept': 'text/html' },
-      logTag: '[CompanyWatchlist] ToS',
-    });
-
-    if (!tosRes.ok) {
-      return { allowed: null, notes: `ToS page returned ${tosRes.status}`, pageNotFound: true };
-    }
-
-    const tosHtml = await tosRes.text();
-    const tosText = stripHtml(tosHtml).slice(0, 8000);
-
-    if (tosText.length < 100) {
-      return { allowed: null, notes: 'ToS page content too short to analyse', pageNotFound: true };
-    }
-
-    // Analyse with OpenAI
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content: `You are a legal compliance assistant. Determine whether the Terms of Service explicitly prohibits automated/programmatic access, web scraping, or crawling.
-
-Answer with JSON only: { "allowed": true/false, "confidence": "high"/"medium"/"low", "reason": "..." }
-
-Rules:
-- "allowed: false" ONLY if there is EXPLICIT prohibition of scraping, crawling, or automated access
-- "allowed: true" if the ToS is silent on the matter or permissive
-- Keep "reason" under 100 characters`,
-        },
-        {
-          role: 'user',
-          content: `Terms of Service:\n\n${tosText}`,
-        },
-      ],
-      max_tokens: 150,
-      temperature: 0,
-    });
-
-    const raw = response.choices[0]?.message?.content ?? '{}';
-    const result = JSON.parse(raw) as { allowed?: boolean; confidence?: string; reason?: string };
-
-    return {
-      allowed: result.allowed ?? true,
-      notes: `[${result.confidence ?? '?'}] ${result.reason ?? ''}`.slice(0, 500),
-      pageNotFound: false,
-    };
-  } catch (err) {
-    logger.warn(`[CompanyWatchlist] ToS analysis failed: ${err}`);
-    return { allowed: null, notes: `Error: ${String(err).slice(0, 200)}`, pageNotFound: true };
+  if (s.includes('venture') || s.includes('private equity') || s.includes('investimento')) {
+    return ['venture capital', 'investment', 'finance', 'startup'];
   }
-}
-
-function extractTosUrl(html: string, origin: string): string | null {
-  // Try known patterns first
-  for (const pattern of TOS_LINK_PATTERNS) {
-    const idx = html.toLowerCase().indexOf(`href="${pattern}`);
-    if (idx !== -1) {
-      const end = html.indexOf('"', idx + 6);
-      if (end !== -1) {
-        const href = html.slice(idx + 6, end);
-        return href.startsWith('http') ? href : `${origin}${href}`;
-      }
-    }
+  if (s.includes('incubat') || s.includes('accelerat') || s.includes('ecosistema')) {
+    return ['startup', 'entrepreneurship', 'innovation', 'accelerator'];
   }
-
-  // Regex fallback
-  const matches = [...html.matchAll(TOS_LINK_REGEX)];
-  if (matches.length > 0) {
-    const href = matches[0][1];
-    return href.startsWith('http') ? href : `${origin}${href}`;
-  }
-
-  return null;
+  return [];
 }
 
 // ---------------------------------------------------------------------------
@@ -586,7 +402,6 @@ export async function importCompanyWatchlistOpportunities(): Promise<{
     let imported = 0;
     let skipped = 0;
     let complianceBlocked = 0;
-    const records: OpportunityRecord[] = [];
 
     for (const company of companies) {
       try {
@@ -596,41 +411,44 @@ export async function importCompanyWatchlistOpportunities(): Promise<{
           continue;
         }
 
-        // Fetch careers page with headless browser (handles SPAs and JS-rendered pages)
         const html = await fetchWithHeadlessBrowser(company.careersUrl);
 
         if (!html) {
           logger.warn(`[CompanyWatchlist] ${company.name}: empty HTML from headless fetch`);
-          await prisma.companyWatchlist.update({
-            where: { id: company.id },
-            data: { lastSyncedAt: now },
-          });
+          await prisma.companyWatchlist.update({ where: { id: company.id }, data: { lastSyncedAt: now } });
           await new Promise(r => setTimeout(r, FETCH_DELAY_MS));
           continue;
         }
-        const rawOpportunities = await extractOpportunitiesWithLLM(html, company);
 
+        const rawOpportunities = await extractOpportunitiesWithLLM(html, company);
+        const companyRecords: OpportunityRecord[] = [];
         let companySkipped = 0;
+
         for (const raw of rawOpportunities) {
           if (!raw.title) { skipped++; companySkipped++; continue; }
 
-          // Fall back to careers page URL when the LLM couldn't extract an individual URL
           const opportunityUrl = raw.url || company.careersUrl;
           const location = raw.location || company.name;
           const countryCode = extractCountryCode(location) || 'IT';
-          const isAbroad = countryCode !== 'IT';
           const isRemote = location.toLowerCase().includes('remote') ||
                            location.toLowerCase().includes('remoto');
 
           const sourceId = `company-watchlist-${company.id}-${Buffer.from(raw.title + opportunityUrl).toString('base64').slice(0, 20)}`;
 
+          // D4: richer description gives AI enrichment better material to work with
+          const description = [
+            `${raw.title} presso ${company.name}.`,
+            raw.location ? `Sede: ${raw.location}.` : null,
+            `Settore: ${company.sector}.`,
+          ].filter(Boolean).join(' ');
+
           const validated = validateOpportunity({
-            title: `${raw.title} — ${company.name}`,
-            description: `${raw.title} presso ${company.name}. ${raw.location || ''}`.trim(),
+            title: raw.title,   // D3: no " — CompanyName" suffix — keeps dedupKey clean
+            description,
             company: company.name,
             url: opportunityUrl,
             location,
-            isAbroad,
+            isAbroad: countryCode !== 'IT',
             isRemote,
             expiresAt: null,
             deadline: raw.deadline ? new Date(raw.deadline) : null,
@@ -638,7 +456,7 @@ export async function importCompanyWatchlistOpportunities(): Promise<{
 
           if (!validated) { skipped++; companySkipped++; continue; }
 
-          records.push({
+          companyRecords.push({
             id: sourceId,
             title: validated.title,
             description: validated.description,
@@ -648,7 +466,8 @@ export async function importCompanyWatchlistOpportunities(): Promise<{
             isAbroad: validated.isAbroad,
             isRemote: validated.isRemote,
             type: mapOpportunityType(raw.title, raw.type ? [raw.type] : null),
-            tags: [company.sector, company.tier],
+            // D2: sector + normalised passion tokens so tag-matching fires correctly
+            tags: [company.sector, company.tier, ...sectorTags(company.sector)],
             postedAt: now,
             expiresAt: null,
             deadline: raw.deadline ? new Date(raw.deadline) : null,
@@ -659,20 +478,23 @@ export async function importCompanyWatchlistOpportunities(): Promise<{
           });
         }
 
-        await prisma.companyWatchlist.update({
-          where: { id: company.id },
-          data: { lastSyncedAt: now },
-        });
+        if (companyRecords.length > 0) {
+          await batchUpsertOpportunities(companyRecords);
+          // D5: mark stale only for opportunities from this company that are no longer seen
+          await markStaleOpportunities('CompanyWatchlist', companyRecords.map(r => r.id), {
+            scopeCompanies: [company.name],
+            minSeenForStale: 1,
+          });
+          imported += companyRecords.length;
+        }
 
-        logger.info(`[CompanyWatchlist] ${company.name}: ${rawOpportunities.length} found, ${rawOpportunities.length - companySkipped} valid`);
+        await prisma.companyWatchlist.update({ where: { id: company.id }, data: { lastSyncedAt: now } });
+        logger.info(`[CompanyWatchlist] ${company.name}: ${rawOpportunities.length} found, ${companyRecords.length} valid`);
         await new Promise(r => setTimeout(r, FETCH_DELAY_MS));
       } catch (err) {
         logger.warn(`[CompanyWatchlist] ${company.name} failed: ${err}`);
       }
     }
-
-    await batchUpsertOpportunities(records);
-    imported = records.length;
 
     await prisma.importLog.update({
       where: { id: log.id },
@@ -747,10 +569,6 @@ async function processCompanyCompliance(company: CompanyWatchlist, now: Date): P
   return true;
 }
 
-function daysSince(date: Date, now: Date): number {
-  return (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24);
-}
-
 // ---------------------------------------------------------------------------
 // Single-company import (used by admin endpoint)
 // ---------------------------------------------------------------------------
@@ -781,9 +599,15 @@ export async function importSingleCompany(companyId: string): Promise<{
     const countryCode = extractCountryCode(location) || 'IT';
     const sourceId = `company-watchlist-${company.id}-${Buffer.from(raw.title + opportunityUrl).toString('base64').slice(0, 20)}`;
 
+    const description = [
+      `${raw.title} presso ${company.name}.`,
+      raw.location ? `Sede: ${raw.location}.` : null,
+      `Settore: ${company.sector}.`,
+    ].filter(Boolean).join(' ');
+
     const validated = validateOpportunity({
-      title: `${raw.title} — ${company.name}`,
-      description: `${raw.title} presso ${company.name}. ${raw.location || ''}`.trim(),
+      title: raw.title,   // D3: no suffix
+      description,
       company: company.name,
       url: opportunityUrl,
       location,
@@ -805,7 +629,7 @@ export async function importSingleCompany(companyId: string): Promise<{
       isAbroad: validated.isAbroad,
       isRemote: validated.isRemote,
       type: mapOpportunityType(raw.title, raw.type ? [raw.type] : null),
-      tags: [company.sector, company.tier],
+      tags: [company.sector, company.tier, ...sectorTags(company.sector)],   // D2
       postedAt: now,
       source: 'CompanyWatchlist',
       sourceId,
@@ -814,7 +638,15 @@ export async function importSingleCompany(companyId: string): Promise<{
     });
   }
 
-  await batchUpsertOpportunities(records);
+  if (records.length > 0) {
+    await batchUpsertOpportunities(records);
+    // D5: mark stale only for this company's opportunities no longer seen
+    await markStaleOpportunities('CompanyWatchlist', records.map(r => r.id), {
+      scopeCompanies: [company.name],
+      minSeenForStale: 1,
+    });
+  }
+
   await prisma.companyWatchlist.update({
     where: { id: company.id },
     data: { lastSyncedAt: now },

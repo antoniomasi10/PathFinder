@@ -13,7 +13,8 @@
 import { FieldOfStudy, OpportunityFormat, OpportunityType } from '@prisma/client';
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
-import { buildDedupKey, isSeniorRole } from './utils';
+import { buildDedupKey, extractCountryCode, isSeniorRole } from './utils';
+import { mapItalianRegion } from './geo-italy';
 import { parseOpportunityContent, parseAIDate, extractOpportunitySkills, extractRequiredLanguages, extractContextualizedSkills } from '../ai/opportunityParser';
 import { classifyOpportunityCluster } from '../ai/clusterClassifier';
 
@@ -42,6 +43,7 @@ export interface OpportunityRecord {
   format?: OpportunityFormat | null;
   city?: string | null;
   country?: string | null;
+  region?: string | null;
   cost?: number | null;
   hasScholarship?: boolean;
   scholarshipDetails?: string | null;
@@ -62,8 +64,19 @@ const UPDATE_CHUNK_SIZE = 100;
 export async function batchUpsertOpportunities(records: OpportunityRecord[]): Promise<void> {
   if (records.length === 0) return;
 
-  // Attach dedup key to each record so updates also refresh it on older rows.
-  const enriched = records.map(r => ({ ...r, dedupKey: buildDedupKey(r.title, r.company ?? r.organizer) }));
+  // Attach dedup key + auto-resolve Italian region for IT records.
+  const enriched = records.map(r => {
+    const dedupKey = buildDedupKey(r.title, r.company ?? r.organizer);
+    let { region, city } = r;
+    if (!region) {
+      const country = r.country ?? extractCountryCode(r.location ?? '');
+      if (country === 'IT') {
+        const geo = mapItalianRegion(city ?? r.location);
+        if (geo) region = geo.region;
+      }
+    }
+    return { ...r, dedupKey, region, city };
+  });
 
   const ids = enriched.map(r => r.id);
   const existing = new Set(
@@ -151,6 +164,7 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
         format: r.format ?? null,
         city: r.city ?? null,
         country: r.country ?? null,
+        region: r.region ?? null,
         cost: r.cost ?? null,
         hasScholarship: r.hasScholarship ?? false,
         scholarshipDetails: r.scholarshipDetails ?? null,
@@ -270,6 +284,7 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
             format: r.format ?? null,
             city: r.city ?? null,
             country: r.country ?? null,
+            region: r.region ?? null,
             cost: r.cost ?? null,
             hasScholarship: r.hasScholarship ?? false,
             scholarshipDetails: r.scholarshipDetails ?? null,

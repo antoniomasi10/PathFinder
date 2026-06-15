@@ -69,6 +69,65 @@ export async function runTranslationBatch(limit = DEFAULT_LIMIT): Promise<{ tran
   return { translated, failed };
 }
 
+/**
+ * Rewrites titleIt for ALL active opportunities using the current prompt.
+ * Unlike runTranslationBatch, this overwrites existing titleIt values.
+ * Intended for one-off backfills after prompt improvements.
+ */
+export async function runRewriteTitlesBatch(limit = 5000): Promise<{ rewritten: number; failed: number }> {
+  if (!process.env.OPENAI_API_KEY) {
+    logger.debug('[RewriteJob] OPENAI_API_KEY not set — skipping');
+    return { rewritten: 0, failed: 0 };
+  }
+
+  const now = new Date();
+  const opps = await prisma.opportunity.findMany({
+    where: { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+    select: { id: true, title: true, description: true, descriptionIt: true },
+    take: limit,
+    orderBy: { postedAt: 'desc' },
+  });
+
+  if (!opps.length) {
+    logger.info('[RewriteJob] Nothing to rewrite');
+    return { rewritten: 0, failed: 0 };
+  }
+
+  logger.info(`[RewriteJob] Rewriting ${opps.length} opportunities (concurrency=${CONCURRENCY})`);
+
+  let rewritten = 0;
+  let failed = 0;
+
+  for (let i = 0; i < opps.length; i += CONCURRENCY) {
+    const chunk = opps.slice(i, i + CONCURRENCY);
+    await Promise.all(
+      chunk.map(async (opp) => {
+        const result = await translateOpportunityToItalian(opp.title, opp.description);
+        if (!result) {
+          failed++;
+          return;
+        }
+        try {
+          await prisma.opportunity.update({
+            where: { id: opp.id },
+            data: {
+              titleIt: result.title,
+              ...(!opp.descriptionIt ? { descriptionIt: result.description } : {}),
+            },
+          });
+          rewritten++;
+        } catch (err) {
+          failed++;
+          logger.warn(`[RewriteJob] DB update failed for ${opp.id}: ${err}`);
+        }
+      }),
+    );
+  }
+
+  logger.info(`[RewriteJob] Done — rewritten=${rewritten} failed=${failed}`);
+  return { rewritten, failed };
+}
+
 export function startTranslationScheduler() {
   // Every night at 02:30 server time
   cron.schedule('30 2 * * *', () => {

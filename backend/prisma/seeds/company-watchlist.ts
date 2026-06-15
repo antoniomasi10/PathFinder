@@ -1,9 +1,16 @@
 /**
  * Seed: Company Watchlist
  *
- * 185 Italian medium/large companies to monitor for internship and stage openings.
- * Large companies = aspirational engagement; medium = accessible opportunities.
+ * ~283 companies to monitor for internship and stage openings.
+ * Sections:
+ *   - 185 original Italian sector leaders (Moda, Food, Tech, Energia, Banking, Pharma,
+ *     Automotive, Retail, Media, Infrastrutture)
+ *   - B1 (+25): Consulting — MBB, boutique strategy, Big4 extensions, Italian boutiques
+ *   - B2 (+25): Finance & Banking — international IBs, Italian public institutions, fintech
+ *   - B3 (+25): Startup & Scaleup italiane — well-funded scaleups and ecosystem leaders
+ *   - B4 (+25): Venture Capital & Ecosistema — VCs, incubators, accelerators, VC-backed cos
  *
+ * Large = aspirational; medium = accessible opportunities.
  * Run: npx ts-node prisma/seeds/company-watchlist.ts
  */
 
@@ -111,26 +118,26 @@ const companies: Array<{
   { name: 'Dolomiti Energia', careersUrl: 'https://www.dolomiti.it/careers', sector: 'Energia & Utilities', tier: 'medium' },
 
   // --- Banking, Finance & Assicurazioni (20) ---
-  { name: 'Intesa Sanpaolo', careersUrl: 'https://careers.intesasanpaolo.com/', sector: 'Banking & Finance', tier: 'large' },
-  { name: 'UniCredit', careersUrl: 'https://careers.unicredit.eu/', sector: 'Banking & Finance', tier: 'large' },
-  { name: 'Generali', careersUrl: 'https://www.generali.com/careers', sector: 'Banking & Finance', tier: 'large' },
-  { name: 'Poste Italiane', careersUrl: 'https://www.posteitaliane.it/careers', sector: 'Banking & Finance', tier: 'large' },
-  { name: 'Mediobanca', careersUrl: 'https://www.mediobanca.com/careers', sector: 'Banking & Finance', tier: 'large' },
-  { name: 'Cassa Depositi e Prestiti', careersUrl: 'https://careers.cdp.it/', sector: 'Banking & Finance', tier: 'large' },
-  { name: 'FinecoBank', careersUrl: 'https://careers.fineco.com/', sector: 'Banking & Finance', tier: 'medium' },
-  { name: 'BNL', careersUrl: 'https://careers.bnl.it/', sector: 'Banking & Finance', tier: 'medium' },
-  { name: 'Banco BPM', careersUrl: 'https://careers.bancobpm.it/', sector: 'Banking & Finance', tier: 'medium' },
-  { name: 'Nexi', careersUrl: 'https://careers.nexigroup.com/', sector: 'Banking & Finance', tier: 'medium' },
-  { name: 'Azimut', careersUrl: 'https://careers.azimut.it/', sector: 'Banking & Finance', tier: 'medium' },
-  { name: 'Banca Mediolanum', careersUrl: 'https://careers.bancamediolanum.it/', sector: 'Banking & Finance', tier: 'medium' },
-  { name: 'Unipol', careersUrl: 'https://careers.unipol.it/', sector: 'Banking & Finance', tier: 'medium' },
-  { name: 'Allianz Italy', careersUrl: 'https://careers.allianz.com/it/', sector: 'Banking & Finance', tier: 'medium' },
-  { name: 'AXA Italy', careersUrl: 'https://careers.axa.it/', sector: 'Banking & Finance', tier: 'medium' },
-  { name: 'Zurich Italy', careersUrl: 'https://careers.zurich.com/it/', sector: 'Banking & Finance', tier: 'medium' },
-  { name: 'Credem', careersUrl: 'https://careers.credem.it/', sector: 'Banking & Finance', tier: 'medium' },
-  { name: 'Banca Sella', careersUrl: 'https://careers.sella.it/', sector: 'Banking & Finance', tier: 'medium' },
-  { name: 'doValue', careersUrl: 'https://careers.dovalue.com/', sector: 'Banking & Finance', tier: 'medium' },
-  { name: 'Cattolica Assicurazioni', careersUrl: 'https://careers.cattolica.it/', sector: 'Banking & Finance', tier: 'medium' },
+  { name: 'Intesa Sanpaolo', careersUrl: 'https://careers.intesasanpaolo.com/', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'UniCredit', careersUrl: 'https://careers.unicredit.eu/', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'Generali', careersUrl: 'https://www.generali.com/careers', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'Poste Italiane', careersUrl: 'https://www.posteitaliane.it/careers', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'Mediobanca', careersUrl: 'https://www.mediobanca.com/careers', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'Cassa Depositi e Prestiti', careersUrl: 'https://careers.cdp.it/', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'FinecoBank', careersUrl: 'https://careers.fineco.com/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'BNL', careersUrl: 'https://careers.bnl.it/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Banco BPM', careersUrl: 'https://careers.bancobpm.it/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Nexi', careersUrl: 'https://careers.nexigroup.com/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Azimut', careersUrl: 'https://careers.azimut.it/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Banca Mediolanum', careersUrl: 'https://careers.bancamediolanum.it/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Unipol', careersUrl: 'https://careers.unipol.it/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Allianz Italy', careersUrl: 'https://careers.allianz.com/it/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'AXA Italy', careersUrl: 'https://careers.axa.it/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Zurich Italy', careersUrl: 'https://careers.zurich.com/it/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Credem', careersUrl: 'https://careers.credem.it/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Banca Sella', careersUrl: 'https://careers.sella.it/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'doValue', careersUrl: 'https://careers.dovalue.com/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Cattolica Assicurazioni', careersUrl: 'https://careers.cattolica.it/', sector: 'Finance & Banking', tier: 'medium' },
 
   // --- Pharma & Healthcare (15) ---
   { name: 'Menarini Group', careersUrl: 'https://careers.menarini.com/', sector: 'Pharma & Healthcare', tier: 'large' },
@@ -216,6 +223,140 @@ const companies: Array<{
   { name: 'Danieli', careersUrl: 'https://careers.danieli.com/', sector: 'Infrastrutture & Difesa', tier: 'medium' },
   { name: 'Tenaris', careersUrl: 'https://careers.tenaris.com/', sector: 'Infrastrutture & Difesa', tier: 'medium' },
   { name: 'Alpitour', careersUrl: 'https://careers.alpitourworld.com/', sector: 'Infrastrutture & Difesa', tier: 'medium' },
+
+  // --- B1: Consulting — Strategy & Management (25) ---
+  // MBB
+  { name: 'McKinsey & Company', careersUrl: 'https://www.mckinsey.com/careers/search-jobs', sector: 'Consulting', tier: 'large' },
+  { name: 'BCG (Boston Consulting Group)', careersUrl: 'https://careers.bcg.com/', sector: 'Consulting', tier: 'large' },
+  { name: 'Bain & Company', careersUrl: 'https://www.bain.com/careers/find-a-job/', sector: 'Consulting', tier: 'large' },
+  // Global boutiques with Italian offices
+  { name: 'Oliver Wyman', careersUrl: 'https://www.oliverwyman.com/careers/jobs.html', sector: 'Consulting', tier: 'large' },
+  { name: 'Roland Berger', careersUrl: 'https://www.rolandberger.com/it/Careers/', sector: 'Consulting', tier: 'large' },
+  { name: 'Kearney', careersUrl: 'https://www.kearney.com/work-with-us/jobs', sector: 'Consulting', tier: 'large' },
+  { name: 'Strategy& Italy (PwC)', careersUrl: 'https://www.strategyand.pwc.com/it/it/careers.html', sector: 'Consulting', tier: 'large' },
+  { name: 'Alvarez & Marsal', careersUrl: 'https://www.alvarezandmarsal.com/careers', sector: 'Consulting', tier: 'large' },
+  { name: 'LEK Consulting', careersUrl: 'https://www.lek.com/careers', sector: 'Consulting', tier: 'large' },
+  { name: 'ZS Associates', careersUrl: 'https://www.zs.com/careers', sector: 'Consulting', tier: 'large' },
+  { name: 'Arthur D. Little', careersUrl: 'https://www.adlittle.com/en/careers', sector: 'Consulting', tier: 'large' },
+  { name: 'Simon-Kucher & Partners', careersUrl: 'https://www.simon-kucher.com/en/careers', sector: 'Consulting', tier: 'large' },
+  { name: 'Sia Partners', careersUrl: 'https://www.sia-partners.com/en/careers', sector: 'Consulting', tier: 'large' },
+  { name: 'FTI Consulting', careersUrl: 'https://www.fticonsulting.com/careers', sector: 'Consulting', tier: 'large' },
+  { name: 'Teneo', careersUrl: 'https://www.teneo.com/careers/', sector: 'Consulting', tier: 'large' },
+  // Italian/European boutiques
+  { name: 'BIP Group (Business Integration Partners)', careersUrl: 'https://careers.bip-group.com/', sector: 'Consulting', tier: 'medium' },
+  { name: 'Prometeia', careersUrl: 'https://www.prometeia.com/lavora-con-noi', sector: 'Consulting', tier: 'medium' },
+  { name: 'The European House – Ambrosetti', careersUrl: 'https://www.ambrosetti.eu/en/careers/', sector: 'Consulting', tier: 'medium' },
+  { name: 'Value Partners', careersUrl: 'https://www.valuepartners.com/careers/', sector: 'Consulting', tier: 'medium' },
+  { name: 'Accuracy', careersUrl: 'https://www.accuracy.com/en/careers/', sector: 'Consulting', tier: 'medium' },
+  { name: 'MBS Consulting', careersUrl: 'https://www.mbsconsulting.it/lavora-con-noi/', sector: 'Consulting', tier: 'medium' },
+  // HR & risk consulting (frequent student employers)
+  { name: 'Mercer Italy', careersUrl: 'https://careers.mercer.com/', sector: 'Consulting', tier: 'medium' },
+  { name: 'WTW (Willis Towers Watson) Italy', careersUrl: 'https://careers.wtwco.com/', sector: 'Consulting', tier: 'medium' },
+  { name: 'Aon Italy', careersUrl: 'https://careers.aon.com/', sector: 'Consulting', tier: 'medium' },
+  { name: 'Protiviti Italy (Robert Half)', careersUrl: 'https://www.protiviti.com/it-it/careers', sector: 'Consulting', tier: 'medium' },
+
+  // --- B2: Finance & Banking — International IBs + Italian Public + Fintech (25) ---
+  // International investment banks (Italy offices / graduate programmes)
+  { name: 'Goldman Sachs Italy', careersUrl: 'https://www.goldmansachs.com/careers/professionals/', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'JPMorgan Italy', careersUrl: 'https://careers.jpmorgan.com/global/en/home', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'Morgan Stanley Italy', careersUrl: 'https://www.morganstanley.com/people-opportunities/', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'Deutsche Bank Italy', careersUrl: 'https://careers.db.com/', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'BNP Paribas Italy', careersUrl: 'https://careers.bnpparibas.com/', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'Société Générale Italy', careersUrl: 'https://careers.societegenerale.com/', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'Credit Agricole CIB Italy', careersUrl: 'https://careers.ca-cib.com/', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'Citi Italy', careersUrl: 'https://jobs.citi.com/', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'Barclays Italy', careersUrl: 'https://search.jobs.barclays/', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'UBS Italy', careersUrl: 'https://www.ubs.com/global/en/careers.html', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'Nomura Italy', careersUrl: 'https://careers.nomura.com/', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'Lazard Italy', careersUrl: 'https://www.lazard.com/career-opportunities/', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'Rothschild & Co Italy', careersUrl: 'https://www.rothschildandco.com/en/careers/', sector: 'Finance & Banking', tier: 'large' },
+  // Italian public / institutional finance
+  { name: 'Banca d\'Italia', careersUrl: 'https://www.bancaditalia.it/chi-siamo/lavorare-bi/', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'SACE', careersUrl: 'https://www.sace.it/careers', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'Invitalia', careersUrl: 'https://www.invitalia.it/chi-siamo/lavora-con-noi/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'MPS (Monte dei Paschi di Siena)', careersUrl: 'https://careers.mps.it/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'BPER Banca', careersUrl: 'https://careers.bper.it/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Banca IFIS', careersUrl: 'https://careers.bancaifis.it/', sector: 'Finance & Banking', tier: 'medium' },
+  // Fintech (Italian + European with strong Italian presence)
+  { name: 'N26', careersUrl: 'https://n26.com/en-eu/careers', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Revolut', careersUrl: 'https://careers.revolut.com/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Moneyfarm', careersUrl: 'https://www.moneyfarm.com/it/lavora-con-noi/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Credimi', careersUrl: 'https://www.credimi.com/it/lavora-con-noi/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Qonto Italy', careersUrl: 'https://jobs.qonto.com/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Soldo', careersUrl: 'https://www.soldo.com/en-eu/careers/', sector: 'Finance & Banking', tier: 'medium' },
+
+  // --- B4: Venture Capital, Incubatori & Ecosistema (25) ---
+  // Italian VCs and ecosystem entry points for students seeking pre-seed/Series A exposure.
+  // Compliance gate (robots.txt + ToS) applies per company, same as all watchlist entries.
+  // VCs — use 'Finance & Banking' so sectorTags emits finance/investment tokens for matching
+  { name: 'CDP Venture Capital', careersUrl: 'https://cdpventurecapital.it/lavora-con-noi/', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'Fondo Italiano d\'Investimento', careersUrl: 'https://www.fondoitaliano.it/lavora-con-noi', sector: 'Finance & Banking', tier: 'large' },
+  { name: 'LVenture Group', careersUrl: 'https://lvg.com/careers/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Indaco Venture Partners', careersUrl: 'https://www.indacoventure.com/team/', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Club degli Investitori', careersUrl: 'https://www.clubinvestitori.it/', sector: 'Finance & Banking', tier: 'medium' },
+  // Innovation hubs, incubators, accelerators — 'Startup & Scaleup' so sectorTags emits startup/innovation tokens
+  { name: 'H-Farm', careersUrl: 'https://www.h-farm.com/it/careers', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'PoliHub', careersUrl: 'https://polihub.it/lavora-con-noi/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'I3P (Politecnico Torino)', careersUrl: 'https://www.i3p.it/lavora-con-noi/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Talent Garden', careersUrl: 'https://talentgarden.com/careers/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Digital Magics', careersUrl: 'https://www.digitalmagics.com/lavora-con-noi/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Speed MI Up', careersUrl: 'https://www.speedmiup.it/careers/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Cariplo Factory', careersUrl: 'https://www.cariplo.it/factory/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Plug and Play Italy', careersUrl: 'https://www.plugandplaytechcenter.com/italy/', sector: 'Startup & Scaleup', tier: 'medium' },
+  // Key VC-backed companies not covered by existing ATS importers
+  { name: 'Satispay', careersUrl: 'https://satispay.com/en/careers/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Musixmatch', careersUrl: 'https://musixmatch.com/about/jobs', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Bending Spoons', careersUrl: 'https://bendingspoons.com/careers/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Prima Assicurazioni', careersUrl: 'https://www.prima.it/it/lavora-con-noi', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Scalapay', careersUrl: 'https://www.scalapay.com/it/carriere', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'MIA Platform', careersUrl: 'https://mia-platform.eu/en/careers/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Molo17', careersUrl: 'https://www.molo17.com/lavora-con-noi/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'TeamSystem', careersUrl: 'https://careers.teamsystem.com/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'ClubDeal Online', careersUrl: 'https://www.clubdealonline.com/lavora-con-noi', sector: 'Finance & Banking', tier: 'medium' },
+  { name: 'Buzzoole', careersUrl: 'https://buzzoole.com/careers/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Jointly', careersUrl: 'https://jointly.pro/careers/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Nativa', careersUrl: 'https://www.nativa.cc/jobs/', sector: 'Startup & Scaleup', tier: 'medium' },
+
+  // --- B3: Startup & Scaleup italiane (25) ---
+  // PropTech / Real Estate
+  { name: 'Casavo', careersUrl: 'https://casavo.com/it/careers/', sector: 'Startup & Scaleup', tier: 'medium' },
+  // E-grocery / AgriFood
+  { name: 'Everli (ex Supermercato24)', careersUrl: 'https://careers.everli.com/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Cortilia', careersUrl: 'https://www.cortilia.it/careers/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Planet Farms', careersUrl: 'https://www.planetfarms.ag/work-with-us/', sector: 'Startup & Scaleup', tier: 'medium' },
+  // EdTech / SaaS
+  { name: 'Docebo', careersUrl: 'https://www.docebo.com/careers/', sector: 'Startup & Scaleup', tier: 'medium' },
+  // Travel
+  { name: 'Lastminute.com', careersUrl: 'https://careers.lastminute.com/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Musement (TUI Group)', careersUrl: 'https://www.musement.com/it/careers/', sector: 'Startup & Scaleup', tier: 'medium' },
+  // Automotive / Mobility
+  { name: 'BrumBrum', careersUrl: 'https://www.brumbrum.it/lavora-con-noi/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Helbiz', careersUrl: 'https://careers.helbiz.com/', sector: 'Startup & Scaleup', tier: 'medium' },
+  // Logistics / Last-mile
+  { name: 'Milkman Technologies', careersUrl: 'https://milkman.eu/careers/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Glovo Italy', careersUrl: 'https://careers.glovoapp.com/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Deliveroo Italy', careersUrl: 'https://careers.deliveroo.co.uk/', sector: 'Startup & Scaleup', tier: 'medium' },
+  // Deep tech / Infrastructure
+  { name: 'Cubbit', careersUrl: 'https://cubbit.io/careers/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Open Fiber', careersUrl: 'https://careers.openfiber.it/', sector: 'Startup & Scaleup', tier: 'medium' },
+  // Marketplace
+  { name: 'Tannico (Campari Group)', careersUrl: 'https://www.tannico.it/lavora-con-noi/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'ProntoPro', careersUrl: 'https://www.prontopro.it/lavora-con-noi', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Winelivery', careersUrl: 'https://winelivery.com/lavora-con-noi', sector: 'Startup & Scaleup', tier: 'medium' },
+  // HealthTech
+  { name: 'Paginemediche', careersUrl: 'https://www.paginemediche.it/lavora-con-noi', sector: 'Startup & Scaleup', tier: 'medium' },
+  // Insurtech / Green banking
+  { name: 'Yolo Group', careersUrl: 'https://yolo.group/careers/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Flowe (Banca Mediolanum)', careersUrl: 'https://flowe.com/it/careers/', sector: 'Startup & Scaleup', tier: 'medium' },
+  { name: 'Tinaba (Banca Profilo)', careersUrl: 'https://www.tinaba.it/careers/', sector: 'Startup & Scaleup', tier: 'medium' },
+  // IT services scaleup
+  { name: 'Spindox', careersUrl: 'https://www.spindox.it/careers/', sector: 'Startup & Scaleup', tier: 'medium' },
+  // Queue / smart services
+  { name: 'Ufirst', careersUrl: 'https://www.ufirst.com/lavora-con-noi', sector: 'Startup & Scaleup', tier: 'medium' },
+  // Language / EdTech
+  { name: 'Babbel', careersUrl: 'https://jobs.babbel.com/', sector: 'Startup & Scaleup', tier: 'medium' },
+  // HR SaaS
+  { name: 'Jet HR', careersUrl: 'https://jethr.com/careers/', sector: 'Startup & Scaleup', tier: 'medium' },
 ];
 
 async function main() {

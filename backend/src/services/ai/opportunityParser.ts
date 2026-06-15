@@ -556,7 +556,10 @@ export async function translateOpportunityToItalian(
   const client = getClient();
   if (!client) return null;
 
-  const userContent = JSON.stringify({ title, description: description.slice(0, 6000) });
+  // Strip null bytes — PostgreSQL UTF8 rejects 
+  const cleanTitle = title.replace(/\u0000/g, '');
+  const cleanDesc = description.replace(/\u0000/g, '');
+  const userContent = JSON.stringify({ title: cleanTitle, description: cleanDesc.slice(0, 6000) });
 
   try {
     const response = await client.chat.completions.create({
@@ -566,7 +569,7 @@ export async function translateOpportunityToItalian(
         { role: 'system', content: TRANSLATE_SYSTEM_PROMPT },
         { role: 'user', content: userContent },
       ],
-      max_tokens: 2000,
+      max_tokens: 4000,
       temperature: 0.1,
     });
 
@@ -574,8 +577,8 @@ export async function translateOpportunityToItalian(
     if (!raw) return null;
 
     const parsed = JSON.parse(raw) as { title?: unknown; description?: unknown };
-    const t = typeof parsed.title === 'string' ? parsed.title.trim() : null;
-    const d = typeof parsed.description === 'string' ? parsed.description.trim() : null;
+    const t = typeof parsed.title === 'string' ? parsed.title.replace(/\u0000/g, '').trim() : null;
+    const d = typeof parsed.description === 'string' ? parsed.description.replace(/\u0000/g, '').trim() : null;
     if (!t || !d) return null;
     return { title: t, description: d };
   } catch (err) {

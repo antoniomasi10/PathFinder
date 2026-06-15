@@ -201,7 +201,10 @@ export function mapOpportunityType(title: string, jobTypes?: string[] | null): O
       t.includes('congresso') || t.includes('symposium') ||
       t.includes('forum') || t.includes('summit') && !t.includes('intern') ||
       t.includes('tedx') || t.includes('ted talk') || t.includes('meetup') ||
-      t.includes('networking event') || t.includes('open day')) return 'EVENT';
+      t.includes('networking event') || t.includes('open day') ||
+      // Finance / consulting recruiting events (observational, not internships)
+      t.includes('insight day') || t.includes('discovery day') ||
+      t.includes('explore day') || t.includes('open week')) return 'EVENT';
 
   // --- Exchange / volunteer ---
   if (t.includes('erasmus') || t.includes('exchange program') ||
@@ -212,6 +215,13 @@ export function mapOpportunityType(title: string, jobTypes?: string[] | null): O
       t.includes('european solidarity') || t.includes('service civile') ||
       t.includes('corps') || t.includes('corps')) return 'VOLUNTEERING';
 
+  // --- Finance / Consulting entry-level programs (before generic TIROCINIO) ---
+  // These titles don't always contain "intern" but are unambiguously student-facing.
+  if (t.includes('spring week') || t.includes('spring insight') || t.includes('spring intern')) return 'TIROCINIO';
+  if (t.includes('summer analyst') || t.includes('winter analyst') || t.includes('fall analyst')) return 'TIROCINIO';
+  // "off-cycle analyst" / "off-cycle associate" at banks = non-summer internship
+  if (t.includes('off-cycle') && (t.includes('analyst') || t.includes('associate') || t.includes('intern'))) return 'TIROCINIO';
+
   // --- Tirocinio (EN/IT/DE/FR) ---
   if (t.includes('intern') || t.includes('tirocinio') || t.includes('traineeship')) return 'TIROCINIO';
   if (t.includes('stage') || t.includes('stagiaire')) return 'TIROCINIO';
@@ -220,9 +230,13 @@ export function mapOpportunityType(title: string, jobTypes?: string[] | null): O
   if (t.includes('apprenti') || t.includes('alternance') ||
       t.includes('duales studium') || t.includes('co-op')) return 'TIROCINIO';
 
-  // --- Fellowship (graduate programs, named fellowships) ---
+  // --- Fellowship (graduate programs, rotational programs, accelerators) ---
   if (t.includes('fellow') || t.includes('graduate program') ||
-      t.includes('graduate scheme') || t.includes('leadership program') ||
+      t.includes('graduate programme') ||   // UK spelling
+      t.includes('graduate scheme') || t.includes('graduate rotational') ||
+      t.includes('rotational program') || t.includes('rotation program') || t.includes('rotation scheme') ||
+      t.includes('leadership program') || t.includes('leadership programme') ||
+      t.includes('accelerator') || t.includes('incubator') ||
       t.includes('silicon valley') || t.includes('scholar')) return 'FELLOWSHIP';
 
   return 'TIROCINIO';
@@ -563,7 +577,7 @@ const SENIOR_TITLE_PATTERNS = [
 // Safe keywords that override senior signals. We use lookahead/lookbehind on non-letters
 // to avoid "Internal" matching "intern" or "graduate program" matching "graduate".
 export const SAFE_TITLE_PATTERNS = [
-  /(?:^|[^a-z])(intern|interns|internship|internships|stage|tirocinio|stagista|trainee|junior|graduate\s+program|werkstudent|apprenti|alternance|stagiaire|praktikant|borsista)(?=[^a-z]|$)/i,
+  /(?:^|[^a-z])(intern|interns|internship|internships|stage|tirocinio|stagista|trainee|junior|graduate\s+programm?e?|graduate\s+rotational|graduate\s+scheme|spring\s+week|spring\s+intern|summer\s+analyst|winter\s+analyst|fall\s+analyst|off-cycle|werkstudent|apprenti|alternance|stagiaire|praktikant|borsista)(?=[^a-z]|$)/i,
 ];
 
 export { SENIOR_TITLE_PATTERNS };
