@@ -28,9 +28,15 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       .then(({ data }) => {
         // identify() must fire before setLoading(false) so PostHog has the user
         // identity before any child component can emit tracking events.
-        identify(data.id, {
-          email: data.email,
+        identify(data.email, {
+          userId: data.id,
+          name: data.name,
+          surname: data.surname,
+          university: data.university?.name,
           universityId: data.university?.id,
+          courseOfStudy: data.courseOfStudy,
+          yearOfStudy: data.yearOfStudy,
+          clusterTag: data.profile?.clusterTag,
           profileCompleted: data.profileCompleted,
         });
         setUser({

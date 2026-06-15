@@ -44,9 +44,9 @@ export function track(event: EventName, properties?: Record<string, unknown>): v
   posthog.capture(event, properties);
 }
 
-export function identify(userId: string, traits?: Record<string, unknown>): void {
+export function identify(distinctId: string, traits?: Record<string, unknown>): void {
   if (!initialized) return;
-  posthog.identify(userId, traits);
+  posthog.identify(distinctId, traits);
 }
 
 export function resetAnalytics(): void {
