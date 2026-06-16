@@ -29,6 +29,7 @@ COPY --from=builder /app/node_modules ./node_modules
 
 RUN npm prune --omit=dev
 RUN npx prisma generate
+RUN npx playwright install chromium --with-deps
 
 COPY --from=builder /app/dist ./dist
 
