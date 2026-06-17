@@ -1142,74 +1142,9 @@ function ClosingCTA() {
   );
 }
 
-/* ───────────────────────── Company logo marquee ───────────────────────── */
-
-/**
- * Simple Icons glyphs live in a square 24x24 box: wordmarks (SIEMENS, SAMSUNG)
- * only fill a thin horizontal strip of it, symbols (Apple, BMW) fill it all.
- * `h` is a per-logo box height that normalizes the optical size across both.
- */
-const COMPANIES: Array<{ slug: string; name: string; h: number }> = [
-  { slug: 'google', name: 'Google', h: 28 },
-  { slug: 'accenture', name: 'Accenture', h: 26 },
-  { slug: 'ferrari', name: 'Ferrari', h: 32 },
-  { slug: 'sap', name: 'SAP', h: 48 },
-  { slug: 'vodafone', name: 'Vodafone', h: 28 },
-  { slug: 'siemens', name: 'Siemens', h: 88 },
-  { slug: 'intel', name: 'Intel', h: 44 },
-  { slug: 'bmw', name: 'BMW', h: 30 },
-  { slug: 'nvidia', name: 'NVIDIA', h: 40 },
-  { slug: 'unilever', name: 'Unilever', h: 30 },
-  { slug: 'cisco', name: 'Cisco', h: 52 },
-  { slug: 'audi', name: 'Audi', h: 56 },
-  { slug: 'bosch', name: 'Bosch', h: 30 },
-  { slug: 'samsung', name: 'Samsung', h: 88 },
-  { slug: 'visa', name: 'Visa', h: 44 },
-  { slug: 'apple', name: 'Apple', h: 28 },
-];
-
-function LogoGroup() {
-  return (
-    <div className="flex h-[88px] shrink-0 items-center gap-12 pr-12">
-      {COMPANIES.map((c) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={c.slug}
-          src={`/logos/${c.slug}.svg`}
-          alt={c.name}
-          className="w-auto shrink-0 opacity-65 transition-opacity duration-200 hover:opacity-100"
-          style={{ height: c.h }}
-        />
-      ))}
-    </div>
-  );
-}
-
-function CompanyMarquee() {
-  return (
-    <section className="py-12 sm:py-14">
-      <Reveal className="mb-9 px-5 text-center">
-        <p className="text-[14.5px] font-medium" style={{ color: C.muted }}>
-          Tirocini e progetti dalle aziende che cercano studenti come te
-        </p>
-      </Reveal>
-      <div className="coha-marquee relative flex overflow-hidden">
-        <div className="coha-marquee-track flex w-max">
-          <LogoGroup />
-          <LogoGroup />
-        </div>
-        <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-20" style={{ background: `linear-gradient(90deg, ${C.bg}, transparent)` }} />
-        <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-20" style={{ background: `linear-gradient(270deg, ${C.bg}, transparent)` }} />
-      </div>
-    </section>
-  );
-}
-
 export function LandingSections() {
   return (
     <>
-      <CompanyMarquee />
-      <SectionDivider />
       <ProblemSection />
       <FlowThread />
       <MatchingSection />
