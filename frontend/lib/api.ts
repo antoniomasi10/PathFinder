@@ -12,6 +12,32 @@ export function setAccessToken(token: string): void { _accessToken = token; }
 export function getAccessToken(): string | null { return _accessToken; }
 export function clearAccessToken(): void { _accessToken = null; }
 
+// Shared refresh deduplication: one in-flight BFF refresh at a time,
+// regardless of whether the caller is AuthProvider or the Axios 401 interceptor.
+// Without this, concurrent callers send the same cookie to the backend, the first
+// call blacklists it, and all subsequent calls get 401 → login redirect loop.
+let _sharedRefreshPromise: Promise<string> | null = null;
+
+export function refreshSession(): Promise<string> {
+  if (!_sharedRefreshPromise) {
+    _sharedRefreshPromise = fetch('/api/bff/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Refresh failed');
+        setAccessToken(data.accessToken);
+        reauthenticateSockets();
+        return data.accessToken as string;
+      })
+      .finally(() => {
+        _sharedRefreshPromise = null;
+      });
+  }
+  return _sharedRefreshPromise;
+}
+
 const api = axios.create({
   baseURL: `${API_URL}/api`,
   withCredentials: true,
@@ -35,11 +61,6 @@ api.interceptors.request.use((config) => {
 
   return config;
 });
-
-// Single in-flight refresh promise shared across all concurrent 401 responses.
-// Without this, multiple expired requests would each try to refresh simultaneously,
-// causing all but the first to fail because the refresh token is single-use.
-let refreshPromise: Promise<string> | null = null;
 
 api.interceptors.response.use(
   (response) => {
@@ -69,32 +90,18 @@ api.interceptors.response.use(
       return api(originalRequest);
     }
 
-    // Token expired — refresh and retry (all concurrent 401s share one refresh call)
+    // Token expired — refresh and retry using the shared singleton so that
+    // concurrent 401s (from this interceptor AND from AuthProvider) never fire
+    // two simultaneous backend refresh calls with the same cookie.
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      if (!refreshPromise) {
-        refreshPromise = axios
-          .post('/api/bff/refresh', {})
-          .then(({ data }) => {
-            setAccessToken(data.accessToken);
-            reauthenticateSockets();
-            return data.accessToken as string;
-          })
-          .catch((err) => {
-            clearAccessToken();
-            throw err;
-          })
-          .finally(() => {
-            refreshPromise = null;
-          });
-      }
-
       try {
-        const newToken = await refreshPromise;
+        const newToken = await refreshSession();
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
         return api(originalRequest);
       } catch {
+        clearAccessToken();
         return Promise.reject(error);
       }
     }
