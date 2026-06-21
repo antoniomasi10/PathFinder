@@ -3,8 +3,7 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { AuthContext, AuthUser } from '@/lib/auth';
-import api, { clearAccessToken, setAccessToken, bffPost } from '@/lib/api';
-import { reauthenticateSockets } from '@/lib/socket';
+import api, { clearAccessToken, bffPost, refreshSession } from '@/lib/api';
 import { useLanguage } from '@/lib/language';
 import { identify, resetAnalytics } from '@/lib/analytics';
 
@@ -18,13 +17,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Refresh first so the subsequent /profile/me never sees a 401.
-    bffPost<{ accessToken: string }>('/api/bff/refresh')
-      .then(({ data }) => {
-        setAccessToken(data.accessToken);
-        reauthenticateSockets();
-        return api.get('/profile/me');
-      })
+    // Use the shared singleton so this call and the Axios 401 interceptor
+    // never fire two simultaneous backend refreshes with the same cookie.
+    refreshSession()
+      .then(() => api.get('/profile/me'))
       .then(({ data }) => {
         // identify() must fire before setLoading(false) so PostHog has the user
         // identity before any child component can emit tracking events.
