@@ -38,7 +38,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
           router.replace('/verify-email');
         } else if (data.emailVerified && !data.profileCompleted && pathname !== '/onboarding') {
           router.replace('/onboarding');
-        } else if (data.emailVerified && data.profileCompleted && ['/onboarding', '/verify-email'].includes(pathname)) {
+        } else if (data.emailVerified && data.profileCompleted && ['/', '/onboarding', '/verify-email'].includes(pathname)) {
           router.replace('/home');
         }
       })
@@ -69,7 +69,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     router.replace('/login');
   };
 
-  if (loading) {
+  if (loading && pathname !== '/') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: '#fbf8ff' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
