@@ -7,7 +7,7 @@ import api, { clearAccessToken, bffPost, refreshSession } from '@/lib/api';
 import { useLanguage } from '@/lib/language';
 import { identify, resetAnalytics } from '@/lib/analytics';
 
-const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
+const publicPaths = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const { t } = useLanguage();
