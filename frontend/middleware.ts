@@ -19,9 +19,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // The backend is the source of truth for token validity: /api/bff/refresh and
+  // every protected API call verify it server-side. When JWT_REFRESH_SECRET is
+  // configured on the frontend we additionally verify the signature here at the
+  // edge. When it isn't set we gate on cookie presence only — otherwise a missing
+  // secret throws on every request and locks every signed-in user out of the app.
+  const refreshSecret = process.env.JWT_REFRESH_SECRET;
+  if (!refreshSecret) {
+    return NextResponse.next();
+  }
+
   try {
-    const secret = new TextEncoder().encode(process.env.JWT_REFRESH_SECRET!);
-    await jwtVerify(token, secret);
+    await jwtVerify(token, new TextEncoder().encode(refreshSecret));
     return NextResponse.next();
   } catch {
     const loginUrl = request.nextUrl.clone();
