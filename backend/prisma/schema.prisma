@@ -122,67 +122,67 @@ enum Role {
 }
 
 model User {
-  id                String                 @id @default(uuid())
-  email             String                 @unique
-  passwordHash      String?
-  name              String
-  surname           String                 @default("")
+  id           String  @id @default(uuid())
+  email        String  @unique
+  passwordHash String?
+  name         String
+  surname      String  @default("")
 
-  phone             String?
-  googleId          String?                @unique
-  provider          AuthProvider           @default(LOCAL)
-  role              Role                   @default(USER)
-  emailVerified     Boolean                @default(false)
-  avatar            String?
-  avatarBgColor     String?
-  bio               String?
-  birthDate         DateTime?
-  universityId      String?
-  university        University?            @relation(fields: [universityId], references: [id])
-  courseOfStudy     String?
-  yearOfStudy       Int?
-  gpa               GpaRange?
-  englishLevel      EnglishLevel?
-  willingToRelocate WillingnessToRelocate?
-  region              String?
-  city                String?
-  regionLock          Boolean   @default(false)
-  cityLock            Boolean   @default(false)
-  profileCompleted    Boolean   @default(false)
-  publicProfile       Boolean   @default(true)
-  privacySavedOpps    String    @default("Tutti")
-  privacyPathmates    String    @default("Tutti")
-  messagePrivacy      String    @default("Pathmates")
-  privacySkills       String    @default("Tutti")
-  privacyUniversity   String    @default("Tutti")
-  skills              Json      @default("{\"core\":null,\"side\":[],\"promptShownAt\":null,\"promptDismissedAt\":null,\"definedAt\":null,\"lastUpdatedAt\":null}")
-  passwordResetToken  String?
-  passwordResetExpiry DateTime?
-  tosConsentAt        DateTime?
-  privacyConsentAt    DateTime?
-  marketingConsent       Boolean   @default(false)
+  phone                  String?
+  googleId               String?                @unique
+  provider               AuthProvider           @default(LOCAL)
+  role                   Role                   @default(USER)
+  emailVerified          Boolean                @default(false)
+  avatar                 String?
+  avatarBgColor          String?
+  bio                    String?
+  birthDate              DateTime?
+  universityId           String?
+  university             University?            @relation(fields: [universityId], references: [id])
+  courseOfStudy          String?
+  yearOfStudy            Int?
+  gpa                    GpaRange?
+  englishLevel           EnglishLevel?
+  willingToRelocate      WillingnessToRelocate?
+  region                 String?
+  city                   String?
+  regionLock             Boolean                @default(false)
+  cityLock               Boolean                @default(false)
+  profileCompleted       Boolean                @default(false)
+  publicProfile          Boolean                @default(true)
+  privacySavedOpps       String                 @default("Tutti")
+  privacyPathmates       String                 @default("Tutti")
+  messagePrivacy         String                 @default("Pathmates")
+  privacySkills          String                 @default("Tutti")
+  privacyUniversity      String                 @default("Tutti")
+  skills                 Json                   @default("{\"core\":null,\"side\":[],\"promptShownAt\":null,\"promptDismissedAt\":null,\"definedAt\":null,\"lastUpdatedAt\":null}")
+  passwordResetToken     String?
+  passwordResetExpiry    DateTime?
+  tosConsentAt           DateTime?
+  privacyConsentAt       DateTime?
+  marketingConsent       Boolean                @default(false)
   oneSignalPlayerId      String?
   oneSignalEmailPlayerId String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
 
   profile                UserProfile?
-  sentMessages           PathMatesMessage[] @relation("SentMessages")
-  receivedMessages       PathMatesMessage[] @relation("ReceivedMessages")
-  createdGroups          PathMatesGroup[]   @relation("GroupCreator")
+  sentMessages           PathMatesMessage[]          @relation("SentMessages")
+  receivedMessages       PathMatesMessage[]          @relation("ReceivedMessages")
+  createdGroups          PathMatesGroup[]            @relation("GroupCreator")
   groupMemberships       GroupMember[]
   notifications          Notification[]
-  sentFriendRequests     FriendRequest[]    @relation("FriendRequestFrom")
-  receivedFriendRequests FriendRequest[]    @relation("FriendRequestTo")
+  sentFriendRequests     FriendRequest[]             @relation("FriendRequestFrom")
+  receivedFriendRequests FriendRequest[]             @relation("FriendRequestTo")
   posts                  Post[]
   postLikes              PostLike[]
   postComments           PostComment[]
   postReports            PostReport[]
   commentReports         CommentReport[]
-  userReports            UserReport[]    @relation("UserReportReporter")
-  reportedBy             UserReport[]    @relation("UserReportTarget")
-  savedOpportunities     Opportunity[]      @relation("SavedOpportunities")
-  savedCourses           Course[]           @relation("SavedCourses")
+  userReports            UserReport[]                @relation("UserReportReporter")
+  reportedBy             UserReport[]                @relation("UserReportTarget")
+  savedOpportunities     Opportunity[]               @relation("SavedOpportunities")
+  savedCourses           Course[]                    @relation("SavedCourses")
   notificationPreference NotificationPreference?
   pushSubscriptions      PushSubscription[]
   badges                 UserBadge[]
@@ -206,87 +206,87 @@ model UserProfile {
   naturalActivity     String?
   freeTimeActivity    String?
   problemSolvingStyle String?
-  riskTolerance     String?
-  coreValue         String?
-  careerVision      String?
-  professionalGoal  String?
-  passions          String[]
-  languages         Json     @default("[]")
-  clusterTag        String?
-  completedAt       DateTime?
+  riskTolerance       String?
+  coreValue           String?
+  careerVision        String?
+  professionalGoal    String?
+  passions            String[]
+  languages           Json      @default("[]")
+  clusterTag          String?
+  completedAt         DateTime?
 }
 
 model Opportunity {
-  id                   String          @id @default(uuid())
+  id                   String                      @id @default(uuid())
   title                String
   description          String
-  titleIt              String?         // Italian translation (DeepL); null = not yet translated
-  descriptionIt        String?         // Italian translation (DeepL); null = not yet translated
+  titleIt              String? // Italian translation (DeepL); null = not yet translated
+  descriptionIt        String? // Italian translation (DeepL); null = not yet translated
   about                String?
   url                  String?
   type                 OpportunityType
   universityId         String?
-  university           University?     @relation(fields: [universityId], references: [id])
+  university           University?                 @relation(fields: [universityId], references: [id])
   company              String?
   location             String?
-  isRemote             Boolean         @default(false)
-  isAbroad             Boolean         @default(false)
+  isRemote             Boolean                     @default(false)
+  isAbroad             Boolean                     @default(false)
   requiredEnglishLevel EnglishLevel?
   minGpa               GpaRange?
   requiredSkills       String?
   recommendedSkills    String?
   tags                 String[]
   deadline             DateTime?
-  postedAt             DateTime        @default(now())
+  postedAt             DateTime                    @default(now())
   expiresAt            DateTime?
-  savedBy              User[]          @relation("SavedOpportunities")
+  savedBy              User[]                      @relation("SavedOpportunities")
   sharedInMessages     PathMatesMessage[]
-  source               String?         // e.g. "EURES", "Stage4eu" — CC BY 4.0 attribution
-  sourceId             String?         // e.g. "eures-12345" — null = manual/seed
-  lastSyncedAt         DateTime?       // last time this record was refreshed by import
-  dedupKey             String?         // normalized hash of title+company/organizer — used to skip cross-source duplicates
+  source               String? // e.g. "EURES", "Stage4eu" — CC BY 4.0 attribution
+  sourceId             String? // e.g. "eures-12345" — null = manual/seed
+  lastSyncedAt         DateTime? // last time this record was refreshed by import
+  dedupKey             String? // normalized hash of title+company/organizer — used to skip cross-source duplicates
   embedding            Unsupported("vector(384)")?
 
   // --- Time / duration (events, summer school, hackathons) ---
-  startDate            DateTime?
-  endDate              DateTime?
-  durationDays         Int?
+  startDate    DateTime?
+  endDate      DateTime?
+  durationDays Int?
 
   // --- Format + location detail ---
-  format               OpportunityFormat?
-  city                 String?
-  country              String?         // ISO-3166-1 alpha-2 (e.g. "IT", "DE")
-  region               String?         // Italian region (e.g. "Puglia", "Lombardia"); null if country != IT
+  format  OpportunityFormat?
+  city    String?
+  country String? // ISO-3166-1 alpha-2 (e.g. "IT", "DE")
+  region  String? // Italian region (e.g. "Puglia", "Lombardia"); null if country != IT
 
   // --- Schwartz personality cluster classification ---
-  clusterScores        Json?           // { Analista: 0-1, Creativo: 0-1, Leader: 0-1, Imprenditore: 0-1, Sociale: 0-1, Explorer: 0-1 }
-  clusterPrimary       String?         // denormalized top cluster for fast queries
+  clusterScores  Json? // { Analista: 0-1, Creativo: 0-1, Leader: 0-1, Imprenditore: 0-1, Sociale: 0-1, Explorer: 0-1 }
+  clusterPrimary String? // denormalized top cluster for fast queries
 
   // --- Cost / compensation ---
-  cost                 Int?            // EUR; 0 = free, null = unknown
-  hasScholarship       Boolean         @default(false)
-  scholarshipDetails   String?
-  stipend              Int?            // EUR/month offered to participant
+  cost               Int? // EUR; 0 = free, null = unknown
+  hasScholarship     Boolean @default(false)
+  scholarshipDetails String?
+  stipend            Int? // EUR/month offered to participant
 
   // --- Structured prerequisites ---
-  eligibleFields       FieldOfStudy[]  @default([])  // empty = any field
-  minYearOfStudy       Int?
-  maxYearOfStudy       Int?
-  requiredLanguages    Json            @default("[]") // [{lang:"en",level:"B2"}]
+  eligibleFields    FieldOfStudy[] @default([]) // empty = any field
+  minYearOfStudy    Int?
+  maxYearOfStudy    Int?
+  requiredLanguages Json           @default("[]") // [{lang:"en",level:"B2"}]
 
   // --- Provenance ---
-  organizer            String?         // for non-company events: "TEDxMilano", "IFMSA Italy"
-  verified             Boolean         @default(false) // manually curated/verified
+  organizer String? // for non-company events: "TEDxMilano", "IFMSA Italy"
+  verified  Boolean @default(false) // manually curated/verified
 
   // --- AI-extracted structured content ---
-  structuredContent    Json?           // {opportunityDescription, companyDescription, tasks}
-  extractedSkills      String[]        @default([]) // AI-extracted, up to 5 real skill names
-  contextualizedSkills String[]        @default([]) // AI-generated contextualized descriptions (TIROCINIO only)
+  structuredContent    Json? // {opportunityDescription, companyDescription, tasks}
+  extractedSkills      String[] @default([]) // AI-extracted, up to 5 real skill names
+  contextualizedSkills String[] @default([]) // AI-generated contextualized descriptions (TIROCINIO only)
 
   // --- URL health ---
-  urlStatus            String?         @default("UNCHECKED") // UNCHECKED | ACTIVE | BROKEN
-  urlCheckedAt         DateTime?
-  urlBrokenStreak      Int             @default(0) // consecutive 404/410 checks; mark BROKEN only at >=3
+  urlStatus       String?   @default("UNCHECKED") // UNCHECKED | ACTIVE | BROKEN
+  urlCheckedAt    DateTime?
+  urlBrokenStreak Int       @default(0) // consecutive 404/410 checks; mark BROKEN only at >=3
 
   @@index([universityId])
   @@index([type])
@@ -316,7 +316,7 @@ model University {
   alumniCount   Int           @default(0)
   avgRating     Float         @default(0)
   isActive      Boolean       @default(true)
-  sourceId      String?       // e.g. "mur-00001" — null = manual/seed
+  sourceId      String? // e.g. "mur-00001" — null = manual/seed
   lastSyncedAt  DateTime?
   users         User[]
   courses       Course[]
@@ -326,21 +326,21 @@ model University {
 }
 
 model Course {
-  id                         String     @id @default(uuid())
+  id                         String                      @id @default(uuid())
   universityId               String
-  university                 University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  university                 University                  @relation(fields: [universityId], references: [id], onDelete: Cascade)
   name                       String
   type                       CourseType
   field                      String?
   employmentRate             Float?
   avgSalaryAfterGraduation   Int?
   internshipsAvailable       Int?
-  internationalOpportunities Boolean    @default(false)
+  internationalOpportunities Boolean                     @default(false)
   programDuration            String?
   languageOfInstruction      String?
-  tags                       String[]   @default([])
-  savedBy                    User[]     @relation("SavedCourses")
-  isActive                   Boolean    @default(true)
+  tags                       String[]                    @default([])
+  savedBy                    User[]                      @relation("SavedCourses")
+  isActive                   Boolean                     @default(true)
   sourceId                   String?
   lastSyncedAt               DateTime?
   embedding                  Unsupported("vector(384)")?
@@ -349,13 +349,13 @@ model Course {
 }
 
 model PathMatesMessage {
-  id         String          @id @default(uuid())
-  senderId   String
-  sender     User            @relation("SentMessages", fields: [senderId], references: [id])
-  receiverId String?
-  receiver   User?           @relation("ReceivedMessages", fields: [receiverId], references: [id])
-  groupId    String?
-  group      PathMatesGroup? @relation(fields: [groupId], references: [id])
+  id            String          @id @default(uuid())
+  senderId      String
+  sender        User            @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId    String?
+  receiver      User?           @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  groupId       String?
+  group         PathMatesGroup? @relation(fields: [groupId], references: [id])
   content       String
   images        String[]        @default([])
   type          MessageType     @default(TEXT)
@@ -510,22 +510,22 @@ model UserReport {
 }
 
 model NotificationPreference {
-  id             String  @id @default(uuid())
-  userId         String  @unique
-  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pushEnabled    Boolean @default(true)
-  networking     Boolean @default(true)
-  opportunities  Boolean @default(true)
-  universities   Boolean @default(true)
-  social         Boolean @default(true)
-  postLikes      Boolean @default(false)
-  chat           Boolean @default(true)
-  achievements   Boolean @default(true)
-  system         Boolean @default(true)
-  emailDigest    Boolean @default(true)
-  emailAlerts    Boolean @default(true)
-  emailSpot      Boolean @default(true)
-  emailDaily     Boolean @default(true)
+  id            String  @id @default(uuid())
+  userId        String  @unique
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pushEnabled   Boolean @default(true)
+  networking    Boolean @default(true)
+  opportunities Boolean @default(true)
+  universities  Boolean @default(true)
+  social        Boolean @default(true)
+  postLikes     Boolean @default(false)
+  chat          Boolean @default(true)
+  achievements  Boolean @default(true)
+  system        Boolean @default(true)
+  emailDigest   Boolean @default(true)
+  emailAlerts   Boolean @default(true)
+  emailSpot     Boolean @default(true)
+  emailDaily    Boolean @default(true)
 }
 
 model PushSubscription {
@@ -540,14 +540,14 @@ model PushSubscription {
 }
 
 model UserBadge {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   badgeId    String
-  progress   Int      @default(0)
+  progress   Int       @default(0)
   unlockedAt DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@unique([userId, badgeId])
   @@index([userId])
@@ -566,15 +566,15 @@ model UserTracking {
 }
 
 model ImportLog {
-  id        String   @id @default(uuid())
-  source    String   // mur, eures, almalaurea, istat
-  type      String   // universities, courses, opportunities, stats
-  status    String   // success, partial, failed
-  count     Int      @default(0)
-  error     String?
-  startedAt DateTime @default(now())
+  id         String    @id @default(uuid())
+  source     String // mur, eures, almalaurea, istat
+  type       String // universities, courses, opportunities, stats
+  status     String // success, partial, failed
+  count      Int       @default(0)
+  error      String?
+  startedAt  DateTime  @default(now())
   finishedAt DateTime?
-  metadata  Json?
+  metadata   Json?
 
   @@index([source, type])
   @@index([startedAt])
@@ -595,13 +595,13 @@ model VerificationCode {
 }
 
 model EmailLog {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        String   // "weekly_digest" | "expiring_alert"
-  sentAt      DateTime @default(now())
-  weekNumber  Int?
-  year        Int?
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       String // "weekly_digest" | "expiring_alert"
+  sentAt     DateTime @default(now())
+  weekNumber Int?
+  year       Int?
 
   @@index([userId, type, weekNumber, year])
   @@index([userId, type, sentAt])
@@ -611,9 +611,9 @@ model UserInteraction {
   id         String   @id @default(uuid())
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  targetType String   // "opportunity" | "course" | "post" | "user"
+  targetType String // "opportunity" | "course" | "post" | "user"
   targetId   String
-  action     String   // "view" | "click" | "save" | "unsave" | "apply" | "like" | "comment" | "friend_request"
+  action     String // "view" | "click" | "save" | "unsave" | "apply" | "like" | "comment" | "friend_request"
   weight     Float    @default(1.0)
   createdAt  DateTime @default(now())
 
@@ -623,27 +623,67 @@ model UserInteraction {
 }
 
 model CompanyWatchlist {
-  id               String    @id @default(cuid())
-  name             String
-  careersUrl       String    @unique
-  sector           String
-  tier             String    // "large" | "medium"
+  id         String @id @default(cuid())
+  name       String
+  careersUrl String @unique
+  sector     String
+  tier       String // "large" | "medium"
 
-  robotsAllowed    Boolean?
-  robotsCheckedAt  DateTime?
+  // --- Universal source registry (import expansion) ---
+  domain          String? // normalized apex domain, discovery/dedup key (e.g. "eni.com")
+  atsType         String? // greenhouse|lever|ashby|workable|smartrecruiters|personio|teamtailor|recruitee|workday|custom-static|custom-js|unknown
+  atsToken        String? // board token/identifier when an ATS is detected (feeds the ATS factory)
+  scrapeTier      String? // "A" (ATS API) | "B" (static+LLM) | "C" (headless+LLM)
+  discoverySource String? // e.g. "ats-index:greenhouse", "registry:opencorporates", "search", "manual"
+  country         String? @default("IT") // ISO-3166-1 alpha-2
 
-  tosAllowed       Boolean?
-  tosAnalyzedAt    DateTime?
-  tosNotes         String?
-  tosPageNotFound  Boolean   @default(false)
+  // --- Change-detection (skip re-scrape/LLM when page unchanged) ---
+  contentHash   String? // hash of last extracted <main> content
+  contentHashAt DateTime?
 
-  lastSyncedAt     DateTime?
-  isActive         Boolean   @default(true)
-  addedBy          String?
+  // --- Health / auto-disable ---
+  lastScrapeStatus    String? // "ok" | "unchanged" | "error"
+  consecutiveFailures Int     @default(0)
 
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  robotsAllowed   Boolean?
+  robotsCheckedAt DateTime?
+
+  tosAllowed      Boolean?
+  tosAnalyzedAt   DateTime?
+  tosNotes        String?
+  tosPageNotFound Boolean   @default(false)
+
+  lastSyncedAt DateTime?
+  isActive     Boolean   @default(true)
+  addedBy      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([isActive])
   @@index([tosAllowed])
+  @@index([atsType])
+  @@index([scrapeTier])
+  @@index([domain])
+}
+
+/// DB-backed scrape queue for tier B/C career-page scraping at scale.
+/// Tier A (ATS APIs) are batch-run per-platform by the ATS factory, not queued.
+model ScrapeJob {
+  id          String    @id @default(cuid())
+  companyId   String // CompanyWatchlist.id
+  tier        String // "B" | "C"
+  status      String    @default("pending") // pending | running | done | failed
+  priority    Int       @default(0) // higher runs first
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  runAfter    DateTime  @default(now()) // backoff / per-domain rate-limit gate
+  lockedAt    DateTime?
+  lockedBy    String?
+  error       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, runAfter, priority])
+  @@index([companyId])
 }

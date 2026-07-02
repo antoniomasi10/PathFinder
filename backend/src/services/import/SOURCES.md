@@ -40,9 +40,37 @@ dedicated importers they are recorded here manually and re-verified quarterly.
 | **Ashby** | `ashby.import.ts` | ATS | — | ✅ allowed | Public embed API | Sat 03:30 | Official ATS |
 | **Workable** | `workable.import.ts` | ATS | — | ✅ allowed | Public widget API | Sat 04:00 | Official ATS |
 | **Personio** | `personio.import.ts` | ATS | — | ✅ allowed | Public XML feed | Sun 03:30 | Official ATS; DACH region focus |
+| **Recruitee** | `ats/adapters/recruitee.ts` | ATS | — | ✅ allowed | Public offers API (`{token}.recruitee.com/api/offers/`) | Sat 04:30 | Factory ATS; DB-driven tokens (grown by discovery) |
 | **MUR** | `mur.import.ts` | Open-Data | — | — | CC BY / Italian gov open data | Monthly 1st 02:00/02:30 | Official Italian universities + courses |
 | **AlmaLaurea** | `almalaurea.import.ts` | Open-Data | — | — | Partnership / public stats | Quarterly Jan/Apr/Jul/Oct 04:00 | Italian graduate employment stats |
 | **ANPAL** | `anpal.import.ts` | Open-Data | — | — | CC BY (Italian gov open data) | Monthly 1st 03:00 | Garanzia Giovani measures + Servizio Civile Universale bandi via dati.gov.it CKAN |
+
+---
+
+## Import expansion — data-driven ATS registry + discovery + scrape queue
+
+To cover Italian companies at scale, ATS sources are **data-driven**: board tokens
+live in `CompanyWatchlist` (`atsType` + `atsToken`, `scrapeTier = A`) instead of
+hardcoded maps. The generic **ATS factory** (`ats/ats-connector.ts` + `ats/adapters/*`)
+reads tokens from the DB, so *discovering a company = inserting a row* — no code per
+company. Seed tokens were migrated in via `scripts/migrateAtsBoardsToRegistry.ts`.
+
+**Discovery** (`discovery/discovery.orchestrator.ts`, Mon 02:30) runs pluggable
+`DiscoveryConnector`s. Fase 1 ships the ATS-index seed connector for Italian companies
+(`discovery/connectors/ats-seed.connector.ts` + `discovery/seeds/italy-ats-seed.ts`);
+each candidate is **validated against the live ATS API before registering**, so wrong/
+dead tokens never pollute the registry. ATS public APIs are covered by the rows above
+(no per-company robots/ToS needed).
+
+**Scrape queue** (`discovery/queue.ts` + `discovery/scrapeWorker.ts`) handles the tier
+B/C long tail (custom / JS career sites) at scale: `ScrapeJob` table claimed with
+`FOR UPDATE SKIP LOCKED`, per-domain rate limiting, exponential backoff, `contentHash`
+change-detection (skips the LLM when a page is unchanged), and auto-disable after 5
+consecutive failures. Compliance for tier B/C reuses the per-company robots.txt + ToS
+gate (cached 30d). Enqueue daily 01:00; worker every 2h.
+
+Admin: `POST /ats/:platform`, `POST /discovery/run`, `POST /queue/enqueue`,
+`POST /queue/drain`, `GET /queue/stats`, `GET /registry/stats`.
 
 ---
 
@@ -69,6 +97,13 @@ dedicated importers they are recorded here manually and re-verified quarterly.
 | **Lu.ma** | API | "publicly supported interfaces" clause ambiguous; conservative exclusion | — |
 | **Bevy / Startup Grind / GDG** | Scrape | Explicit scraping prohibition in ToS | — |
 | **Workday** | Scrape | ToS prohibits automated access; used by many CompanyWatchlist entries — auto-skipped | — |
+| **SuccessFactors / Taleo / iCIMS** | Scrape | ToS prohibit automated access | — |
+
+**Prohibited-ATS blocklist (enforced in code):** `discovery/ats-policy.ts` marks
+Workday, SuccessFactors, Taleo, iCIMS as `prohibited`. Discovery uses them only as a
+company *signal*: when a resolved careers page fingerprints to one of these, the company
+is registered `no-harvest` (`lastScrapeStatus = 'no-harvest'`, `scrapeTier = null`) and is
+never scraped. It is harvested only if it also exposes a non-ATS page of its own.
 
 ---
 

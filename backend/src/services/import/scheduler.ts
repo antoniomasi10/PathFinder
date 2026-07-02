@@ -50,6 +50,11 @@ import { importTechConfitOpportunities } from './techconfit.import';
 import { importMobilizonOpportunities } from './mobilizon.import';
 import { importCompanyWatchlistOpportunities } from './company-watchlist.import';
 import { importANPALOpportunities } from './anpal.import';
+import { runAtsConnector } from './ats/ats-connector';
+import { recruiteeAdapter } from './ats/adapters/recruitee';
+import { runDiscovery } from './discovery/discovery.orchestrator';
+import { enqueueScrapeJobs } from './discovery/queue';
+import { runScrapeWorker } from './discovery/scrapeWorker';
 // F6S: DISABLED — import will be added here after C0 compliance verification (see f6s.import.ts)
 import { runCleanup } from './cleanup.service';
 import { runUrlCheckBatch } from './urlChecker';
@@ -152,6 +157,11 @@ export function startImportScheduler() {
     runWithAlert('Workable', 'workable', 'opportunities', importWorkableOpportunities);
   });
 
+  // Weekly Saturday: Recruitee internships (04:30) — factory ATS, DB-driven tokens
+  cron.schedule('30 4 * * 6', () => {
+    runWithAlert('Recruitee', 'recruitee', 'opportunities', () => runAtsConnector(recruiteeAdapter));
+  });
+
   // Weekly Sunday: Personio internships (03:30)
   cron.schedule('30 3 * * 0', () => {
     runWithAlert('Personio', 'personio', 'opportunities', importPersonioOpportunities);
@@ -199,6 +209,23 @@ export function startImportScheduler() {
   //   runWithAlert('F6S', 'f6s', 'opportunities', importF6sOpportunities);
   // });
 
+  // --- Import expansion: discovery → registry → scrape queue ---
+
+  // Weekly Monday: company discovery (02:30) — validates + registers ATS boards
+  cron.schedule('30 2 * * 1', () => {
+    runWithAlert('Discovery', 'discovery', 'companies', () => runDiscovery());
+  });
+
+  // Daily: enqueue tier B/C scrape jobs for due companies (01:00)
+  cron.schedule('0 1 * * *', () => {
+    runWithAlert('ScrapeEnqueue', 'scrape-queue', 'companies', () => enqueueScrapeJobs());
+  });
+
+  // Every 2 hours: drain the scrape queue (tier B/C, change-detected)
+  cron.schedule('0 */2 * * *', () => {
+    runWithAlert('ScrapeWorker', 'scrape-queue', 'opportunities', () => runScrapeWorker());
+  });
+
   // Weekly Sunday: cleanup (05:00)
   cron.schedule('0 5 * * 0', async () => {
     logger.info('[Scheduler] Cleanup...');
@@ -224,7 +251,8 @@ export function startImportScheduler() {
   logger.info('  ConfsTech: Wed 03:00 | Stage4eu: Wed 03:30 | CompanyWatchlist: Wed 05:30');
   logger.info('  Greenhouse: Thu 03:30 | Jobicy: Thu 04:00 | TechConfit: Thu 04:30');
   logger.info('  Lever: Fri 03:30 | FashionUnited: Fri 04:00 | Mobilizon: Fri 04:30');
-  logger.info('  Ashby: Sat 03:30 | Workable: Sat 04:00');
+  logger.info('  Ashby: Sat 03:30 | Workable: Sat 04:00 | Recruitee: Sat 04:30');
   logger.info('  Personio: Sun 03:30 | Cleanup: Sun 05:00 | URL check: Sun 06:00');
+  logger.info('  Discovery: Mon 02:30 | ScrapeEnqueue: daily 01:00 | ScrapeWorker: every 2h');
   logger.info('  MUR: monthly 1st 02:00/02:30 | ANPAL (GG+SCU): monthly 1st 03:00 | AlmaLaurea: quarterly');
 }

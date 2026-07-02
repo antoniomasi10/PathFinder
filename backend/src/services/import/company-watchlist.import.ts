@@ -380,6 +380,73 @@ export async function extractOpportunitiesWithLLM(
 // Main import orchestration
 // ---------------------------------------------------------------------------
 
+/**
+ * Builds normalized OpportunityRecords from LLM-extracted raw listings for one
+ * company. Shared by the weekly batch loop, the single-company admin import, and
+ * the tier B/C scrape worker so record shape / sourceId / tags stay identical.
+ */
+export function buildWatchlistRecords(
+  company: CompanyWatchlist,
+  rawOpportunities: RawLLMOpportunity[],
+  now: Date,
+): { records: OpportunityRecord[]; skipped: number } {
+  const records: OpportunityRecord[] = [];
+  let skipped = 0;
+
+  for (const raw of rawOpportunities) {
+    if (!raw.title) { skipped++; continue; }
+
+    const opportunityUrl = raw.url || company.careersUrl;
+    const location = raw.location || company.name;
+    const countryCode = extractCountryCode(location) || 'IT';
+    const isRemote = location.toLowerCase().includes('remote') || location.toLowerCase().includes('remoto');
+    const sourceId = `company-watchlist-${company.id}-${Buffer.from(raw.title + opportunityUrl).toString('base64').slice(0, 20)}`;
+
+    const description = [
+      `${raw.title} presso ${company.name}.`,
+      raw.location ? `Sede: ${raw.location}.` : null,
+      `Settore: ${company.sector}.`,
+    ].filter(Boolean).join(' ');
+
+    const validated = validateOpportunity({
+      title: raw.title,   // D3: no " — CompanyName" suffix — keeps dedupKey clean
+      description,
+      company: company.name,
+      url: opportunityUrl,
+      location,
+      isAbroad: countryCode !== 'IT',
+      isRemote,
+      expiresAt: null,
+      deadline: raw.deadline ? new Date(raw.deadline) : null,
+    }, 'company-watchlist');
+
+    if (!validated) { skipped++; continue; }
+
+    records.push({
+      id: sourceId,
+      title: validated.title,
+      description: validated.description,
+      company: company.name,
+      url: validated.url ?? null,
+      location: validated.location || null,
+      isAbroad: validated.isAbroad,
+      isRemote: validated.isRemote,
+      type: mapOpportunityType(raw.title, raw.type ? [raw.type] : null),
+      // D2: sector + normalised passion tokens so tag-matching fires correctly
+      tags: [company.sector, company.tier, ...sectorTags(company.sector)],
+      postedAt: now,
+      expiresAt: null,
+      deadline: raw.deadline ? new Date(raw.deadline) : null,
+      source: 'CompanyWatchlist',
+      sourceId,
+      lastSyncedAt: now,
+      country: countryCode || null,
+    });
+  }
+
+  return { records, skipped };
+}
+
 export async function importCompanyWatchlistOpportunities(): Promise<{
   imported: number;
   skipped: number;
@@ -395,7 +462,9 @@ export async function importCompanyWatchlistOpportunities(): Promise<{
 
   try {
     const companies = await prisma.companyWatchlist.findMany({
-      where: { isActive: true },
+      // Only non-ATS rows are scraped here. ATS boards (atsType set, tier A) are
+      // imported via the ATS factory, not headless-scraped.
+      where: { isActive: true, atsType: null },
       orderBy: { lastSyncedAt: { sort: 'asc', nulls: 'first' } },
     });
 
@@ -421,62 +490,8 @@ export async function importCompanyWatchlistOpportunities(): Promise<{
         }
 
         const rawOpportunities = await extractOpportunitiesWithLLM(html, company);
-        const companyRecords: OpportunityRecord[] = [];
-        let companySkipped = 0;
-
-        for (const raw of rawOpportunities) {
-          if (!raw.title) { skipped++; companySkipped++; continue; }
-
-          const opportunityUrl = raw.url || company.careersUrl;
-          const location = raw.location || company.name;
-          const countryCode = extractCountryCode(location) || 'IT';
-          const isRemote = location.toLowerCase().includes('remote') ||
-                           location.toLowerCase().includes('remoto');
-
-          const sourceId = `company-watchlist-${company.id}-${Buffer.from(raw.title + opportunityUrl).toString('base64').slice(0, 20)}`;
-
-          // D4: richer description gives AI enrichment better material to work with
-          const description = [
-            `${raw.title} presso ${company.name}.`,
-            raw.location ? `Sede: ${raw.location}.` : null,
-            `Settore: ${company.sector}.`,
-          ].filter(Boolean).join(' ');
-
-          const validated = validateOpportunity({
-            title: raw.title,   // D3: no " — CompanyName" suffix — keeps dedupKey clean
-            description,
-            company: company.name,
-            url: opportunityUrl,
-            location,
-            isAbroad: countryCode !== 'IT',
-            isRemote,
-            expiresAt: null,
-            deadline: raw.deadline ? new Date(raw.deadline) : null,
-          }, 'company-watchlist');
-
-          if (!validated) { skipped++; companySkipped++; continue; }
-
-          companyRecords.push({
-            id: sourceId,
-            title: validated.title,
-            description: validated.description,
-            company: company.name,
-            url: validated.url ?? null,
-            location: validated.location || null,
-            isAbroad: validated.isAbroad,
-            isRemote: validated.isRemote,
-            type: mapOpportunityType(raw.title, raw.type ? [raw.type] : null),
-            // D2: sector + normalised passion tokens so tag-matching fires correctly
-            tags: [company.sector, company.tier, ...sectorTags(company.sector)],
-            postedAt: now,
-            expiresAt: null,
-            deadline: raw.deadline ? new Date(raw.deadline) : null,
-            source: 'CompanyWatchlist',
-            sourceId,
-            lastSyncedAt: now,
-            country: countryCode || null,
-          });
-        }
+        const { records: companyRecords, skipped: companySkipped } = buildWatchlistRecords(company, rawOpportunities, now);
+        skipped += companySkipped;
 
         if (companyRecords.length > 0) {
           await batchUpsertOpportunities(companyRecords);
@@ -523,7 +538,7 @@ export async function importCompanyWatchlistOpportunities(): Promise<{
  * Returns true if the company is allowed to be scraped.
  * Re-checks every 30 days; uses cached values otherwise.
  */
-async function processCompanyCompliance(company: CompanyWatchlist, now: Date): Promise<boolean> {
+export async function processCompanyCompliance(company: CompanyWatchlist, now: Date): Promise<boolean> {
   const robotsExpired = !company.robotsCheckedAt ||
     daysSince(company.robotsCheckedAt, now) > ROBOTS_CHECK_INTERVAL_DAYS;
   const tosExpired = !company.tosAnalyzedAt ||
@@ -588,55 +603,7 @@ export async function importSingleCompany(companyId: string): Promise<{
   const html = await fetchWithHeadlessBrowser(company.careersUrl);
   if (!html) return { imported: 0, skipped: 0, allowed: true };
   const rawOpportunities = await extractOpportunitiesWithLLM(html, company);
-  const records: OpportunityRecord[] = [];
-  let skipped = 0;
-
-  for (const raw of rawOpportunities) {
-    if (!raw.title) { skipped++; continue; }
-
-    const opportunityUrl = raw.url || company.careersUrl;
-    const location = raw.location || company.name;
-    const countryCode = extractCountryCode(location) || 'IT';
-    const sourceId = `company-watchlist-${company.id}-${Buffer.from(raw.title + opportunityUrl).toString('base64').slice(0, 20)}`;
-
-    const description = [
-      `${raw.title} presso ${company.name}.`,
-      raw.location ? `Sede: ${raw.location}.` : null,
-      `Settore: ${company.sector}.`,
-    ].filter(Boolean).join(' ');
-
-    const validated = validateOpportunity({
-      title: raw.title,   // D3: no suffix
-      description,
-      company: company.name,
-      url: opportunityUrl,
-      location,
-      isAbroad: countryCode !== 'IT',
-      isRemote: location.toLowerCase().includes('remote') || location.toLowerCase().includes('remoto'),
-      expiresAt: null,
-      deadline: raw.deadline ? new Date(raw.deadline) : null,
-    }, 'company-watchlist');
-
-    if (!validated) { skipped++; continue; }
-
-    records.push({
-      id: sourceId,
-      title: validated.title,
-      description: validated.description,
-      company: company.name,
-      url: validated.url ?? null,
-      location: validated.location || null,
-      isAbroad: validated.isAbroad,
-      isRemote: validated.isRemote,
-      type: mapOpportunityType(raw.title, raw.type ? [raw.type] : null),
-      tags: [company.sector, company.tier, ...sectorTags(company.sector)],   // D2
-      postedAt: now,
-      source: 'CompanyWatchlist',
-      sourceId,
-      lastSyncedAt: now,
-      country: countryCode || null,
-    });
-  }
+  const { records, skipped } = buildWatchlistRecords(company, rawOpportunities, now);
 
   if (records.length > 0) {
     await batchUpsertOpportunities(records);

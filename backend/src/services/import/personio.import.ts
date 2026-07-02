@@ -16,6 +16,7 @@ import { OpportunityType } from '@prisma/client';
 import { validateOpportunity } from './validation';
 import { batchUpsertOpportunities, markStaleOpportunities, OpportunityRecord } from './batch';
 import { stripHtml, mapOpportunityType, fetchWithRetry, runWithConcurrency } from './utils';
+import { getRegistryBoards } from './ats/registry';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -30,7 +31,7 @@ const STUDENT_RE = /\b(intern(?:ship)?|stage|stagiaire|trainee|graduate.program|
  * Company boards to scrape (slug → display name).
  * Personio feed URL: https://{slug}.jobs.personio.com/xml?language=en
  */
-const BOARDS: Record<string, string> = {
+export const PERSONIO_SEED_BOARDS: Record<string, string> = {
   'westwing': 'Westwing',
   'auxmoney-gmbh': 'Auxmoney',
   'tonies': 'Tonies',
@@ -137,7 +138,8 @@ export async function importPersonioOpportunities(options?: {
 }): Promise<{ imported: number; skipped: number; source: string }> {
   logger.info('[Personio] Starting opportunity import...');
   const now = new Date();
-  const boards = options?.boards || BOARDS;
+  // seed < manual override < DB registry (discovery-grown)
+  const boards = { ...PERSONIO_SEED_BOARDS, ...(options?.boards || {}), ...(await getRegistryBoards('personio')) };
 
   const log = await prisma.importLog.create({
     data: { source: 'personio', type: 'opportunities', status: 'running', startedAt: now },

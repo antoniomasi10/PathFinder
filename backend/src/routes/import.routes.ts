@@ -25,6 +25,11 @@ import { importANPALOpportunities } from '../services/import/anpal.import';
 import { importF6sOpportunities } from '../services/import/f6s.import';
 import { checkRobotsTxt, findAndAnalyzeTos } from '../services/import/compliance';
 import { resetDedupCache } from '../services/import/validation';
+import { runAtsConnector } from '../services/import/ats/ats-connector';
+import { ATS_ADAPTER_BY_PLATFORM } from '../services/import/ats/adapters';
+import { runDiscovery } from '../services/import/discovery/discovery.orchestrator';
+import { enqueueScrapeJobs, getQueueStats } from '../services/import/discovery/queue';
+import { runScrapeWorker } from '../services/import/discovery/scrapeWorker';
 import {
   getDataFreshnessStats,
   getSourceHealthStats,
@@ -279,6 +284,68 @@ router.post('/f6s', ...adminAuth, async (_req: Request, res: Response) => {
 router.post('/cleanup', ...adminAuth, async (_req: Request, res: Response) => {
   try { res.json(await runCleanup()); }
   catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// ---------------------------------------------------------------------------
+// Import expansion: factory-driven ATS + discovery + scrape queue
+// ---------------------------------------------------------------------------
+
+// POST /api/import/ats/:platform — run one factory ATS platform (greenhouse|lever|ashby|workable|recruitee)
+router.post('/ats/:platform', ...adminAuth, async (req: Request, res: Response) => {
+  try {
+    const adapter = ATS_ADAPTER_BY_PLATFORM[req.params.platform];
+    if (!adapter) {
+      return res.status(404).json({ error: `Unknown ATS platform: ${req.params.platform}`, supported: Object.keys(ATS_ADAPTER_BY_PLATFORM) });
+    }
+    resetDedupCache();
+    res.json(await runAtsConnector(adapter));
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/import/discovery/run — discover + register ATS boards into the registry
+router.post('/discovery/run', ...adminAuth, async (req: Request, res: Response) => {
+  try {
+    const validate = req.body?.validate !== false;
+    res.json(await runDiscovery({ validate }));
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/import/queue/enqueue — create scrape jobs for due tier B/C companies
+router.post('/queue/enqueue', ...adminAuth, async (req: Request, res: Response) => {
+  try { res.json(await enqueueScrapeJobs({ force: req.body?.force === true, limit: req.body?.limit })); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/import/queue/drain — run the scrape worker over pending jobs
+router.post('/queue/drain', ...adminAuth, async (req: Request, res: Response) => {
+  try { resetDedupCache(); res.json(await runScrapeWorker({ limit: req.body?.limit })); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/import/queue/stats — pending/running/done/failed counts
+router.get('/queue/stats', ...adminAuth, async (_req: Request, res: Response) => {
+  try { res.json(await getQueueStats()); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/import/registry/stats — registry breakdown by ATS type / tier / compliance / health
+router.get('/registry/stats', ...adminAuth, async (_req: Request, res: Response) => {
+  try {
+    const [byAts, byTier, total, active, blocked, autoDisabled] = await Promise.all([
+      prisma.companyWatchlist.groupBy({ by: ['atsType'], _count: { _all: true } }),
+      prisma.companyWatchlist.groupBy({ by: ['scrapeTier'], _count: { _all: true } }),
+      prisma.companyWatchlist.count(),
+      prisma.companyWatchlist.count({ where: { isActive: true } }),
+      prisma.companyWatchlist.count({ where: { OR: [{ robotsAllowed: false }, { tosAllowed: false }] } }),
+      prisma.companyWatchlist.count({ where: { isActive: false, consecutiveFailures: { gte: 5 } } }),
+    ]);
+    res.json({
+      total, active, inactive: total - active, complianceBlocked: blocked, autoDisabled,
+      byAtsType: Object.fromEntries(byAts.map(r => [r.atsType ?? 'none', r._count._all])),
+      byScrapeTier: Object.fromEntries(byTier.map(r => [r.scrapeTier ?? 'none', r._count._all])),
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // POST /api/import/all — run everything (ANPAL included; F6S skipped while DISABLED)

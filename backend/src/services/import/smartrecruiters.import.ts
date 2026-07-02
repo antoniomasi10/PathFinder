@@ -22,6 +22,7 @@ import { OpportunityType } from '@prisma/client';
 import { validateOpportunity } from './validation';
 import { batchUpsertOpportunities, markStaleOpportunities, OpportunityRecord } from './batch';
 import { stripHtml, mapOpportunityType, fetchWithRetry, runWithConcurrency } from './utils';
+import { getRegistryBoards } from './ats/registry';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -52,7 +53,7 @@ const STUDENT_RE = /\b(intern(?:ship)?|stage|stagiaire|tirocinio|trainee|praktik
  * industrial) and The Muse (enterprise non-tech).
  * identifier → display name
  */
-const BOARDS: Record<string, string> = {
+export const SMARTRECRUITERS_SEED_BOARDS: Record<string, string> = {
   // German industrial — fills Bundesagentur gap
   'BoschGroup': 'Bosch Group',
   'Continental': 'Continental',
@@ -170,7 +171,8 @@ export async function importSmartRecruitersOpportunities(options?: {
 }): Promise<{ imported: number; skipped: number; source: string }> {
   logger.info('[SmartRecruiters] Starting opportunity import...');
   const now = new Date();
-  const boards = options?.boards || BOARDS;
+  // seed < manual override < DB registry (discovery-grown)
+  const boards = { ...SMARTRECRUITERS_SEED_BOARDS, ...(options?.boards || {}), ...(await getRegistryBoards('smartrecruiters')) };
 
   const log = await prisma.importLog.create({
     data: { source: 'smartrecruiters', type: 'opportunities', status: 'running', startedAt: now },
