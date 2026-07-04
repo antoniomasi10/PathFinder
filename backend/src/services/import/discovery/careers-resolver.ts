@@ -2,13 +2,20 @@
  * Careers-page resolver — given a company apex domain, locate its careers page.
  *
  * Strategy (cheap HTTP only; the headless path is reserved for the scrape worker):
- *   1. fetch the homepage and follow a "careers / lavora con noi" nav link
- *   2. otherwise probe a list of common careers paths
+ *   1. fetch the homepage (fail-fast: if the domain is unreachable we stop here —
+ *      no point probing 14 paths on a dead host)
+ *   2. follow a "careers / lavora con noi" nav link, else probe common paths
+ *
+ * All probes use retries:0 + a short timeout so a large seed list stays fast:
+ * a missing path is expected, not an error worth backing off on.
  *
  * Returns the resolved URL plus the fetched HTML (so the caller can fingerprint
  * without re-fetching). Returns null when nothing careers-like is found.
  */
 import { fetchWithRetry } from '../utils';
+
+const HOME_TIMEOUT_MS = 8000;
+const PROBE_TIMEOUT_MS = 8000;
 
 const CAREERS_PATHS = [
   '/careers', '/careers/', '/en/careers', '/it/careers',
@@ -17,7 +24,7 @@ const CAREERS_PATHS = [
   '/join-us', '/work-with-us', '/posizioni-aperte', '/carriere',
 ];
 
-/** Anchor text that indicates a careers link (EN + IT). */
+/** Anchor text/href that indicates a careers link (EN + IT). */
 const CAREERS_LINK_RE = /(careers?|lavora con noi|posizioni aperte|carriere|join us|work with us|opportunit)/i;
 
 function looksLikeCareers(html: string): boolean {
@@ -42,6 +49,17 @@ function findCareersLink(html: string, base: string): string | null {
   return null;
 }
 
+/** GET a URL fast (single attempt); returns the HTML on 2xx, else null. */
+async function tryFetch(url: string, domain: string): Promise<string | null> {
+  try {
+    const res = await fetchWithRetry(url, { timeoutMs: PROBE_TIMEOUT_MS, retries: 0, logTag: `[Resolver] ${domain}` });
+    if (!res.ok) return null;
+    return await res.text();
+  } catch {
+    return null;
+  }
+}
+
 export interface ResolvedCareers {
   url: string;
   html: string;
@@ -50,34 +68,29 @@ export interface ResolvedCareers {
 export async function resolveCareersUrl(domain: string): Promise<ResolvedCareers | null> {
   const base = `https://${domain}`;
 
-  // 1. Homepage → follow a careers nav link.
+  // 1. Homepage — fail fast if the host is unreachable (skip path probing).
+  let homeHtml: string | null = null;
   try {
-    const res = await fetchWithRetry(base, { timeoutMs: 15000, logTag: `[Resolver] ${domain}` });
-    if (res.ok) {
-      const homeHtml = await res.text();
-      const link = findCareersLink(homeHtml, base);
-      if (link) {
-        try {
-          const r2 = await fetchWithRetry(link, { timeoutMs: 15000, logTag: `[Resolver] ${domain} careers` });
-          if (r2.ok) {
-            const html = await r2.text();
-            if (looksLikeCareers(html)) return { url: link, html };
-          }
-        } catch { /* fall through to path probing */ }
-      }
-    }
-  } catch { /* fall through */ }
+    const res = await fetchWithRetry(base, { timeoutMs: HOME_TIMEOUT_MS, retries: 1, logTag: `[Resolver] ${domain}` });
+    if (res.ok) homeHtml = await res.text();
+  } catch {
+    return null; // DNS/connection failure → don't waste time probing paths
+  }
 
-  // 2. Common careers paths.
+  // 1a. Follow a careers nav link from the homepage.
+  if (homeHtml) {
+    const link = findCareersLink(homeHtml, base);
+    if (link) {
+      const html = await tryFetch(link, domain);
+      if (html && looksLikeCareers(html)) return { url: link, html };
+    }
+  }
+
+  // 2. Probe common careers paths (only reached when the host responded).
   for (const path of CAREERS_PATHS) {
     const url = base + path;
-    try {
-      const res = await fetchWithRetry(url, { timeoutMs: 12000, logTag: `[Resolver] ${domain}${path}` });
-      if (res.ok) {
-        const html = await res.text();
-        if (looksLikeCareers(html)) return { url, html };
-      }
-    } catch { /* try next path */ }
+    const html = await tryFetch(url, domain);
+    if (html && looksLikeCareers(html)) return { url, html };
   }
 
   return null;
