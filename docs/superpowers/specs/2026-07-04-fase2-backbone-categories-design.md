@@ -1,6 +1,9 @@
 # Fase 2 — Backbone Binario 1 per categoria (PF-118) — Design
 
-**Status:** Draft — C0 compliance verificata sul campo, scope rivisto rispetto all'outline originale
+**Status:** Draft — C0 compliance verificata sul campo, scope rivisto rispetto all'outline
+originale. Round 1: Devfolio (Slice A) implementato ed `ENABLED`. Round 2 (2026-07-08):
+Slice B/C/D ricognite a fondo, nessuna pronta per implementazione — vedi § Ricognizione
+round 2 per i blocchi specifici trovati.
 **Date:** 2026-07-04
 **Branch:** PF-118
 **Parent spec:** `2026-07-04-opportunity-expansion-10k-design.md` (§ Fase 2, outline)
@@ -141,3 +144,99 @@ dettagliato, stessa convenzione già usata per Fase 0/1 vs Fase 2-4 nel piano pa
 Nessun importer per ESN/AEGEE/MLH/EURAXESS/IAESTE/BEST in questo giro (esclusi o rimandati
 per i motivi sopra). Nessuna modifica allo schema. Nessuna nuova infra — riuso del contratto
 `batchUpsertOpportunities`/`markStaleOpportunities` esistente.
+
+---
+
+## Ricognizione round 2 (2026-07-08) — Slice B/C/D
+
+Dopo Devfolio (implementato, vedi implementation plan), ricognizione dedicata sulle tre
+slice lasciate outline. Conclusione per tutte e tre: **nessuna pronta per un implementation
+plan a step eseguibili in questo giro**, ma per motivi diversi e più concreti di "serve
+altra ricognizione" — ognuna ha ora un blocco tecnico specifico e verificato.
+
+### Slice B — AIESEC: endpoint trovato, ma protetto
+
+Trovato il vero sistema dati dietro `aiesec.org` (Next.js App Router, non più il vecchio
+sito): un sitemap dinamico pubblico, `aiesec.org/server-sitemap.xml`, elenca **2.987 URL**
+opportunità nel pattern `/opportunity/{global-volunteer|global-talent|global-teacher}/{id}`
+(1.160 / 1.363 / 464 rispettivamente) — nessun bisogno di un motore di ricerca o browser
+headless per enumerare le opportunità esistenti. `robots.txt` è permissivo (`Allow: /`,
+nessun blocco).
+
+Il problema è a valle: le pagine di dettaglio (es. `/opportunity/global-volunteer/1337668`)
+**non contengono dati strutturati nell'HTML iniziale** (niente JSON-LD, niente
+`__NEXT_DATA__` — è React Server Components/RSC streaming). Il body reale è idratato lato
+client con una chiamata autenticata a `gis-api.aiesec.org` (confermato: root risponde
+`{"project":"gis"}`; `POST /v2/opportunities.json` risponde `{"error":"Unauthorized"}`,
+HTTP 402 — richiede credenziali app che non abbiamo e nessuna chiave pubblica è esposta nei
+bundle JS ispezionati). L'unico dato server-rendered (quindi scrapabile senza JS) sono i tag
+SEO — `<title>` e `<meta name="description">`, cioè **solo titolo + descrizione libera**,
+senza location/date/durata/formato — non abbastanza per un `OpportunityRecord` decente
+(niente `startDate`/`endDate`, niente su cui basare `isAbroad`/`country`).
+
+**Conclusione:** bloccata, ma non più per "serve trovare l'endpoint" (trovato) — per
+mancanza di credenziali API o di un vero browser headless (assente in questo ambiente/
+sessione) capace di leggere il DOM post-idratazione. Sblocco richiede una di due cose fuori
+dallo scope di un giro di implementazione:
+1. Richiesta di accesso API ufficiale ad AIESEC (azione di outreach, non tecnica).
+2. Un headless browser reale (Playwright/Puppeteer) per leggere i dati come li vede un
+   visitatore anonimo — da rivalutare se/quando questo strumento sarà disponibile.
+
+### Slice C — SummerSchoolsInEurope: ToS pulita, ma WAF blocca il fetch semplice
+
+Verificato via fetch reale (non solo lettura): homepage e pagine interne rispondono
+**403 Cloudflare** a qualunque client HTTP semplice (curl, con o senza User-Agent da
+browser) — è Cloudflare Bot Management (cookie `__cf_bm`, header `cf-ray`), non un blocco
+mirato al nostro user-agent. Una fetch tramite un altro canale (rendering-capable) ha
+invece letto il contenuto: pagina `/disclaimer/` **non menziona scraping/automated access**
+(solo boilerplate "nessun diritto derivabile dal contenuto"), e una pagina corso
+(`/course/project-management-from-theory-to-practice/`) mostra tutti i campi utili in HTML
+semplice — titolo, date, città/paese, durata, costo, deadline, lingua, organizzatore — ma
+**senza JSON-LD/microdata**: sarebbe comunque necessario un parser HTML su misura (pattern
+già usato altrove nel repo, es. `stage4eu.import.ts`), non l'approccio "zero-touch" di
+Devfolio.
+
+**Conclusione:** il punto non è più legale/strutturale (ToS pulita, campi ricavabili via
+regex) ma **infrastrutturale**: il nostro `fetchWithRetry` (fetch Node.js semplice, stesso
+meccanismo usato in produzione da ogni importer) riceverebbe lo stesso 403 che ho ricevuto
+da curl — non arriverebbe mai ai dati. Costruire un importer contro una fonte che sappiamo
+già irraggiungibile dal nostro stack non ha senso. Resta rimandata, non per policy ma per
+un blocco tecnico verificato; da rivalutare solo se cambia il meccanismo di fetch usato in
+produzione (es. proxy/rendering service dedicato in Fase 3).
+
+### Slice D — Fellowship: trovata un'API ufficiale pubblica, serve un altro giro di filtri
+
+L'EU Funding & Tenders Portal (sostituto candidato di EURAXESS) espone una search API
+pubblica reale e **senza autenticazione**: `POST
+https://api.tech.ec.europa.eu/search-api/prod/rest/search?apiKey=SEDIA` (la "SEDIA" API,
+documentata in giro come componente ufficiale del portale — `apiKey=SEDIA` è una costante
+pubblica, non un segreto). Verificata con una chiamata reale: risponde con JSON strutturato
+reale (milioni di risultati indicizzati — FAQ, eventi, "topic"/call, documenti — ciascuno
+con metadata ricchi: programma, date, deadline, lingua, tipo contenuto).
+
+Non ancora risolto: il portale copre **tutto** il funding EU (soprattutto bandi
+istituzionali per organizzazioni/università/aziende), non solo fellowship individuali per
+studenti. Le query di prova hanno restituito prevalentemente FAQ (`DATASOURCE: SEDIA_FAQ`)
+invece delle call vere per problemi di ranking/filtro, non ancora isolato il filtro
+`type`/`status`/`DATASOURCE` corretto per isolare solo i "topic" di tipo call-for-proposals
+individuali (es. Marie Skłodowska-Curie Postdoctoral Fellowships, che sono aperte a singoli
+ricercatori/dottorandi, a differenza della maggioranza dei bandi del portale).
+
+**Conclusione:** candidato più promettente delle tre — API ufficiale, pubblica, C0 verde,
+in linea con "open-data prima di scrape+gate" — ma **non pronto per un implementation plan**
+finché non si isola la combinazione di filtri che restituisce solo le call individuali
+rilevanti (prossimo passo naturale, reconnaissance pura, nessun rischio compliance). DAAD e
+ProFellow/Scholars4dev non ulteriormente esplorati in questo giro — deprioritizzati rispetto
+a SEDIA che è già un'API ufficiale funzionante.
+
+### Riepilogo stato dopo round 2
+
+| Slice | Blocco | Tipo di blocco | Prossimo passo (fuori scope qui) |
+|---|---|---|---|
+| B — AIESEC | Dati dietro API autenticata (`gis-api.aiesec.org`) | Mancanza credenziali / no headless browser | Outreach API ufficiale, o headless browser quando disponibile |
+| C — SummerSchoolsInEurope | WAF Cloudflare blocca fetch semplice | Infrastrutturale (non legale) | Rivalutare solo con meccanismo di fetch diverso (Fase 3?) |
+| D — Fellowship (SEDIA API) | Filtro corretto per call individuali non ancora isolato | Reconnaissance incompleta, nessun rischio compliance | Altro giro di query di prova sulla search API per isolare `type`/`DATASOURCE` dei topic MSCA-style |
+
+Nessuna delle tre è quindi implementabile a step eseguibili in questo giro. La più vicina è
+D (SEDIA API) — un ulteriore giro di ricognizione pura (query API, zero scraping, zero
+rischio) potrebbe sbloccarla per un implementation plan dedicato.
