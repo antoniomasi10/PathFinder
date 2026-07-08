@@ -13,6 +13,7 @@ import { importAlmaLaureaStats } from '../services/import/almalaurea.import';
 import { importOpportunityDeskOpportunities } from '../services/import/opportunity-desk.import';
 import { importHackClubOpportunities } from '../services/import/hackclub.import';
 import { importDevfolioOpportunities } from '../services/import/devfolio.import';
+import { importMscaOpportunities } from '../services/import/msca.import';
 import { importDevpostOpportunities } from '../services/import/devpost.import';
 import { importBestCoursesOpportunities } from '../services/import/best-courses.import';
 import { importConfsTechOpportunities } from '../services/import/confstech.import';
@@ -168,6 +169,12 @@ router.post('/hackclub', ...adminAuth, async (_req: Request, res: Response) => {
 // POST /api/import/devfolio
 router.post('/devfolio', ...adminAuth, async (_req: Request, res: Response) => {
   try { res.json(await importDevfolioOpportunities()); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/import/msca
+router.post('/msca', ...adminAuth, async (_req: Request, res: Response) => {
+  try { res.json(await importMscaOpportunities()); }
   catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 

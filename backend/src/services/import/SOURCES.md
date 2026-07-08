@@ -45,6 +45,7 @@ dedicated importers they are recorded here manually and re-verified quarterly.
 | **AlmaLaurea** | `almalaurea.import.ts` | Open-Data | — | — | Partnership / public stats | Quarterly Jan/Apr/Jul/Oct 04:00 | Italian graduate employment stats |
 | **ANPAL** | `anpal.import.ts` | Open-Data | — | — | CC BY (Italian gov open data) | Monthly 1st 03:00 | Garanzia Giovani measures + Servizio Civile Universale bandi via dati.gov.it CKAN |
 | **Devfolio** | `devfolio.import.ts` | Scrape (structured, 0 LLM) | ✅ allowed | ✅ allowed | — | Tue 04:45 | Hackathon listing; `__NEXT_DATA__` JSON parse, no LLM. Heavily India-centric — only `is_online` events are IT-relevant, expect single-digit yield |
+| **MSCA** | `msca.import.ts` | API (SEDIA search API, official EU) | — | — | Public EU institutional data | Mon 05:00 | Marie Skłodowska-Curie Actions fellowships/doctoral networks via `api.tech.ec.europa.eu/search-api` (apiKey=SEDIA, public/unauthenticated). Replacement for EURAXESS (excluded). Scoped to `text=MSCA` keyword — not the full institutional-grants catalogue |
 
 ---
 
@@ -138,6 +139,7 @@ For dedicated importers (this section), compliance is manually verified and reco
 | Arbeitnow | 2025-01 | 2025-01 | 2026-01 | Marco |
 | HackClub | 2025-01 | 2025-01 | 2026-01 | Marco |
 | Devfolio | 2026-07-04 | 2026-07-04 | 2026-10 | Marco |
+| MSCA (SEDIA API) | — (official EU API, no robots.txt applicable) | — (official EU Commission API, public apiKey) | 2026-10 | Marco |
 
 ---
 

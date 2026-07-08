@@ -349,7 +349,7 @@ export interface FetchRetryOptions {
   maxBackoffMs?: number;
   headers?: Record<string, string>;
   method?: string;
-  body?: string;
+  body?: RequestInit['body'];
   /** Tag for logs (e.g. "[Greenhouse] cloudflare") */
   logTag?: string;
 }

@@ -3,6 +3,7 @@
  *
  * Cron schedules:
  * - EU Youth/Eurodesk: weekly Monday 03:30 | SmartRecruiters: weekly Monday 04:00
+ * - MSCA fellowships (EU Funding & Tenders SEDIA API): weekly Monday 05:00
  * - Arbeitnow: weekly Tuesday 03:30 | RemoteOK: weekly Tuesday 04:00
  * - Stage4eu: weekly Wednesday 03:30
  * - Greenhouse: weekly Thursday 03:30 | Jobicy: weekly Thursday 04:00
@@ -41,6 +42,7 @@ import { importFashionUnitedOpportunities } from './fashionunited.import';
 import { importSmartRecruitersOpportunities } from './smartrecruiters.import';
 import { importHackClubOpportunities } from './hackclub.import';
 import { importDevfolioOpportunities } from './devfolio.import';
+import { importMscaOpportunities } from './msca.import';
 import { importDevpostOpportunities } from './devpost.import';
 import { importBestCoursesOpportunities } from './best-courses.import';
 import { importConfsTechOpportunities } from './confstech.import';
@@ -99,6 +101,11 @@ export function startImportScheduler() {
   // Weekly Monday: HackClub hackathons (04:30)
   cron.schedule('30 4 * * 1', () => {
     runWithAlert('HackClub', 'hackclub', 'opportunities', importHackClubOpportunities);
+  });
+
+  // Weekly Monday: MSCA fellowships via EU Funding & Tenders SEDIA search API (05:00)
+  cron.schedule('0 5 * * 1', () => {
+    runWithAlert('MSCA', 'msca', 'opportunities', importMscaOpportunities);
   });
 
   // Weekly Wednesday: Confs.tech tech conferences (03:00) — MIT license open data
@@ -252,7 +259,7 @@ export function startImportScheduler() {
 
   logger.info('[Scheduler] Import scheduler started:');
   logger.info('  EURES: disabled (static cache) | F6S: disabled (pending C0 verification)');
-  logger.info('  EU Youth: Mon 03:30 | SmartRecruiters: Mon 04:00 | HackClub: Mon 04:30');
+  logger.info('  EU Youth: Mon 03:30 | SmartRecruiters: Mon 04:00 | HackClub: Mon 04:30 | MSCA: Mon 05:00');
   logger.info('  Arbeitnow: Tue 03:30 | RemoteOK: Tue 04:00 | DevelopersEvents: Tue 04:30 | Devfolio: Tue 04:45');
   logger.info('  ConfsTech: Wed 03:00 | Stage4eu: Wed 03:30 | CompanyWatchlist: Wed 05:30');
   logger.info('  Greenhouse: Thu 03:30 | Jobicy: Thu 04:00 | TechConfit: Thu 04:30');
