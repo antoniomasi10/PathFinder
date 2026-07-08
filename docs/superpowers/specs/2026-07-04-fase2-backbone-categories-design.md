@@ -1,11 +1,11 @@
 # Fase 2 — Backbone Binario 1 per categoria (PF-118) — Design
 
-**Status:** Draft — C0 compliance verificata sul campo, scope rivisto rispetto all'outline
-originale. Round 1: Devfolio (Slice A) implementato ed `ENABLED`. Round 2 (2026-07-08):
-Slice B/C/D ricognite a fondo — B e C bloccate (motivi infrastrutturali/di accesso), D
-(Fellowship via SEDIA API) sbloccata in un round 3 di ricognizione sui filtri e **implementata
-ed `ENABLED`** (`msca.import.ts`, scope `text=MSCA`) — vedi implementation plan per i
-dettagli. B e C restano outline/bloccate.
+**Status:** Binario 1 (backbone per categoria) **chiuso** per questo giro. Devfolio (Slice A)
+e MSCA (Slice D) implementati ed `ENABLED`. AIESEC (Slice B) e SummerSchoolsInEurope
+(Slice C) bloccate per motivi infrastrutturali verificati. Round 4 (2026-07-09): verificati
+e chiusi anche i candidati minori residui (DoraHacks, ProFellow bloccati da anti-bot;
+Scholars4dev a resa troppo bassa; DAAD/Erasmus+ rimandati, valore marginale basso). Il resto
+del gap per categoria è lavoro di Fase 3 (motore long-tail `HarvestTarget`).
 **Date:** 2026-07-04
 **Branch:** PF-118
 **Parent spec:** `2026-07-04-opportunity-expansion-10k-design.md` (§ Fase 2, outline)
@@ -269,6 +269,48 @@ iniziale onestamente ristretto a keyword `"MSCA"` — non "tutto il funding EU",
 quasi interamente istituzionale e fuori target). DAAD e ProFellow/Scholars4dev non
 ulteriormente esplorati — deprioritizzati, SEDIA è già una fonte pubblica funzionante e
 sufficiente per questo giro.
+
+### Round 4 (2026-07-09) — pezzi minori rimasti, tutti verificati e chiusi
+
+Ultimo giro sui candidati minori ancora aperti nel piano padre, per chiudere Binario 1
+(backbone per categoria) di Fase 2:
+
+- **DoraHacks** (hackathon, alternativa a Devfolio): **bloccato**. Anche solo `robots.txt`
+  restituisce una pagina di CAPTCHA (AWS WAF "Human Verification") invece del file — stesso
+  tipo di blocco infrastrutturale di SummerSchoolsInEurope, verificato immediatamente senza
+  bisogno di scavare oltre.
+- **ProFellow** (fellowship): **bloccato**. Homepage risponde 403 con header
+  `cf-mitigated: challenge` — Cloudflare Challenge esplicito, non un caso limite.
+- **Scholars4dev** (fellowship): **raggiungibile ma resa troppo bassa**. Sito WordPress con
+  feed RSS regolare (stesso pattern di Opportunity Desk), ma sia il feed principale
+  (`/feed/`, 0 item) sia quello di categoria (`/category/scholarships-list/feed/`, 1 item,
+  datato aprile 2026) sono quasi vuoti nonostante il sito abbia migliaia di pagine scholarship
+  storiche — il flusso RSS non riflette contenuto fresco. Non giustifica un importer dedicato
+  per una manciata di record al mese.
+- **DAAD** (fellowship): `robots.txt` blocca solo varianti specifiche
+  (print/pdf/stage/lingua) della pagina stipendiendatenbank, non l'interfaccia di ricerca
+  pubblica — ma l'URL reale della scholarship database non è stato identificato con certezza
+  in questo giro (il path tentato in precedenza risulta 404). Rimandato: valore marginale
+  basso vista la copertura già data da MSCA + Opportunity Desk sulla stessa categoria, non
+  giustifica altro tempo di URL-discovery ora.
+- **Erasmus+** (`erasmus-plus.ec.europa.eu`, candidato per summer school/programmi EU):
+  sito Drupal raggiungibile, ma senza `/jsonapi` esposto (404) — nessuna scorciatoia a dati
+  strutturati; `/opportunities` e `/projects` sono pagine generiche (200) non liste
+  strutturate. Servirebbe ricognizione pagina-per-pagina senza un chiaro punto d'accesso
+  strutturato — stesso profilo di costo/beneficio di SummerSchoolsInEurope se dovesse
+  rivelarsi solo scraping HTML, ma qui manca perfino la conferma che i dati siano lì.
+
+**Conclusione:** nessuno dei candidati minori rimasti nel piano padre per Fase 2/Binario 1
+è implementabile ora — o bloccato da anti-bot (DoraHacks, ProFellow — stesso pattern di
+SummerSchoolsInEurope), o a resa troppo bassa per il costo di un importer dedicato
+(Scholars4dev), o non ancora abbastanza ricognito da giustificare l'investimento vista la
+copertura già esistente (DAAD, Erasmus+). Binario 1 di Fase 2 si considera **chiuso per
+questo giro** con due sorgenti `ENABLED` (Devfolio, MSCA); il resto del gap
+hackathon/fellowship/summer-school/eventi (~793/568/693/1880 secondo la stima del piano
+padre) resta per costruzione il lavoro di **Fase 3** (motore long-tail, `HarvestTarget`) —
+è lì che appartengono le fonti frammentate/a bassa resa individuale come sezioni locali
+ESN/AEGEE, pagine università, e fonti come Scholars4dev/DAAD se mai riconsiderate con un
+motore di estrazione generico invece di un importer dedicato per fonte.
 
 ### Riepilogo stato dopo round 2
 
