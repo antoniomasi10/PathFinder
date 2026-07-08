@@ -2,7 +2,10 @@
  * Data Cleanup Service
  *
  * Retention policy:
- * - Opportunities: delete ONLY if explicitly expired (expiresAt < now)
+ * - Opportunities: delete ONLY if explicitly expired (expiresAt < now).
+ *   Rows with a past endDate (event/hackathon finished) or deadline
+ *   (applications closed) but no expiresAt yet get expiresAt=now stamped
+ *   here, so they're deleted on the *next* cleanup run.
  *   Stale records (not synced recently) stay visible — they may still
  *   be live on the source site. They just get flagged for re-verification.
  * - Universities/Courses: soft-delete (isActive=false) if not synced in 12 months
@@ -24,6 +27,27 @@ interface CleanupResult {
   prunedLogs: number;
 }
 
+/**
+ * Sets expiresAt=now on rows whose endDate (event/hackathon finished) or
+ * deadline (applications closed) has passed but that don't have an explicit
+ * expiresAt yet. Extracted from runCleanup so it's independently testable —
+ * the actual delete of expired rows happens on the next cleanup run.
+ */
+export async function expireByDate(now: Date): Promise<number> {
+  const result = await prisma.opportunity.updateMany({
+    where: {
+      sourceId: { not: null },
+      expiresAt: null,
+      OR: [
+        { endDate: { not: null, lt: now } },
+        { deadline: { not: null, lt: now } },
+      ],
+    },
+    data: { expiresAt: now },
+  });
+  return result.count;
+}
+
 export async function runCleanup(): Promise<CleanupResult> {
   logger.info('[Cleanup] Starting data cleanup...');
   const now = new Date();
@@ -36,11 +60,13 @@ export async function runCleanup(): Promise<CleanupResult> {
     prunedLogs: 0,
   };
 
-  // 0. Remove cross-source duplicates (same title+company, keep most recent)
+  // 0. Remove cross-source duplicates (same title+company+startDate, keep most
+  //    recent). startDate is part of the grouping so recurring events/hackathons
+  //    on different dates are never collapsed into one row.
   const dupeGroups = await prisma.$queryRawUnsafe<{ ids: string[] }[]>(`
     SELECT array_agg(id ORDER BY "postedAt" DESC) as ids
     FROM "Opportunity"
-    GROUP BY LOWER(title), LOWER(company)
+    GROUP BY LOWER(title), LOWER(company), COALESCE("startDate", '1900-01-01'::timestamp)
     HAVING COUNT(*) > 1
   `);
   if (dupeGroups.length > 0) {
@@ -53,6 +79,11 @@ export async function runCleanup(): Promise<CleanupResult> {
       logger.info(`[Cleanup] Removed ${deleted.count} duplicate opportunities`);
     }
   }
+
+  // 0b. Expire by date: finished events / closed application deadlines that
+  //     are still listed (no explicit expiresAt yet). Setting expiresAt here
+  //     lets step 1 below delete them on the next cleanup run.
+  await expireByDate(now);
 
   // 1. Delete ONLY explicitly expired opportunities (expiresAt in the past)
   //    These have a clear expiration date from the source — safe to remove
@@ -163,6 +194,63 @@ export async function getDataFreshnessStats() {
     courses: { total: totalCourses, active: activeCourses },
     lastImports, recentErrors,
   };
+}
+
+/**
+ * Coverage of "live, deduped, IT-relevant" opportunities per type — the
+ * dashboard used to verify progress on the 10k IT-relevant target (PF-118).
+ * Each stage narrows the previous one:
+ *   total        → all rows of that type
+ *   live         → expiresAt is null or in the future
+ *   dedup        → live rows collapsed by dedupKey (a null dedupKey never
+ *                  collides with another, so untouched legacy rows still
+ *                  count individually)
+ *   itRelevant   → dedup rows that also satisfy country='IT' OR isRemote OR
+ *                  (isAbroad AND type IN (SUMMER_PROGRAM,FELLOWSHIP,EXCHANGE,EVENT))
+ */
+export async function getImportCoverage() {
+  const rows = await prisma.$queryRawUnsafe<{
+    type: string; total: bigint; live: bigint; dedup: bigint; it_relevant: bigint;
+  }[]>(`
+    SELECT
+      type,
+      COUNT(*) AS total,
+      COUNT(*) FILTER (WHERE "expiresAt" IS NULL OR "expiresAt" > NOW()) AS live,
+      COUNT(DISTINCT COALESCE("dedupKey", id)) FILTER (
+        WHERE "expiresAt" IS NULL OR "expiresAt" > NOW()
+      ) AS dedup,
+      COUNT(DISTINCT COALESCE("dedupKey", id)) FILTER (
+        WHERE ("expiresAt" IS NULL OR "expiresAt" > NOW())
+          AND (
+            country = 'IT'
+            OR "isRemote" = true
+            OR ("isAbroad" = true AND type IN ('SUMMER_PROGRAM', 'FELLOWSHIP', 'EXCHANGE', 'EVENT'))
+          )
+      ) AS it_relevant
+    FROM "Opportunity"
+    GROUP BY type
+    ORDER BY type
+  `);
+
+  const byType = rows.map(r => ({
+    type: r.type,
+    total: Number(r.total),
+    live: Number(r.live),
+    dedup: Number(r.dedup),
+    itRelevant: Number(r.it_relevant),
+  }));
+
+  const totals = byType.reduce(
+    (acc, r) => ({
+      total: acc.total + r.total,
+      live: acc.live + r.live,
+      dedup: acc.dedup + r.dedup,
+      itRelevant: acc.itRelevant + r.itRelevant,
+    }),
+    { total: 0, live: 0, dedup: 0, itRelevant: 0 },
+  );
+
+  return { byType, totals, generatedAt: new Date().toISOString() };
 }
 
 // All enabled sources tracked in ImportLog. Ordered to match SOURCES.md table.

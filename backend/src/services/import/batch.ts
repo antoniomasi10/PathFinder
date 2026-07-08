@@ -57,6 +57,15 @@ export interface OpportunityRecord {
 
 const UPDATE_CHUNK_SIZE = 100;
 
+// Dated types collapse recurring instances (same title+organizer, different
+// dates) unless the dedup key also carries startDate — see buildDedupKey.
+const DATED_TYPES = new Set<OpportunityType>([
+  OpportunityType.EVENT,
+  OpportunityType.HACKATHON,
+  OpportunityType.SUMMER_PROGRAM,
+  OpportunityType.COMPETITION,
+]);
+
 /**
  * Upserts opportunities in batches. `postedAt` is preserved on updates
  * (only set on inserts) so we don't rewrite the original publication date.
@@ -66,7 +75,11 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
 
   // Attach dedup key + auto-resolve Italian region for IT records.
   const enriched = records.map(r => {
-    const dedupKey = buildDedupKey(r.title, r.company ?? r.organizer);
+    const dedupKey = buildDedupKey(
+      r.title,
+      r.company ?? r.organizer,
+      DATED_TYPES.has(r.type) ? r.startDate ?? null : null,
+    );
     let { region, city } = r;
     if (!region) {
       const country = r.country ?? extractCountryCode(r.location ?? '');

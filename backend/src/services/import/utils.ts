@@ -309,10 +309,18 @@ export function normalizeFieldToEnum(raw: string): FieldOfStudy {
  *
  * For events/hackathons without a company, pass `organizer` as the second arg.
  *
+ * For dated types (EVENT/HACKATHON/SUMMER_PROGRAM/COMPETITION), pass `startDate`
+ * so recurring instances of the same event/organizer on different dates don't
+ * collapse into a single dedup key.
+ *
  * Returns null if inputs are too short/empty to produce a meaningful key —
  * callers should NOT use that as a dedup signal (treat as "no match").
  */
-export function buildDedupKey(title: string, companyOrOrganizer: string | null | undefined): string | null {
+export function buildDedupKey(
+  title: string,
+  companyOrOrganizer: string | null | undefined,
+  startDate?: Date | null,
+): string | null {
   const company = companyOrOrganizer;
   const norm = (s: string) =>
     s.toLowerCase()
@@ -326,7 +334,8 @@ export function buildDedupKey(title: string, companyOrOrganizer: string | null |
   const t = norm(title);
   const c = norm(company || '');
   if (t.length < 3 || c.length < 2) return null;
-  return `${t}|${c}`;
+  const d = startDate ? `|${startDate.toISOString().slice(0, 10)}` : '';
+  return `${t}|${c}${d}`;
 }
 
 // ---------------------------------------------------------------------------

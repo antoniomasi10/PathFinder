@@ -34,6 +34,7 @@ import {
   getDataFreshnessStats,
   getSourceHealthStats,
   getOpportunityDistribution,
+  getImportCoverage,
 } from '../services/import/cleanup.service';
 
 const router = Router();
@@ -56,6 +57,12 @@ router.get('/source-health', ...adminAuth, async (_req: Request, res: Response) 
 // GET /api/import/distribution — opportunity counts by type / sector (tags) / region / country
 router.get('/distribution', ...adminAuth, async (_req: Request, res: Response) => {
   try { res.json(await getOpportunityDistribution()); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/import/coverage — live/dedup/IT-relevant funnel per type (PF-118 10k target dashboard)
+router.get('/coverage', ...adminAuth, async (_req: Request, res: Response) => {
+  try { res.json(await getImportCoverage()); }
   catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
