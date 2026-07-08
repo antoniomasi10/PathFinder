@@ -580,6 +580,24 @@ model ImportLog {
   @@index([startedAt])
 }
 
+/// Fase 4 hardening: raw token usage per OpenAI call, for cost visibility.
+/// Stores tokens only, never a computed price — pricing is looked up at read
+/// time (services/ai/openai-client.ts::OPENAI_PRICING) so old rows never go
+/// stale when OpenAI repricing happens.
+model LlmUsageLog {
+  id               String   @id @default(cuid())
+  source           String // e.g. "opportunity-enrichment", "msca", "harvest-extraction"
+  purpose          String // e.g. "content-parse", "cluster-classify", "skill-extract"
+  model            String // e.g. "gpt-4o-mini"
+  promptTokens     Int
+  completionTokens Int
+  totalTokens      Int
+  createdAt        DateTime @default(now())
+
+  @@index([source, createdAt])
+  @@index([createdAt])
+}
+
 model VerificationCode {
   id        String               @id @default(uuid())
   userId    String

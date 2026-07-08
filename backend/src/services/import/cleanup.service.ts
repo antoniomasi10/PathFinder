@@ -277,11 +277,16 @@ const ALL_SOURCES = [
   { key: 'mur',              prefix: 'mur-',               schedule: 'Monthly 1st 02:00' },
   { key: 'almalaurea',       prefix: 'almalaurea-',        schedule: 'Quarterly' },
   { key: 'anpal',            prefix: 'anpal-',             schedule: 'Monthly 1st 03:00' },
+  { key: 'devfolio',         prefix: 'devfolio-',          schedule: 'Tue 04:45' },
+  { key: 'msca',             prefix: 'msca-',              schedule: 'Mon 05:00' },
+  // Produces HarvestTarget rows, not Opportunity rows — no sourceId prefix to count against.
+  { key: 'harvest-discovery',prefix: null,                 schedule: 'Mon 03:00' },
+  { key: 'harvest-feeds',    prefix: 'harvest-',           schedule: 'Tue 05:00' },
 ] as const;
 
 /**
  * Per-source health: last run, last success, last error, record count, 30-day success rate.
- * Covers all 22 ENABLED sources from SOURCES.md.
+ * Covers all ENABLED sources from SOURCES.md.
  */
 export async function getSourceHealthStats() {
   const now = new Date();
@@ -312,7 +317,7 @@ export async function getSourceHealthStats() {
         where: { source: key, startedAt: { gte: thirtyDaysAgo } },
         select: { status: true },
       }),
-      prisma.opportunity.count({ where: { sourceId: { startsWith: prefix } } }),
+      prefix === null ? Promise.resolve(0) : prisma.opportunity.count({ where: { sourceId: { startsWith: prefix } } }),
     ]);
 
     const totalRuns = recentRuns.length;

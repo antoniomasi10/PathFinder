@@ -8,20 +8,12 @@
  * On any API error, returns fallback result instead of null.
  */
 
-import OpenAI from 'openai';
 import { logger } from '../../utils/logger';
+import { getClient, trackedCompletion } from './openai-client';
 
 export interface ClusterClassification {
   scores: Record<'Analista' | 'Creativo' | 'Leader' | 'Imprenditore' | 'Sociale' | 'Explorer', number>;
   primary: 'Analista' | 'Creativo' | 'Leader' | 'Imprenditore' | 'Sociale' | 'Explorer';
-}
-
-let _client: OpenAI | null = null;
-
-function getClient(): OpenAI | null {
-  if (!process.env.OPENAI_API_KEY) return null;
-  if (!_client) _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  return _client;
 }
 
 const SYSTEM_PROMPT = `Sei un esperto di psicologia del lavoro specializzato nella classificazione di opportunità universitarie secondo i cluster di personalità di Schwartz.
@@ -187,7 +179,7 @@ export async function classifyOpportunityCluster(opp: {
     .join('\n\n');
 
   try {
-    const response = await client.chat.completions.create({
+    const response = await trackedCompletion(client, {
       model: 'gpt-4o-mini',
       response_format: { type: 'json_object' },
       messages: [
@@ -196,7 +188,7 @@ export async function classifyOpportunityCluster(opp: {
       ],
       max_tokens: 200,
       temperature: 0,
-    });
+    }, { source: 'opportunity-enrichment', purpose: 'cluster-classify' });
 
     const raw = response.choices[0]?.message?.content;
     if (!raw) {

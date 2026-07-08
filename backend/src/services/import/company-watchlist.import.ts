@@ -21,13 +21,15 @@
 
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
-import OpenAI from 'openai';
 import { chromium, Page } from 'playwright';
 import { CompanyWatchlist } from '@prisma/client';
 import { validateOpportunity } from './validation';
 import { batchUpsertOpportunities, markStaleOpportunities, OpportunityRecord } from './batch';
 import { extractCountryCode, mapOpportunityType, fetchWithRetry, stripHtml } from './utils';
 import { checkCompliance } from './compliance/gate';
+import { getClient, trackedCompletion } from '../ai/openai-client';
+
+export { getClient };
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -35,14 +37,6 @@ import { checkCompliance } from './compliance/gate';
 
 const FETCH_DELAY_MS = 2000;
 const MAX_HTML_CHARS = 40000; // ~12k tokens after strip
-
-let _client: OpenAI | null = null;
-
-export function getClient(): OpenAI | null {
-  if (!process.env.OPENAI_API_KEY) return null;
-  if (!_client) _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  return _client;
-}
 
 // ---------------------------------------------------------------------------
 // Headless browser fetch
@@ -336,7 +330,7 @@ export async function extractOpportunitiesWithLLM(
 
     if (text.length < 50) return [];
 
-    const response = await client.chat.completions.create({
+    const response = await trackedCompletion(client, {
       model: 'gpt-4o-mini',
       response_format: { type: 'json_object' },
       messages: [
@@ -348,7 +342,7 @@ export async function extractOpportunitiesWithLLM(
       ],
       max_tokens: 2000,
       temperature: 0,
-    });
+    }, { source: 'company-watchlist', purpose: 'job-listing-extract' });
 
     const raw = response.choices[0]?.message?.content ?? '{}';
     const parsed = JSON.parse(raw);

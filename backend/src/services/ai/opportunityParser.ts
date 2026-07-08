@@ -9,10 +9,11 @@
  * On any API error the function returns null, never throws.
  */
 
-import OpenAI from 'openai';
+import type OpenAI from 'openai';
 import { Prisma } from '@prisma/client';
 import prisma from '../../lib/prisma';
 import { logger } from '../../utils/logger';
+import { getClient, trackedCompletion } from './openai-client';
 
 const VALID_FIELDS = [
   'COMPUTER_SCIENCE',
@@ -54,14 +55,6 @@ const LIMITS = {
   taskCount: 6,
   taskWords: 12,
 } as const;
-
-let _client: OpenAI | null = null;
-
-function getClient(): OpenAI | null {
-  if (!process.env.OPENAI_API_KEY) return null;
-  if (!_client) _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  return _client;
-}
 
 export function parseAIDate(s: string | null | undefined): Date | null {
   if (!s) return null;
@@ -161,7 +154,7 @@ async function callLLM(
   extraSystem?: string,
 ): Promise<StructuredContent | null> {
   const system = extraSystem ? `${SYSTEM_PROMPT}\n\n${extraSystem}` : SYSTEM_PROMPT;
-  const response = await client.chat.completions.create({
+  const response = await trackedCompletion(client, {
     model: 'gpt-4o-mini',
     response_format: { type: 'json_object' },
     messages: [
@@ -170,7 +163,7 @@ async function callLLM(
     ],
     max_tokens: 700,
     temperature: 0.2,
-  });
+  }, { source: 'opportunity-enrichment', purpose: 'content-parse' });
   const raw = response.choices[0]?.message?.content;
   if (!raw) return null;
   return normalizeRaw(JSON.parse(raw));
@@ -253,7 +246,7 @@ export async function extractDeadlineFromText(
     .join('\n\n');
 
   try {
-    const response = await client.chat.completions.create({
+    const response = await trackedCompletion(client, {
       model: 'gpt-4o-mini',
       response_format: { type: 'json_object' },
       messages: [
@@ -262,7 +255,7 @@ export async function extractDeadlineFromText(
       ],
       max_tokens: 50,
       temperature: 0.1,
-    });
+    }, { source: 'opportunity-enrichment', purpose: 'deadline-extract' });
 
     const raw = response.choices[0]?.message?.content;
     if (!raw) return null;
@@ -310,7 +303,7 @@ export async function extractOpportunitySkills(
     .join('\n\n');
 
   try {
-    const response = await client.chat.completions.create({
+    const response = await trackedCompletion(client, {
       model: 'gpt-4o-mini',
       response_format: { type: 'json_object' },
       messages: [
@@ -319,7 +312,7 @@ export async function extractOpportunitySkills(
       ],
       max_tokens: 150,
       temperature: 0.1,
-    });
+    }, { source: 'opportunity-enrichment', purpose: 'skill-extract' });
 
     const raw = response.choices[0]?.message?.content;
     if (!raw) return [];
@@ -378,7 +371,7 @@ export async function extractContextualizedSkills(
     .join('\n\n');
 
   try {
-    const response = await client.chat.completions.create({
+    const response = await trackedCompletion(client, {
       model: 'gpt-4o-mini',
       response_format: { type: 'json_object' },
       messages: [
@@ -387,7 +380,7 @@ export async function extractContextualizedSkills(
       ],
       max_tokens: 200,
       temperature: 0.2,
-    });
+    }, { source: 'opportunity-enrichment', purpose: 'contextualized-skills' });
 
     const raw = response.choices[0]?.message?.content;
     if (!raw) return [];
@@ -450,7 +443,7 @@ export async function extractRequiredLanguages(
     .join('\n\n');
 
   try {
-    const response = await client.chat.completions.create({
+    const response = await trackedCompletion(client, {
       model: 'gpt-4o-mini',
       response_format: { type: 'json_object' },
       messages: [
@@ -459,7 +452,7 @@ export async function extractRequiredLanguages(
       ],
       max_tokens: 150,
       temperature: 0.1,
-    });
+    }, { source: 'opportunity-enrichment', purpose: 'language-extract' });
 
     const raw = response.choices[0]?.message?.content;
     if (!raw) return [];
@@ -562,7 +555,7 @@ export async function translateOpportunityToItalian(
   const userContent = JSON.stringify({ title: cleanTitle, description: cleanDesc.slice(0, 6000) });
 
   try {
-    const response = await client.chat.completions.create({
+    const response = await trackedCompletion(client, {
       model: 'gpt-4o-mini',
       response_format: { type: 'json_object' },
       messages: [
@@ -571,7 +564,7 @@ export async function translateOpportunityToItalian(
       ],
       max_tokens: 4000,
       temperature: 0.1,
-    });
+    }, { source: 'opportunity-enrichment', purpose: 'translate-it' });
 
     const raw = response.choices[0]?.message?.content;
     if (!raw) return null;

@@ -12,6 +12,7 @@ import { validateOpportunity } from '../validation';
 import { OpportunityRecord } from '../batch';
 import { extractCountryCode, stripHtml } from '../utils';
 import { getClient, htmlLinksToText } from '../company-watchlist.import';
+import { trackedCompletion } from '../../ai/openai-client';
 
 const MAX_HTML_CHARS = 40000; // ~12k tokens after strip, same budget as CompanyWatchlist
 
@@ -85,7 +86,7 @@ export async function extractOpportunitiesFromPage(
       ? `\n\nBias: most opportunities on this page are likely of type ${ctx.categoryHint}, but extract whatever is actually present.`
       : '';
 
-    const response = await client.chat.completions.create({
+    const response = await trackedCompletion(client, {
       model: 'gpt-4o-mini',
       response_format: { type: 'json_object' },
       messages: [
@@ -97,7 +98,7 @@ export async function extractOpportunitiesFromPage(
       ],
       max_tokens: 3000,
       temperature: 0,
-    });
+    }, { source: 'harvest-extraction', purpose: 'harvest-extract' });
 
     const raw = response.choices[0]?.message?.content ?? '{}';
     const parsed = JSON.parse(raw);
