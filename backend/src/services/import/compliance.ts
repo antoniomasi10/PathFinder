@@ -57,11 +57,25 @@ export async function checkRobotsTxt(careersUrl: string): Promise<boolean> {
 
 /**
  * Parses robots.txt content and determines if the given path is allowed.
- * Applies blocks whose User-agent is `*` or `coha`. Allow takes precedence
- * over Disallow within the same block (standard robots.txt semantics).
+ * Applies blocks whose User-agent is `*` or `coha`. Per RFC 9309, the rule
+ * with the *longest matching pattern* wins (not first-match-in-file-order) —
+ * a broad `Allow: /jobs` followed later by a narrower `Disallow: /jobs/*`
+ * (a real pattern seen on euraxess.ec.europa.eu) must still block `/jobs/*`.
+ * Ties are resolved in favor of Allow, matching Google's documented behavior.
+ *
+ * A group of directives ends only when a *new* User-agent line follows
+ * directives already collected for the current group — never on a blank
+ * line. Many real robots.txt files (euraxess.ec.europa.eu among them) use
+ * blank lines purely as visual spacing *within* a single User-agent block
+ * to separate rule categories (CSS/JS allows, directory disallows, API
+ * disallows, …); treating those as group boundaries silently drops every
+ * directive after the first blank line.
  */
 export function isAllowedByRobots(robotsTxt: string, path: string): boolean {
-  const lines = robotsTxt.split('\n').map(l => l.trim());
+  const lines = robotsTxt
+    .split('\n')
+    .map(l => l.replace(/#.*/, '').trim())
+    .filter(l => l.length > 0);
 
   type Block = { agents: string[]; allow: string[]; disallow: string[] };
   const blocks: Block[] = [];
@@ -87,23 +101,44 @@ export function isAllowedByRobots(robotsTxt: string, path: string): boolean {
     } else if (line.toLowerCase().startsWith('allow:')) {
       const p = line.slice('allow:'.length).trim();
       if (p) current.allow.push(p);
-    } else if (line === '') {
-      blocks.push(current);
-      current = null;
     }
+    // Any other directive (Sitemap:, Crawl-delay:, Host:, …) is ignored.
   }
   if (current) blocks.push(current);
 
+  let best: { length: number; allow: boolean } | null = null;
   for (const block of blocks) {
     if (!block.agents.some(a => a === '*' || a === 'coha')) continue;
     for (const p of block.allow) {
-      if (path.startsWith(p)) return true;
+      if (matchesRobotsPattern(path, p) && (!best || p.length >= best.length)) {
+        best = { length: p.length, allow: true };
+      }
     }
     for (const p of block.disallow) {
-      if (p === '/' || path.startsWith(p)) return false;
+      if (matchesRobotsPattern(path, p) && (!best || p.length > best.length)) {
+        best = { length: p.length, allow: false };
+      }
     }
   }
-  return true;
+  return best ? best.allow : true;
+}
+
+/**
+ * Matches a URL path against a robots.txt Allow/Disallow pattern, per the
+ * de-facto spec: `*` matches any run of characters, and a trailing `$`
+ * anchors the match to the end of the path. Without `$` the match is a
+ * (wildcard-aware) prefix, same as plain robots.txt prefix rules.
+ *
+ * A naive `path.startsWith(pattern)` — the previous implementation — never
+ * matches wildcard patterns like `Disallow: /jobs/*` because `*` is treated
+ * as a literal character, silently under-blocking those paths.
+ */
+function matchesRobotsPattern(path: string, pattern: string): boolean {
+  const endAnchored = pattern.endsWith('$');
+  const body = endAnchored ? pattern.slice(0, -1) : pattern;
+  const escaped = body.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*');
+  const regex = new RegExp(`^${escaped}${endAnchored ? '$' : ''}`);
+  return regex.test(path);
 }
 
 // ---------------------------------------------------------------------------
