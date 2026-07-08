@@ -258,3 +258,27 @@ per-target in DB, non elencato riga per riga (impraticabile a decine/centinaia d
 /api/import/harvest-discovery` (nuova route admin) → verificare righe `HarvestTarget` create
 → `POST /api/import/harvest-worker` (o attesa cron) → `GET /import/coverage` → EVENT in
 crescita.
+
+### Esito verifica manuale reale (2026-07-09)
+
+Eseguita contro il DB dev locale con tutti e 33 i seed ESN:
+- `POST /api/import/harvest-discovery` → `{"discovered":33,"registered":33,"unresolved":0,
+  "created":33}` — risoluzione 100%. Distribuzione feed-kind reale: **25/33 RSS** (la
+  maggior parte delle sezioni ESN gira WordPress con feed eventi — esattamente il percorso
+  0-LLM per cui l'engine è stato progettato), **8/33 html-static** (nessuna sezione JS-heavy
+  o ICS in questo seed).
+- `POST /api/import/harvest-feeds` (25 target RSS) → `{"imported":239,"skipped":11,
+  "targets":25}` — titoli reali verificati ("BBQ Party", "Welcome Back 14.07", "Discovering
+  Italy: Quiz Night"), `organizer` popolato correttamente, nessuna data strutturata (RSS non
+  la fornisce — atteso, non un bug).
+- `POST /api/import/queue/enqueue` → `{"enqueued":8}` (esattamente gli 8 target
+  html-static) → `ScrapeJob` verificate con `harvestTargetId` valorizzato e `companyId`
+  nullo. `POST /api/import/queue/drain` → `{"processed":8,"ok":8,"unchanged":0,"blocked":0,
+  "failed":0}` — estrazione LLM verificata con dati reali di qualità ("Hiking under the
+  stars" / ESN Genova, "European talk about gender-based violence" / ESN Lecce, ecc.).
+- **Risultato complessivo**: 263 opportunità reali importate da 33 sezioni ESN in un solo
+  giro. `GET /import/coverage` → EVENT `itRelevant` **111 → 370** (+259, singolo run,
+  seed parziale — non l'intero universo delle associazioni studentesche italiane).
+
+Motore validato end-to-end su entrambi i percorsi (strutturato 0-LLM e HTML+LLM), con dati
+reali, non fixture.
