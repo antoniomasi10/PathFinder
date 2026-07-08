@@ -394,3 +394,61 @@ export async function getOpportunityDistribution() {
     generatedAt: now.toISOString(),
   };
 }
+
+export interface DedupCandidatePair {
+  idA: string;
+  idB: string;
+  titleA: string;
+  titleB: string;
+  sourceA: string | null;
+  sourceB: string | null;
+  similarity: number;
+}
+
+/**
+ * Dedup quality audit (PF-118 Fase 4) — finds pairs of *live* opportunities
+ * with *different* dedupKeys that are semantically near-identical (same
+ * real-world posting slipped past the text-based dedupKey, e.g. the same
+ * event scraped from two sources with differently-worded titles). Reuses
+ * the pgvector cosine-distance idiom already in production in
+ * similarity.service.ts::getVectorSimilarUsers, applied to
+ * Opportunity.embedding instead of User.embedding.
+ *
+ * Read-only — returns candidate pairs for manual review, never merges
+ * anything automatically (two semantically similar postings are not
+ * necessarily the same one; see design spec).
+ *
+ * O(n²) self-join over live rows with an embedding (~4.5k today) — no ANN
+ * index yet (ivfflat/hnsw), deliberately: add one only if this turns out to
+ * be slow in practice (YAGNI), not preemptively.
+ */
+export async function findDedupCandidates(threshold = 0.93, limit = 200): Promise<DedupCandidatePair[]> {
+  const rows = await prisma.$queryRawUnsafe<{
+    id_a: string; id_b: string; title_a: string; title_b: string;
+    source_a: string | null; source_b: string | null; similarity: number;
+  }[]>(
+    `SELECT a.id AS id_a, b.id AS id_b, a.title AS title_a, b.title AS title_b,
+            a.source AS source_a, b.source AS source_b,
+            1 - (a.embedding <=> b.embedding) AS similarity
+     FROM "Opportunity" a, "Opportunity" b
+     WHERE a.id < b.id
+       AND a."dedupKey" IS DISTINCT FROM b."dedupKey"
+       AND a."expiresAt" IS NULL AND b."expiresAt" IS NULL
+       AND a.embedding IS NOT NULL AND b.embedding IS NOT NULL
+       AND 1 - (a.embedding <=> b.embedding) > $1
+     ORDER BY similarity DESC
+     LIMIT $2`,
+    threshold,
+    limit,
+  );
+
+  return rows.map(r => ({
+    idA: r.id_a,
+    idB: r.id_b,
+    titleA: r.title_a,
+    titleB: r.title_b,
+    sourceA: r.source_a,
+    sourceB: r.source_b,
+    similarity: Number(r.similarity),
+  }));
+}

@@ -39,7 +39,9 @@ import {
   getSourceHealthStats,
   getOpportunityDistribution,
   getImportCoverage,
+  findDedupCandidates,
 } from '../services/import/cleanup.service';
+import { getLlmCostReport } from '../services/ai/usage-report';
 
 const router = Router();
 
@@ -52,7 +54,7 @@ router.get('/status', ...adminAuth, async (_req: Request, res: Response) => {
   catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
-// GET /api/import/source-health — per-source success rate + last run for all 22 ENABLED sources
+// GET /api/import/source-health — per-source success rate + last run for all ENABLED sources
 router.get('/source-health', ...adminAuth, async (_req: Request, res: Response) => {
   try { res.json(await getSourceHealthStats()); }
   catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -67,6 +69,21 @@ router.get('/distribution', ...adminAuth, async (_req: Request, res: Response) =
 // GET /api/import/coverage — live/dedup/IT-relevant funnel per type (PF-118 10k target dashboard)
 router.get('/coverage', ...adminAuth, async (_req: Request, res: Response) => {
   try { res.json(await getImportCoverage()); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/import/dedup-audit — near-duplicate live opportunities with different dedupKeys (read-only, no merge)
+router.get('/dedup-audit', ...adminAuth, async (req: Request, res: Response) => {
+  try {
+    const threshold = req.query.threshold ? parseFloat(req.query.threshold as string) : undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    res.json({ pairs: await findDedupCandidates(threshold, limit) });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/import/llm-cost — token usage + estimated cost per source/purpose over 24h/7d/30d/all
+router.get('/llm-cost', ...adminAuth, async (_req: Request, res: Response) => {
+  try { res.json(await getLlmCostReport()); }
   catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 

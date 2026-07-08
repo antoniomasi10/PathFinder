@@ -165,3 +165,22 @@ read-only, no mutation.
 ## Modifiche allo schema
 
 - **Nuovo modello** `LlmUsageLog` (Step 3). Nessuna modifica ad altri modelli.
+
+## Esito verifica manuale reale (2026-07-09)
+
+- `GET /import/source-health` → `devfolio`/`msca`/`harvest-discovery`/`harvest-feeds` ora
+  visibili con dati reali (record count, ultimo run, success rate) — bug confermato risolto.
+- Chiamata reale a `parseOpportunityContent()` (via script isolato, non solo mock) → riga
+  `LlmUsageLog` scritta correttamente (`content-parse`, 970 token); nel frattempo il backend
+  live (processi in background già in esecuzione) ha continuato a loggare altre chiamate
+  concorrenti — la strumentazione cattura traffico reale, non solo la mia chiamata di test.
+- `GET /import/llm-cost` → finestra 24h: **193.111 token, ~$0.03 stimati**. Breakdown per
+  `purpose` conferma l'ipotesi del design: `skill-extract` domina (158k token) — la spesa
+  reale è nell'arricchimento automatico, non negli importer con estrazione esplicita.
+- `GET /import/dedup-audit?limit=20` → 20 coppie reali trovate in **1.6s** (nessun problema
+  di performance alla scala attuale, ~4.500 embedding — conferma la scelta YAGNI di non
+  costruire un indice ANN preventivamente). Risultati genuini e sensati: coppie come
+  "Production Engineering Intern - MSE1" vs "...MSE2" (Bosch) o "Intern - Q2 2026" vs
+  "Intern - Q1 2027" (Roland Berger) — testo quasi identico ma **rotazioni/trimestri
+  diversi**, non duplicati reali. Conferma corretta la decisione di design di non fare mai
+  merge automatico: alta similarità semantica non implica stesso posting.
