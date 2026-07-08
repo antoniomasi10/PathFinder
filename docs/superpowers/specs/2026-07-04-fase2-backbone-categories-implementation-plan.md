@@ -288,18 +288,56 @@ espone JSON-LD/microdata (in linea con l'approccio "0 LLM" già usato per Devfol
 importer analogo; se no, la fonte resta rimandata a Fase 3 (motore long-tail con parser
 strutturati JSON-LD/ICS/RSS).
 
-## Slice D — Fellowship (outline, non pronto)
+## Slice D — Fellowship via EU Funding & Tenders SEDIA API (implementata, `ENABLED`)
 
-EURAXESS **esclusa** (§ design spec). Nessuna fonte alternativa ancora verificata C0 in
-questa sessione. Prossimo passo: C0 su EU Funding & Tenders/Erasmus+ (open-data), DAAD,
-ProFellow/Scholars4dev — nell'ordine di rischio crescente indicato nell'outline originale
-(open-data prima di scrape+gate).
+EURAXESS **esclusa** (§ design spec). Sostituita dalla SEDIA search API del portale EU
+Funding & Tenders (`api.tech.ec.europa.eu/search-api`, `apiKey=SEDIA`, pubblica, senza
+autenticazione) — vedi § "Ricognizione round 2/3" nel design spec per il dettaglio completo
+di come è stato trovato il formato di richiesta e i filtri.
+
+**File nuovo:** `backend/src/services/import/msca.import.ts`. Stesso contratto invariato
+(`OpportunityRecord[]` → `batchUpsertOpportunities` → `markStaleOpportunities`).
+
+Punti chiave dell'implementazione:
+- Richiesta `multipart/form-data` (non JSON puro — l'API la ignora silenziosamente): parte
+  `query` (blob JSON `{"bool":{"must":[{"terms":{"type":["1","2","8"]}},{"terms":{"status":
+  ["31094501","31094502"]}}]}}`) + parte `languages` (blob JSON `["en"]`) + `displayLanguage=en`.
+  `type` esclude FAQ/news/eventi; `status` esclude i bandi chiusi (`31094503`).
+- Query testuale `text=MSCA` — isola le call Marie Skłodowska-Curie Actions (Postdoctoral
+  Fellowships, Doctoral Networks, COFUND, Staff Exchanges), l'unico grande schema EU aperto a
+  singoli ricercatori/dottorandi, evitando l'oceano di bandi istituzionali del resto del portale.
+- `fetchWithRetry`'s `body` widened da `string` a `RequestInit['body']` (`utils.ts`) per
+  poter passare un `FormData` nativo — cambio di tipo retrocompatibile, nessun altro importer
+  impattato.
+- Validazione difensiva: `status` server-side trattato come euristica, non verità — ogni
+  record viene comunque scartato se `deadlineDate` (preso come il più recente fra eventuali
+  date multi-stage) è già passato rispetto a `now`.
+- Mapping: `type: 'FELLOWSHIP'`, `isAbroad: true` (schema pan-europeo, non specifico
+  all'Italia — rientra nel carve-out `isAbroad` già esistente per FELLOWSHIP),
+  `isRemote: false` (posizione di ricerca in presenza), `organizer` fisso ("Marie
+  Skłodowska-Curie Actions (European Commission)"), `expiresAt`/`deadline` = deadline reale,
+  `hasScholarship: true`, `cost: 0`. Nessun `startDate`/`endDate` di progetto (non noti a
+  livello di bando, solo a livello di singolo progetto assegnato).
+- Route: `POST /api/import/msca` in `import.routes.ts`.
+- Scheduler: settimanale lunedì 05:00 (`scheduler.ts`), slot libero dopo HackClub (04:30).
+- `SOURCES.md`: nuova riga `ENABLED` + log compliance (2026-07-08, prossima verifica 2026-10).
+- Test: `backend/src/tests/msca-import.test.ts` — unit su `metaFirst`/`metaLatestDate`/
+  `buildSourceId`, integration con `fetchWithRetry` mockato (mapping corretto, dedup
+  intra-batch, scarto record con deadline già passata nonostante status "aperto/imminente",
+  scarto record senza descrizione utilizzabile, fallimento API).
+
+**Verifica manuale reale (2026-07-08):** `POST /api/import/msca` → `{"imported":10,
+"skipped":14}`; `GET /api/import/coverage` → FELLOWSHIP `itRelevant` 10 → 20. Controllo
+diretto su DB: 10 righe reali, tutte con scadenze future corrette (es. *"MSCA Postdoctoral
+Fellowships 2026"*, deadline 2026-09-09, aperta oggi), URL puliti verso le pagine
+`topic-details` del portale ufficiale.
 
 ---
 
 ## Ordine di esecuzione consigliato
 
-Slice A (Devfolio) è pronta e a rischio pressoché zero — implementarla subito. Le altre tre
-slice restano bloccate su ricognizione aggiuntiva (endpoint AIESEC, verifica manuale ToS
-SummerSchoolsInEurope, fonte fellowship alternativa) prima di poter scrivere un piano
-altrettanto dettagliato.
+Slice A (Devfolio) e Slice D (MSCA) sono implementate ed `ENABLED`. Slice B (AIESEC) e C
+(SummerSchoolsInEurope) restano bloccate per motivi infrastrutturali verificati (credenziali
+API mancanti / no headless browser per B; WAF Cloudflare che blocca il fetch semplice del
+nostro stack per C) — non sbloccabili con altra sola ricognizione, vedi design spec per il
+dettaglio.

@@ -3,8 +3,9 @@
 **Status:** Draft — C0 compliance verificata sul campo, scope rivisto rispetto all'outline
 originale. Round 1: Devfolio (Slice A) implementato ed `ENABLED`. Round 2 (2026-07-08):
 Slice B/C/D ricognite a fondo — B e C bloccate (motivi infrastrutturali/di accesso), D
-(Fellowship via SEDIA API) **sbloccata** in un round 3 di ricognizione sui filtri — pronta
-per implementation plan dedicato.
+(Fellowship via SEDIA API) sbloccata in un round 3 di ricognizione sui filtri e **implementata
+ed `ENABLED`** (`msca.import.ts`, scope `text=MSCA`) — vedi implementation plan per i
+dettagli. B e C restano outline/bloccate.
 **Date:** 2026-07-04
 **Branch:** PF-118
 **Parent spec:** `2026-07-04-opportunity-expansion-10k-design.md` (§ Fase 2, outline)
