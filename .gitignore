@@ -14,3 +14,4 @@ frontend/.env.local
 *.log
 .DS_Store
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
