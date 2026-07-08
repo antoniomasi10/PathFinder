@@ -2,8 +2,9 @@
 
 **Status:** Draft — C0 compliance verificata sul campo, scope rivisto rispetto all'outline
 originale. Round 1: Devfolio (Slice A) implementato ed `ENABLED`. Round 2 (2026-07-08):
-Slice B/C/D ricognite a fondo, nessuna pronta per implementazione — vedi § Ricognizione
-round 2 per i blocchi specifici trovati.
+Slice B/C/D ricognite a fondo — B e C bloccate (motivi infrastrutturali/di accesso), D
+(Fellowship via SEDIA API) **sbloccata** in un round 3 di ricognizione sui filtri — pronta
+per implementation plan dedicato.
 **Date:** 2026-07-04
 **Branch:** PF-118
 **Parent spec:** `2026-07-04-opportunity-expansion-10k-design.md` (§ Fase 2, outline)
@@ -222,12 +223,51 @@ invece delle call vere per problemi di ranking/filtro, non ancora isolato il fil
 individuali (es. Marie Skłodowska-Curie Postdoctoral Fellowships, che sono aperte a singoli
 ricercatori/dottorandi, a differenza della maggioranza dei bandi del portale).
 
-**Conclusione:** candidato più promettente delle tre — API ufficiale, pubblica, C0 verde,
-in linea con "open-data prima di scrape+gate" — ma **non pronto per un implementation plan**
-finché non si isola la combinazione di filtri che restituisce solo le call individuali
-rilevanti (prossimo passo naturale, reconnaissance pura, nessun rischio compliance). DAAD e
-ProFellow/Scholars4dev non ulteriormente esplorati in questo giro — deprioritizzati rispetto
-a SEDIA che è già un'API ufficiale funzionante.
+**Aggiornamento (stesso giorno, round 3) — filtro risolto, SBLOCCATA:**
+
+Isolato il formato esatto della richiesta ispezionando il bundle Angular del portale
+ufficiale (`main-*.js`, ~4MB minificato — nessuno scraping del portale stesso, solo lettura
+del JS pubblico servito al browser). Findings:
+
+1. **La richiesta NON è JSON puro** — va inviata come `multipart/form-data` con due parti:
+   - `query`: blob `application/json` con `{"bool":{"must":[...]}}` (stessa sintassi
+     Elasticsearch-like già provata, ma ignorata silenziosamente se inviata come body JSON
+     diretto — da cui i risultati "non filtrati" dei primi tentativi)
+   - `languages`: blob `application/json` con `["en"]`
+   - `displayLanguage=en` come campo di testo semplice
+   - Stessi query-string param di prima: `?apiKey=SEDIA&text=...&pageSize=...&pageNumber=...`
+2. **`type` risolto**: il frontend filtra di default su `type:["1","2","8"]` per "calls for
+   proposals/tenders" (esclude `"3"` = FAQ, che dominava i risultati nei tentativi precedenti
+   per rilevanza testuale).
+3. **`status` risolto per enumerazione empirica** (query mirate per singolo codice + verifica
+   `deadlineDate`/`startDate` risultanti):
+   - `31094501` = **forthcoming** (non ancora aperta, `startDate` futuro)
+   - `31094502` = **open** (candidatura aperta ora)
+   - `31094503` = **closed** (scaduta)
+4. **Query di testo `"MSCA"` isola in modo pulito le call Marie Skłodowska-Curie Actions** —
+   l'unico grande schema EU di mobilità per singoli ricercatori/dottorandi (Postdoctoral
+   Fellowships, Doctoral Networks, COFUND, Staff Exchanges), a differenza del resto del
+   portale che è quasi tutto bandi istituzionali per organizzazioni/aziende. Verificato con
+   una call **realmente aperta oggi**: *"MSCA Postdoctoral Fellowships 2026"*
+   (`HORIZON-MSCA-2026-PF-01-01`, status `31094502`, deadline `2026-09-09`, oggi è
+   2026-07-08), URL pulito
+   (`.../portal/screen/opportunities/topic-details/HORIZON-MSCA-2026-PF-01-01`), metadata
+   ricchi (title, description, `deadlineDate`, `startDate`, `programmePeriod`, `budget`,
+   `identifier`, aggiornamenti/`latestInfos`).
+5. **Caveat da gestire nell'importer**: alcuni record hanno `status` non aggiornato (es.
+   `MSCA Postdoctoral Fellowships 2023` con `deadlineDate` 2023 ma ancora taggato
+   `31094501`/`31094502` nell'indice) — il filtro `status` server-side va trattato come
+   euristica, non verità assoluta: l'importer deve comunque scartare/impostare `expiresAt`
+   in base a `deadlineDate` reale confrontato con `now`, esattamente come fa già
+   `validateOpportunity`/`markStaleOpportunities` per ogni altra fonte.
+
+**Conclusione:** **Slice D ora sbloccata** — API ufficiale, pubblica, senza autenticazione,
+C0 verde, formato di richiesta e filtri verificati con dati reali. Pronta per un
+implementation plan dedicato (nuovo importer `eu-funding-tenders.import.ts` o simile, scope
+iniziale onestamente ristretto a keyword `"MSCA"` — non "tutto il funding EU", che resta
+quasi interamente istituzionale e fuori target). DAAD e ProFellow/Scholars4dev non
+ulteriormente esplorati — deprioritizzati, SEDIA è già una fonte pubblica funzionante e
+sufficiente per questo giro.
 
 ### Riepilogo stato dopo round 2
 
@@ -235,8 +275,10 @@ a SEDIA che è già un'API ufficiale funzionante.
 |---|---|---|---|
 | B — AIESEC | Dati dietro API autenticata (`gis-api.aiesec.org`) | Mancanza credenziali / no headless browser | Outreach API ufficiale, o headless browser quando disponibile |
 | C — SummerSchoolsInEurope | WAF Cloudflare blocca fetch semplice | Infrastrutturale (non legale) | Rivalutare solo con meccanismo di fetch diverso (Fase 3?) |
-| D — Fellowship (SEDIA API) | Filtro corretto per call individuali non ancora isolato | Reconnaissance incompleta, nessun rischio compliance | Altro giro di query di prova sulla search API per isolare `type`/`DATASOURCE` dei topic MSCA-style |
+| D — Fellowship (SEDIA API) | **Risolto** — vedi aggiornamento sopra | — | Pronta per implementation plan dedicato |
 
-Nessuna delle tre è quindi implementabile a step eseguibili in questo giro. La più vicina è
-D (SEDIA API) — un ulteriore giro di ricognizione pura (query API, zero scraping, zero
-rischio) potrebbe sbloccarla per un implementation plan dedicato.
+B e C restano bloccate per questo giro (motivi infrastrutturali/di accesso, non di
+ricognizione). **D è stata sbloccata** in un terzo giro di ricognizione pura sull'API
+pubblica (nessuno scraping, nessun rischio compliance) — vedi sezione precedente per il
+formato di richiesta e i filtri risolti. Prossimo passo naturale: implementation plan
+dedicato per un importer MSCA via SEDIA search API.
