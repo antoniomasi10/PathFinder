@@ -57,16 +57,21 @@ company. Seed tokens were migrated in via `scripts/migrateAtsBoardsToRegistry.ts
 
 **Discovery** (`discovery/discovery.orchestrator.ts`, Mon 02:30) runs pluggable
 `DiscoveryConnector`s. Fase 1 ships the ATS-index seed connector for Italian companies
-(`discovery/connectors/ats-seed.connector.ts` + `discovery/seeds/italy-ats-seed.ts`, 42
+(`discovery/connectors/ats-seed.connector.ts` + `discovery/seeds/italy-ats-seed.ts`, ~71
 candidate tokens); each candidate is **validated against the live ATS API before
 registering**, so wrong/dead tokens never pollute the registry. ATS public APIs are
 covered by the rows above (no per-company robots/ToS needed). The company-domain
 connector (`discovery/connectors/company-domain.connector.ts` +
-`discovery/seeds/italy-company-domains.ts`, 214 apex domains across energy, industrial/
+`discovery/seeds/italy-company-domains.ts`, ~244 apex domains across energy, industrial/
 automotive, finance, fashion, food, telecom/tech, pharma, and retail/logistics) resolves
 each domain's careers page and fingerprints it — this feeds the long tail (resolver +
-fingerprint, below). Both seed lists are meant to keep growing; append entries and the
-next discovery run picks them up.
+fingerprint, below). The university-careers connector
+(`discovery/connectors/university-careers.connector.ts` +
+`discovery/seeds/italy-university-careers.ts`, ~66 Italian university apex domains)
+routes career-service pages through the same resolve→fingerprint→route path — these
+are IT-native by construction (PF-118 P3: fixes the country=IT scarcity). All three
+seed lists are meant to keep growing; append entries and the next discovery run picks
+them up.
 
 **Scrape queue** (`discovery/queue.ts` + `discovery/scrapeWorker.ts`) handles the tier
 B/C long tail (custom / JS career sites) at scale: `ScrapeJob` table claimed with
@@ -164,4 +169,4 @@ Candidate VCs for future automation: Indaco, P101, LVenture, Club degli Investit
 
 ---
 
-*Last updated: 2026-06-14. Update whenever a source is added, removed, or its compliance status changes.*
+*Last updated: 2026-07-04. Update whenever a source is added, removed, or its compliance status changes.*

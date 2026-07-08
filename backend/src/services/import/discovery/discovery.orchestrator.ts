@@ -23,6 +23,7 @@ import { ATS_ADAPTER_BY_PLATFORM } from '../ats/adapters';
 import { CompanyCandidate, DiscoveryConnector } from './types';
 import { atsSeedConnector } from './connectors/ats-seed.connector';
 import { companyDomainConnector } from './connectors/company-domain.connector';
+import { universityCareersConnector } from './connectors/university-careers.connector';
 import { resolveCareersUrl } from './careers-resolver';
 import { fingerprintAts, classifyCustomTier } from './ats-fingerprint';
 import { PERMITTED_ATS } from './ats-policy';
@@ -31,6 +32,7 @@ import { PERMITTED_ATS } from './ats-policy';
 export const DISCOVERY_CONNECTORS: DiscoveryConnector[] = [
   atsSeedConnector,
   companyDomainConnector,
+  universityCareersConnector,
 ];
 
 const PROBE_CONCURRENCY = 5;
