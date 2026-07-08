@@ -44,6 +44,7 @@ dedicated importers they are recorded here manually and re-verified quarterly.
 | **MUR** | `mur.import.ts` | Open-Data | — | — | CC BY / Italian gov open data | Monthly 1st 02:00/02:30 | Official Italian universities + courses |
 | **AlmaLaurea** | `almalaurea.import.ts` | Open-Data | — | — | Partnership / public stats | Quarterly Jan/Apr/Jul/Oct 04:00 | Italian graduate employment stats |
 | **ANPAL** | `anpal.import.ts` | Open-Data | — | — | CC BY (Italian gov open data) | Monthly 1st 03:00 | Garanzia Giovani measures + Servizio Civile Universale bandi via dati.gov.it CKAN |
+| **Devfolio** | `devfolio.import.ts` | Scrape (structured, 0 LLM) | ✅ allowed | ✅ allowed | — | Tue 04:45 | Hackathon listing; `__NEXT_DATA__` JSON parse, no LLM. Heavily India-centric — only `is_online` events are IT-relevant, expect single-digit yield |
 
 ---
 
@@ -136,6 +137,7 @@ For dedicated importers (this section), compliance is manually verified and reco
 | FashionUnited | 2025-01 | 2025-01 | 2026-01 | Marco |
 | Arbeitnow | 2025-01 | 2025-01 | 2026-01 | Marco |
 | HackClub | 2025-01 | 2025-01 | 2026-01 | Marco |
+| Devfolio | 2026-07-04 | 2026-07-04 | 2026-10 | Marco |
 
 ---
 

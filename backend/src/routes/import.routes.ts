@@ -12,6 +12,7 @@ import { importEUOpportunities } from '../services/import/eu-youth.import';
 import { importAlmaLaureaStats } from '../services/import/almalaurea.import';
 import { importOpportunityDeskOpportunities } from '../services/import/opportunity-desk.import';
 import { importHackClubOpportunities } from '../services/import/hackclub.import';
+import { importDevfolioOpportunities } from '../services/import/devfolio.import';
 import { importDevpostOpportunities } from '../services/import/devpost.import';
 import { importBestCoursesOpportunities } from '../services/import/best-courses.import';
 import { importConfsTechOpportunities } from '../services/import/confstech.import';
@@ -161,6 +162,12 @@ router.post('/opportunity-desk', ...adminAuth, async (_req: Request, res: Respon
 // POST /api/import/hackclub
 router.post('/hackclub', ...adminAuth, async (_req: Request, res: Response) => {
   try { res.json(await importHackClubOpportunities()); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/import/devfolio
+router.post('/devfolio', ...adminAuth, async (_req: Request, res: Response) => {
+  try { res.json(await importDevfolioOpportunities()); }
   catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 

@@ -40,6 +40,7 @@ import { importJobicyOpportunities } from './jobicy.import';
 import { importFashionUnitedOpportunities } from './fashionunited.import';
 import { importSmartRecruitersOpportunities } from './smartrecruiters.import';
 import { importHackClubOpportunities } from './hackclub.import';
+import { importDevfolioOpportunities } from './devfolio.import';
 import { importDevpostOpportunities } from './devpost.import';
 import { importBestCoursesOpportunities } from './best-courses.import';
 import { importConfsTechOpportunities } from './confstech.import';
@@ -182,6 +183,11 @@ export function startImportScheduler() {
     runWithAlert('DevelopersEvents', 'developers-events', 'opportunities', importDevelopersEventsOpportunities);
   });
 
+  // Weekly Tuesday: Devfolio hackathons (04:45) — scrape, structured __NEXT_DATA__ JSON, 0 LLM
+  cron.schedule('45 4 * * 2', () => {
+    runWithAlert('Devfolio', 'devfolio', 'opportunities', importDevfolioOpportunities);
+  });
+
   // BEST Courses: DISABLED — ToS unclear (403 on legal pages). Contact info@best.eu.org before re-enabling.
 
   // Monthly 1st: MUR universities (02:00) + courses (02:30)
@@ -247,7 +253,7 @@ export function startImportScheduler() {
   logger.info('[Scheduler] Import scheduler started:');
   logger.info('  EURES: disabled (static cache) | F6S: disabled (pending C0 verification)');
   logger.info('  EU Youth: Mon 03:30 | SmartRecruiters: Mon 04:00 | HackClub: Mon 04:30');
-  logger.info('  Arbeitnow: Tue 03:30 | RemoteOK: Tue 04:00 | DevelopersEvents: Tue 04:30');
+  logger.info('  Arbeitnow: Tue 03:30 | RemoteOK: Tue 04:00 | DevelopersEvents: Tue 04:30 | Devfolio: Tue 04:45');
   logger.info('  ConfsTech: Wed 03:00 | Stage4eu: Wed 03:30 | CompanyWatchlist: Wed 05:30');
   logger.info('  Greenhouse: Thu 03:30 | Jobicy: Thu 04:00 | TechConfit: Thu 04:30');
   logger.info('  Lever: Fri 03:30 | FashionUnited: Fri 04:00 | Mobilizon: Fri 04:30');
