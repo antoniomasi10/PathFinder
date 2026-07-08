@@ -323,7 +323,7 @@ export async function batchUpsertOpportunities(records: OpportunityRecord[]): Pr
 export async function markStaleOpportunities(
   source: string,
   seenIds: string[],
-  options: { scopeCompanies?: string[]; minSeenForStale?: number } = {},
+  options: { scopeCompanies?: string[]; scopeOrganizers?: string[]; minSeenForStale?: number } = {},
 ): Promise<number> {
   const min = options.minSeenForStale ?? 1;
   if (seenIds.length < min) {
@@ -338,6 +338,11 @@ export async function markStaleOpportunities(
   };
   if (options.scopeCompanies && options.scopeCompanies.length > 0) {
     where.company = { in: options.scopeCompanies };
+  }
+  // HarvestTarget records populate `organizer`, not `company` (events don't have
+  // a company) — same scoping idea as scopeCompanies, different field.
+  if (options.scopeOrganizers && options.scopeOrganizers.length > 0) {
+    where.organizer = { in: options.scopeOrganizers };
   }
 
   const result = await prisma.opportunity.updateMany({

@@ -10,7 +10,7 @@
  *   5. health: reset/raise consecutiveFailures, auto-disable chronic failures
  */
 import { createHash, randomUUID } from 'crypto';
-import { CompanyWatchlist } from '@prisma/client';
+import { CompanyWatchlist, HarvestTarget } from '@prisma/client';
 import prisma from '../../../lib/prisma';
 import { logger } from '../../../utils/logger';
 import { fetchWithRetry, stripHtml, runWithConcurrency } from '../utils';
@@ -21,6 +21,8 @@ import {
   extractOpportunitiesWithLLM,
   buildWatchlistRecords,
 } from '../company-watchlist.import';
+import { processTargetCompliance } from './harvest-compliance';
+import { extractOpportunitiesFromPage, buildHarvestRecords } from './extraction';
 import { alertImportFailure } from '../alerting';
 import { claimNextJob, completeJob, failJob, AUTO_DISABLE_THRESHOLD, ClaimedJob } from './queue';
 
@@ -98,9 +100,91 @@ async function scrapeCompany(company: CompanyWatchlist, tier: string, now: Date)
   return 'ok';
 }
 
+/** Fetch + extract + upsert one harvest target, with change-detection. Twin of scrapeCompany. */
+async function scrapeHarvestTarget(target: HarvestTarget, tier: string, now: Date): Promise<ScrapeStatus> {
+  const allowed = await processTargetCompliance(target, now);
+  if (!allowed) {
+    await prisma.harvestTarget.update({ where: { id: target.id }, data: { lastScrapeStatus: 'blocked', lastSyncedAt: now } });
+    return 'blocked';
+  }
+
+  await respectDomainRateLimit(target.url);
+  const html = tier === 'C'
+    ? await fetchWithHeadlessBrowser(target.url)
+    : await (await fetchWithRetry(target.url, { timeoutMs: 20000, logTag: `[Scrape B] ${target.name}` })).text();
+
+  if (!html) {
+    await prisma.harvestTarget.update({ where: { id: target.id }, data: { lastScrapeStatus: 'error', lastSyncedAt: now } });
+    return 'unchanged';
+  }
+
+  const hash = hashContent(html);
+  if (target.contentHash && target.contentHash === hash) {
+    await prisma.harvestTarget.update({
+      where: { id: target.id },
+      data: { lastScrapeStatus: 'unchanged', lastSyncedAt: now, contentHashAt: now },
+    });
+    logger.info(`[Scrape] ${target.name}: content unchanged — LLM skipped`);
+    return 'unchanged';
+  }
+
+  const rawOpportunities = await extractOpportunitiesFromPage(html, {
+    sourceLabel: target.sourceLabel, organizer: target.name, url: target.url, categoryHint: target.categoryHint,
+  });
+  const { records } = buildHarvestRecords(target, rawOpportunities, now);
+
+  if (records.length > 0) {
+    await batchUpsertOpportunities(records);
+    await markStaleOpportunities('HarvestTarget', records.map(r => r.id), {
+      scopeOrganizers: [target.name],
+      minSeenForStale: 1,
+    });
+  }
+
+  await prisma.harvestTarget.update({
+    where: { id: target.id },
+    data: { lastScrapeStatus: 'ok', lastSyncedAt: now, contentHash: hash, contentHashAt: now },
+  });
+  logger.info(`[Scrape] ${target.name} (tier ${tier}): ${rawOpportunities.length} found, ${records.length} valid`);
+  return 'ok';
+}
+
 async function processJob(job: ClaimedJob): Promise<ScrapeStatus | 'error'> {
   const now = new Date();
-  const company = await prisma.companyWatchlist.findUnique({ where: { id: job.companyId } });
+
+  if (job.harvestTargetId) {
+    const target = await prisma.harvestTarget.findUnique({ where: { id: job.harvestTargetId } });
+    if (!target) {
+      await completeJob(job.id); // orphaned job — nothing to do
+      return 'error';
+    }
+    try {
+      const status = await scrapeHarvestTarget(target, job.tier, now);
+      await completeJob(job.id);
+      if (target.consecutiveFailures > 0) {
+        await prisma.harvestTarget.update({ where: { id: target.id }, data: { consecutiveFailures: 0 } });
+      }
+      return status;
+    } catch (err: any) {
+      const { exhausted } = await failJob(job, String(err));
+      if (exhausted) {
+        const failures = target.consecutiveFailures + 1;
+        const disable = failures >= AUTO_DISABLE_THRESHOLD;
+        await prisma.harvestTarget.update({
+          where: { id: target.id },
+          data: { consecutiveFailures: failures, lastScrapeStatus: 'error', ...(disable ? { isActive: false } : {}) },
+        });
+        if (disable) {
+          logger.warn(`[Scrape] ${target.name}: auto-disabled after ${failures} consecutive failures`);
+          alertImportFailure('harvest-target', 'opportunities', `Auto-disabled ${target.name}: ${err}`).catch(() => {});
+        }
+      }
+      logger.warn(`[Scrape] ${target.name} job failed: ${err}`);
+      return 'error';
+    }
+  }
+
+  const company = await prisma.companyWatchlist.findUnique({ where: { id: job.companyId! } });
   if (!company) {
     await completeJob(job.id); // orphaned job — nothing to do
     return 'error';

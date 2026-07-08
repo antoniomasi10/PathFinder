@@ -38,7 +38,7 @@ const MAX_HTML_CHARS = 40000; // ~12k tokens after strip
 
 let _client: OpenAI | null = null;
 
-function getClient(): OpenAI | null {
+export function getClient(): OpenAI | null {
   if (!process.env.OPENAI_API_KEY) return null;
   if (!_client) _client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   return _client;
@@ -302,7 +302,7 @@ If a position has no URL, omit the url field.`;
  * baseUrl, then strips remaining HTML. This ensures the LLM sees job listing URLs
  * that are embedded as <a href="..."> in the source.
  */
-function htmlLinksToText(html: string, baseUrl: string): string {
+export function htmlLinksToText(html: string, baseUrl: string): string {
   const linkified = html.replace(
     /<a\s[^>]*?href=["']([^"'>]+)["'][^>]*?>([\s\S]*?)<\/a>/gi,
     (_: string, href: string, inner: string) => {

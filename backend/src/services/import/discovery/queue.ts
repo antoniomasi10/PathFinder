@@ -16,7 +16,8 @@ export const AUTO_DISABLE_THRESHOLD = 5;
 
 export interface ClaimedJob {
   id: string;
-  companyId: string;
+  companyId: string | null;
+  harvestTargetId: string | null;
   tier: string;
   attempts: number;
   maxAttempts: number;
@@ -59,14 +60,46 @@ export async function enqueueScrapeJobs(options?: { limit?: number; force?: bool
     enqueued++;
   }
 
-  logger.info(`[ScrapeQueue] Enqueued ${enqueued} jobs (${companies.length} due candidates)`);
+  // HarvestTarget: only feedKind html-static/html-js go through the queue (they
+  // need LLM extraction). jsonld/ics/rss targets are fetched directly in a
+  // separate weekly batch (harvest-feed-runner.ts) — 0 LLM, no need for
+  // per-domain backoff/rate-limit sophistication.
+  const harvestTargets = await prisma.harvestTarget.findMany({
+    where: {
+      isActive: true,
+      scrapeTier: { in: ['B', 'C'] },
+      feedKind: { in: ['html-static', 'html-js'] },
+      consecutiveFailures: { lt: AUTO_DISABLE_THRESHOLD },
+      AND: [
+        { OR: [{ robotsAllowed: null }, { robotsAllowed: true }] },
+        { OR: [{ tosAllowed: null }, { tosAllowed: true }] },
+      ],
+      ...(options?.force ? {} : { OR: [{ lastSyncedAt: null }, { lastSyncedAt: { lt: cutoff } }] }),
+    },
+    select: { id: true, scrapeTier: true },
+    take: options?.limit ?? 5000,
+  });
+
+  for (const t of harvestTargets) {
+    const existing = await prisma.scrapeJob.findFirst({
+      where: { harvestTargetId: t.id, status: { in: ['pending', 'running'] } },
+      select: { id: true },
+    });
+    if (existing) continue;
+    await prisma.scrapeJob.create({
+      data: { harvestTargetId: t.id, tier: t.scrapeTier!, priority: t.scrapeTier === 'B' ? 10 : 5 },
+    });
+    enqueued++;
+  }
+
+  logger.info(`[ScrapeQueue] Enqueued ${enqueued} jobs (${companies.length + harvestTargets.length} due candidates)`);
   return { enqueued };
 }
 
 /**
  * Atomically claim the next runnable job. Uses FOR UPDATE SKIP LOCKED so
  * concurrent workers never grab the same row. Returns null when the queue is
- * drained.
+ * drained. Exactly one of companyId/harvestTargetId is set on the returned job.
  */
 export async function claimNextJob(workerId: string): Promise<ClaimedJob | null> {
   const rows = await prisma.$queryRaw<ClaimedJob[]>`
@@ -83,7 +116,7 @@ export async function claimNextJob(workerId: string): Promise<ClaimedJob | null>
       FOR UPDATE SKIP LOCKED
       LIMIT 1
     )
-    RETURNING id, "companyId", tier, attempts, "maxAttempts"
+    RETURNING id, "companyId", "harvestTargetId", tier, attempts, "maxAttempts"
   `;
   return rows[0] ?? null;
 }

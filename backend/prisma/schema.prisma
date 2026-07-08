@@ -667,23 +667,72 @@ model CompanyWatchlist {
   @@index([domain])
 }
 
+/// Fase 3 long-tail engine: harvest target for an *opportunity page* (event
+/// organizer, university career/events page, hackathon/summer-school org) —
+/// twin of CompanyWatchlist, which is company-careers-centric. See
+/// docs/superpowers/specs/2026-07-09-fase3-long-tail-engine-design.md.
+model HarvestTarget {
+  id          String @id @default(cuid())
+  name        String
+  url         String @unique // resolved opportunity/events page
+  sourceLabel String // e.g. "esn-locale", "university-events" — markStaleOpportunities scoping + logs
+
+  categoryHint OpportunityType? // bias for the extractor
+  feedKind     String // "jsonld" | "ics" | "rss" | "html-static" | "html-js"
+  scrapeTier   String? // "B" | "C" — only for feedKind html-*; jsonld/ics/rss bypass the queue (0 LLM, direct fetch)
+
+  discoverySource String? // e.g. "seed:it-student-orgs", "manual"
+  domain          String?
+  country         String? @default("IT")
+  region          String?
+
+  // --- Change-detection (skip re-scrape/LLM when page unchanged) ---
+  contentHash   String?
+  contentHashAt DateTime?
+
+  // --- Health / auto-disable ---
+  lastScrapeStatus    String? // "ok" | "unchanged" | "error" | "blocked"
+  consecutiveFailures Int     @default(0)
+
+  robotsAllowed   Boolean?
+  robotsCheckedAt DateTime?
+
+  tosAllowed      Boolean?
+  tosAnalyzedAt   DateTime?
+  tosNotes        String?
+  tosPageNotFound Boolean   @default(false)
+
+  lastSyncedAt DateTime?
+  isActive     Boolean   @default(true)
+  addedBy      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([feedKind])
+  @@index([sourceLabel])
+}
+
 /// DB-backed scrape queue for tier B/C career-page scraping at scale.
 /// Tier A (ATS APIs) are batch-run per-platform by the ATS factory, not queued.
 model ScrapeJob {
-  id          String    @id @default(cuid())
-  companyId   String // CompanyWatchlist.id
-  tier        String // "B" | "C"
-  status      String    @default("pending") // pending | running | done | failed
-  priority    Int       @default(0) // higher runs first
-  attempts    Int       @default(0)
-  maxAttempts Int       @default(3)
-  runAfter    DateTime  @default(now()) // backoff / per-domain rate-limit gate
-  lockedAt    DateTime?
-  lockedBy    String?
-  error       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  companyId       String? // CompanyWatchlist.id — nullable, exactly one of companyId/harvestTargetId set
+  harvestTargetId String? // HarvestTarget.id — plain field, no formal relation, same style as companyId
+  tier            String // "B" | "C"
+  status          String    @default("pending") // pending | running | done | failed
+  priority        Int       @default(0) // higher runs first
+  attempts        Int       @default(0)
+  maxAttempts     Int       @default(3)
+  runAfter        DateTime  @default(now()) // backoff / per-domain rate-limit gate
+  lockedAt        DateTime?
+  lockedBy        String?
+  error           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@index([status, runAfter, priority])
   @@index([companyId])
+  @@index([harvestTargetId])
 }

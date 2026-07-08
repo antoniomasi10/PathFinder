@@ -63,9 +63,13 @@ export function fingerprintFeed(html: string, pageUrl: string): FeedFingerprint
 ```
 Ordine di rilevamento (design §3): JSON-LD (`<script type="application/ld+json">` con
 `"@type":"Event"`, anche dentro `@graph`) → `<link rel="alternate" type="text/calendar">` o
-href `.ics` → `<link rel="alternate" type="application/rss+xml">` → altrimenti
-`classifyCustomTier(html)` (**riusata da `ats-fingerprint.ts`, non duplicata**) mappata a
-`html-static`/`html-js`.
+href `.ics` → `<link rel="alternate" type="application/rss+xml">` → altrimenti classificatore
+HTML statico/JS. **Correzione rispetto al design**: non riusa `classifyCustomTier` di
+`ats-fingerprint.ts` — i suoi segnali ("intern", "candidati", "posizioni") sono specifici
+delle careers page e classificherebbero erroneamente pagine eventi statiche genuine come
+JS-rendered (verificato: un test con vocabolario eventi falliva contro quel classificatore).
+`feed-fingerprint.ts` ha un proprio piccolo classificatore con vocabolario eventi
+("hackathon", "workshop", "iscriviti", "calendario", ...), stessa euristica SPA-shell.
 
 ### `jsonld-parser.ts`
 ```ts
@@ -175,6 +179,13 @@ sofisticato — motivazione in design §2): per ogni `HarvestTarget` attivo con 
 `feedKind`, `processTargetCompliance` → fetch → parse (il parser giusto in base a
 `feedKind`) → mappa a `OpportunityRecord[]` (bypassa `extractOpportunitiesFromPage`, i dati
 sono già strutturati) → `batchUpsertOpportunities` → `markStaleOpportunities` scoped.
+
+**Semplificazione rispetto al design**: niente colonna `feedUrl` separata su
+`HarvestTarget`. Il campo `url` cambia semanticamente in "URL da fetchare per questo target"
+in modo uniforme per ogni `feedKind` — per `html-*`/`jsonld` è la pagina opportunità (il
+JSON-LD è incorporato lì), per `ics`/`rss` è direttamente l'URL del feed risolto in fase di
+discovery (`fingerprintFeed().feedUrl` quando presente, altrimenti l'URL della pagina). Un
+solo campo, nessuna migration aggiuntiva, nessuna ambiguità su cosa fetchare.
 
 **Test:** `backend/src/tests/scope-organizers.test.ts` (puro, su `markStaleOpportunities`);
 aggiornare/estendere eventuali test di `queue.ts` se esistenti (verificare prima).
