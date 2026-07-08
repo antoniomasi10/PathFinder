@@ -58,6 +58,8 @@ import { recruiteeAdapter } from './ats/adapters/recruitee';
 import { runDiscovery } from './discovery/discovery.orchestrator';
 import { enqueueScrapeJobs } from './discovery/queue';
 import { runScrapeWorker } from './discovery/scrapeWorker';
+import { runHarvestDiscovery } from './discovery/harvest.orchestrator';
+import { runHarvestFeeds } from './discovery/harvest-feed-runner';
 // F6S: DISABLED — import will be added here after C0 compliance verification (see f6s.import.ts)
 import { runCleanup } from './cleanup.service';
 import { runUrlCheckBatch } from './urlChecker';
@@ -234,9 +236,22 @@ export function startImportScheduler() {
     runWithAlert('ScrapeEnqueue', 'scrape-queue', 'companies', () => enqueueScrapeJobs());
   });
 
-  // Every 2 hours: drain the scrape queue (tier B/C, change-detected)
+  // Every 2 hours: drain the scrape queue (tier B/C, change-detected) — now covers
+  // both CompanyWatchlist and HarvestTarget jobs (see queue.ts/scrapeWorker.ts)
   cron.schedule('0 */2 * * *', () => {
     runWithAlert('ScrapeWorker', 'scrape-queue', 'opportunities', () => runScrapeWorker());
+  });
+
+  // --- Fase 3: long-tail harvest engine (organizer opportunity pages) ---
+
+  // Weekly Monday: harvest discovery (03:00) — resolves + registers HarvestTarget pages
+  cron.schedule('0 3 * * 1', () => {
+    runWithAlert('HarvestDiscovery', 'harvest-discovery', 'harvest-targets', () => runHarvestDiscovery());
+  });
+
+  // Weekly Tuesday: structured harvest feeds (05:00) — jsonld/ics/rss, 0 LLM, bypasses the queue
+  cron.schedule('0 5 * * 2', () => {
+    runWithAlert('HarvestFeeds', 'harvest-feeds', 'opportunities', () => runHarvestFeeds());
   });
 
   // Weekly Sunday: cleanup (05:00)
@@ -267,5 +282,6 @@ export function startImportScheduler() {
   logger.info('  Ashby: Sat 03:30 | Workable: Sat 04:00 | Recruitee: Sat 04:30');
   logger.info('  Personio: Sun 03:30 | Cleanup: Sun 05:00 | URL check: Sun 06:00');
   logger.info('  Discovery: Mon 02:30 | ScrapeEnqueue: daily 01:00 | ScrapeWorker: every 2h');
+  logger.info('  HarvestDiscovery: Mon 03:00 | HarvestFeeds: Tue 05:00');
   logger.info('  MUR: monthly 1st 02:00/02:30 | ANPAL (GG+SCU): monthly 1st 03:00 | AlmaLaurea: quarterly');
 }

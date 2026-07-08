@@ -32,6 +32,8 @@ import { ATS_ADAPTER_BY_PLATFORM } from '../services/import/ats/adapters';
 import { runDiscovery } from '../services/import/discovery/discovery.orchestrator';
 import { enqueueScrapeJobs, getQueueStats } from '../services/import/discovery/queue';
 import { runScrapeWorker } from '../services/import/discovery/scrapeWorker';
+import { runHarvestDiscovery } from '../services/import/discovery/harvest.orchestrator';
+import { runHarvestFeeds } from '../services/import/discovery/harvest-feed-runner';
 import {
   getDataFreshnessStats,
   getSourceHealthStats,
@@ -329,6 +331,18 @@ router.post('/discovery/run', ...adminAuth, async (req: Request, res: Response) 
     const validate = req.body?.validate !== false;
     res.json(await runDiscovery({ validate }));
   } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/import/harvest-discovery — discover + register HarvestTarget opportunity pages
+router.post('/harvest-discovery', ...adminAuth, async (_req: Request, res: Response) => {
+  try { res.json(await runHarvestDiscovery()); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/import/harvest-feeds — direct-fetch batch for jsonld/ics/rss HarvestTargets (0 LLM, bypasses the queue)
+router.post('/harvest-feeds', ...adminAuth, async (_req: Request, res: Response) => {
+  try { resetDedupCache(); res.json(await runHarvestFeeds()); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
 // POST /api/import/queue/enqueue — create scrape jobs for due tier B/C companies

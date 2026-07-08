@@ -87,6 +87,42 @@ Admin: `POST /ats/:platform`, `POST /discovery/run`, `POST /queue/enqueue`,
 
 ---
 
+## Harvest targets — long-tail engine (Fase 3, data-driven)
+
+Twin of the ATS registry above, for *organizer opportunity pages* (student associations,
+university event calendars, hackathon/summer-school orgs) instead of company careers
+pages — see `docs/superpowers/specs/2026-07-09-fase3-long-tail-engine-design.md`. Targets
+live in `HarvestTarget` (compliance columns identical in shape to `CompanyWatchlist`,
+checked per-target via the same `checkCompliance()` gate — **not listed row-by-row here**,
+impractical at the target scale this is meant to reach; audit via
+`SELECT name, url, robotsAllowed, tosAllowed FROM "HarvestTarget"`).
+
+**Feed-kind fingerprint** (`discovery/feed-fingerprint.ts`) routes each resolved
+opportunity page by access pattern, cheapest first: `jsonld` (schema.org `Event` in
+`<script type="application/ld+json">`) → `ics` (calendar feed link) → `rss` (feed link,
+reuses `parseRSSFeed()`) → `html-static`/`html-js` (LLM extraction via
+`extractOpportunitiesFromPage()`, tier B/C).
+
+- **Structured feeds** (`jsonld`/`ics`/`rss`, 0 LLM): fetched directly by
+  `discovery/harvest-feed-runner.ts`, weekly Tue 05:00 — bypass the scrape queue entirely.
+- **HTML** (`html-static`/`html-js`): queued through the same `ScrapeJob` table as
+  CompanyWatchlist (`harvestTargetId` instead of `companyId`), drained by the same
+  `scrapeWorker.ts` every 2h.
+
+**Discovery** (`discovery/harvest.orchestrator.ts`, Mon 03:00) runs pluggable
+`HarvestConnector`s, resolves each candidate's opportunity page
+(`discovery/opportunity-page-resolver.ts`), fingerprints it, and registers a
+`HarvestTarget`. First connector: `discovery/connectors/student-orgs.connector.ts` +
+`discovery/seeds/italy-student-orgs.ts` — 32 ESN Italy local section domains, verified
+reachable against the official national directory (`esn.it/it/sezioni-esn`) on
+2026-07-09. This is the case flagged repeatedly in Fase 2 as "belongs to Fase 3": ESN's
+national feed only carries org-wide news, not local events.
+
+Admin: `POST /harvest-discovery`, `POST /harvest-feeds` (structured feeds only — HTML
+targets ride the existing `POST /queue/enqueue` + `POST /queue/drain`).
+
+---
+
 ## DISABLED sources (paused — data kept in DB as static cache)
 
 | Source | Importer file | Reason | Re-enable condition |
