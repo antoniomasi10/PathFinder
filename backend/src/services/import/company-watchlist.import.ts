@@ -27,13 +27,7 @@ import { CompanyWatchlist } from '@prisma/client';
 import { validateOpportunity } from './validation';
 import { batchUpsertOpportunities, markStaleOpportunities, OpportunityRecord } from './batch';
 import { extractCountryCode, mapOpportunityType, fetchWithRetry, stripHtml } from './utils';
-import {
-  checkRobotsTxt,
-  findAndAnalyzeTos,
-  daysSince,
-  ROBOTS_CHECK_INTERVAL_DAYS,
-  TOS_CHECK_INTERVAL_DAYS,
-} from './compliance';
+import { checkCompliance } from './compliance/gate';
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -245,8 +239,6 @@ export async function fetchWithHeadlessBrowser(url: string): Promise<string> {
     await browser.close();
   }
 }
-
-// checkRobotsTxt, findAndAnalyzeTos, daysSince imported from ./compliance
 
 // ---------------------------------------------------------------------------
 // Sector → passion tags (D2)
@@ -537,51 +529,52 @@ export async function importCompanyWatchlistOpportunities(): Promise<{
  * Checks and updates compliance state (robots.txt + ToS) for a company.
  * Returns true if the company is allowed to be scraped.
  * Re-checks every 30 days; uses cached values otherwise.
+ *
+ * Thin wrapper around the generalized `checkCompliance` gate (shared with the
+ * upcoming HarvestTarget harvester) — this function only adapts CompanyWatchlist's
+ * two legacy timestamp columns (robotsCheckedAt/tosAnalyzedAt) to and from the
+ * gate's single complianceCheckedAt cache marker.
  */
 export async function processCompanyCompliance(company: CompanyWatchlist, now: Date): Promise<boolean> {
-  const robotsExpired = !company.robotsCheckedAt ||
-    daysSince(company.robotsCheckedAt, now) > ROBOTS_CHECK_INTERVAL_DAYS;
-  const tosExpired = !company.tosAnalyzedAt ||
-    daysSince(company.tosAnalyzedAt, now) > TOS_CHECK_INTERVAL_DAYS;
+  // Use the earlier of the two per-field timestamps as the unified cache marker,
+  // so a stale field on either side triggers a fresh combined check.
+  const cachedAt = company.robotsCheckedAt && company.tosAnalyzedAt
+    ? new Date(Math.min(company.robotsCheckedAt.getTime(), company.tosAnalyzedAt.getTime()))
+    : null;
 
-  const updates: Partial<CompanyWatchlist> = {};
+  const result = await checkCompliance(company.careersUrl, {
+    robotsAllowed: company.robotsAllowed,
+    tosAllowed: company.tosAllowed,
+    complianceCheckedAt: cachedAt,
+  }, now);
 
-  if (robotsExpired) {
-    const robotsAllowed = await checkRobotsTxt(company.careersUrl);
-    updates.robotsAllowed = robotsAllowed;
-    updates.robotsCheckedAt = now;
-    if (!robotsAllowed) {
-      logger.info(`[CompanyWatchlist] ${company.name}: robots.txt disallows scraping`);
-    }
-  }
-
-  if (tosExpired) {
-    const tos = await findAndAnalyzeTos(company.careersUrl);
-    updates.tosAllowed = tos.allowed;
-    updates.tosAnalyzedAt = now;
-    updates.tosNotes = tos.notes;
-    updates.tosPageNotFound = tos.pageNotFound;
-    if (tos.allowed === false) {
-      logger.info(`[CompanyWatchlist] ${company.name}: ToS prohibits scraping — ${tos.notes}`);
-    } else if (tos.allowed === null) {
-      logger.info(`[CompanyWatchlist] ${company.name}: ToS status unknown — ${tos.notes}`);
-    }
-  }
-
-  if (Object.keys(updates).length > 0) {
+  if (result.checked) {
+    const updates: Partial<CompanyWatchlist> = {
+      robotsAllowed: result.robotsAllowed,
+      robotsCheckedAt: now,
+      tosAllowed: result.tosAllowed,
+      tosAnalyzedAt: now,
+      tosNotes: result.tosNotes ?? null,
+      tosPageNotFound: result.tosPageNotFound ?? false,
+    };
     await prisma.companyWatchlist.update({
       where: { id: company.id },
       data: updates as any,
     });
     // Use updated values for the current run
     Object.assign(company, updates);
+
+    if (result.robotsAllowed === false) {
+      logger.info(`[CompanyWatchlist] ${company.name}: robots.txt disallows scraping`);
+    }
+    if (result.tosAllowed === false) {
+      logger.info(`[CompanyWatchlist] ${company.name}: ToS prohibits scraping — ${result.tosNotes}`);
+    } else if (result.tosAllowed === null) {
+      logger.info(`[CompanyWatchlist] ${company.name}: ToS status unknown — ${result.tosNotes}`);
+    }
   }
 
-  // Block only if explicitly disallowed — null (unknown/not found) is treated as allowed
-  if (company.robotsAllowed === false) return false;
-  if (company.tosAllowed === false) return false;
-
-  return true;
+  return result.allowed;
 }
 
 // ---------------------------------------------------------------------------
