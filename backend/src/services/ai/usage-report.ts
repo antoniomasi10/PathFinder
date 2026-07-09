@@ -60,6 +60,20 @@ async function reportForWindow(window: UsageWindow['window'], since: Date | null
   return { window, breakdown, totalTokens, totalEstimatedCostUsd };
 }
 
+/**
+ * Estimated USD spend over the last `sinceHours`. Used by the scrape worker's
+ * budget gate (Fase 5) — an unpriced model in the window makes this null
+ * (never silently under-report), which the caller treats as "can't confirm
+ * we're under budget" rather than "$0 spent".
+ */
+export async function getSpendUsd(sinceHours: number): Promise<number | null> {
+  const since = new Date(Date.now() - sinceHours * 60 * 60 * 1000);
+  // '24h' label is unused here — only the total is read; reportForWindow's window
+  // arg is just a display tag, the actual range comes from `since`.
+  const { totalEstimatedCostUsd } = await reportForWindow('24h', since);
+  return totalEstimatedCostUsd;
+}
+
 export async function getLlmCostReport(): Promise<{ windows: UsageWindow[]; generatedAt: string }> {
   const now = new Date();
   const windows = await Promise.all([

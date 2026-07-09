@@ -13,6 +13,7 @@ import { logger } from '../../../utils/logger';
 
 export const REFRESH_INTERVAL_DAYS = 7;
 export const AUTO_DISABLE_THRESHOLD = 5;
+const DEFAULT_ENQUEUE_LIMIT = Number(process.env.SCRAPE_ENQUEUE_DAILY_LIMIT ?? 5000);
 
 export interface ClaimedJob {
   id: string;
@@ -44,16 +45,21 @@ export async function enqueueScrapeJobs(options?: { limit?: number; force?: bool
       ...(options?.force ? {} : { OR: [{ lastSyncedAt: null }, { lastSyncedAt: { lt: cutoff } }] }),
     },
     select: { id: true, scrapeTier: true },
-    take: options?.limit ?? 5000,
+    take: options?.limit ?? DEFAULT_ENQUEUE_LIMIT,
   });
+
+  // Batched anti-join instead of one findFirst per row — matters once the
+  // company-registry funnel (Fase 5) is feeding tens of thousands of candidates.
+  const alreadyQueuedCompanyIds = new Set(
+    (await prisma.scrapeJob.findMany({
+      where: { companyId: { in: companies.map(c => c.id) }, status: { in: ['pending', 'running'] } },
+      select: { companyId: true },
+    })).map(j => j.companyId),
+  );
 
   let enqueued = 0;
   for (const c of companies) {
-    const existing = await prisma.scrapeJob.findFirst({
-      where: { companyId: c.id, status: { in: ['pending', 'running'] } },
-      select: { id: true },
-    });
-    if (existing) continue;
+    if (alreadyQueuedCompanyIds.has(c.id)) continue;
     await prisma.scrapeJob.create({
       data: { companyId: c.id, tier: c.scrapeTier!, priority: c.scrapeTier === 'B' ? 10 : 5 },
     });
@@ -77,15 +83,18 @@ export async function enqueueScrapeJobs(options?: { limit?: number; force?: bool
       ...(options?.force ? {} : { OR: [{ lastSyncedAt: null }, { lastSyncedAt: { lt: cutoff } }] }),
     },
     select: { id: true, scrapeTier: true },
-    take: options?.limit ?? 5000,
+    take: options?.limit ?? DEFAULT_ENQUEUE_LIMIT,
   });
 
+  const alreadyQueuedTargetIds = new Set(
+    (await prisma.scrapeJob.findMany({
+      where: { harvestTargetId: { in: harvestTargets.map(t => t.id) }, status: { in: ['pending', 'running'] } },
+      select: { harvestTargetId: true },
+    })).map(j => j.harvestTargetId),
+  );
+
   for (const t of harvestTargets) {
-    const existing = await prisma.scrapeJob.findFirst({
-      where: { harvestTargetId: t.id, status: { in: ['pending', 'running'] } },
-      select: { id: true },
-    });
-    if (existing) continue;
+    if (alreadyQueuedTargetIds.has(t.id)) continue;
     await prisma.scrapeJob.create({
       data: { harvestTargetId: t.id, tier: t.scrapeTier!, priority: t.scrapeTier === 'B' ? 10 : 5 },
     });

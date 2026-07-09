@@ -49,6 +49,30 @@ dedicated importers they are recorded here manually and re-verified quarterly.
 
 ---
 
+## Binario 3 — job-aggregator APIs (Fase 5, parallel track)
+
+Official aggregator APIs run alongside the company-first crawl to add Italy-relevant
+volume immediately while the crawl scales. Both require a free API key (optional
+sources — the importer logs and returns a no-op when unset, never errors) and both
+require visible attribution, shown as a backlink in the opportunity detail page's
+"Fonte" row (`frontend/app/(main)/opportunities/[id]/page.tsx`). Apply links
+(`redirect_url` / `link`) are stored and used exactly as returned — never resolved
+or rewritten, per each API's ToS.
+
+| Source | Importer file | Access | robots.txt | ToS | License | Cron | Notes |
+|---|---|---|---|---|---|---|---|
+| **Adzuna** | `adzuna.import.ts` | API | — | ✅ allowed (attribution required) | Official API terms | Wed 04:00 | `api.adzuna.com/v1/api/jobs/it/search`; `what_or` keyword filter (stage/tirocinio/internship/trainee/graduate/junior/…), `max_days_old=45`; needs `ADZUNA_APP_ID` + `ADZUNA_APP_KEY` |
+| **Jooble** | `jooble.import.ts` | API | — | ✅ allowed (attribution required) | Official API terms | Thu 05:00 | `jooble.org/api/{key}` POST; `keywords`/`location=Italia` filter; needs `JOOBLE_API_KEY` |
+
+Quality controls shared with the rest of the pipeline: `isSeniorRole` title filter,
+`validateOpportunity`, cross-source `dedupKey` (an aggregator ad for a company we
+also import via tier A collides and the earlier row wins — monitor via
+`GET /dedup-audit`).
+
+Admin: `POST /adzuna`, `POST /jooble`.
+
+---
+
 ## Import expansion — data-driven ATS registry + discovery + scrape queue
 
 To cover Italian companies at scale, ATS sources are **data-driven**: board tokens
@@ -84,6 +108,42 @@ gate (cached 30d). Enqueue daily 01:00; worker every 2h.
 
 Admin: `POST /ats/:platform`, `POST /discovery/run`, `POST /queue/enqueue`,
 `POST /queue/drain`, `GET /queue/stats`, `GET /registry/stats`.
+
+---
+
+## Company registry — pre-funnel staging (Fase 5, company-first scale-up)
+
+The hand-curated seeds (~71 ATS tokens, ~245 domains, ~66 universities) saturated
+around 551/10k Italy-relevant opportunities. Fase 5 grows the input at scale from
+**free open data only**, staged in `CompanyRegistry` (pre-resolution — most raw
+rows never get a careers page) before promotion into `CompanyWatchlist` via the
+existing `registerAtsBoard`/`registerScrapeTarget`. See
+`docs/superpowers/specs/2026-07-09-fase5-company-first-scaleup-design.md`.
+
+| Source | Loader file | Access | robots.txt | ToS | License | Notes |
+|---|---|---|---|---|---|---|
+| **Registro Imprese — startup/PMI innovative** | `company-registry/loaders/registro-imprese-startup.loader.ts` | Open-Data (manual CSV export) | — | — | CC-BY 4.0 (Infocamere) | No documented stable bulk-download URL (verified 2026-07-09) — requires manually downloading the CSV from startup.registroimprese.it and passing `--file`. ~15k startups/PMI with declared website |
+| **Wikidata** | `company-registry/loaders/wikidata.loader.ts` | API (SPARQL) | — | — | CC0 | `query.wikidata.org/sparql`, fixed `P31` class list (business/enterprise/public company/bank/insurer) + `P17=Italy` + `P856` (official website required). Also covers Borsa Italiana listed companies via `P414` |
+| **Manual curated lists** (e.g. Mediobanca "Le principali società italiane") | `company-registry/loaders/manual-list.loader.ts` (`source: manual:<list-name>`) | Manual | — | — | — | One-time hand-prepared CSV import; never scraped automatically (source ToS not reviewed for automated access) |
+| **Common Crawl ATS-token index** | `company-registry/loaders/commoncrawl-ats.loader.ts` | Open-Data (public web archive index) | — | — | CC BY 4.0 (index); underlying job data always fetched live from the permitted ATS API, never from the archive | Queries `index.commoncrawl.org` CDX API for URLs already hosted on `boards.greenhouse.io`, `jobs.lever.co`, `jobs.ashbyhq.com`, `apply.workable.com`, `*.recruitee.com` — every hit is a tier-A candidate by construction, 0 careers-page resolution needed. Deliberately does NOT scan `*.it` for careers pages (needs the columnar/parquet index, out of scope). Each token is probed against the live ATS API and kept only if it has ≥1 Italy/EU-remote role, gating out global boards. Prohibited ATS (Workday/SuccessFactors/Taleo/iCIMS) are never queried — not in the platform list |
+
+**GLEIF (Global LEI): evaluated and dropped** — the LEI golden copy has no website
+field, and name→domain guessing at this scale produces too many wrong matches; not
+worth the false-positive risk. Documented here so it isn't re-proposed.
+
+**Discovery**: `runRegistryDiscovery()` (`discovery/discovery.orchestrator.ts`, daily
+02:00) claims a priority-ordered batch of pending `CompanyRegistry` rows
+(`discovery/connectors/company-registry.connector.ts::claimRegistryBatch`, default
+`REGISTRY_DISCOVERY_DAILY_LIMIT=400`/day — polite, resumable via the `status` column
+itself), routes each through the exact same resolve→fingerprint→route path as the
+seed connectors (`routeDomainCandidate`, exported for reuse), then reconciles against
+`CompanyWatchlist` to mark rows promoted/unresolved/pending-retry
+(`reconcileRegistryBatch`). Rows that already carry a known ATS token (Common Crawl
+fast path, Fase 5 slice below) skip straight to board validation. Kill switch:
+`REGISTRY_DISCOVERY_ENABLED=false`.
+
+Admin: `POST /registry/ingest { source, filePath? }`, `POST /registry/discovery-run
+{ limit?, validate? }`, `GET /registry-funnel`.
 
 ---
 
@@ -189,6 +249,8 @@ Sources that require attribution to be shown in the UI or stored in records:
 | Developers.events | CC BY-NC 4.0 | `source` field set to `"DevelopersEvents"`; non-commercial use only |
 | MUR | Italian gov open data (CC BY) | `source` field set to `"MUR"`; ministry credited in About page |
 | AlmaLaurea | Partnership | Stats credited to AlmaLaurea in data displays |
+| Adzuna | Official API terms | `source` set to `"Adzuna"`; detail page renders a backlink to adzuna.it; apply URL used as-is |
+| Jooble | Official API terms | `source` set to `"Jooble"`; detail page renders a backlink to jooble.org; apply URL used as-is |
 
 ---
 

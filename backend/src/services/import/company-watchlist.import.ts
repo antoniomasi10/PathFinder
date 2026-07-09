@@ -28,6 +28,7 @@ import { batchUpsertOpportunities, markStaleOpportunities, OpportunityRecord } f
 import { extractCountryCode, mapOpportunityType, fetchWithRetry, stripHtml } from './utils';
 import { checkCompliance } from './compliance/gate';
 import { getClient, trackedCompletion } from '../ai/openai-client';
+import { parseAIDate } from '../ai/opportunityParser';
 
 export { getClient };
 
@@ -403,7 +404,7 @@ export function buildWatchlistRecords(
       isAbroad: countryCode !== 'IT',
       isRemote,
       expiresAt: null,
-      deadline: raw.deadline ? new Date(raw.deadline) : null,
+      deadline: parseAIDate(raw.deadline),
     }, 'company-watchlist');
 
     if (!validated) { skipped++; continue; }
@@ -422,7 +423,7 @@ export function buildWatchlistRecords(
       tags: [company.sector, company.tier, ...sectorTags(company.sector)],
       postedAt: now,
       expiresAt: null,
-      deadline: raw.deadline ? new Date(raw.deadline) : null,
+      deadline: parseAIDate(raw.deadline),
       source: 'CompanyWatchlist',
       sourceId,
       lastSyncedAt: now,

@@ -53,9 +53,11 @@ import { importTechConfitOpportunities } from './techconfit.import';
 import { importMobilizonOpportunities } from './mobilizon.import';
 import { importCompanyWatchlistOpportunities } from './company-watchlist.import';
 import { importANPALOpportunities } from './anpal.import';
+import { importAdzunaOpportunities } from './adzuna.import';
+import { importJoobleOpportunities } from './jooble.import';
 import { runAtsConnector } from './ats/ats-connector';
 import { recruiteeAdapter } from './ats/adapters/recruitee';
-import { runDiscovery } from './discovery/discovery.orchestrator';
+import { runDiscovery, runRegistryDiscovery } from './discovery/discovery.orchestrator';
 import { enqueueScrapeJobs } from './discovery/queue';
 import { runScrapeWorker } from './discovery/scrapeWorker';
 import { runHarvestDiscovery } from './discovery/harvest.orchestrator';
@@ -120,6 +122,11 @@ export function startImportScheduler() {
     runWithAlert('Stage4eu', 'stage4eu', 'opportunities', importStage4euOpportunities);
   });
 
+  // Weekly Wednesday: Adzuna aggregator (04:00) — Binario 3, official API, optional (needs ADZUNA_APP_ID/KEY)
+  cron.schedule('0 4 * * 3', () => {
+    runWithAlert('Adzuna', 'adzuna', 'opportunities', importAdzunaOpportunities);
+  });
+
   // Weekly Wednesday: Company Watchlist LLM-assisted scraping (05:30)
   cron.schedule('30 5 * * 3', () => {
     runWithAlert('CompanyWatchlist', 'company-watchlist', 'opportunities', importCompanyWatchlistOpportunities);
@@ -138,6 +145,11 @@ export function startImportScheduler() {
   // Weekly Thursday: TechConfit Italian tech conferences (04:30) — CC0 Public Domain
   cron.schedule('30 4 * * 4', () => {
     runWithAlert('TechConfit', 'techconfit', 'opportunities', importTechConfitOpportunities);
+  });
+
+  // Weekly Thursday: Jooble aggregator (05:00) — Binario 3, official API, optional (needs JOOBLE_API_KEY)
+  cron.schedule('0 5 * * 4', () => {
+    runWithAlert('Jooble', 'jooble', 'opportunities', importJoobleOpportunities);
   });
 
   // Devpost: DISABLED — ToS prohibits automated access (support@devpost.com for API access)
@@ -231,6 +243,14 @@ export function startImportScheduler() {
     runWithAlert('Discovery', 'discovery', 'companies', () => runDiscovery());
   });
 
+  // Daily: company-registry discovery (01:30) — drains a priority-ordered batch of
+  // CompanyRegistry candidates (Fase 5) through the same resolve→route path.
+  // Newly-promoted CompanyWatchlist rows get picked up by the NEXT day's 01:00
+  // scrape enqueue.
+  cron.schedule('30 1 * * *', () => {
+    runWithAlert('RegistryDiscovery', 'registry-discovery', 'companies', () => runRegistryDiscovery());
+  });
+
   // Daily: enqueue tier B/C scrape jobs for due companies (01:00)
   cron.schedule('0 1 * * *', () => {
     runWithAlert('ScrapeEnqueue', 'scrape-queue', 'companies', () => enqueueScrapeJobs());
@@ -276,12 +296,12 @@ export function startImportScheduler() {
   logger.info('  EURES: disabled (static cache) | F6S: disabled (pending C0 verification)');
   logger.info('  EU Youth: Mon 03:30 | SmartRecruiters: Mon 04:00 | HackClub: Mon 04:30 | MSCA: Mon 05:00');
   logger.info('  Arbeitnow: Tue 03:30 | RemoteOK: Tue 04:00 | DevelopersEvents: Tue 04:30 | Devfolio: Tue 04:45');
-  logger.info('  ConfsTech: Wed 03:00 | Stage4eu: Wed 03:30 | CompanyWatchlist: Wed 05:30');
-  logger.info('  Greenhouse: Thu 03:30 | Jobicy: Thu 04:00 | TechConfit: Thu 04:30');
+  logger.info('  ConfsTech: Wed 03:00 | Stage4eu: Wed 03:30 | Adzuna: Wed 04:00 | CompanyWatchlist: Wed 05:30');
+  logger.info('  Greenhouse: Thu 03:30 | Jobicy: Thu 04:00 | TechConfit: Thu 04:30 | Jooble: Thu 05:00');
   logger.info('  Lever: Fri 03:30 | FashionUnited: Fri 04:00 | Mobilizon: Fri 04:30');
   logger.info('  Ashby: Sat 03:30 | Workable: Sat 04:00 | Recruitee: Sat 04:30');
   logger.info('  Personio: Sun 03:30 | Cleanup: Sun 05:00 | URL check: Sun 06:00');
-  logger.info('  Discovery: Mon 02:30 | ScrapeEnqueue: daily 01:00 | ScrapeWorker: every 2h');
+  logger.info('  Discovery: Mon 02:30 | RegistryDiscovery: daily 01:30 | ScrapeEnqueue: daily 01:00 | ScrapeWorker: every 2h');
   logger.info('  HarvestDiscovery: Mon 03:00 | HarvestFeeds: Tue 05:00');
   logger.info('  MUR: monthly 1st 02:00/02:30 | ANPAL (GG+SCU): monthly 1st 03:00 | AlmaLaurea: quarterly');
 }

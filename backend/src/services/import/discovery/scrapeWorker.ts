@@ -25,10 +25,28 @@ import { processTargetCompliance } from './harvest-compliance';
 import { extractOpportunitiesFromPage, buildHarvestRecords } from './extraction';
 import { alertImportFailure } from '../alerting';
 import { claimNextJob, completeJob, failJob, AUTO_DISABLE_THRESHOLD, ClaimedJob } from './queue';
+import { getSpendUsd } from '../../ai/usage-report';
 
 const WORKER_CONCURRENCY = 5;
 const MIN_DOMAIN_INTERVAL_MS = 3000; // politeness: min gap between hits to same host
 const DEFAULT_JOB_LIMIT = 200;
+const BUDGET_CHECK_INTERVAL = 20; // re-check spend every N processed jobs
+const LLM_DAILY_BUDGET_USD = Number(process.env.LLM_DAILY_BUDGET_USD ?? 5);
+
+/**
+ * True when 24h LLM spend is at/over budget. A null estimate (unpriced model in
+ * the mix) is treated as "over budget" — fail safe, since we can't confirm
+ * we're under. A read failure returns false (don't stall the whole queue on a
+ * DB hiccup unrelated to the budget itself).
+ */
+async function budgetExceeded(): Promise<boolean> {
+  try {
+    const spend = await getSpendUsd(24);
+    return spend === null || spend >= LLM_DAILY_BUDGET_USD;
+  } catch {
+    return false;
+  }
+}
 
 type ScrapeStatus = 'ok' | 'unchanged' | 'blocked';
 
@@ -221,11 +239,21 @@ async function processJob(job: ClaimedJob): Promise<ScrapeStatus | 'error'> {
  * repeatedly (idle when the queue is empty).
  */
 export async function runScrapeWorker(options?: { limit?: number }): Promise<{
-  processed: number; ok: number; unchanged: number; blocked: number; failed: number;
+  processed: number; ok: number; unchanged: number; blocked: number; failed: number; budgetStopped: boolean;
 }> {
   const workerId = `worker-${randomUUID().slice(0, 8)}`;
   const limit = options?.limit ?? DEFAULT_JOB_LIMIT;
-  const counts = { processed: 0, ok: 0, unchanged: 0, blocked: 0, failed: 0 };
+  const counts = { processed: 0, ok: 0, unchanged: 0, blocked: 0, failed: 0, budgetStopped: false };
+
+  if (await budgetExceeded()) {
+    logger.warn(`[ScrapeWorker] LLM daily budget ($${LLM_DAILY_BUDGET_USD}) already exceeded — skipping this run entirely`);
+    alertImportFailure('scrape-queue', 'opportunities', `LLM daily budget exceeded before run start`).catch(() => {});
+    counts.budgetStopped = true;
+    return counts;
+  }
+
+  let batchesSinceBudgetCheck = 0;
+  const batchesPerBudgetCheck = Math.max(1, Math.round(BUDGET_CHECK_INTERVAL / WORKER_CONCURRENCY));
 
   while (counts.processed < limit) {
     // Claim a batch up to the concurrency width.
@@ -245,6 +273,20 @@ export async function runScrapeWorker(options?: { limit?: number }): Promise<{
       else if (status === 'blocked') counts.blocked++;
       else counts.failed++;
     });
+
+    // Re-check the budget between batches (not mid-batch — claimed jobs always
+    // finish once claimed). Jobs not yet claimed stay 'pending' and are picked
+    // up by the next drain once the 24h window rolls forward.
+    batchesSinceBudgetCheck++;
+    if (batchesSinceBudgetCheck >= batchesPerBudgetCheck) {
+      batchesSinceBudgetCheck = 0;
+      if (await budgetExceeded()) {
+        logger.warn(`[ScrapeWorker] ${workerId}: LLM daily budget ($${LLM_DAILY_BUDGET_USD}) reached after ${counts.processed} jobs — stopping drain`);
+        alertImportFailure('scrape-queue', 'opportunities', `LLM daily budget exceeded mid-run after ${counts.processed} jobs`).catch(() => {});
+        counts.budgetStopped = true;
+        break;
+      }
+    }
   }
 
   logger.info(`[ScrapeWorker] ${workerId} done: ${JSON.stringify(counts)}`);

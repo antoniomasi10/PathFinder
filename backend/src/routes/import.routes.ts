@@ -24,12 +24,14 @@ import {
   importSingleCompany,
 } from '../services/import/company-watchlist.import';
 import { importANPALOpportunities } from '../services/import/anpal.import';
+import { importAdzunaOpportunities } from '../services/import/adzuna.import';
+import { importJoobleOpportunities } from '../services/import/jooble.import';
 import { importF6sOpportunities } from '../services/import/f6s.import';
 import { checkRobotsTxt, findAndAnalyzeTos } from '../services/import/compliance';
 import { resetDedupCache } from '../services/import/validation';
 import { runAtsConnector } from '../services/import/ats/ats-connector';
 import { ATS_ADAPTER_BY_PLATFORM } from '../services/import/ats/adapters';
-import { runDiscovery } from '../services/import/discovery/discovery.orchestrator';
+import { runDiscovery, runRegistryDiscovery } from '../services/import/discovery/discovery.orchestrator';
 import { enqueueScrapeJobs, getQueueStats } from '../services/import/discovery/queue';
 import { runScrapeWorker } from '../services/import/discovery/scrapeWorker';
 import { runHarvestDiscovery } from '../services/import/discovery/harvest.orchestrator';
@@ -42,6 +44,12 @@ import {
   findDedupCandidates,
 } from '../services/import/cleanup.service';
 import { getLlmCostReport } from '../services/ai/usage-report';
+import { ingestRegistryEntities } from '../services/import/company-registry/ingest';
+import { registroImpreseStartupLoader } from '../services/import/company-registry/loaders/registro-imprese-startup.loader';
+import { wikidataLoader } from '../services/import/company-registry/loaders/wikidata.loader';
+import { manualListLoader } from '../services/import/company-registry/loaders/manual-list.loader';
+import { commonCrawlAtsLoader } from '../services/import/company-registry/loaders/commoncrawl-ats.loader';
+import { getRegistryFunnel } from '../services/import/company-registry/funnel';
 
 const router = Router();
 
@@ -306,6 +314,18 @@ router.post('/anpal', ...adminAuth, async (_req: Request, res: Response) => {
   catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
+// POST /api/import/adzuna — Binario 3 aggregator (optional, needs ADZUNA_APP_ID/ADZUNA_APP_KEY)
+router.post('/adzuna', ...adminAuth, async (_req: Request, res: Response) => {
+  try { res.json(await importAdzunaOpportunities()); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/import/jooble — Binario 3 aggregator (optional, needs JOOBLE_API_KEY)
+router.post('/jooble', ...adminAuth, async (_req: Request, res: Response) => {
+  try { res.json(await importJoobleOpportunities()); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
 // POST /api/import/f6s — DISABLED until C0 compliance verification; returns 503
 router.post('/f6s', ...adminAuth, async (_req: Request, res: Response) => {
   try {
@@ -397,6 +417,45 @@ router.get('/registry/stats', ...adminAuth, async (_req: Request, res: Response)
       byScrapeTier: Object.fromEntries(byTier.map(r => [r.scrapeTier ?? 'none', r._count._all])),
       generatedAt: new Date().toISOString(),
     });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// ---------------------------------------------------------------------------
+// Fase 5: company-first scale-up — CompanyRegistry (pre-funnel staging)
+// ---------------------------------------------------------------------------
+
+// POST /api/import/registry/ingest — load a source (file-backed or live) and upsert into CompanyRegistry
+router.post('/registry/ingest', ...adminAuth, async (req: Request, res: Response) => {
+  try {
+    const { source, filePath, platform } = req.body ?? {};
+    if (!source) return res.status(400).json({ error: 'source is required' });
+
+    const loader = source === 'registro-imprese-startup' ? registroImpreseStartupLoader
+      : source === 'wikidata' ? wikidataLoader
+      : source === 'commoncrawl-ats' ? commonCrawlAtsLoader
+      : typeof source === 'string' && source.startsWith('manual:') ? manualListLoader(source)
+      : null;
+    if (!loader) {
+      return res.status(400).json({ error: `Unknown source "${source}". Supported: registro-imprese-startup, wikidata, commoncrawl-ats, manual:<list-name>` });
+    }
+
+    const entities = await loader.load({ filePath, platform });
+    res.json(await ingestRegistryEntities(loader.source, entities));
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/import/registry-funnel — CompanyRegistry → CompanyWatchlist → queue → opportunities funnel
+router.get('/registry-funnel', ...adminAuth, async (_req: Request, res: Response) => {
+  try { res.json(await getRegistryFunnel()); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/import/registry/discovery-run — drain a priority batch of CompanyRegistry candidates
+router.post('/registry/discovery-run', ...adminAuth, async (req: Request, res: Response) => {
+  try {
+    const limit = req.body?.limit ? parseInt(req.body.limit, 10) : undefined;
+    const validate = req.body?.validate !== false;
+    res.json(await runRegistryDiscovery({ limit, validate }));
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 

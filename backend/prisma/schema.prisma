@@ -732,6 +732,41 @@ model HarvestTarget {
   @@index([sourceLabel])
 }
 
+/// Fase 5 company-first scale-up: pre-funnel staging table for company candidates
+/// harvested from free open data (Registro Imprese startup/PMI innovative, Wikidata,
+/// Common Crawl ATS-token index, curated manual lists). Distinct from CompanyWatchlist
+/// (post-resolution, keyed on careersUrl): most raw entities never resolve to a
+/// careers page, so they never pollute the operational registry. Promotion writes/
+/// updates a CompanyWatchlist row via registerAtsBoard/registerScrapeTarget and sets
+/// watchlistId + status='promoted'. See docs/superpowers/specs/2026-07-09-fase5-*.
+model CompanyRegistry {
+  id             String    @id @default(cuid())
+  name           String
+  normalizedName String // lowercase, legal suffixes stripped (s.p.a./s.r.l./...)
+  domain         String?   @unique // normalized apex domain; null = needs resolution
+  websiteUrl     String? // raw URL from the source
+  legalId        String? // codice fiscale / QID / LEI
+  source         String // "registro-imprese-startup" | "wikidata" | "commoncrawl-ats" | "manual:<list>"
+  sourceRef      String? // stable per-source id (CF, QID, urlkey) — idempotent re-ingest
+  sector         String?
+  employeeBand   String? // "0-9" | "10-49" | "50-249" | "250+"
+  region         String?
+  atsType        String? // pre-known ATS (commoncrawl-ats fast path)
+  atsToken       String?
+  priorityScore  Int       @default(0)
+  status         String    @default("pending") // pending|queued|promoted|unresolved|no-domain|duplicate
+  attempts       Int       @default(0)
+  lastAttemptAt  DateTime?
+  watchlistId    String? // CompanyWatchlist.id once promoted
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([source, sourceRef])
+  @@index([status, priorityScore(sort: Desc)])
+  @@index([normalizedName])
+}
+
 /// DB-backed scrape queue for tier B/C career-page scraping at scale.
 /// Tier A (ATS APIs) are batch-run per-platform by the ATS factory, not queued.
 model ScrapeJob {

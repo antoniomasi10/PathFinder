@@ -709,10 +709,15 @@ export default function OpportunityDetailPage({ params }: { params: { id: string
             </div>
           )}
 
-          {/* Source attribution */}
+          {/* Source attribution — Adzuna/Jooble API terms require a visible backlink */}
           {opportunity.source && (
             <p className="text-[11px]" style={{ color: '#acb0ce', fontFamily: 'var(--font-plus-jakarta)' }}>
-              Fonte: {opportunity.source}
+              Fonte:{' '}
+              {opportunity.source.toLowerCase() === 'adzuna' ? (
+                <a href="https://www.adzuna.it" target="_blank" rel="noopener noreferrer" className="underline">Adzuna</a>
+              ) : opportunity.source.toLowerCase() === 'jooble' ? (
+                <a href="https://it.jooble.org" target="_blank" rel="noopener noreferrer" className="underline">Jooble</a>
+              ) : opportunity.source}
             </p>
           )}
 
